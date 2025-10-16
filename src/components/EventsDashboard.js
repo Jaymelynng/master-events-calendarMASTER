@@ -1781,16 +1781,19 @@ The system will add new events and update any changed events automatically.`;
                 setViewMode('table');
               }}
               className="bg-white rounded shadow px-3 py-2 border border-gray-200 hover:shadow-md transition-all duration-200 text-center flex-1 min-w-[100px]"
-              style={{ borderColor: theme.colors.success }}
+              style={{ borderColor: theme.colors.primary }}
             >
               <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
-                {eventTypesFromEvents.length}
+                {(() => {
+                  const requiredTypes = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'];
+                  return requiredTypes.filter(type => events.some(e => e.type === type)).length;
+                })()}
               </div>
               <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
                 Event Types
               </div>
               <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                Click to view all types
+                This month
               </div>
             </button>
 
