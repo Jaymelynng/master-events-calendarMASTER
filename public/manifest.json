@@ -1,0 +1,18 @@
+{
+  "short_name": "Events Calendar",
+  "name": "Master Events Calendar - Gymnastics Event Management",
+  "description": "Professional event management system for multi-location gymnastics operations",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#FF1493",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary"
+}
+
