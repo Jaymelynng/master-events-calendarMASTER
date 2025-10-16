@@ -563,10 +563,13 @@ const EventsDashboard = () => {
   }, []);
 
   // Data processing - event types from events for dropdown
+  // EXCLUDE CAMPS - Only count tracked event types (Clinics, KNO, Open Gym)
   const eventTypesFromEvents = useMemo(() => {
     const types = [...new Set(events.map(event => event.type))];
-    return types.filter(Boolean).sort();
-  }, [events]);
+    // Filter out camp types and only include tracked types
+    const trackedTypes = eventTypes.filter(et => et.is_tracked).map(et => et.name);
+    return types.filter(type => type && trackedTypes.includes(type)).sort();
+  }, [events, eventTypes]);
 
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
