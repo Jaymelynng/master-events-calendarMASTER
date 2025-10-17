@@ -1802,8 +1802,8 @@ The system will add new events and update any changed events automatically.`;
                 setSelectedEventType('CLINIC');
                 setViewMode('calendar');
               }}
-              className="bg-white rounded shadow px-3 py-2 border border-gray-200 hover:shadow-md transition-all duration-200 text-center flex-1 min-w-[100px]"
-              style={{ borderColor: '#F3E8FF' }}
+              className="rounded shadow-md px-3 py-2 border-2 hover:shadow-lg transition-all duration-200 text-center flex-1 min-w-[100px]"
+              style={{ backgroundColor: '#F3E8FF', borderColor: '#9333ea' }}
             >
               <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
                 {events.filter(e => e.type === 'CLINIC').length}
@@ -1821,8 +1821,8 @@ The system will add new events and update any changed events automatically.`;
                 setSelectedEventType('KIDS NIGHT OUT');
                 setViewMode('calendar');
               }}
-              className="bg-white rounded shadow px-3 py-2 border border-gray-200 hover:shadow-md transition-all duration-200 text-center flex-1 min-w-[100px]"
-              style={{ borderColor: '#FFCCCB' }}
+              className="rounded shadow-md px-3 py-2 border-2 hover:shadow-lg transition-all duration-200 text-center flex-1 min-w-[100px]"
+              style={{ backgroundColor: '#FFCCCB', borderColor: '#ec4899' }}
             >
               <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
                 {events.filter(e => e.type === 'KIDS NIGHT OUT').length}
@@ -1840,8 +1840,8 @@ The system will add new events and update any changed events automatically.`;
                 setSelectedEventType('OPEN GYM');
                 setViewMode('calendar');
               }}
-              className="bg-white rounded shadow px-3 py-2 border border-gray-200 hover:shadow-md transition-all duration-200 text-center flex-1 min-w-[100px]"
-              style={{ borderColor: '#C8E6C9' }}
+              className="rounded shadow-md px-3 py-2 border-2 hover:shadow-lg transition-all duration-200 text-center flex-1 min-w-[100px]"
+              style={{ backgroundColor: '#C8E6C9', borderColor: '#16a34a' }}
             >
               <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
                 {events.filter(e => e.type === 'OPEN GYM').length}
