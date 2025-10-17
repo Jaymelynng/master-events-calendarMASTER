@@ -2725,6 +2725,46 @@ The system will add new events and update any changed events automatically.`;
                           {displayDates.map(date => {
                             const dateEvents = gymEvents.filter(event => {
                               if (!event.date) return false;
+                              
+                              // Helper: Extract actual end date from title if database end_date is wrong
+                              const getActualEndDate = (event) => {
+                                // Check if title has date range patterns like "11/24 - 11/26" or "Nov 24-26"
+                                const title = event.title || '';
+                                
+                                // Pattern: "11/24 - 11/26" or "11/24-11/26"
+                                const dateRangeMatch = title.match(/(\d{1,2})\/(\d{1,2})\s*-\s*(\d{1,2})\/(\d{1,2})/);
+                                if (dateRangeMatch) {
+                                  const [, startMonth, startDay, endMonth, endDay] = dateRangeMatch;
+                                  const year = parseYmdLocal(event.start_date).getFullYear();
+                                  return new Date(year, parseInt(endMonth) - 1, parseInt(endDay));
+                                }
+                                
+                                // Pattern: "March 16th-20th" (same month, different days)
+                                const sameMonthMatch = title.match(/(\d{1,2})(?:st|nd|rd|th)-(\d{1,2})(?:st|nd|rd|th)/);
+                                if (sameMonthMatch) {
+                                  const [, startDay, endDay] = sameMonthMatch;
+                                  const startDate = parseYmdLocal(event.start_date);
+                                  return new Date(startDate.getFullYear(), startDate.getMonth(), parseInt(endDay));
+                                }
+                                
+                                // Fallback to database end_date
+                                return event.end_date ? parseYmdLocal(event.end_date) : parseYmdLocal(event.start_date);
+                              };
+                              
+                              // For multi-day events, check if current date falls within start_date and end_date range
+                              if (event.start_date && event.end_date) {
+                                const currentDate = new Date(currentYear, currentMonth, date);
+                                const startDate = parseYmdLocal(event.start_date);
+                                const endDate = getActualEndDate(event); // Use parsed end date
+                                
+                                // Only treat as multi-day if start and end are actually different
+                                if (startDate.getTime() !== endDate.getTime()) {
+                                  // Check if current date is within the event's date range (inclusive)
+                                  return currentDate >= startDate && currentDate <= endDate;
+                                }
+                              }
+                              
+                              // For single-day events, match by exact date
                               const eventDate = parseYmdLocal(event.date);
                               return eventDate.getFullYear() === currentYear && 
                                      eventDate.getMonth() === currentMonth && 
