@@ -1803,7 +1803,7 @@ The system will add new events and update any changed events automatically.`;
                 setViewMode('calendar');
               }}
               className="bg-white rounded shadow px-3 py-2 border border-gray-200 hover:shadow-md transition-all duration-200 text-center flex-1 min-w-[100px]"
-              style={{ borderColor: theme.colors.warning }}
+              style={{ borderColor: '#F3E8FF' }}
             >
               <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
                 {events.filter(e => e.type === 'CLINIC').length}
@@ -1812,11 +1812,47 @@ The system will add new events and update any changed events automatically.`;
                 Clinics
               </div>
               <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                Click to filter clinics
+                This month
               </div>
             </button>
 
+            <button 
+              onClick={() => {
+                setSelectedEventType('KIDS NIGHT OUT');
+                setViewMode('calendar');
+              }}
+              className="bg-white rounded shadow px-3 py-2 border border-gray-200 hover:shadow-md transition-all duration-200 text-center flex-1 min-w-[100px]"
+              style={{ borderColor: '#FFCCCB' }}
+            >
+              <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
+                {events.filter(e => e.type === 'KIDS NIGHT OUT').length}
+              </div>
+              <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
+                Kids Night Out
+              </div>
+              <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                This month
+              </div>
+            </button>
 
+            <button 
+              onClick={() => {
+                setSelectedEventType('OPEN GYM');
+                setViewMode('calendar');
+              }}
+              className="bg-white rounded shadow px-3 py-2 border border-gray-200 hover:shadow-md transition-all duration-200 text-center flex-1 min-w-[100px]"
+              style={{ borderColor: '#C8E6C9' }}
+            >
+              <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
+                {events.filter(e => e.type === 'OPEN GYM').length}
+              </div>
+              <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
+                Open Gym
+              </div>
+              <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                This month
+              </div>
+            </button>
 
             <button 
               onClick={() => {
