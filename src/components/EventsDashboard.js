@@ -220,7 +220,7 @@ const EventsDashboard = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth()); // Current month (0-indexed)  
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear()); // Current year
   const [calendarView, setCalendarView] = useState('full'); // Start with full month view
-  const [hoveredEvent, setHoveredEvent] = useState(null);
+  const [selectedEventForPanel, setSelectedEventForPanel] = useState(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   const [copiedUrl, setCopiedUrl] = useState(null);
@@ -279,7 +279,6 @@ const EventsDashboard = () => {
   const calendarRef = useRef(null);
   const gymRefs = useRef({});
   const monthNavRef = useRef(null);
-  const hidePopoverTimeoutRef = useRef(null);
 
   // Fetch data
   const { gyms: gymsList, loading: gymsLoading, error: gymsError } = useGyms();
@@ -345,21 +344,7 @@ const EventsDashboard = () => {
   };
   
   // ✨ Toggle individual event expansion - Shows full detail popup
-  const toggleEventExpansion = (event, e) => {
-    e?.stopPropagation();
-    // Show the full detail popup (same as hover)
-    if (hoveredEvent?.event?.id === event.id) {
-      // If already showing, close it
-      setHoveredEvent(null);
-    } else {
-      // Show the full detail card
-      const rect = e.currentTarget.getBoundingClientRect();
-      setHoveredEvent({ 
-        event, 
-        position: { x: rect.left + rect.width / 2, y: rect.top }
-      });
-    }
-  };
+  // Removed toggleEventExpansion - now using side panel on click
   
   // Helper to format time in short format (6:30-9:30)
   const formatTimeShort = (timeString) => {
@@ -512,7 +497,7 @@ const EventsDashboard = () => {
     } else {
       setCurrentMonth(currentMonth - 1);
     }
-    setCalendarView('firstHalf');
+    setCalendarView('full');
   };
 
   const goToNextMonth = () => {
@@ -522,7 +507,7 @@ const EventsDashboard = () => {
     } else {
       setCurrentMonth(currentMonth + 1);
     }
-    setCalendarView('firstHalf');
+    setCalendarView('full');
   };
 
   const scrollToGym = (gym) => {
@@ -1657,17 +1642,20 @@ The system will add new events and update any changed events automatically.`;
       )}
       
       <div ref={topRef} className="relative z-10 w-full">
-        <div className="w-full px-1">
-          {/* Dashboard Header */}
+        <div className="w-full">
+          {/* Dashboard Header - Redesigned with dark background */}
+          <div className="w-full mb-6 px-6 py-8 rounded-2xl shadow-2xl" style={{ backgroundColor: '#b48f8f' }}>
+            
+            {/* Title */}
           <div className="text-center mb-6">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent mb-2">
+              <h1 className="text-5xl font-bold text-white mb-3 drop-shadow-lg">
               ✨ Master Events Calendar ✨
             </h1>
-            <p className="text-gray-600">All gyms special events in one place</p>
+              <p className="text-white text-lg opacity-90">All gyms special events in one place</p>
             
             {/* Secret audit history trigger - Ctrl+Click */}
             <div 
-              className="text-sm text-gray-500 mt-2 cursor-default select-none"
+                className="text-sm text-white opacity-70 mt-3 cursor-default select-none hover:opacity-100 transition-opacity"
               onClick={(e) => {
                 if (e.ctrlKey || e.metaKey) {
                   e.preventDefault();
@@ -1685,10 +1673,11 @@ The system will add new events and update any changed events automatically.`;
                 hour: '2-digit',
                 minute: '2-digit'
               })}
+              </div>
             </div>
             
-            {/* Month Navigation - Top Level */}
-            <div className="flex justify-center items-center gap-6 mt-6 mb-6 w-full max-w-none mx-auto">
+            {/* Month Navigation */}
+            <div className="flex justify-center items-center gap-6 mb-8">
               <button
                 onClick={() => {
                   if (currentMonth === 0) {
@@ -1697,18 +1686,18 @@ The system will add new events and update any changed events automatically.`;
                   } else {
                     setCurrentMonth(currentMonth - 1);
                   }
-                  setCalendarView('full'); // Ensure full month view
+                  setCalendarView('full');
                 }}
-                className="flex items-center gap-2 px-6 py-3 rounded-full text-white transition-all duration-200 hover:scale-105 hover:shadow-lg min-w-[120px] justify-center flex-shrink-0"
-                style={{ backgroundColor: theme.colors.primary }}
+                className="flex items-center gap-2 px-6 py-3 rounded-full bg-white text-gray-800 font-semibold transition-all duration-200 hover:scale-105 hover:shadow-xl min-w-[120px] justify-center"
+                style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.25)' }}
               >
                 <ChevronLeft className="w-4 h-4" />
                 Previous
               </button>
               
               <div className="flex-shrink-0">
-                <h2 className="text-2xl font-bold px-8 py-3 rounded-full text-white shadow-md text-center whitespace-nowrap"
-                    style={{ backgroundColor: theme.colors.accent }}>
+                <h2 className="text-3xl font-bold px-10 py-4 rounded-full bg-white text-gray-800 text-center whitespace-nowrap"
+                    style={{ boxShadow: '0 6px 20px rgba(0,0,0,0.3)' }}>
                   {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { 
                     month: 'long', 
                     year: 'numeric' 
@@ -1724,25 +1713,22 @@ The system will add new events and update any changed events automatically.`;
                   } else {
                     setCurrentMonth(currentMonth + 1);
                   }
-                  setCalendarView('full'); // Ensure full month view
+                  setCalendarView('full');
                 }}
-                className="flex items-center gap-2 px-6 py-3 rounded-full text-white transition-all duration-200 hover:scale-105 hover:shadow-lg min-w-[120px] justify-center flex-shrink-0"
-                style={{ backgroundColor: theme.colors.primary }}
+                className="flex items-center gap-2 px-6 py-3 rounded-full bg-white text-gray-800 font-semibold transition-all duration-200 hover:scale-105 hover:shadow-xl min-w-[120px] justify-center"
+                style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.25)' }}
               >
                 Next
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
-          </div>
-
-          {/* Dashboard Stats Cards - Now Clickable! */}
-          <div className="w-full mb-3 flex justify-center">
-            <div className="flex gap-3 max-w-4xl">
+            {/* Dashboard Stats Cards - Row 1: General Stats */}
+            <div className="flex gap-3 justify-center max-w-4xl mx-auto mb-4">
             <button 
               onClick={() => setViewMode('calendar')}
-              className="bg-white rounded shadow px-3 py-2 border border-gray-200 hover:shadow-md transition-all duration-200 text-center flex-1 min-w-[100px]"
-              style={{ borderColor: theme.colors.primary }}
+                className="bg-white rounded-lg px-4 py-3 hover:shadow-2xl transition-all duration-200 text-center flex-1 min-w-[110px] hover:scale-105"
+                style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
             >
               <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
                 {events.length}
@@ -1751,7 +1737,7 @@ The system will add new events and update any changed events automatically.`;
                 Total Events
               </div>
               <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                This Month • Click to view calendar
+                  This Month
               </div>
             </button>
             
@@ -1761,8 +1747,8 @@ The system will add new events and update any changed events automatically.`;
                 setSelectedEventType('all');
                 setViewMode('calendar');
               }}
-              className="bg-white rounded shadow px-3 py-2 border border-gray-200 hover:shadow-md transition-all duration-200 text-center flex-1 min-w-[100px]"
-              style={{ borderColor: theme.colors.accent }}
+                className="bg-white rounded-lg px-4 py-3 hover:shadow-2xl transition-all duration-200 text-center flex-1 min-w-[110px] hover:scale-105"
+                style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
             >
               <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
                 {uniqueGymsWithEvents.length}
@@ -1771,47 +1757,46 @@ The system will add new events and update any changed events automatically.`;
                 Active Gyms
               </div>
               <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                Click to view all gym events
+                  This Month
               </div>
             </button>
 
             <button 
               onClick={() => {
-                setSelectedEventType('all');
                 setViewMode('table');
               }}
-              className="bg-white rounded shadow px-3 py-2 border border-gray-200 hover:shadow-md transition-all duration-200 text-center flex-1 min-w-[100px]"
-              style={{ borderColor: theme.colors.primary }}
+                className="bg-white rounded-lg px-4 py-3 hover:shadow-2xl transition-all duration-200 text-center flex-1 min-w-[110px] hover:scale-105"
+                style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
             >
               <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
-                {(() => {
-                  const requiredTypes = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'];
-                  return requiredTypes.filter(type => events.some(e => e.type === type)).length;
-                })()}
+                  {allGyms.filter(gym => getMissingEventTypes(gym).length === 0).length}/{allGyms.length}
               </div>
               <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
-                Event Types
+                  Requirements Met
               </div>
               <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                This month
+                  This Month
               </div>
             </button>
+            </div>
 
+            {/* Dashboard Stats Cards - Row 2: Event Types */}
+            <div className="flex gap-3 justify-center max-w-3xl mx-auto">
             <button 
               onClick={() => {
                 setSelectedEventType('CLINIC');
                 setViewMode('calendar');
               }}
-              className="rounded shadow-md px-3 py-2 border-2 hover:shadow-lg transition-all duration-200 text-center flex-1 min-w-[100px]"
-              style={{ backgroundColor: '#F3E8FF', borderColor: '#9333ea' }}
+                className="rounded-lg px-4 py-3 hover:shadow-2xl transition-all duration-200 text-center flex-1 min-w-[110px] hover:scale-105"
+                style={{ backgroundColor: '#e3f2fd', boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
             >
-              <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
+                <div className="text-xl font-bold text-blue-800">
                 {events.filter(e => e.type === 'CLINIC').length}
               </div>
-              <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
+                <div className="text-sm font-medium text-blue-700">
                 Clinics
               </div>
-              <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                <div className="text-xs text-blue-600">
                 This month
               </div>
             </button>
@@ -1821,16 +1806,16 @@ The system will add new events and update any changed events automatically.`;
                 setSelectedEventType('KIDS NIGHT OUT');
                 setViewMode('calendar');
               }}
-              className="rounded shadow-md px-3 py-2 border-2 hover:shadow-lg transition-all duration-200 text-center flex-1 min-w-[100px]"
-              style={{ backgroundColor: '#FFCCCB', borderColor: '#ec4899' }}
+                className="rounded-lg px-4 py-3 hover:shadow-2xl transition-all duration-200 text-center flex-1 min-w-[110px] hover:scale-105"
+                style={{ backgroundColor: '#f3e8ff', boxShadow: '0 4px 12px rgba(139,92,246,0.3)' }}
             >
-              <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
+                <div className="text-xl font-bold text-purple-800">
                 {events.filter(e => e.type === 'KIDS NIGHT OUT').length}
               </div>
-              <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
+                <div className="text-sm font-medium text-purple-700">
                 Kids Night Out
               </div>
-              <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                <div className="text-xs text-purple-600">
                 This month
               </div>
             </button>
@@ -1840,38 +1825,21 @@ The system will add new events and update any changed events automatically.`;
                 setSelectedEventType('OPEN GYM');
                 setViewMode('calendar');
               }}
-              className="rounded shadow-md px-3 py-2 border-2 hover:shadow-lg transition-all duration-200 text-center flex-1 min-w-[100px]"
-              style={{ backgroundColor: '#C8E6C9', borderColor: '#16a34a' }}
+                className="rounded-lg px-4 py-3 hover:shadow-2xl transition-all duration-200 text-center flex-1 min-w-[110px] hover:scale-105"
+                style={{ backgroundColor: '#e8f5e9', boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}
             >
-              <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
+              <div className="text-xl font-bold text-green-800">
                 {events.filter(e => e.type === 'OPEN GYM').length}
               </div>
-              <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
+              <div className="text-sm font-medium text-green-700">
                 Open Gym
               </div>
-              <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
+              <div className="text-xs text-green-600">
                 This month
               </div>
             </button>
-
-            <button 
-              onClick={() => {
-                setViewMode('table');
-              }}
-              className="bg-white rounded shadow px-3 py-2 border border-gray-200 hover:shadow-md transition-all duration-200 text-center flex-1 min-w-[100px]"
-              style={{ borderColor: theme.colors.success }}
-            >
-              <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
-                {allGyms.filter(gym => getMissingEventTypes(gym).length === 0).length}/{allGyms.length}
-              </div>
-              <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
-                All Events In
-              </div>
-              <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                Monthly requirements met
-              </div>
-            </button>
             </div>
+
           </div>
 
           {/* ✨ Secret Sparkle Button - TOP SECTION (Shift+Click) */}
@@ -2069,8 +2037,8 @@ The system will add new events and update any changed events automatically.`;
                           <div className="flex items-center justify-center">
                             <button
                               onClick={() => scrollToGym(gym)}
-                              className="hover:underline inline-flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors font-medium cursor-pointer"
-                              style={{ color: theme.colors.primary }}
+                              className="hover:underline inline-flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors font-bold cursor-pointer text-base"
+                              style={{ color: '#4a4a4a' }}
                               title={`Jump to ${gym} in calendar`}
                             >
                               {gym}
@@ -2516,7 +2484,7 @@ The system will add new events and update any changed events automatically.`;
                           {formatTime(event.time || event.event_time)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {event.price ? `$${event.price}` : <span className="text-gray-500 italic">Price not listed</span>}
+                          {event.price ? `$${event.price}` : <span className="text-gray-500 italic">Price not in title</span>}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-2">
@@ -2674,7 +2642,7 @@ The system will add new events and update any changed events automatically.`;
               </div>
 
               {/* Calendar Grid - FULL WIDTH */}
-              <div className="mx-2 mb-20 pb-20">
+              <div className={`mx-2 mb-20 pb-20 transition-all duration-300 ${selectedEventForPanel ? 'mr-[400px]' : ''}`}>
                 <div ref={calendarRef} className="w-full overflow-x-auto overflow-y-visible rounded-xl shadow-lg" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
                   <div className="min-w-full pb-8">
                   {/* Calendar Header */}
@@ -2823,72 +2791,131 @@ The system will add new events and update any changed events automatically.`;
                                 
                                 <div className="space-y-1 pt-1">
                                   {dateEvents.length > 0 ? (
-                                    dateEvents.map(event => {
-                                      const eventTypeName = event.type || event.event_type;
-                                      const eventTypeData = eventTypes.find(et => et.name === eventTypeName);
-                                      const displayName = eventTypeData?.display_name || eventTypeName || 'Event';
-                                      const isShowingPopup = hoveredEvent?.event?.id === event.id;
+                                    (() => {
+                                      // 🏕️ GROUP CAMP EVENTS BY BASE NAME (Display-only consolidation)
+                                      const groupCampEventsForDisplay = (events) => {
+                                        const campGroups = new Map();
+                                        const regularEvents = [];
+                                        
+                                        events.forEach(event => {
+                                          if (event.type === 'CAMP') {
+                                            // Extract base camp name by removing option identifiers
+                                            let baseName = event.title;
+                                            
+                                            // Handle titles that START with activity type (e.g., "Girls Gymnastics Fall Break Camp...")
+                                            baseName = baseName
+                                              .replace(/^Girls?\s+Gymnastics\s+/i, '')
+                                              .replace(/^Co-ed\s+Ninja\s+Warrior\s+/i, '')
+                                              .replace(/^Parkour\s*&\s*Ninja\s+/i, '')
+                                              .replace(/^Ninja\s+Warrior\s+/i, '')
+                                              .replace(/^COED\s+Ninja\s+/i, '');
+                                            
+                                            // Handle titles with activity AFTER pipe (e.g., "Winter Camp | Gymnastics | ...")
+                                            baseName = baseName
+                                              .replace(/\s*\|\s*(Girls?\s*)?(Co-ed\s*|COED\s*)?Gymnastics\s*Camp.*$/i, '')
+                                              .replace(/\s*\|\s*(Parkour\s*&\s*)?Ninja\s*(Warrior\s*)?Camp.*$/i, '')
+                                              .replace(/\s*\|\s*Gymnastics\s*\|.*$/i, '')
+                                              .replace(/\s*\|\s*Ninja\s*\|.*$/i, '')
+                                              .replace(/\s*\|\s*Full\s*Day.*$/i, '')
+                                              .replace(/\s*\|\s*Half\s*Day.*$/i, '')
+                                              .trim();
+                                            
+                                            // Group key: gym + base name + start date + end date
+                                            const startDate = event.start_date || event.date;
+                                            const endDate = event.end_date || event.date;
+                                            const groupKey = `${event.gym_id}-${baseName}-${startDate}-${endDate}`;
+                                            
+                                            // Debug log
+                                            if (event.title.includes('Fall Break')) {
+                                              console.log('Base name extraction:', {
+                                                original: event.title,
+                                                baseName: baseName,
+                                                groupKey: groupKey
+                                              });
+                                            }
+                                            
+                                            if (!campGroups.has(groupKey)) {
+                                              campGroups.set(groupKey, []);
+                                            }
+                                            campGroups.get(groupKey).push(event);
+                                          } else {
+                                            regularEvents.push(event);
+                                          }
+                                        });
+                                        
+                                        // Convert groups to consolidated display events
+                                        const consolidatedCamps = [];
+                                        campGroups.forEach((groupEvents, key) => {
+                                          if (groupEvents.length === 1) {
+                                            // Single option - show as-is
+                                            consolidatedCamps.push({ ...groupEvents[0], isGrouped: false, groupedEvents: null });
+                                          } else {
+                                            // Multiple options - create consolidated event
+                                            consolidatedCamps.push({
+                                              ...groupEvents[0],
+                                              isGrouped: true,
+                                              groupedEvents: groupEvents,
+                                              optionCount: groupEvents.length
+                                            });
+                                          }
+                                        });
+                                        
+                                        return [...consolidatedCamps, ...regularEvents.map(e => ({ ...e, isGrouped: false, groupedEvents: null }))];
+                                      };
+                                      
+                                      // Group the events for this date
+                                      const displayEvents = groupCampEventsForDisplay(dateEvents);
+                                      
+                                      // Debug: Log grouping results
+                                      if (dateEvents.some(e => e.type === 'CAMP')) {
+                                        console.log('Date events:', dateEvents.filter(e => e.type === 'CAMP').map(e => ({
+                                          title: e.title,
+                                          gym: e.gym_id,
+                                          start: e.start_date,
+                                          end: e.end_date
+                                        })));
+                                        console.log('Display events:', displayEvents.filter(e => e.type === 'CAMP').map(e => ({
+                                          title: e.title,
+                                          isGrouped: e.isGrouped,
+                                          count: e.optionCount
+                                        })));
+                                      }
+                                      
+                                      return displayEvents.map(event => {
+                                        const eventTypeName = event.type || event.event_type;
+                                        const eventTypeData = eventTypes.find(et => et.name === eventTypeName);
+                                        const displayName = eventTypeData?.display_name || eventTypeName || 'Event';
                                       
                                       return (
                                       <div
                                         key={event.id}
                                         className="relative group cursor-pointer"
-                                        onMouseEnter={hoverEnabled ? (e) => {
-                                          if (hidePopoverTimeoutRef.current) clearTimeout(hidePopoverTimeoutRef.current);
-                                          setHoveredEvent({ event, position: { x: e.clientX, y: e.clientY } });
-                                        } : undefined}
-                                        onMouseLeave={hoverEnabled ? () => {
-                                          if (hidePopoverTimeoutRef.current) clearTimeout(hidePopoverTimeoutRef.current);
-                                          hidePopoverTimeoutRef.current = setTimeout(() => setHoveredEvent(null), 200);
-                                        } : undefined}
+                                        onClick={() => setSelectedEventForPanel(event)}
                                       >
                                         <div
-                                          className="text-xs rounded text-gray-700 text-center font-medium transition-all duration-200 border p-2"
+                                          className="text-xs rounded text-gray-700 text-center font-medium transition-all duration-200 border p-2 hover:shadow-md hover:scale-105"
                                           style={{ 
                                             backgroundColor: getEventTypeColor(eventTypeName),
                                             borderColor: 'rgba(0,0,0,0.1)'
                                           }}
                                         >
-                                          {/* ✨ Sparkle Toggle Button - Top Center - Opens full detail popup */}
-                                          <button
-                                            onClick={(e) => toggleEventExpansion(event, e)}
-                                            className="absolute -top-1 left-1/2 transform -translate-x-1/2 flex items-center justify-center rounded-full bg-white shadow-sm hover:shadow-md transition-all duration-200 hover:scale-110 z-10 w-5 h-5"
-                                            style={{ 
-                                              border: `1.5px solid ${isShowingPopup ? theme.colors.primary : '#d1d5db'}`,
-                                              opacity: isShowingPopup ? 1 : 0.7
-                                            }}
-                                            title={isShowingPopup ? "Click to close details" : "Click to view details"}
-                                          >
-                                            <span className="text-xs" style={{
-                                              filter: isShowingPopup ? 'none' : 'grayscale(50%)',
-                                              transition: 'all 0.2s ease'
-                                            }}>✨</span>
-                                          </button>
-                                          
                                           {/* Compact Card View */}
                                           <div className="font-semibold leading-tight text-sm">
                                             {displayName}
                                           </div>
                                           <div className="text-gray-600 mt-0.5 leading-tight text-xs">
-                                            {formatTimeShort(event.time || event.event_time)}
+                                            {event.isGrouped ? (
+                                              <span className="text-gray-500 italic">{event.optionCount} options available</span>
+                                            ) : (
+                                              formatTimeShort(event.time || event.event_time)
+                                            )}
                                           </div>
                                           
                                         </div>
-                                        
-                                        {/* Edit Button - Click to open edit modal */}
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEditEvent(event);
-                                          }}
-                                          className="absolute top-0 right-0 w-4 h-4 bg-blue-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center hover:bg-blue-600 text-xs"
-                                          title="Edit event"
-                                        >
-                                          ✎
-                                        </button>
                                       </div>
                                     );
-                                    })
+                                      });
+                                    })()
                                   ) : (
                                     // Show placeholder for debugging
                                     <div className="text-xs text-gray-400 p-1">
@@ -2907,106 +2934,254 @@ The system will add new events and update any changed events automatically.`;
               </div>
               </div>
 
-              {/* Event Hover Popover */}
-              {hoveredEvent && (
+              {/* Event Detail Side Panel */}
+              {selectedEventForPanel && (
                 <div
-                  className="fixed z-50 pointer-events-auto"
+                  className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ease-in-out"
                   style={{
-                    left: hoveredEvent.position.x + 10,
-                    top: hoveredEvent.position.y - 120,
-                  }}
-                  onMouseEnter={() => {
-                    if (hidePopoverTimeoutRef.current) clearTimeout(hidePopoverTimeoutRef.current);
-                  }}
-                  onMouseLeave={() => {
-                    if (hidePopoverTimeoutRef.current) clearTimeout(hidePopoverTimeoutRef.current);
-                    hidePopoverTimeoutRef.current = setTimeout(() => setHoveredEvent(null), 150);
+                    borderLeft: `4px solid ${theme.colors.primary}`
                   }}
                 >
-                  <div className="bg-white rounded-xl shadow-lg border p-4 w-72 relative" style={{
-                    borderColor: '#e5e7eb',
-                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
-                  }}>
-                                         {/* Event Type Badge */}
-                     <div className="flex items-center justify-between mb-3">
-                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-gray-700 border"
-                             style={{ 
-                               backgroundColor: getEventTypeColor(hoveredEvent.event.type || hoveredEvent.event.event_type),
-                               borderColor: 'rgba(0,0,0,0.1)'
-                             }}>
-                         {hoveredEvent.event.type || hoveredEvent.event.event_type || 'EVENT'}
-                       </span>
-                     </div>
+                  {/* Header with close button */}
+                  <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between" style={{ borderColor: theme.colors.primary }}>
+                    <h3 className="font-bold text-lg" style={{ color: theme.colors.textPrimary }}>Event Details</h3>
+                    <button
+                      onClick={() => setSelectedEventForPanel(null)}
+                      className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all"
+                      title="Close"
+                    >
+                      <span className="text-xl text-gray-600">×</span>
+                    </button>
+                  </div>
+
+                  <div className="p-6">
+                    {/* Event Type Badge */}
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-gray-700 border"
+                            style={{ 
+                              backgroundColor: getEventTypeColor(selectedEventForPanel.type || selectedEventForPanel.event_type),
+                              borderColor: 'rgba(0,0,0,0.1)'
+                            }}>
+                        {selectedEventForPanel.type || selectedEventForPanel.event_type || 'EVENT'}
+                      </span>
+                      {selectedEventForPanel.isGrouped && (
+                        <span className="text-sm text-gray-600 font-semibold">
+                          {selectedEventForPanel.optionCount} options
+                        </span>
+                      )}
+                    </div>
                     
                     {/* Event Title */}
-                    <h4 className="font-semibold text-base mb-3 text-gray-800">
-                      {hoveredEvent.event.title || `${hoveredEvent.event.type || hoveredEvent.event.event_type} Event`}
+                    <h4 className="font-bold text-xl mb-4 text-gray-800">
+                      {selectedEventForPanel.title || `${selectedEventForPanel.type || selectedEventForPanel.event_type} Event`}
                     </h4>
                     
                     {/* Event Details */}
-                    <div className="space-y-2 text-sm text-gray-600">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-gray-400" />
-                        <span>{gymsList.find(g => g.gym_code === hoveredEvent.event.gym_code)?.name || 
-                               gymsList.find(g => g.name === hoveredEvent.event.gym_name)?.name || 
-                               hoveredEvent.event.gym_name || hoveredEvent.event.gym_code}</span>
+                    <div className="space-y-3 mb-6 text-sm text-gray-700">
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <div className="font-semibold text-xs text-gray-500 uppercase mb-1">Location</div>
+                          <div>{gymsList.find(g => g.gym_code === selectedEventForPanel.gym_code || g.id === selectedEventForPanel.gym_id)?.name || 
+                               selectedEventForPanel.gym_name || selectedEventForPanel.gym_code}</div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        <span>{parseYmdLocal(hoveredEvent.event.date).toLocaleDateString('en-US', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })}</span>
+                      <div className="flex items-start gap-3">
+                        <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <div className="font-semibold text-xs text-gray-500 uppercase mb-1">Date</div>
+                          <div>{parseYmdLocal(selectedEventForPanel.date).toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}</div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        <span>{formatTime(hoveredEvent.event.time || hoveredEvent.event.event_time) || ''}</span>
+                      <div className="flex items-start gap-3">
+                        <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <div className="font-semibold text-xs text-gray-500 uppercase mb-1">Time</div>
+                          <div>{formatTime(selectedEventForPanel.time || selectedEventForPanel.event_time) || ''}</div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-gray-400" />
-                        <span className={`font-medium ${hoveredEvent.event.price ? 'text-gray-800' : 'text-gray-500 italic'}`}>
-                          {hoveredEvent.event.price ? `$${hoveredEvent.event.price}` : 'Price not listed'}
-                        </span>
+                      <div className="flex items-start gap-3">
+                        <DollarSign className="w-5 h-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <div className="font-semibold text-xs text-gray-500 uppercase mb-1">Price</div>
+                          {selectedEventForPanel.price ? (
+                            <div className="font-bold text-lg" style={{ color: theme.colors.primary }}>${selectedEventForPanel.price}</div>
+                          ) : (
+                            <div className="text-sm text-gray-500 italic">Price not in title</div>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
-                                         {/* Action Buttons */}
-                     <div className="mt-4 pt-3 border-t border-gray-100 flex gap-2">
-                       <button
-                         onClick={() => {
-                           const url = hoveredEvent.event.event_url || hoveredEvent.event.registration_url;
-                           if (url) {
-                             window.open(url, '_blank');
-                           }
-                         }}
-                         className="flex-1 text-white text-sm font-medium py-2 px-3 rounded-lg transition-all hover:scale-105 hover:shadow-lg pointer-events-auto flex items-center justify-center gap-1.5"
-                         style={{ backgroundColor: theme.colors.primary }}
-                       >
-                         ✨ View Details
-                       </button>
-                      <button
-                        onClick={() => {
-                          const url = hoveredEvent.event.event_url || hoveredEvent.event.registration_url;
-                          if (url) {
-                            copyToClipboard(url, hoveredEvent.event.id);
-                          }
-                        }}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all pointer-events-auto ${
-                          copiedUrl === hoveredEvent.event.id 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-blue-50 hover:bg-blue-100 text-blue-600'
-                        }`}
-                        title="Copy registration URL"
-                      >
-                        {copiedUrl === hoveredEvent.event.id ? (
-                          <CheckCircle className="w-4 h-4" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                        {copiedUrl === hoveredEvent.event.id ? 'Copied!' : 'Copy'}
-                      </button>
+                    {/* Quick Access - Check gym_links table for what THIS gym offers */}
+                    {selectedEventForPanel.type === 'CAMP' && (() => {
+                      const gymId = selectedEventForPanel.gym_id;
+                      
+                      // Find this gym's camp links from database
+                      const fullDayLink = gymLinks.find(gl => gl.gym_id === gymId && gl.link_type_id === 'camps');
+                      const halfDayLink = gymLinks.find(gl => gl.gym_id === gymId && gl.link_type_id === 'camps_half');
+                      
+                      // Only show section if gym has at least one camp link
+                      if (!fullDayLink && !halfDayLink) return null;
+                      
+                      return (
+                        <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
+                          <p className="font-semibold text-xs text-gray-500 uppercase mb-3">🔗 Quick Access</p>
+                          
+                          <div className="flex gap-2">
+                            {fullDayLink && (
+                              <button
+                                onClick={() => window.open(fullDayLink.url, '_blank')}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 border border-orange-200 hover:border-orange-400 transition-all hover:scale-105"
+                                title="View all Full Day camps at this gym"
+                              >
+                                <span className="text-2xl">🏕️</span>
+                                <span className="font-semibold text-sm text-orange-800">Full Day</span>
+                              </button>
+                            )}
+                            
+                            {halfDayLink && (
+                              <button
+                                onClick={() => window.open(halfDayLink.url, '_blank')}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 hover:border-blue-400 transition-all hover:scale-105"
+                                title="View all Half Day camps at this gym"
+                              >
+                                <span className="text-2xl">🕐</span>
+                                <span className="font-semibold text-sm text-blue-800">Half Day</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    
+                    {/* Registration Options - Detect from ACTUAL grouped event titles */}
+                    <div className="border-t pt-4" style={{ borderColor: theme.colors.secondary }}>
+                      {selectedEventForPanel.isGrouped && selectedEventForPanel.groupedEvents ? (
+                         // Multiple options - detect activity/duration from actual titles
+                        <div className="space-y-3">
+                          <p className="font-semibold text-gray-800 mb-3">📝 Register for THIS Camp:</p>
+                          {selectedEventForPanel.groupedEvents.map((option) => {
+                             // Parse ACTUAL title to detect activity and duration
+                             const title = option.title;
+                             let icon = '📋';
+                             let label = '';
+                             
+                             // Detect activity from title content
+                             if (title.includes('Gymnastics') || title.includes('Girls Gymnastics')) {
+                               icon = '🤸';
+                               label = title.includes('Girls') ? 'Girls Gymnastics' : 'Gymnastics';
+                             } else if (title.includes('Ninja')) {
+                               icon = '🥷';
+                               if (title.includes('Co-ed')) label = 'Co-ed Ninja';
+                               else if (title.includes('Warrior')) label = 'Ninja Warrior';
+                               else if (title.includes('Parkour')) label = 'Parkour & Ninja';
+                               else if (title.includes('COED')) label = 'COED Ninja';
+                               else label = 'Ninja';
+                             }
+                             
+                             // Add duration if detected
+                             if (title.includes('Full Day') || title.includes('FULL DAY')) {
+                               label = label ? `${label} - Full Day` : 'Full Day';
+                             } else if (title.includes('Half Day') || title.includes('HALF DAY')) {
+                               label = label ? `${label} - Half Day` : 'Half Day';
+                             }
+                             
+                             // If still no label, use first part of title
+                             if (!label) {
+                               const parts = title.split('|');
+                               label = parts[0].trim();
+                             }
+                             
+                             return (
+                               <div key={option.id} className="flex gap-2 items-center">
+                                 <button
+                                   onClick={() => window.open(option.event_url, '_blank')}
+                                   className="flex-1 text-left text-white text-sm font-medium py-2.5 px-3 rounded-lg transition-all hover:scale-102 hover:shadow-md flex items-center gap-2"
+                                   style={{ backgroundColor: theme.colors.primary }}
+                                 >
+                                   <span className="text-xl flex-shrink-0">{icon}</span>
+                                   <span className="flex-1">
+                                     <span className="block font-semibold">{label}</span>
+                                     <span className="block text-xs opacity-90 mt-0.5">
+                                       {formatTimeShort(option.time)} {option.price && `• $${option.price}`}
+                                     </span>
+                                   </span>
+                                   <span className="text-sm flex-shrink-0">→</span>
+                                 </button>
+                                 <button
+                                   onClick={() => copyToClipboard(option.event_url, option.id)}
+                                   className={`flex items-center justify-center w-10 h-10 rounded-lg transition-all ${
+                                     copiedUrl === option.id 
+                                       ? 'bg-green-100 text-green-700' 
+                                       : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                   }`}
+                                   title="Copy registration link"
+                                 >
+                                   {copiedUrl === option.id ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                 </button>
+                               </div>
+                             );
+                           })}
+                         </div>
+                      ) : (
+                        // Single option - show regular buttons
+                        <div className="space-y-3">
+                          <button
+                            onClick={() => {
+                              const url = selectedEventForPanel.event_url || selectedEventForPanel.registration_url;
+                              if (url) {
+                                window.open(url, '_blank');
+                              }
+                            }}
+                            className="w-full text-white font-semibold py-3 px-4 rounded-lg transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2"
+                            style={{ backgroundColor: theme.colors.primary }}
+                          >
+                            📝 Register Now
+                          </button>
+                          <button
+                            onClick={() => {
+                              const url = selectedEventForPanel.event_url || selectedEventForPanel.registration_url;
+                              if (url) {
+                                copyToClipboard(url, selectedEventForPanel.id);
+                              }
+                            }}
+                            className={`w-full font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 ${
+                              copiedUrl === selectedEventForPanel.id 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                            }`}
+                          >
+                            {copiedUrl === selectedEventForPanel.id ? (
+                              <>
+                                <CheckCircle className="w-5 h-5" />
+                                URL Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-5 h-5" />
+                                Copy Registration URL
+                              </>
+                            )}
+                          </button>
+                          
+                          {/* Edit Button */}
+                          <button
+                            onClick={() => {
+                              handleEditEvent(selectedEventForPanel);
+                              setSelectedEventForPanel(null);
+                            }}
+                            className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                          >
+                            ✎ Edit Event
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -812,6 +812,57 @@ try {
 
 ---
 
+## ⚠️ CRITICAL: CAMP COMPLEXITY CHALLENGE
+
+### **The Display Problem with Camps:**
+
+When you import camps using F12, you'll notice that **6 out of 10 gyms create MULTIPLE separate events for the SAME camp**:
+
+**Example - Estrella Gymnastics "Spring Break Camp":**
+The F12 import will create **4 separate database records**:
+1. Girls Gymnastics Camp Full Day | 9AM-3PM
+2. Girls Gymnastics Camp Half Day | 9AM-12PM
+3. Ninja Warrior Camp Full Day | 9AM-3PM
+4. Ninja Warrior Camp Half Day | 9AM-12PM
+
+**Why This Happens:**
+- iClassPro creates separate event listings for each combination of:
+  - Activity type (Gymnastics vs Ninja)
+  - Duration (Full Day vs Half Day)
+- Each has a unique event ID and registration URL
+- F12 imports them all as separate events (CORRECT)
+- Calendar displays them all as separate cards (PROBLEM - takes 4x space)
+
+**Gyms Affected:**
+- **EST** (Estrella): 4 events per camp (worst case)
+- **CPF** (Pflugerville): 2 events per camp (Full + Half)
+- **HGA, OAS, SGT, TIG**: 2 events per camp (Gym + Ninja)
+
+**What F12 Import Does (CORRECT BEHAVIOR):**
+✅ Imports each event with its unique ID and URL
+✅ Preserves all registration links
+✅ Stores everything accurately in database
+
+**What Needs to Be Fixed (DISPLAY LAYER):**
+⚠️ Calendar should GROUP related camps into ONE visual card
+⚠️ Show "X options" badge on consolidated card
+⚠️ Display all registration links in hover/click popup
+
+### **📖 COMPLETE DOCUMENTATION:**
+
+**For full details about camp complexity and how to handle it, see:**
+→ **[CAMP_COMPLEXITY_MASTER_GUIDE.md](./CAMP_COMPLEXITY_MASTER_GUIDE.md)**
+
+This document includes:
+- Complete gym-by-gym breakdown
+- Real event title examples
+- Grouping logic for consolidation
+- Requirements for any display solution
+
+**⚠️ CRITICAL:** Do NOT try to "fix" this during F12 import. The import is working correctly. The problem is only in how events are DISPLAYED on the calendar.
+
+---
+
 ## 📋 CURRENT LIMITATIONS & FUTURE IMPROVEMENTS
 
 ### **Current Limitations:**
@@ -819,12 +870,14 @@ try {
 2. **Single gym at a time** - Can't bulk process all gyms automatically  
 3. **Portal slug dependency** - Relies on stored gym links being current
 4. **Date range parsing** - Limited to specific patterns in camp titles
+5. **Camp display** - Multiple camp options show as separate cards (see Camp Complexity Guide)
 
 ### **Future Enhancements:**
 1. **Full automation** - Background job to collect all gyms automatically
 2. **Portal discovery** - Auto-detect portal slugs from gym websites
 3. **Smart scheduling** - Run imports daily/weekly automatically
 4. **Enhanced parsing** - Better date range and price extraction
+5. **Camp consolidation** - Display-layer grouping of related camp options
 
 ---
 
