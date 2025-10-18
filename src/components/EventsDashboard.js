@@ -414,11 +414,6 @@ const EventsDashboard = () => {
         getGymLinkUrl(gymName, 'camps_half'),
         getGymLinkUrl(gymName, 'special_events')
       ].filter(Boolean);
-      
-      // Show proactive alert about pop-ups
-      const proceed = window.confirm(`✨ Opening ${urlsToOpen.length} pages for ${gymName}\n\n🔓 Please ALLOW pop-ups when your browser asks!\n\nYour browser will show a pop-up blocker notification - click "Allow" so all pages can open.\n\n(This is a one-time setup)\n\nClick OK to continue.`);
-      
-      if (!proceed) return;
 
       openMultipleTabs(
         urlsToOpen,
