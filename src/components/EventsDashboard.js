@@ -372,33 +372,26 @@ const EventsDashboard = () => {
     setCopySuccess(startingMessage);
 
     // Synchronous anchor-click strategy (most reliable under popup blockers)
+    let openedCount = 0;
     try {
-      const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
-      container.style.top = '-9999px';
-      document.body.appendChild(container);
-
-      uniqueUrls.forEach((url) => {
-        const a = document.createElement('a');
-        a.href = url;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        container.appendChild(a);
-        a.click(); // Synchronous click within the user gesture
+      uniqueUrls.forEach((url, index) => {
+        setTimeout(() => {
+          const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+          if (newWindow && !newWindow.closed) {
+            openedCount++;
+          }
+        }, index * 100); // Stagger by 100ms to help with pop-up blockers
       });
-
-      // Cleanup DOM container
+      
+      // Check if any were blocked after attempting to open
       setTimeout(() => {
-        try { container.remove(); } catch (_) {}
-      }, 0);
+        if (openedCount < uniqueUrls.length) {
+          alert(`🚫 Pop-up Blocker Active!\n\nTrying to open ${uniqueUrls.length} pages, but your browser is blocking them.\n\n✅ How to fix:\n1. Look for the pop-up blocked icon in your address bar (usually top-right)\n2. Click it and select "Always allow pop-ups from this site"\n3. Click the ✨ sparkle button again\n\nThis is a one-time setup - after allowing pop-ups, all pages will open instantly!`);
+        }
+      }, uniqueUrls.length * 100 + 500);
+      
     } catch (err) {
-      // Fallback: direct window.open loop with secure features
-      uniqueUrls.forEach((url) => {
-        try {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        } catch (_) {}
-      });
+      alert(`🚫 Pop-up Blocker Active!\n\nYour browser is blocking multiple tabs from opening.\n\n✅ How to fix:\n1. Look for the pop-up blocked icon in your address bar\n2. Click it and select "Always allow pop-ups from this site"\n3. Try again\n\nThis is a one-time setup!`);
     }
 
     // Completion toast
