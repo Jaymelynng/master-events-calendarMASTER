@@ -306,14 +306,14 @@ const EventsDashboard = () => {
       'special_events': 'special_events'
     };
     
-    const linkTypeId = linkTypeMap[eventType];
+    const linkTypeId = linkTypeMap[eventType] || eventType;
     
-    // Find gym by name, then find link by gym_id + link_type
+    // Find gym by name, then find link by gym_id (gyms table only has id and name)
     const gym = gymsList.find(g => g.name === gymName);
     if (!gym) return null;
     
     const link = gymLinks.find(gl => 
-      (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && 
+      gl.gym_id === gym.id && 
       gl.link_type_id === linkTypeId
     );
     return link?.url;
@@ -412,11 +412,11 @@ const EventsDashboard = () => {
   const handleOpenAllForGym = (gymName) => {
     try {
       const urlsToOpen = [
-        // Standard special-event categories (use link_type_id from gym_links table)
-        getGymLinkUrl(gymName, 'skill_clinics'),
-        getGymLinkUrl(gymName, 'kids_night_out'),
-        getGymLinkUrl(gymName, 'open_gym'),
-        // Camps (optional, only if present for the gym)
+        // Standard special-event categories (getGymLinkUrl maps these to link_type_ids)
+        getGymLinkUrl(gymName, 'CLINIC'),
+        getGymLinkUrl(gymName, 'KIDS NIGHT OUT'),
+        getGymLinkUrl(gymName, 'OPEN GYM'),
+        // Camps (use direct link_type_id since not in event types)
         getGymLinkUrl(gymName, 'camps'),
         getGymLinkUrl(gymName, 'camps_half'),
         // Special events (RBA only)
