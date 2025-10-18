@@ -1990,9 +1990,13 @@ The system will add new events and update any changed events automatically.`;
               <h2 className="text-lg font-bold mb-1" style={{ color: theme.colors.textPrimary }}>
                 Special Event Statistics by Gym
                 <span className="text-sm font-normal ml-2" style={{ color: theme.colors.textSecondary }}>
-                  (Click counts to view event pages)
+                  (Click counts to view event pages | ✨ = Open all gym pages)
                 </span>
               </h2>
+              <div className="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-1 mb-2 flex items-center gap-1">
+                <span>⚠️</span>
+                <span><strong>Allow pop-ups</strong> in your browser to open multiple pages at once with the ✨ sparkle button</span>
+              </div>
               <div className="flex items-center justify-between">
                 <div className="text-xs bg-gray-50 px-2 py-1 rounded border">
                   <span className="font-semibold text-gray-700">Monthly: </span>
