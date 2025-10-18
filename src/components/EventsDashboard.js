@@ -414,6 +414,11 @@ const EventsDashboard = () => {
         getGymLinkUrl(gymName, 'camps_half'),
         getGymLinkUrl(gymName, 'special_events')
       ].filter(Boolean);
+      
+      // Show proactive alert about pop-ups
+      const proceed = window.confirm(`✨ Opening ${urlsToOpen.length} pages for ${gymName}\n\n🔓 Please ALLOW pop-ups when your browser asks!\n\nYour browser will show a pop-up blocker notification - click "Allow" so all pages can open.\n\n(This is a one-time setup)\n\nClick OK to continue.`);
+      
+      if (!proceed) return;
 
       openMultipleTabs(
         urlsToOpen,
@@ -1983,13 +1988,9 @@ The system will add new events and update any changed events automatically.`;
               <h2 className="text-lg font-bold mb-1" style={{ color: theme.colors.textPrimary }}>
                 Special Event Statistics by Gym
                 <span className="text-sm font-normal ml-2" style={{ color: theme.colors.textSecondary }}>
-                  (Click counts to view event pages | ✨ = Open all gym pages)
+                  (Click counts to view event pages)
                 </span>
               </h2>
-              <div className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1 mb-2 flex items-center gap-1">
-                <span>💡</span>
-                <span><strong>Quick Tip:</strong> Click the ✨ sparkle next to any gym name to open all their event pages at once (Clinics, Kids Night Out, Open Gym, Camps). Your browser may ask you to allow pop-ups the first time - click "Allow" and it'll work from then on!</span>
-              </div>
               <div className="flex items-center justify-between">
                 <div className="text-xs bg-gray-50 px-2 py-1 rounded border">
                   <span className="font-semibold text-gray-700">Monthly: </span>
