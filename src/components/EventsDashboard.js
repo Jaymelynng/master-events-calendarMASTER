@@ -408,18 +408,17 @@ const EventsDashboard = () => {
     }, 150);
   };
 
-  // Open all special event pages for a given gym (Clinic, KNO, Open Gym, Camps)
+  // Open all special event pages for a given gym (Booking, Clinic, KNO, Open Gym, Camps)
   const handleOpenAllForGym = (gymName) => {
     try {
       const urlsToOpen = [
-        // Standard special-event categories (getGymLinkUrl maps these to link_type_ids)
+        // All link types that gym might have
+        getGymLinkUrl(gymName, 'BOOKING'),
         getGymLinkUrl(gymName, 'CLINIC'),
         getGymLinkUrl(gymName, 'KIDS NIGHT OUT'),
         getGymLinkUrl(gymName, 'OPEN GYM'),
-        // Camps (use direct link_type_id since not in event types)
         getGymLinkUrl(gymName, 'camps'),
         getGymLinkUrl(gymName, 'camps_half'),
-        // Special events (RBA only)
         getGymLinkUrl(gymName, 'special_events')
       ].filter(Boolean);
 

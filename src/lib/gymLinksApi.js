@@ -6,15 +6,16 @@ import { supabase } from './supabase';
 export const gymLinksApi = {
   // Get all gym links with details from main database
   async getAllLinksDetailed() {
+    // Use base gym_links table directly (simple and reliable)
     const { data, error } = await supabase
-      .from('gym_links_detailed')
+      .from('gym_links')
       .select('*')
-      .order('gym_name')
+      .eq('is_active', true)
+      .order('gym_id')
       .order('sort_order');
     
     if (error) {
-      console.warn('gym_links_detailed view not found, using fallback query');
-      // Fallback: manually join if view doesn't exist yet
+      console.error('Error fetching gym_links:', error);
       return [];
     }
     return data || [];
