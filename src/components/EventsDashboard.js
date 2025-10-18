@@ -412,10 +412,10 @@ const EventsDashboard = () => {
   const handleOpenAllForGym = (gymName) => {
     try {
       const urlsToOpen = [
-        // Standard special-event categories (use event type keys)
-        getGymLinkUrl(gymName, 'CLINIC'),
-        getGymLinkUrl(gymName, 'KIDS NIGHT OUT'),
-        getGymLinkUrl(gymName, 'OPEN GYM'),
+        // Standard special-event categories (use link_type_id from gym_links table)
+        getGymLinkUrl(gymName, 'skill_clinics'),
+        getGymLinkUrl(gymName, 'kids_night_out'),
+        getGymLinkUrl(gymName, 'open_gym'),
         // Camps (optional, only if present for the gym)
         getGymLinkUrl(gymName, 'camps'),
         getGymLinkUrl(gymName, 'camps_half'),
