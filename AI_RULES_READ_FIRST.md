@@ -51,11 +51,12 @@
 
 ## 🎯 CURRENT ISSUE TRACKING
 
-**SPARKLE BUTTON BUG:**
-- **Problem**: Oasis sparkle only opens 1 page (should open 5)
-- **Root Cause**: Unknown - investigating data loading
-- **Status**: Testing if gym_links table query fix works
-- **Next Step**: Wait for Vercel deploy, get console output from Jayme
+**✅ REAL-TIME SUBSCRIPTIONS IMPLEMENTED:**
+- **Feature**: App now "attached" to Supabase database
+- **What it does**: Changes in database appear automatically without refresh
+- **Tables subscribed**: events, gyms, gym_links
+- **Status**: Ready to test
+- **Next Step**: User should test by opening two browser tabs and seeing changes appear automatically
 
 ---
 

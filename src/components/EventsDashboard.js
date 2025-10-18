@@ -9,6 +9,7 @@ import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi } from '../li
 import { gymLinksApi } from '../lib/gymLinksApi';
 import { cachedApi, cache } from '../lib/cache';
 import { supabase } from '../lib/supabase';
+import { useRealtimeEvents, useRealtimeGymLinks, useRealtimeGyms } from '../lib/useRealtimeEvents';
 import AdminPortalModal from './EventsDashboard/AdminPortalModal';
 
 // Exact Color Theme from user's specification
@@ -99,6 +100,25 @@ const useGyms = () => {
     fetchGyms();
   }, []);
 
+  // 🔴 REAL-TIME: Subscribe to gyms table changes
+  useRealtimeGyms((payload) => {
+    console.log('🔴 Gym changed in database:', payload.eventType);
+    
+    // Invalidate cache and refetch
+    cache.invalidate('gyms');
+    
+    const refreshGyms = async () => {
+      try {
+        const data = await gymsApi.getAll();
+        setGyms(data || []);
+      } catch (err) {
+        console.error('Error refreshing gyms:', err);
+      }
+    };
+    
+    refreshGyms();
+  });
+
   return { gyms, loading, error };
 };
 
@@ -121,6 +141,25 @@ const useGymLinks = () => {
 
     fetchGymLinks();
   }, []);
+
+  // 🔴 REAL-TIME: Subscribe to gym_links table changes
+  useRealtimeGymLinks((payload) => {
+    console.log('🔴 Gym link changed in database:', payload.eventType);
+    
+    // Invalidate cache and refetch
+    cache.invalidate('gymLinks');
+    
+    const refreshGymLinks = async () => {
+      try {
+        const data = await gymLinksApi.getAllLinksDetailed();
+        setGymLinks(data || []);
+      } catch (err) {
+        console.error('Error refreshing gym links:', err);
+      }
+    };
+    
+    refreshGymLinks();
+  });
 
   return { gymLinks, loading, error };
 };
@@ -153,6 +192,7 @@ const useEvents = (startDate, endDate) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Fetch events initially
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -170,6 +210,27 @@ const useEvents = (startDate, endDate) => {
       fetchEvents();
     }
   }, [startDate, endDate]);
+
+  // 🔴 REAL-TIME: Subscribe to events table changes
+  // This makes the app "attached" to Supabase - changes appear automatically!
+  useRealtimeEvents((payload) => {
+    console.log('🔴 Event changed in database:', payload.eventType);
+    
+    // When ANY event changes, refresh the data (invalidate cache)
+    cache.invalidate('events');
+    
+    // Refetch events to get the latest data
+    const refreshEvents = async () => {
+      try {
+        const data = await eventsApi.getAll(startDate, endDate);
+        setEvents(data || []);
+      } catch (err) {
+        console.error('Error refreshing events:', err);
+      }
+    };
+    
+    refreshEvents();
+  });
 
   const refetch = async () => {
     try {
@@ -266,13 +327,8 @@ const EventsDashboard = () => {
     };
   }, [showAdminPortal, showBulkImportModal, showAddEventModal]);
   
-  // ✨ Sparkle Hover Toggle State
-  const [hoverEnabled, setHoverEnabled] = useState(true);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  
-  // ✨ Per-Event Expansion State
-  const [expandedEvents, setExpandedEvents] = useState(new Set());
   
   // Refs
   const topRef = useRef(null);
@@ -330,18 +386,6 @@ const EventsDashboard = () => {
     return urls;
   };
 
-  // ✨ Toggle hover mode function
-  const toggleHoverMode = () => {
-    const newState = !hoverEnabled;
-    setHoverEnabled(newState);
-    setToastMessage(newState ? '✨ Hover mode ON' : 'Hover mode OFF');
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2000);
-    // When turning off hover, also collapse all expanded events
-    if (!newState) {
-      setExpandedEvents(new Set());
-    }
-  };
   
   // ✨ Toggle individual event expansion - Shows full detail popup
   // Removed toggleEventExpansion - now using side panel on click
@@ -2609,29 +2653,6 @@ The system will add new events and update any changed events automatically.`;
                   <p>• Click gym buttons above to quickly jump to that gym's calendar section</p>
               </div>
 
-              {/* ✨ Hover Toggle - Positioned above calendar */}
-              <div className="flex justify-center items-center gap-2 mt-4 mb-2">
-                <span className="text-sm" style={{ color: theme.colors.textSecondary }}>Quick Preview:</span>
-                <button
-                  onClick={toggleHoverMode}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                  style={{ 
-                    backgroundColor: hoverEnabled ? theme.colors.primary : theme.colors.accent,
-                    opacity: hoverEnabled ? 1 : 0.6
-                  }}
-                  title={hoverEnabled ? "Hover previews ON (click to disable)" : "Hover previews OFF (click to enable)"}
-                >
-                  <span className="text-base" style={{ 
-                    filter: hoverEnabled ? 'none' : 'grayscale(100%)',
-                    transition: 'all 0.3s ease'
-                  }}>
-                    ✨
-                  </span>
-                  <span className="text-sm font-medium text-white">
-                    {hoverEnabled ? 'Hover ON' : 'Hover OFF'}
-                  </span>
-                </button>
-              </div>
 
               {/* Calendar Grid - FULL WIDTH */}
               <div className={`mx-2 mb-20 pb-20 transition-all duration-300 ${selectedEventForPanel ? 'mr-[400px]' : ''}`}>
