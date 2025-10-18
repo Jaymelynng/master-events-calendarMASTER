@@ -1993,9 +1993,9 @@ The system will add new events and update any changed events automatically.`;
                   (Click counts to view event pages | ✨ = Open all gym pages)
                 </span>
               </h2>
-              <div className="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-1 mb-2 flex items-center gap-1">
-                <span>⚠️</span>
-                <span><strong>Allow pop-ups</strong> in your browser to open multiple pages at once with the ✨ sparkle button</span>
+              <div className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1 mb-2 flex items-center gap-1">
+                <span>💡</span>
+                <span><strong>Quick Tip:</strong> Click the ✨ sparkle next to any gym name to open all their event pages at once (Clinics, Kids Night Out, Open Gym, Camps). Your browser may ask you to allow pop-ups the first time - click "Allow" and it'll work from then on!</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="text-xs bg-gray-50 px-2 py-1 rounded border">
