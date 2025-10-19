@@ -448,6 +448,9 @@ const EventsDashboard = () => {
   // Open all special event pages for a given gym (Booking, Clinic, KNO, Open Gym, Camps)
   const handleOpenAllForGym = (gymName) => {
     try {
+      // Check if user has seen the pop-up alert before
+      const hasSeenPopupAlert = localStorage.getItem('hasSeenSparklePopupAlert');
+      
       const urlsToOpen = [
         // All link types that gym might have
         getGymLinkUrl(gymName, 'BOOKING'),
@@ -458,6 +461,28 @@ const EventsDashboard = () => {
         getGymLinkUrl(gymName, 'camps_half'),
         getGymLinkUrl(gymName, 'special_events')
       ].filter(Boolean);
+
+      // Show one-time alert if they haven't seen it yet
+      if (!hasSeenPopupAlert) {
+        const userConfirmed = window.confirm(
+          `🚀 Allow Pop-ups Required\n\n` +
+          `This will open ${urlsToOpen.length} tabs at once to access all gym portals.\n\n` +
+          `⚠️ Important: Allow Pop-ups\n\n` +
+          `1. Your browser may block the tabs from opening\n` +
+          `2. Look for a pop-up blocked icon in your address bar (usually top-right)\n` +
+          `3. Click it and select "Always allow pop-ups from this site"\n` +
+          `4. Then click "Continue" below to try again\n\n` +
+          `This is a one-time setup. After allowing pop-ups, all bulk actions will work instantly!\n\n` +
+          `Click OK to continue.`
+        );
+        
+        if (!userConfirmed) {
+          return; // User cancelled
+        }
+        
+        // Remember they've seen this alert
+        localStorage.setItem('hasSeenSparklePopupAlert', 'true');
+      }
 
       openMultipleTabs(
         urlsToOpen,
