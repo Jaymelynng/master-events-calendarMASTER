@@ -62,7 +62,7 @@ export const eventsApi = {
       
       // Auto-populate start_date and end_date if missing
       if (!event.start_date) event.start_date = event.date;
-      if (!event.end_date) event.end_date = event.date;
+      if (!event.end_date) event.end_date = event.start_date || event.date;
       
       // Validate date format
       const dateTest = new Date(event.date);

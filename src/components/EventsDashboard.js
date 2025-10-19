@@ -1304,11 +1304,12 @@ The system will add new events and update any changed events automatically.`;
         }
 
         // Parse date range for camps - CRITICAL FIX for day count badges!
-        let startDate = processedDate;
-        let endDate = processedDate;
+        // BUT: Only parse title if end_date wasn't already provided (F12 import provides correct dates)
+        let startDate = event.start_date || processedDate;
+        let endDate = event.end_date || processedDate;
         
-        // Extract date range from camp titles (e.g., "Oct 13-17", "Nov 24-26", "Dec 22-Jan 5")
-        if (event.type === 'CAMP' && event.title) {
+        // Extract date range from camp titles ONLY if not already set
+        if (event.type === 'CAMP' && event.title && !event.end_date) {
           // Match patterns like: "Oct 13-17", "November 24-26", "Dec 22nd-26th"
           const simpleRangeMatch = event.title.match(/([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?\s*[-–]\s*(\d{1,2})(?:st|nd|rd|th)?/);
           
