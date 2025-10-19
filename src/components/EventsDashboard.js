@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useRef, useEffect, Suspense, lazy } from 'react';
 import { 
-  Calendar, Clock, DollarSign, MapPin, Filter, Search, Grid, List, Plus, 
+  Calendar, Clock, DollarSign, MapPin, Search, Grid, List, Plus, 
   ChevronUp, ChevronLeft, ChevronRight, AlertCircle, Loader, Copy, CheckCircle
 } from 'lucide-react';
 
 // Import real API functions
-import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi } from '../lib/api';
+import { gymsApi, eventsApi, monthlyRequirementsApi } from '../lib/api';
 import { gymLinksApi } from '../lib/gymLinksApi';
 import { cachedApi, cache } from '../lib/cache';
 import { supabase } from '../lib/supabase';
@@ -292,7 +292,6 @@ const EventsDashboard = () => {
   const [editingEvent, setEditingEvent] = useState(null);
   const [bulkImportData, setBulkImportData] = useState('');
   const [rawEventListings, setRawEventListings] = useState('');
-  const [bulkImportEventType, setBulkImportEventType] = useState('AUTO_DETECT');
   const [validationResults, setValidationResults] = useState(null);
   // Admin timing metrics for benchmarking the workflow
   const [importTiming, setImportTiming] = useState({ convertMs: null, importMs: null, totalMs: null });
@@ -326,9 +325,6 @@ const EventsDashboard = () => {
       document.body.style.overflow = 'unset';
     };
   }, [showAdminPortal, showBulkImportModal, showAddEventModal]);
-  
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
   
   // Refs
   const topRef = useRef(null);
@@ -493,28 +489,6 @@ const EventsDashboard = () => {
     } catch (_) {
       // No-op: openMultipleTabs already reports issues to the user via toasts
     }
-  };
-
-  // Small visual effect near cursor for non-Shift clicks
-  const showFairyDust = (event) => {
-    try {
-      const dust = document.createElement('div');
-      dust.textContent = '✨';
-      dust.style.position = 'fixed';
-      dust.style.left = `${event.clientX}px`;
-      dust.style.top = `${event.clientY}px`;
-      dust.style.transform = 'translate(-50%, -50%)';
-      dust.style.pointerEvents = 'none';
-      dust.style.fontSize = '18px';
-      dust.style.transition = 'transform 400ms ease-out, opacity 400ms ease-out';
-      dust.style.opacity = '1';
-      document.body.appendChild(dust);
-      requestAnimationFrame(() => {
-        dust.style.transform = 'translate(-50%, -90%) scale(1.3)';
-        dust.style.opacity = '0';
-      });
-      setTimeout(() => { try { dust.remove(); } catch(_){} }, 450);
-    } catch (_) {}
   };
 
   
@@ -865,7 +839,7 @@ const EventsDashboard = () => {
         const gymLink = gymLinks.find(gl => gl.gym_name === gym.name);
         let portalSlug = '';
         if (gymLink && gymLink.url) {
-          const urlMatch = gymLink.url.match(/portal\.iclasspro\.com\/([^\/]+)/);
+          const urlMatch = gymLink.url.match(/portal\.iclasspro\.com\/([^/]+)/);
           if (urlMatch) {
             portalSlug = urlMatch[1];
           }
@@ -1025,80 +999,6 @@ const EventsDashboard = () => {
     }
   };
 
-  // Bulk Import Function for Admin
-  // Consolidate camp events that belong to the same camp
-  const consolidateCampEvents = async (events) => {
-    const campGroups = {};
-    const nonCampEvents = [];
-    
-    // Group camp events by gym and camp name
-    events.forEach(event => {
-      if (event.type === 'CAMP') {
-        // Extract base camp name (everything before first |)
-        const campName = event.title.split('|')[0].trim();
-        const groupKey = `${event.gym_id}-${campName}`;
-        
-        if (!campGroups[groupKey]) {
-          campGroups[groupKey] = [];
-        }
-        campGroups[groupKey].push(event);
-        } else {
-        nonCampEvents.push(event);
-      }
-    });
-    
-    // Consolidate each camp group
-    const consolidatedCamps = [];
-    Object.entries(campGroups).forEach(([groupKey, campEvents]) => {
-      if (campEvents.length === 1) {
-        // Single day camp - use as is
-        consolidatedCamps.push(campEvents[0]);
-      } else {
-        // Multi-day camp - merge into single event
-        const sortedEvents = campEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
-        const firstEvent = sortedEvents[0];
-        const lastEvent = sortedEvents[sortedEvents.length - 1];
-        
-        // Create consolidated event
-        const consolidatedEvent = {
-          ...firstEvent,
-          title: firstEvent.title.replace(/\|\s*\w+day,\s*\w+\s+\d{1,2}(?:st|nd|rd|th)?,\s*\d{4}/, `| ${getDateRangeString(firstEvent.date, lastEvent.date)}`),
-          start_date: firstEvent.date,
-          end_date: lastEvent.date,
-          day_of_week: (() => {
-            const [year, month, day] = firstEvent.date.split('-').map(Number);
-            const dateObj = new Date(year, month - 1, day);
-            return dateObj.toLocaleDateString('en-US', { weekday: 'long' });
-          })()
-        };
-        
-        consolidatedCamps.push(consolidatedEvent);
-      }
-    });
-    
-    return [...consolidatedCamps, ...nonCampEvents];
-  };
-  
-  // Helper function to format date ranges
-  const getDateRangeString = (startDate, endDate) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-    const startDay = start.getDate();
-    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-    const endDay = end.getDate();
-    const year = start.getFullYear();
-    
-    if (start.getMonth() === end.getMonth()) {
-      // Same month: "Oct 16-17, 2025"
-      return `${startMonth} ${startDay}-${endDay}, ${year}`;
-    } else {
-      // Different months: "Dec 22, 2025 - Jan 5, 2026"
-      return `${startMonth} ${startDay}, ${year} - ${endMonth} ${endDay}, ${end.getFullYear()}`;
-    }
-  };
-
   const handleBulkImport = async () => {
     const t0 = performance.now();
     let validatedEvents = []; // Declare at function scope
@@ -1174,14 +1074,11 @@ const EventsDashboard = () => {
       // 1) De-duplicate within the pasted batch by unique key
       const seenKeys = new Set();
       const batchUnique = [];
-      let skippedInBatch = 0;
       for (const event of newEvents) {
         const key = `${event.gym_id}-${event.date}-${event.time}-${event.type}`;
         if (!seenKeys.has(key)) {
           seenKeys.add(key);
           batchUnique.push(event);
-        } else {
-          skippedInBatch++;
         }
       }
 
@@ -1314,7 +1211,6 @@ The system will add new events and update any changed events automatically.`;
           
           if (simpleRangeMatch) {
             const month = simpleRangeMatch[1];
-            const startDay = simpleRangeMatch[2];
             const endDay = simpleRangeMatch[3];
             const year = processedDate.split('-')[0]; // Use the event's year
             
@@ -2782,7 +2678,7 @@ The system will add new events and update any changed events automatically.`;
                                 // Pattern: "11/24 - 11/26" or "11/24-11/26"
                                 const dateRangeMatch = title.match(/(\d{1,2})\/(\d{1,2})\s*-\s*(\d{1,2})\/(\d{1,2})/);
                                 if (dateRangeMatch) {
-                                  const [, startMonth, startDay, endMonth, endDay] = dateRangeMatch;
+                                  const [, , , endMonth, endDay] = dateRangeMatch;
                                   const year = parseYmdLocal(event.start_date).getFullYear();
                                   return new Date(year, parseInt(endMonth) - 1, parseInt(endDay));
                                 }
@@ -2790,7 +2686,7 @@ The system will add new events and update any changed events automatically.`;
                                 // Pattern: "March 16th-20th" (same month, different days)
                                 const sameMonthMatch = title.match(/(\d{1,2})(?:st|nd|rd|th)-(\d{1,2})(?:st|nd|rd|th)/);
                                 if (sameMonthMatch) {
-                                  const [, startDay, endDay] = sameMonthMatch;
+                                  const [, , endDay] = sameMonthMatch;
                                   const startDate = parseYmdLocal(event.start_date);
                                   return new Date(startDate.getFullYear(), startDate.getMonth(), parseInt(endDay));
                                 }
@@ -3246,22 +3142,6 @@ The system will add new events and update any changed events automatically.`;
         >
           <ChevronUp className="w-6 h-6 text-white mx-auto" />
         </button>
-      )}
-      
-      {/* ✨ Toast Notification */}
-      {showToast && (
-        <div 
-          className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-xl backdrop-blur-sm animate-slide-down"
-          style={{ 
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            border: `2px solid ${theme.colors.primary}`,
-            animation: 'slideDown 0.3s ease-out'
-          }}
-        >
-          <div className="flex items-center gap-2 text-sm font-medium" style={{ color: theme.colors.textPrimary }}>
-            {toastMessage}
-          </div>
-        </div>
       )}
       
       <style>{`
