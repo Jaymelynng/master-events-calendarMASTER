@@ -2649,8 +2649,9 @@ The system will add new events and update any changed events automatically.`;
                   </div>
 
               <div className="mt-4 text-xs text-center" style={{ color: theme.colors.textSecondary }}>
-                  <p>• Click sparkles (✨) on event cards to view full details</p>
+                  <p>• Click any event card to open the side panel with full details and registration links</p>
                   <p>• Click gym buttons above to quickly jump to that gym's calendar section</p>
+                  <p>• Click ✨ next to gym names to open all their event pages at once</p>
               </div>
 
 
