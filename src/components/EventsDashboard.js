@@ -1562,7 +1562,7 @@ The system will add new events and update any changed events automatically.`;
         </Suspense>
       )}
       
-      {/* Magic Control Portal - Secret Feature (Shift+Click) */}
+      {/* Jayme's Command Center - Secret Admin Portal */}
       {showAdminPortal && (
         <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"><div className="bg-white rounded-lg p-6">Loading...</div></div>}>
           <AdminPortalModal
@@ -1878,7 +1878,7 @@ The system will add new events and update any changed events automatically.`;
 
           </div>
 
-          {/* ✨ Secret Sparkle Button - TOP SECTION (Shift+Click) */}
+          {/* ✨ Jayme's Command Center - TOP SECTION */}
           <div className="flex justify-center mb-2">
             <button
               onClick={(e) => {
@@ -1887,7 +1887,7 @@ The system will add new events and update any changed events automatically.`;
                 }
               }}
               className="flex items-center justify-center w-8 h-8 bg-white rounded border border-pink-300 hover:border-pink-500 hover:bg-pink-50 transition-all duration-200 group opacity-70 hover:opacity-100"
-              title="Shift+Click for Magic Control Portal"
+              title="🔐 Jayme's Command Center"
             >
               <span className="text-lg group-hover:scale-125 transition-transform">✨</span>
             </button>
@@ -2554,7 +2554,7 @@ The system will add new events and update any changed events automatically.`;
         {/* Calendar View */}
         {viewMode === 'calendar' && (
             <div className="space-y-2">
-              {/* 🪄 Magic Control - BEFORE CALENDAR VIEW (Shift+Click) */}
+              {/* 🪄 Jayme's Command Center - BEFORE CALENDAR VIEW */}
               <div className="flex justify-center mb-2">
                 <button
                   onClick={(e) => {
@@ -2563,7 +2563,7 @@ The system will add new events and update any changed events automatically.`;
                     }
                   }}
                   className="flex items-center justify-center w-8 h-8 bg-white rounded border border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group opacity-70 hover:opacity-100"
-                  title="Shift+Click for Magic Control Portal"
+                  title="🔐 Jayme's Command Center"
                 >
                   <span className="text-lg group-hover:scale-125 transition-transform">🪄</span>
                 </button>
