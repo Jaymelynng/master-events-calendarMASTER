@@ -2309,6 +2309,12 @@ The system will add new events and update any changed events automatically.`;
             </p>
             </div>
 
+            {/* Help Text - Instructions for stats table */}
+            <div className="mt-3 text-xs text-center px-2" style={{ color: theme.colors.textSecondary }}>
+              <p>• Click ✨ next to gym names to open all their event pages at once</p>
+              <p>• Click gym buttons to jump to that gym's calendar section below</p>
+            </div>
+
           {/* Controls */}
           <div className="mb-2 space-y-2">
             {/* Month Navigation */}
@@ -2650,8 +2656,6 @@ The system will add new events and update any changed events automatically.`;
 
               <div className="mt-4 text-xs text-center" style={{ color: theme.colors.textSecondary }}>
                   <p>• Click any event card to open the side panel with full details and registration links</p>
-                  <p>• Click gym buttons above to quickly jump to that gym's calendar section</p>
-                  <p>• Click ✨ next to gym names to open all their event pages at once</p>
               </div>
 
 
