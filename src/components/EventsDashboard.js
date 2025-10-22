@@ -462,6 +462,8 @@ const EventsDashboard = () => {
       // Check if user has seen the pop-up alert before
       const hasSeenPopupAlert = localStorage.getItem('hasSeenSparklePopupAlert');
       
+      console.log('🔍 Sparkle popup check:', { hasSeenPopupAlert, willShow: !hasSeenPopupAlert });
+      
       // Show one-time alert BEFORE opening anything
       if (!hasSeenPopupAlert) {
         const userConfirmed = window.confirm(
@@ -478,10 +480,13 @@ const EventsDashboard = () => {
         
         // Remember they've seen this alert (even if they cancel)
         localStorage.setItem('hasSeenSparklePopupAlert', 'true');
+        console.log('✅ Saved to localStorage - popup should not show again');
         
         if (!userConfirmed) {
           return; // User cancelled
         }
+      } else {
+        console.log('✅ User has seen popup before - skipping alert');
       }
 
       // Now open the tabs (either first time after clicking OK, or subsequent times)
