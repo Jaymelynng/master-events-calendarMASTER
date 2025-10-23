@@ -866,14 +866,19 @@ const EventsDashboard = () => {
       
       // Convert iClassPro events to our database format
       const processedEvents = jsonData.data.flatMap(event => {
-        // Extract portal slug from the first URL we find in gymLinks
-        const gymLink = gymLinks.find(gl => gl.gym_name === gym.name);
+        // Extract portal slug from ANY link for this gym in gymLinks
+        const gymLink = gymLinks.find(gl => gl.gym_id === selectedGymId);
         let portalSlug = '';
         if (gymLink && gymLink.url) {
           const urlMatch = gymLink.url.match(/portal\.iclasspro\.com\/([^\/]+)/);
           if (urlMatch) {
             portalSlug = urlMatch[1];
           }
+        }
+        
+        // Debug log to help troubleshoot
+        if (!portalSlug) {
+          console.warn(`⚠️ Could not find portal slug for gym ${selectedGymId}. URL will be UNKNOWN.`);
         }
         
         // Construct the event URL
@@ -931,22 +936,27 @@ const EventsDashboard = () => {
       // CRITICAL FIX: Fetch fresh data from database instead of using stale client state
       // This prevents the "1 duplicate will be skipped" message from being inaccurate
       console.log('🔍 Fetching fresh events from database for duplicate detection...');
-      const freshEventsFromDB = await eventsApi.getAll(startDate, endDate);
+      // FIXED: Fetch ALL events (wide date range) to properly detect duplicates for future camps
+      const allStartDate = '2024-01-01'; // Start from beginning of 2024
+      const allEndDate = '2026-12-31'; // Through end of 2026
+      const freshEventsFromDB = await eventsApi.getAll(allStartDate, allEndDate);
       console.log(`📊 Found ${freshEventsFromDB.length} existing events in database`);
       
       // Check for existing events to detect duplicates
       let existingCount = 0;
-      const existingUrlSet = new Set(
-        (freshEventsFromDB || []).map(ev => {
-          if (!ev.event_url) return null;
-          // Remove query parameters for comparison
-          return ev.event_url.split('?')[0];
-        }).filter(url => url)
-      );
+      // FIXED: Store both URL and gym_id to avoid false duplicates with UNKNOWN URLs
+      const existingEventsCheck = (freshEventsFromDB || []).map(ev => ({
+        url: ev.event_url ? ev.event_url.split('?')[0] : null,
+        gym_id: ev.gym_id
+      })).filter(ev => ev.url);
       
       processedEvents.forEach(newEvent => {
         const newUrlBase = newEvent.event_url.split('?')[0];
-        if (existingUrlSet.has(newUrlBase)) {
+        // URL match must ALSO match gym_id
+        const isDuplicate = existingEventsCheck.some(existing => 
+          existing.url === newUrlBase && existing.gym_id === newEvent.gym_id
+        );
+        if (isDuplicate) {
           existingCount++;
         }
       });
@@ -1194,7 +1204,10 @@ const EventsDashboard = () => {
       // CRITICAL: Fetch fresh data from database, NOT stale client-side events state
       // This prevents duplicate imports when clicking import multiple times
       console.log('Fetching fresh events from database for duplicate detection...');
-      const freshEventsFromDB = await eventsApi.getAll(startDate, endDate);
+      // FIXED: Fetch ALL events (wide date range) to properly detect duplicates for future camps
+      const allStartDate = '2024-01-01'; // Start from beginning of 2024
+      const allEndDate = '2026-12-31'; // Through end of 2026
+      const freshEventsFromDB = await eventsApi.getAll(allStartDate, allEndDate);
       console.log(`Found ${freshEventsFromDB.length} existing events in database`);
       
       const existingEventsMap = new Map();
@@ -1216,10 +1229,14 @@ const EventsDashboard = () => {
       for (const newEvent of batchUnique) {
         let existingEvent = null;
         
-        // Find existing event by URL or composite key
+        // Find existing event by URL (must also match gym_id) or composite key
         if (newEvent.event_url) {
           const urlKey = newEvent.event_url.split('?')[0];
-          existingEvent = existingEventsMap.get(urlKey);
+          const urlMatch = existingEventsMap.get(urlKey);
+          // FIXED: URL match must ALSO match gym_id to avoid false duplicates with UNKNOWN URLs
+          if (urlMatch && urlMatch.gym_id === newEvent.gym_id) {
+            existingEvent = urlMatch;
+          }
         }
         
         if (!existingEvent) {
