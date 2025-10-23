@@ -441,10 +441,10 @@ const EventsDashboard = () => {
       
     } catch (err) {
       // Only show this alert once
-      const hasSeenBlockerAlert = localStorage.getItem('hasSeenBlockerAlert');
-      if (!hasSeenBlockerAlert) {
+      const hasSeenCatchAlert = localStorage.getItem('hasSeenCatchAlert');
+      if (!hasSeenCatchAlert) {
         alert(`🚫 Pop-up Blocker Active!\n\nYour browser is blocking multiple tabs from opening.\n\n✅ How to fix:\n1. Look for the pop-up blocked icon in your address bar\n2. Click it and select "Always allow pop-ups from this site"\n3. Try again\n\nThis is a one-time setup!`);
-        localStorage.setItem('hasSeenBlockerAlert', 'true');
+        localStorage.setItem('hasSeenCatchAlert', 'true');
       }
     }
 
