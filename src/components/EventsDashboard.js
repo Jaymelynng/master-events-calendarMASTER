@@ -2212,9 +2212,20 @@ The system will add new events and update any changed events automatically.`;
                             const totalCount = counts[gym]?.total || 0;
                             const classesUrl = getGymLinkUrl(gym, 'Classes') || getGymLinkUrl(gym, 'Programs') || getGymLinkUrl(gym, 'Booking (Special Events)');
                             
-                            // Calculate if gym meets total monthly requirements
+                            // Calculate if gym meets ALL individual requirements (not just total)
                             const totalRequired = Object.values(monthlyRequirements).reduce((sum, req) => sum + req, 0);
-                            const isDeficient = totalCount < totalRequired;
+                            
+                            // Check each requirement individually
+                            let meetsAllRequirements = true;
+                            Object.keys(monthlyRequirements).forEach(eventType => {
+                              const requiredCount = monthlyRequirements[eventType];
+                              const currentCount = counts[gym]?.[eventType] || 0;
+                              if (currentCount < requiredCount) {
+                                meetsAllRequirements = false;
+                              }
+                            });
+                            
+                            const isDeficient = !meetsAllRequirements;
                             
                             // Use booking page from Supabase data
                             const finalUrl = classesUrl || getGymLinkUrl(gym, 'BOOKING') || '#';
@@ -2225,7 +2236,7 @@ The system will add new events and update any changed events automatically.`;
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className={`font-bold inline-flex items-center justify-center gap-1 px-3 py-2 rounded transition-all duration-200 hover:scale-105 hover:shadow-md min-w-[48px] h-[40px] ${
-                                  isDeficient ? 'text-red-700' : 'text-gray-700'
+                                  isDeficient ? 'text-red-700 bg-red-50' : 'text-green-700 bg-green-50'
                                 }`}
                                 style={{ backgroundColor: isDeficient ? 'transparent' : 'transparent' }}
                                 title={`View all programs at ${gym} (${totalCount}/${totalRequired})`}
