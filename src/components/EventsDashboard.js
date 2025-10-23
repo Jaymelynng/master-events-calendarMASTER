@@ -2117,7 +2117,7 @@ The system will add new events and update any changed events automatically.`;
                         {eventType.display_name || eventType.name}
                       </th>
                     ))}
-                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>Total Tracked</th>
+                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>Total (4 Required)</th>
                     <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>Missing</th>
                     <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>CAMPS</th>
                   </tr>
@@ -2230,7 +2230,7 @@ The system will add new events and update any changed events automatically.`;
                                 style={{ backgroundColor: isDeficient ? 'transparent' : 'transparent' }}
                                 title={`View all programs at ${gym} (${totalCount}/${totalRequired})`}
                               >
-                                <span className="text-lg font-bold">{totalCount}</span>
+                                <span className="text-lg font-bold">{totalCount}/{totalRequired}</span>
                                 <svg className="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                 </svg>
