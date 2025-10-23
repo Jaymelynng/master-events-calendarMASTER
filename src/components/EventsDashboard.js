@@ -430,12 +430,22 @@ const EventsDashboard = () => {
       // Check if any were blocked after attempting to open
       setTimeout(() => {
         if (openedCount < uniqueUrls.length) {
-          alert(`🚫 Pop-up Blocker Active!\n\nTrying to open ${uniqueUrls.length} pages, but your browser is blocking them.\n\n✅ How to fix:\n1. Look for the pop-up blocked icon in your address bar (usually top-right)\n2. Click it and select "Always allow pop-ups from this site"\n3. Click the ✨ sparkle button again\n\nThis is a one-time setup - after allowing pop-ups, all pages will open instantly!`);
+          // Only show this alert once
+          const hasSeenBlockerAlert = localStorage.getItem('hasSeenBlockerAlert');
+          if (!hasSeenBlockerAlert) {
+            alert(`🚫 Pop-up Blocker Active!\n\nTrying to open ${uniqueUrls.length} pages, but your browser is blocking them.\n\n✅ How to fix:\n1. Look for the pop-up blocked icon in your address bar (usually top-right)\n2. Click it and select "Always allow pop-ups from this site"\n3. Click the ✨ sparkle button again\n\nThis is a one-time setup - after allowing pop-ups, all pages will open instantly!`);
+            localStorage.setItem('hasSeenBlockerAlert', 'true');
+          }
         }
       }, uniqueUrls.length * 100 + 500);
       
     } catch (err) {
-      alert(`🚫 Pop-up Blocker Active!\n\nYour browser is blocking multiple tabs from opening.\n\n✅ How to fix:\n1. Look for the pop-up blocked icon in your address bar\n2. Click it and select "Always allow pop-ups from this site"\n3. Try again\n\nThis is a one-time setup!`);
+      // Only show this alert once
+      const hasSeenBlockerAlert = localStorage.getItem('hasSeenBlockerAlert');
+      if (!hasSeenBlockerAlert) {
+        alert(`🚫 Pop-up Blocker Active!\n\nYour browser is blocking multiple tabs from opening.\n\n✅ How to fix:\n1. Look for the pop-up blocked icon in your address bar\n2. Click it and select "Always allow pop-ups from this site"\n3. Try again\n\nThis is a one-time setup!`);
+        localStorage.setItem('hasSeenBlockerAlert', 'true');
+      }
     }
 
     // Completion toast
