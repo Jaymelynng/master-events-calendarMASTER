@@ -2117,8 +2117,7 @@ The system will add new events and update any changed events automatically.`;
                         {eventType.display_name || eventType.name}
                       </th>
                     ))}
-                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>Total (4 Required)</th>
-                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>Missing</th>
+                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>Status</th>
                     <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>CAMPS</th>
                   </tr>
                 </thead>
@@ -2209,56 +2208,35 @@ The system will add new events and update any changed events automatically.`;
                         })}
                         <td className="p-1 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
                           {(() => {
-                            const totalCount = counts[gym]?.total || 0;
-                            const classesUrl = getGymLinkUrl(gym, 'Classes') || getGymLinkUrl(gym, 'Programs') || getGymLinkUrl(gym, 'Booking (Special Events)');
-                            
-                            // Calculate if gym meets ALL individual requirements (not just total)
-                            const totalRequired = Object.values(monthlyRequirements).reduce((sum, req) => sum + req, 0);
-                            
                             // Check each requirement individually
                             let meetsAllRequirements = true;
+                            let missingItems = [];
+                            
                             Object.keys(monthlyRequirements).forEach(eventType => {
                               const requiredCount = monthlyRequirements[eventType];
                               const currentCount = counts[gym]?.[eventType] || 0;
                               if (currentCount < requiredCount) {
                                 meetsAllRequirements = false;
+                                const deficit = requiredCount - currentCount;
+                                const shortLabel = eventType === 'KIDS NIGHT OUT' ? 'KNO' : eventType;
+                                missingItems.push(`+${deficit} ${shortLabel}`);
                               }
                             });
                             
-                            const isDeficient = !meetsAllRequirements;
-                            
-                            // Use booking page from Supabase data
-                            const finalUrl = classesUrl || getGymLinkUrl(gym, 'BOOKING') || '#';
-                            
-                            return (
-                              <a 
-                                href={finalUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className={`font-bold inline-flex items-center justify-center gap-1 px-3 py-2 rounded transition-all duration-200 hover:scale-105 hover:shadow-md min-w-[48px] h-[40px] ${
-                                  isDeficient ? 'text-red-700 bg-red-50' : 'text-green-700 bg-green-50'
-                                }`}
-                                style={{ backgroundColor: isDeficient ? 'transparent' : 'transparent' }}
-                                title={`View all programs at ${gym} (${totalCount}/${totalRequired})`}
-                              >
-                                <span className="text-lg font-bold">{totalCount}/{totalRequired}</span>
-                                <svg className="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                </svg>
-                              </a>
-                            );
+                            if (meetsAllRequirements) {
+                              return (
+                                <span className="text-green-700 font-bold bg-green-50 px-2 py-1 rounded">
+                                  ✓ Complete
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <span className="text-red-700 font-bold bg-red-50 px-2 py-1 rounded">
+                                  {missingItems.join(', ')}
+                                </span>
+                              );
+                            }
                           })()}
-                        </td>
-                        <td className="p-1 border text-xs text-center">
-                          {getMissingEventTypes(gym).length > 0 ? (
-                            <span style={{ color: theme.colors.error }}>
-                              {getMissingEventTypes(gym).join(', ')}
-                            </span>
-                          ) : (
-                            <span style={{ color: theme.colors.success }}>
-                              ✅ All events in
-                            </span>
-                          )}
                         </td>
                         <td className="p-1 border text-center text-xs">
                           {(() => {
