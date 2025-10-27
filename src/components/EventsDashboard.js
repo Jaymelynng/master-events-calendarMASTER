@@ -277,10 +277,18 @@ const EventsDashboard = () => {
   const [selectedEventType, setSelectedEventType] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('calendar');
-  // Dynamic month - starts with current month
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth()); // Current month (0-indexed)  
+  // Dynamic month - starts with default month (November)
+  const [defaultMonth, setDefaultMonth] = useState(10); // Default month (November = 10, 0-indexed)
+  const [currentMonth, setCurrentMonth] = useState(10); // Start with November (0-indexed)  
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear()); // Current year
   const [calendarView, setCalendarView] = useState('full'); // Start with full month view
+
+  // Function to reset to default month
+  const resetToDefaultMonth = () => {
+    setCurrentMonth(defaultMonth);
+    setCurrentYear(new Date().getFullYear());
+    setCalendarView('full');
+  };
   const [selectedEventForPanel, setSelectedEventForPanel] = useState(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
@@ -1775,26 +1783,37 @@ The system will add new events and update any changed events automatically.`;
             </h1>
               <p className="text-white text-lg opacity-90">All gyms special events in one place</p>
             
-            {/* Secret audit history trigger - Ctrl+Click */}
+            {/* Secret Magic Wand - Ctrl+Click */}
             <div 
                 className="text-sm text-white opacity-70 mt-3 cursor-default select-none hover:opacity-100 transition-opacity"
               onClick={(e) => {
                 if (e.ctrlKey || e.metaKey) {
                   e.preventDefault();
-                  loadAuditHistory();
-                  setShowAuditHistory(true);
+                  // Toggle between audit history and default month setting
+                  if (e.shiftKey) {
+                    // Shift+Ctrl+Click: Set default month
+                    const newDefaultMonth = prompt(`Set default month (0=Jan, 1=Feb, ..., 10=Nov, 11=Dec):`, defaultMonth);
+                    if (newDefaultMonth !== null && !isNaN(newDefaultMonth) && newDefaultMonth >= 0 && newDefaultMonth <= 11) {
+                      setDefaultMonth(parseInt(newDefaultMonth));
+                      resetToDefaultMonth();
+                    }
+                  } else {
+                    // Ctrl+Click: Show audit history
+                    loadAuditHistory();
+                    setShowAuditHistory(true);
+                  }
                 }
               }}
-              title="Ctrl+Click for secret features"
+              title="Ctrl+Click: Audit History | Shift+Ctrl+Click: Set Default Month"
             >
-              {new Date().toLocaleString('en-US', { 
+              ✨ Magic Wand: {new Date().toLocaleString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
-              })}
+              })} ✨
               </div>
             </div>
             
@@ -1815,6 +1834,15 @@ The system will add new events and update any changed events automatically.`;
               >
                 <ChevronLeft className="w-4 h-4" />
                 Previous
+              </button>
+              
+              <button
+                onClick={resetToDefaultMonth}
+                className="flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold transition-all duration-200 hover:scale-105 hover:shadow-xl"
+                style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.25)' }}
+                title={`Reset to default month: ${new Date(new Date().getFullYear(), defaultMonth).toLocaleDateString('en-US', { month: 'long' })}`}
+              >
+                ✨ Reset to Default
               </button>
               
               <div className="flex-shrink-0">
