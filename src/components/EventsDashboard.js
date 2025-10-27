@@ -1789,24 +1789,52 @@ The system will add new events and update any changed events automatically.`;
               onClick={(e) => {
                 if (e.ctrlKey || e.metaKey) {
                   e.preventDefault();
-                  // Toggle between audit history and default month setting
+                  
                   if (e.shiftKey) {
-                    // Shift+Ctrl+Click: Set default month
-                    const newDefaultMonth = prompt(`Set default month (0=Jan, 1=Feb, ..., 10=Nov, 11=Dec):`, defaultMonth);
-                    if (newDefaultMonth !== null && !isNaN(newDefaultMonth) && newDefaultMonth >= 0 && newDefaultMonth <= 11) {
-                      setDefaultMonth(parseInt(newDefaultMonth));
-                      resetToDefaultMonth();
+                    // Shift+Ctrl+Click: Magic Wand Settings Menu
+                    const choice = prompt(`🔮 F12 Magic Wand Settings:
+1. Set Default Month (current: ${new Date(new Date().getFullYear(), defaultMonth).toLocaleDateString('en-US', { month: 'long' })})
+2. Clear Cache & Refresh Data
+3. Reset to Default Month
+4. Show Audit History
+
+Enter choice (1-4):`, '1');
+                    
+                    switch(choice) {
+                      case '1':
+                        const newDefaultMonth = prompt(`Set default month (0=Jan, 1=Feb, ..., 10=Nov, 11=Dec):`, defaultMonth);
+                        if (newDefaultMonth !== null && !isNaN(newDefaultMonth) && newDefaultMonth >= 0 && newDefaultMonth <= 11) {
+                          setDefaultMonth(parseInt(newDefaultMonth));
+                          alert(`✅ Default month set to: ${new Date(new Date().getFullYear(), parseInt(newDefaultMonth)).toLocaleDateString('en-US', { month: 'long' })}`);
+                        }
+                        break;
+                      case '2':
+                        cache.clearAll();
+                        localStorage.removeItem('eventsCacheData');
+                        alert('✅ Cache cleared! Refreshing...');
+                        window.location.reload();
+                        break;
+                      case '3':
+                        resetToDefaultMonth();
+                        alert(`✅ Reset to default month: ${new Date(new Date().getFullYear(), defaultMonth).toLocaleDateString('en-US', { month: 'long' })}`);
+                        break;
+                      case '4':
+                        loadAuditHistory();
+                        setShowAuditHistory(true);
+                        break;
+                      default:
+                        alert('❌ Invalid choice');
                     }
                   } else {
-                    // Ctrl+Click: Show audit history
-                    loadAuditHistory();
-                    setShowAuditHistory(true);
+                    // Ctrl+Click: Quick reset to default month
+                    resetToDefaultMonth();
+                    alert(`✨ Reset to default month: ${new Date(new Date().getFullYear(), defaultMonth).toLocaleDateString('en-US', { month: 'long' })}`);
                   }
                 }
               }}
-              title="Ctrl+Click: Audit History | Shift+Ctrl+Click: Set Default Month"
+              title="Ctrl+Click: Quick Reset to Default | Shift+Ctrl+Click: Magic Wand Settings"
             >
-              ✨ Magic Wand: {new Date().toLocaleString('en-US', { 
+              ✨ F12 Magic Wand: {new Date().toLocaleString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
@@ -1836,14 +1864,6 @@ The system will add new events and update any changed events automatically.`;
                 Previous
               </button>
               
-              <button
-                onClick={resetToDefaultMonth}
-                className="flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold transition-all duration-200 hover:scale-105 hover:shadow-xl"
-                style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.25)' }}
-                title={`Reset to default month: ${new Date(new Date().getFullYear(), defaultMonth).toLocaleDateString('en-US', { month: 'long' })}`}
-              >
-                ✨ Reset to Default
-              </button>
               
               <div className="flex-shrink-0">
                 <h2 className="text-3xl font-bold px-10 py-4 rounded-full bg-white text-gray-800 text-center whitespace-nowrap"

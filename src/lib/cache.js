@@ -72,13 +72,14 @@ export const cachedApi = {
   },
 
   async getEvents(startDate, endDate) {
-    const params = { startDate, endDate };
-    const cached = cache.get('events', params);
-    if (cached) return cached;
+    // DISABLED CACHE FOR EVENTS - Always fetch fresh data
+    // const params = { startDate, endDate };
+    // const cached = cache.get('events', params);
+    // if (cached) return cached;
     
     const { eventsApi } = await import('./api');
     const data = await eventsApi.getAll(startDate, endDate);
-    cache.set('events', data, params, 300000); // 5 min cache
+    // cache.set('events', data, params, 300000); // DISABLED - 5 min cache
     return data;
   },
 
