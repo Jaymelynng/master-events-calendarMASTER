@@ -74,19 +74,21 @@ export default function BulkImportModal({
           <div>
             <h3 className="font-semibold mb-2 text-green-800">🏢 Step 2: Select Gym</h3>
             
-            <select
-              value={selectedGymId}
-              onChange={(e) => setSelectedGymId(e.target.value)}
-              className="w-full p-3 border rounded-lg font-medium text-lg"
-              style={{ borderColor: theme.colors.accent }}
-            >
-              <option value="">-- Select Gym --</option>
+            <div className="grid grid-cols-2 gap-2 border rounded-lg p-3" style={{ borderColor: theme.colors.accent }}>
               {gymsList.map((gym) => (
-                <option key={gym.id} value={gym.id}>
-                  {gym.name}
-                </option>
+                <label key={gym.id} className="flex items-center text-sm cursor-pointer hover:bg-gray-50 p-2 rounded">
+                  <input
+                    type="radio"
+                    name="selectedGym"
+                    value={gym.id}
+                    checked={selectedGymId === gym.id}
+                    onChange={(e) => setSelectedGymId(e.target.value)}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">{gym.name}</span>
+                </label>
               ))}
-            </select>
+            </div>
           </div>
         </div>
 

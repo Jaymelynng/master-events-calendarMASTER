@@ -470,7 +470,7 @@ const EventsDashboard = () => {
       ].filter(Boolean);
 
       // Check if user has seen the pop-up alert before
-      const hasSeenPopupAlert = localStorage.getItem('hasSeenSparklePopupAlert');
+      const hasSeenPopupAlert = localStorage.getItem('hasSeenSparklePopupAlert') === 'true';
       
       console.log('🔍 Sparkle popup check:', { hasSeenPopupAlert, willShow: !hasSeenPopupAlert });
       
@@ -568,6 +568,9 @@ const EventsDashboard = () => {
   }, [calendarView, currentYear, currentMonth]);
 
   const goToPreviousMonth = () => {
+    // Save current scroll position
+    const currentScrollY = window.scrollY;
+    
     if (currentMonth === 0) {
       setCurrentMonth(11);
       setCurrentYear(currentYear - 1);
@@ -575,9 +578,17 @@ const EventsDashboard = () => {
       setCurrentMonth(currentMonth - 1);
     }
     setCalendarView('full');
+    
+    // Restore scroll position after state updates
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollY);
+    }, 0);
   };
 
   const goToNextMonth = () => {
+    // Save current scroll position
+    const currentScrollY = window.scrollY;
+    
     if (currentMonth === 11) {
       setCurrentMonth(0);
       setCurrentYear(currentYear + 1);
@@ -585,6 +596,11 @@ const EventsDashboard = () => {
       setCurrentMonth(currentMonth + 1);
     }
     setCalendarView('full');
+    
+    // Restore scroll position after state updates
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollY);
+    }, 0);
   };
 
   const scrollToGym = (gym) => {
@@ -676,14 +692,25 @@ const EventsDashboard = () => {
     
     allGyms.forEach(gym => {
       counts[gym] = {};
+      // Find the gym_id for this gym name
+      const gymData = gymsList.find(g => g.name === gym);
+      const gymId = gymData?.gym_code || gymData?.id;
+      
       trackedTypes.forEach(type => {
         counts[gym][type] = currentMonthEvents.filter(
-          event => (event.gym_name || event.gym_code) === gym && event.type === type
+          event => {
+            // Match by gym_id primarily, fallback to gym_name or gym_code
+            const eventGym = event.gym_id || event.gym_code || event.gym_name;
+            return (eventGym === gymId || eventGym === gym) && event.type === type;
+          }
         ).length;
       });
       
       counts[gym].total = currentMonthEvents.filter(
-        event => (event.gym_name || event.gym_code) === gym && trackedTypes.includes(event.type)
+        event => {
+          const eventGym = event.gym_id || event.gym_code || event.gym_name;
+          return (eventGym === gymId || eventGym === gym) && trackedTypes.includes(event.type);
+        }
       ).length;
     });
     
@@ -2225,14 +2252,14 @@ The system will add new events and update any changed events automatically.`;
                             
                             if (meetsAllRequirements) {
                               return (
-                                <span className="text-green-700 font-bold bg-green-50 px-2 py-1 rounded">
+                                <span className="text-green-700 font-bold bg-green-100 px-3 py-2 rounded-lg border border-green-200">
                                   ✓ Complete
                                 </span>
                               );
                             } else {
                               return (
-                                <span className="text-red-700 font-bold bg-red-50 px-2 py-1 rounded">
-                                  {missingItems.join(', ')}
+                                <span className="text-red-700 font-bold bg-red-100 px-3 py-2 rounded-lg border border-red-200">
+                                  {missingItems.join(' • ')}
                                 </span>
                               );
                             }
@@ -2997,6 +3024,44 @@ The system will add new events and update any changed events automatically.`;
                     })}
                   </div>
                 </div>
+              </div>
+
+              {/* Bottom Month Navigation - Mirror of Top */}
+              <div className="flex justify-center items-center gap-4 mb-4 mt-6">
+                <button
+                  onClick={goToPreviousMonth}
+                  className="flex items-center gap-1 px-3 py-1 rounded-full text-white transition-all duration-200 hover:scale-105 hover:shadow-md text-sm"
+                  style={{ backgroundColor: theme.colors.primary }}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                <div className="text-base font-bold" style={{ color: theme.colors.textPrimary }}>
+                  {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </div>
+                <button
+                  onClick={goToNextMonth}
+                  className="flex items-center gap-1 px-3 py-1 rounded-full text-white transition-all duration-200 hover:scale-105 hover:shadow-md text-sm"
+                  style={{ backgroundColor: theme.colors.primary }}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Bottom ADD EVENT Button */}
+              <div className="flex justify-center mb-6">
+                <button
+                  onClick={() => setShowAddEventModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 shadow-md font-medium text-sm"
+                  style={{ 
+                    backgroundColor: theme.colors.primary,
+                    color: 'white'
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                  ADD EVENT
+                </button>
               </div>
               </div>
 
