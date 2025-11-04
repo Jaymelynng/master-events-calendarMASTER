@@ -72,15 +72,41 @@ export const eventsApi = {
     }
     
     try {
-      console.log('🚀 Sending to Supabase:', events);
+      console.log('🔍 Checking for existing events...');
+      console.log('📊 Total events to import:', events.length);
       
-      // Use upsert with ignoreDuplicates to skip existing events
+      // Get list of existing event URLs
+      const eventUrls = events.map(e => e.event_url);
+      const { data: existingEvents, error: checkError } = await supabase
+        .from('events')
+        .select('event_url')
+        .in('event_url', eventUrls);
+      
+      if (checkError) {
+        console.error('❌ Error checking existing events:', checkError);
+        throw new Error(`Failed to check existing events: ${checkError.message}`);
+      }
+      
+      // Create a Set of existing URLs for fast lookup
+      const existingUrls = new Set(existingEvents?.map(e => e.event_url) || []);
+      
+      // Filter out events that already exist
+      const newEvents = events.filter(e => !existingUrls.has(e.event_url));
+      const duplicateCount = events.length - newEvents.length;
+      
+      console.log(`📋 Found ${duplicateCount} duplicates, ${newEvents.length} new events to import`);
+      
+      if (newEvents.length === 0) {
+        console.log('✅ All events already exist - no new events to import');
+        return [];
+      }
+      
+      console.log('🚀 Inserting new events to Supabase:', newEvents);
+      
+      // Insert only new events
       const { data, error } = await supabase
         .from('events')
-        .upsert(events, { 
-          onConflict: 'event_url',
-          ignoreDuplicates: true 
-        })
+        .insert(newEvents)
         .select();
       
       if (error) {
@@ -88,11 +114,7 @@ export const eventsApi = {
         throw new Error(`Database error: ${error.message}`);
       }
       
-      if (!data || data.length === 0) {
-        console.log('✅ All events were duplicates - none imported');
-      } else {
-        console.log(`✅ Successfully imported ${data.length} new events`);
-      }
+      console.log(`✅ Successfully imported ${data?.length || 0} new events`);
       
       return data || [];
     } catch (networkError) {
