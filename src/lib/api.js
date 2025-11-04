@@ -72,26 +72,31 @@ export const eventsApi = {
     }
     
     try {
-      console.log('Sending to Supabase:', events);
+      console.log('🚀 Sending to Supabase:', events);
       
-      // Use simple insert instead of upsert to avoid constraint issues
+      // Use upsert with ignoreDuplicates to skip existing events
       const { data, error } = await supabase
         .from('events')
-        .insert(events)
+        .upsert(events, { 
+          onConflict: 'event_url',
+          ignoreDuplicates: true 
+        })
         .select();
       
       if (error) {
-        console.error('Supabase bulk import error:', error);
+        console.error('❌ Supabase bulk import error:', error);
         throw new Error(`Database error: ${error.message}`);
       }
       
       if (!data || data.length === 0) {
-        console.warn('Bulk import returned no data');
+        console.log('✅ All events were duplicates - none imported');
+      } else {
+        console.log(`✅ Successfully imported ${data.length} new events`);
       }
       
       return data || [];
     } catch (networkError) {
-      console.error('Network error during bulk import:', networkError);
+      console.error('❌ Network error during bulk import:', networkError);
       throw new Error(`Failed to save events: ${networkError.message}`);
     }
   },
