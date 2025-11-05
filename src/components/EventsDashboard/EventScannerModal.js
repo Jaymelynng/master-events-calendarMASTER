@@ -1,20 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function EventScannerModal({
   theme,
   onClose,
   gymsList,
-  existingEvents
+  eventsApi
 }) {
   const [pastedText, setPastedText] = useState('');
   const [scanResults, setScanResults] = useState(null);
   const [scanning, setScanning] = useState(false);
+  const [allEvents, setAllEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState({
     'CLINIC': true,
     'KIDS NIGHT OUT': true,
     'OPEN GYM': true,
     'CAMP': true
   });
+
+  // Fetch ALL events from database when modal opens
+  useEffect(() => {
+    const fetchAllEvents = async () => {
+      try {
+        console.log('🔍 Scanner fetching ALL events from database...');
+        // Fetch wide date range to get everything
+        const allEventsFromDb = await eventsApi.getAll('2024-01-01', '2027-12-31');
+        setAllEvents(allEventsFromDb || []);
+        console.log(`📊 Scanner loaded ${allEventsFromDb?.length || 0} total events from database`);
+      } catch (error) {
+        console.error('Error fetching events for scanner:', error);
+        setAllEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAllEvents();
+  }, [eventsApi]);
 
   // Parse gym name from text
   const parseGymFromText = (text) => {
@@ -178,7 +200,7 @@ export default function EventScannerModal({
       
       categoriesToProcess.forEach(category => {
         const textEvents = eventsFoundInText.filter(e => e.type === category);
-        const dbEvents = existingEvents.filter(e => e.type === category && new Date(e.date) >= new Date());
+        const dbEvents = allEvents.filter(e => e.type === category && new Date(e.date) >= new Date());
 
         console.log(`🔍 Scanning ${category}:`, {
           textEvents: textEvents.length,
@@ -261,6 +283,19 @@ export default function EventScannerModal({
     }
   };
 
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="bg-white rounded-lg p-6">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin text-3xl">🔍</div>
+            <div className="text-lg">Loading all events from database...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-hidden">
       <div className="bg-white rounded-lg p-6 w-full max-w-6xl mx-4 max-h-[90vh] overflow-y-auto flex flex-col">
@@ -269,6 +304,7 @@ export default function EventScannerModal({
           <h2 className="text-2xl font-bold flex items-center gap-2" style={{ color: theme.colors.primary }}>
             🔍 Quick Event Scanner
             <span className="text-sm bg-purple-100 text-purple-700 px-2 py-1 rounded">Fast Detection</span>
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">{allEvents.length} events loaded</span>
           </h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
         </div>

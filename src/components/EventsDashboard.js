@@ -1696,9 +1696,11 @@ The system will add new events and update any changed events automatically.`;
         <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"><div className="bg-white rounded-lg p-6">Loading...</div></div>}>
           <EventScannerModal
             theme={theme}
-            onClose={() => setShowEventScanner(false)}
+            onClose={async () => {
+              setShowEventScanner(false);
+            }}
             gymsList={gymsList}
-            existingEvents={events}
+            eventsApi={eventsApi}
           />
         </Suspense>
       )}
