@@ -1257,14 +1257,13 @@ const EventsDashboard = () => {
       
       const existingEventsMap = new Map();
       (freshEventsFromDB || []).forEach(ev => {
-        // Map by URL without query params
+        // Map by URL without query params (URLs are unique per event)
         if (ev.event_url) {
           const urlKey = ev.event_url.split('?')[0];
           existingEventsMap.set(urlKey, ev);
         }
-        // Also map by composite key
-        const compositeKey = `${ev.gym_id}-${ev.date}-${ev.time}-${ev.type}`;
-        existingEventsMap.set(compositeKey, ev);
+        // NOTE: Removed composite key mapping - it was causing false duplicates
+        // for camps with same date/time but different activities (Gymnastics vs Ninja)
       });
       
       const skippedEvents = [];
@@ -1274,20 +1273,20 @@ const EventsDashboard = () => {
       for (const newEvent of batchUnique) {
         let existingEvent = null;
         
-        // Find existing event by URL (must also match gym_id) or composite key
+        // Find existing event by URL ONLY (each event has unique URL)
+        // This ensures Gymnastics and Ninja camps with different event IDs are treated as separate events
         if (newEvent.event_url) {
           const urlKey = newEvent.event_url.split('?')[0];
           const urlMatch = existingEventsMap.get(urlKey);
-          // FIXED: URL match must ALSO match gym_id to avoid false duplicates with UNKNOWN URLs
+          // URL match must ALSO match gym_id for safety
           if (urlMatch && urlMatch.gym_id === newEvent.gym_id) {
             existingEvent = urlMatch;
           }
         }
         
-        if (!existingEvent) {
-          const compositeKey = `${newEvent.gym_id}-${newEvent.date}-${newEvent.time}-${newEvent.type}`;
-          existingEvent = existingEventsMap.get(compositeKey);
-        }
+        // NOTE: Removed composite key fallback - it caused Ninja camps to be incorrectly
+        // marked as duplicates of Gymnastics camps when they have the same date/time.
+        // Every F12 import has a unique event_url, so URL-only matching is sufficient and correct.
         
         if (existingEvent) {
           // Check for changes
