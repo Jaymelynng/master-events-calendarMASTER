@@ -216,7 +216,15 @@ export default function EventScannerModal({
       
       categoriesToProcess.forEach(category => {
         const textEvents = uniqueEvents.filter(e => e.type === category);
-        const dbEvents = allEvents.filter(e => e.type === category && new Date(e.date) >= new Date());
+        
+        // Only check FUTURE events (ignore past events)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dbEvents = allEvents.filter(e => {
+          const eventDate = new Date(e.date);
+          eventDate.setHours(0, 0, 0, 0);
+          return e.type === category && eventDate >= today;
+        });
 
         console.log(`🔍 Scanning ${category}:`, {
           textEvents: textEvents.length,
