@@ -75,23 +75,24 @@ export const eventsApi = {
       console.log('🔍 Checking for existing events...');
       console.log('📊 Total events to import:', events.length);
       
-      // Get list of existing event URLs
-      const eventUrls = events.map(e => e.event_url);
-      const { data: existingEvents, error: checkError } = await supabase
+      // Get ALL existing event URLs to check against (we'll filter in JS)
+      const { data: existingEvents, error: checkError} = await supabase
         .from('events')
-        .select('event_url')
-        .in('event_url', eventUrls);
+        .select('event_url');
       
       if (checkError) {
         console.error('❌ Error checking existing events:', checkError);
         throw new Error(`Failed to check existing events: ${checkError.message}`);
       }
       
-      // Create a Set of existing URLs for fast lookup
-      const existingUrls = new Set(existingEvents?.map(e => e.event_url) || []);
+      // Create a Set of existing URLs for fast lookup (strip query params)
+      const existingUrls = new Set(existingEvents?.map(e => e.event_url ? e.event_url.split('?')[0] : e.event_url) || []);
       
-      // Filter out events that already exist
-      const newEvents = events.filter(e => !existingUrls.has(e.event_url));
+      // Filter out events that already exist (compare base URLs without query params)
+      const newEvents = events.filter(e => {
+        const baseUrl = e.event_url ? e.event_url.split('?')[0] : e.event_url;
+        return !existingUrls.has(baseUrl);
+      });
       const duplicateCount = events.length - newEvents.length;
       
       console.log(`📋 Found ${duplicateCount} duplicates, ${newEvents.length} new events to import`);
