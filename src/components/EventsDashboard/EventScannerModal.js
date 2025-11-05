@@ -9,6 +9,12 @@ export default function EventScannerModal({
   const [pastedText, setPastedText] = useState('');
   const [scanResults, setScanResults] = useState(null);
   const [scanning, setScanning] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState({
+    'CLINIC': true,
+    'KIDS NIGHT OUT': true,
+    'OPEN GYM': true,
+    'CAMP': true
+  });
 
   // Parse gym name from text
   const parseGymFromText = (text) => {
@@ -125,30 +131,66 @@ export default function EventScannerModal({
       const results = {
         byCategory: {},
         totalNew: 0,
-        totalRemoved: 0
+        totalRemoved: 0,
+        debugInfo: []
       };
 
-      // Organize by category
-      ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM', 'CAMP'].forEach(category => {
+      // Helper to normalize time for comparison
+      const normalizeTime = (time) => {
+        if (!time) return '';
+        return time.replace(/\s+/g, ' ').trim().toUpperCase();
+      };
+
+      // Only process selected categories
+      const categoriesToProcess = Object.keys(selectedCategories).filter(cat => selectedCategories[cat]);
+      
+      categoriesToProcess.forEach(category => {
         const textEvents = eventsFoundInText.filter(e => e.type === category);
         const dbEvents = existingEvents.filter(e => e.type === category && new Date(e.date) >= new Date());
 
-        // Find NEW events (in text but not in DB)
-        const newEvents = textEvents.filter(textEvent => {
-          return !dbEvents.some(dbEvent => 
-            dbEvent.gym_id === textEvent.gym &&
-            dbEvent.date === textEvent.date &&
-            (dbEvent.time === textEvent.time || !textEvent.time)
-          );
+        console.log(`🔍 Scanning ${category}:`, {
+          textEvents: textEvents.length,
+          dbEvents: dbEvents.length
         });
 
-        // Find REMOVED events (in DB but not in text) - only future events
-        const removedEvents = dbEvents.filter(dbEvent => {
-          return !textEvents.some(textEvent =>
-            textEvent.gym === dbEvent.gym_id &&
-            textEvent.date === dbEvent.date
-          );
+        // Find NEW events (in text but not in DB)
+        const newEvents = textEvents.filter(textEvent => {
+          const found = dbEvents.some(dbEvent => {
+            const gymMatch = dbEvent.gym_id === textEvent.gym;
+            const dateMatch = dbEvent.date === textEvent.date;
+            const timeMatch = !textEvent.time || normalizeTime(dbEvent.time) === normalizeTime(textEvent.time);
+            
+            const isMatch = gymMatch && dateMatch && timeMatch;
+            
+            if (!isMatch && gymMatch && dateMatch) {
+              console.log('⚠️ Date match but not full match:', {
+                text: textEvent.title?.substring(0, 30),
+                textTime: textEvent.time,
+                dbTime: dbEvent.time,
+                timeMatch
+              });
+            }
+            
+            return isMatch;
+          });
+          
+          if (!found) {
+            console.log('✅ NEW EVENT:', textEvent.title, textEvent.date, textEvent.gym);
+          }
+          
+          return !found;
         });
+
+        // Find REMOVED events (in DB but not in text) - only if text has events for this category
+        let removedEvents = [];
+        if (textEvents.length > 0) {
+          removedEvents = dbEvents.filter(dbEvent => {
+            return !textEvents.some(textEvent =>
+              textEvent.gym === dbEvent.gym_id &&
+              textEvent.date === dbEvent.date
+            );
+          });
+        }
 
         if (textEvents.length > 0 || dbEvents.length > 0) {
           results.byCategory[category] = {
@@ -157,7 +199,8 @@ export default function EventScannerModal({
             newEvents: newEvents,
             removedEvents: removedEvents,
             gymsWithNew: [...new Set(newEvents.map(e => e.gymName))],
-            gymsWithRemoved: [...new Set(removedEvents.map(e => e.gym_name))]
+            gymsWithRemoved: [...new Set(removedEvents.map(e => e.gym_name))],
+            scanned: textEvents.length > 0
           };
           results.totalNew += newEvents.length;
           results.totalRemoved += removedEvents.length;
@@ -189,13 +232,59 @@ export default function EventScannerModal({
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <h3 className="font-semibold text-blue-800 mb-2">📋 How to Use:</h3>
           <ol className="text-sm text-blue-700 space-y-1">
-            <li>1. Open ALL gym event pages (use bulk buttons on main dashboard)</li>
-            <li>2. On each gym page, select ALL text (Ctrl+A) and copy (Ctrl+C)</li>
-            <li>3. Paste everything here (all gyms together is fine!)</li>
-            <li>4. Click "🔍 Scan for Changes"</li>
-            <li>5. System will show which gyms have NEW or REMOVED events</li>
+            <li>1. Select which categories you're scanning below ⬇️</li>
+            <li>2. Open those gym event pages (use bulk buttons on main dashboard)</li>
+            <li>3. On each gym page, select ALL text (Ctrl+A) and copy (Ctrl+C)</li>
+            <li>4. Paste everything here (all gyms together is fine!)</li>
+            <li>5. Click "🔍 Scan for Changes"</li>
             <li>6. Only do F12 import for gyms with new events! ⚡</li>
           </ol>
+        </div>
+
+        {/* Category Selector */}
+        <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+          <h3 className="font-semibold text-purple-800 mb-3">📂 What are you scanning? (Check the categories you pasted)</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <label className="flex items-center space-x-2 cursor-pointer bg-white p-3 rounded-lg border hover:border-purple-400 transition-colors">
+              <input
+                type="checkbox"
+                checked={selectedCategories['CLINIC']}
+                onChange={(e) => setSelectedCategories({...selectedCategories, 'CLINIC': e.target.checked})}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-medium">🎯 Clinics</span>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer bg-white p-3 rounded-lg border hover:border-purple-400 transition-colors">
+              <input
+                type="checkbox"
+                checked={selectedCategories['KIDS NIGHT OUT']}
+                onChange={(e) => setSelectedCategories({...selectedCategories, 'KIDS NIGHT OUT': e.target.checked})}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-medium">🌙 KNO</span>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer bg-white p-3 rounded-lg border hover:border-purple-400 transition-colors">
+              <input
+                type="checkbox"
+                checked={selectedCategories['OPEN GYM']}
+                onChange={(e) => setSelectedCategories({...selectedCategories, 'OPEN GYM': e.target.checked})}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-medium">🏃 Open Gym</span>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer bg-white p-3 rounded-lg border hover:border-purple-400 transition-colors">
+              <input
+                type="checkbox"
+                checked={selectedCategories['CAMP']}
+                onChange={(e) => setSelectedCategories({...selectedCategories, 'CAMP': e.target.checked})}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-medium">🏕️ Camps</span>
+            </label>
+          </div>
+          <p className="text-xs text-purple-600 mt-2">
+            💡 Tip: Uncheck categories you didn't paste to avoid "missing event" warnings
+          </p>
         </div>
 
         {/* Text Input */}
@@ -284,7 +373,7 @@ export default function EventScannerModal({
                 )}
 
                 {/* Removed Events */}
-                {data.removedEvents.length > 0 && (
+                {data.removedEvents.length > 0 && data.scanned && (
                   <div className="p-3 bg-orange-50 border border-orange-200 rounded">
                     <div className="font-semibold text-orange-800 mb-2">
                       ⚠️ {data.removedEvents.length} Event{data.removedEvents.length > 1 ? 's' : ''} Not Found on Website
@@ -310,9 +399,16 @@ export default function EventScannerModal({
                 )}
 
                 {/* No Changes */}
-                {data.newEvents.length === 0 && data.removedEvents.length === 0 && (
-                  <div className="p-3 bg-gray-100 rounded text-center text-gray-600">
+                {data.scanned && data.newEvents.length === 0 && data.removedEvents.length === 0 && (
+                  <div className="p-3 bg-green-100 rounded text-center text-green-700 font-medium">
                     ✅ All events match - No changes detected for this category
+                  </div>
+                )}
+                
+                {/* Not Scanned */}
+                {!data.scanned && (
+                  <div className="p-3 bg-gray-100 rounded text-center text-gray-500 italic">
+                    ⚪ Not scanned - No text found for this category
                   </div>
                 )}
               </div>
