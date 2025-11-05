@@ -179,7 +179,23 @@ export default function EventScannerModal({
         }
       }
 
-      console.log('📋 Total events found in pasted text:', eventsFoundInText.length);
+      console.log('📋 Total events found in pasted text (before dedup):', eventsFoundInText.length);
+
+      // De-duplicate events found in text (in case same gym appears multiple times in paste)
+      const uniqueEvents = [];
+      const seenKeys = new Set();
+      
+      eventsFoundInText.forEach(event => {
+        const key = `${event.gym}-${event.date}-${event.time || 'notime'}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          uniqueEvents.push(event);
+        } else {
+          console.log('⚠️ Duplicate in pasted text (skipping):', event.title?.substring(0, 40));
+        }
+      });
+
+      console.log('📋 Unique events after dedup:', uniqueEvents.length);
 
       // Compare with existing events in Supabase
       const results = {
@@ -199,7 +215,7 @@ export default function EventScannerModal({
       const categoriesToProcess = Object.keys(selectedCategories).filter(cat => selectedCategories[cat]);
       
       categoriesToProcess.forEach(category => {
-        const textEvents = eventsFoundInText.filter(e => e.type === category);
+        const textEvents = uniqueEvents.filter(e => e.type === category);
         const dbEvents = allEvents.filter(e => e.type === category && new Date(e.date) >= new Date());
 
         console.log(`🔍 Scanning ${category}:`, {
