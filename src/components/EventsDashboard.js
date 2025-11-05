@@ -1231,12 +1231,13 @@ const EventsDashboard = () => {
       }
       
       // Validate and process events
-      // 1) De-duplicate within the pasted batch by unique key
+      // 1) De-duplicate within the pasted batch by URL (each event has unique URL)
       const seenKeys = new Set();
       const batchUnique = [];
       let skippedInBatch = 0;
       for (const event of newEvents) {
-        const key = `${event.gym_id}-${event.date}-${event.time}-${event.type}`;
+        // Use URL instead of composite key to avoid false duplicates (Gymnastics vs Ninja)
+        const key = event.event_url ? event.event_url.split('?')[0] : `${event.gym_id}-${event.title}-${event.date}`;
         if (!seenKeys.has(key)) {
           seenKeys.add(key);
           batchUnique.push(event);
