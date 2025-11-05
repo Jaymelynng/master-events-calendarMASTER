@@ -11,6 +11,7 @@ import { cachedApi, cache } from '../lib/cache';
 import { supabase } from '../lib/supabase';
 import { useRealtimeEvents, useRealtimeGymLinks, useRealtimeGyms } from '../lib/useRealtimeEvents';
 import AdminPortalModal from './EventsDashboard/AdminPortalModal';
+import EventScannerModal from './EventsDashboard/EventScannerModal';
 
 // Exact Color Theme from user's specification
 const theme = {
@@ -297,6 +298,7 @@ const EventsDashboard = () => {
 
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+  const [showEventScanner, setShowEventScanner] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [bulkImportData, setBulkImportData] = useState('');
   const [rawEventListings, setRawEventListings] = useState('');
@@ -323,7 +325,7 @@ const EventsDashboard = () => {
   
   // Lock body scroll when modals are open
   useEffect(() => {
-    if (showAdminPortal || showBulkImportModal || showAddEventModal) {
+    if (showAdminPortal || showBulkImportModal || showAddEventModal || showEventScanner) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -333,7 +335,7 @@ const EventsDashboard = () => {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [showAdminPortal, showBulkImportModal, showAddEventModal]);
+  }, [showAdminPortal, showBulkImportModal, showAddEventModal, showEventScanner]);
   
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -1674,6 +1676,10 @@ The system will add new events and update any changed events automatically.`;
                         setShowAdminPortal(false);
                         setTimeout(() => setShowBulkImportModal(true), 100);
                       }}
+            onOpenEventScanner={() => {
+                        setShowAdminPortal(false);
+                        setTimeout(() => setShowEventScanner(true), 100);
+                      }}
             onOpenAuditHistory={() => {
               setShowAdminPortal(false);
               setTimeout(() => {
@@ -1681,6 +1687,18 @@ The system will add new events and update any changed events automatically.`;
                 setShowAuditHistory(true);
               }, 100);
             }}
+          />
+        </Suspense>
+      )}
+
+      {/* Event Scanner Modal - Quick Detection */}
+      {showEventScanner && (
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"><div className="bg-white rounded-lg p-6">Loading...</div></div>}>
+          <EventScannerModal
+            theme={theme}
+            onClose={() => setShowEventScanner(false)}
+            gymsList={gymsList}
+            existingEvents={events}
           />
         </Suspense>
       )}

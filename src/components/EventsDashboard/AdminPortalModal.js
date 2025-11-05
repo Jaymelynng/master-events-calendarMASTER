@@ -6,6 +6,7 @@ export default function AdminPortalModal({
   onOpenAddEvent,
   onOpenBulkImport,
   onOpenAuditHistory,
+  onOpenEventScanner,
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-hidden">
@@ -71,6 +72,17 @@ export default function AdminPortalModal({
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Add New Event
+                </button>
+              </div>
+
+              <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <h4 className="font-semibold text-purple-800 mb-2">🔍 Quick Event Scanner ⭐ NEW!</h4>
+                <p className="text-sm text-purple-600 mb-3">Paste gym page text to detect new/removed events (saves time!)</p>
+                <button
+                  onClick={onOpenEventScanner}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"
+                >
+                  Open Event Scanner
                 </button>
               </div>
 
