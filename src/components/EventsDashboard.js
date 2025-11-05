@@ -1235,16 +1235,20 @@ const EventsDashboard = () => {
       const seenKeys = new Set();
       const batchUnique = [];
       let skippedInBatch = 0;
+      console.log('🔧 [DEBUG] Deduplicating batch - total events:', newEvents.length);
       for (const event of newEvents) {
         // Use URL instead of composite key to avoid false duplicates (Gymnastics vs Ninja)
         const key = event.event_url ? event.event_url.split('?')[0] : `${event.gym_id}-${event.title}-${event.date}`;
+        console.log('🔧 [DEBUG] Event:', event.title?.substring(0, 30), 'Key:', key.substring(key.length - 20));
         if (!seenKeys.has(key)) {
           seenKeys.add(key);
           batchUnique.push(event);
         } else {
+          console.log('⚠️ [DEBUG] Skipping duplicate in batch');
           skippedInBatch++;
         }
       }
+      console.log('🔧 [DEBUG] After batch dedup:', batchUnique.length, 'unique events');
 
       // 2) Check for existing events and detect changes
       // CRITICAL: Fetch fresh data from database, NOT stale client-side events state
