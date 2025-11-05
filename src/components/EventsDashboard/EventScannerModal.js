@@ -62,11 +62,18 @@ export default function EventScannerModal({
     return null;
   };
 
-  // Parse time from text
+  // Parse time from text - handles multiple formats
   const parseTime = (timeText) => {
-    const match = timeText.match(/(\d{1,2}:\d{2}\s*[AP]M)\s*-\s*(\d{1,2}:\d{2}\s*[AP]M)/);
+    // Handle formats like: "6:15pm-7:15pm" or "6:15 PM - 7:15 PM" or "Fri| 6:15 PM - 7:15 PM"
+    const match = timeText.match(/(\d{1,2}:\d{2})\s*([ap]m)?\s*-\s*(\d{1,2}:\d{2})\s*([ap]m)?/i);
     if (match) {
-      return `${match[1]} - ${match[2]}`;
+      const start = match[1];
+      const startPeriod = match[2] || match[4]; // Get AM/PM from either position
+      const end = match[3];
+      const endPeriod = match[4];
+      
+      // Normalize to "HH:MM AM - HH:MM PM" format
+      return `${start} ${startPeriod?.toUpperCase() || 'AM'} - ${end} ${endPeriod?.toUpperCase() || 'PM'}`;
     }
     return null;
   };
@@ -98,19 +105,37 @@ export default function EventScannerModal({
         const gym = parseGymFromText(line);
         if (gym) {
           currentGym = gym;
+          console.log('🏢 Detected gym:', gym.name);
           continue;
         }
 
-        // Detect event type
-        if (line.includes('CLINIC') || line.includes('KIDS NIGHT OUT') || line.includes('OPEN GYM') || line.includes('CAMP')) {
+        // Detect event type from section headers
+        if (line.includes('CLINIC') || line.includes('KIDS NIGHT OUT') || line.includes('OPEN GYM') || line.includes('SCHOOL YEAR CAMP')) {
           currentEventType = parseEventType(line);
+          console.log('📂 Detected category:', currentEventType);
           continue;
         }
 
-        // Parse event line (contains title with date/time)
-        if (line.includes('|') && line.includes('2025') || line.includes('2026')) {
-          const date = parseDate(line);
-          const time = parseTime(line);
+        // Parse event TITLE line (contains pipes and year)
+        if (line.includes('|') && (line.includes('2025') || line.includes('2026'))) {
+          // This is the title line - get FULL title
+          const fullTitle = line;
+          
+          // Get date from next line that looks like: "Nov 14th, 2025 - Nov 14th, 2025"
+          let date = null;
+          let time = null;
+          
+          // Look ahead for structured date line
+          if (i + 1 < lines.length) {
+            const nextLine = lines[i + 1].trim();
+            date = parseDate(nextLine);
+          }
+          
+          // Look ahead for time line (format: "Fri| 6:15 PM - 7:15 PM")
+          if (i + 3 < lines.length) {
+            const timeLine = lines[i + 3].trim();
+            time = parseTime(timeLine);
+          }
           
           if (date && currentGym) {
             eventsFoundInText.push({
@@ -118,14 +143,21 @@ export default function EventScannerModal({
               gymName: currentGym.name,
               date: date,
               time: time,
-              title: line.split('|')[0].trim(),
+              title: fullTitle,
               type: currentEventType || parseEventType(line)
+            });
+            
+            console.log('✅ Parsed event:', {
+              gym: currentGym.abbr,
+              title: fullTitle.substring(0, 50),
+              date,
+              time
             });
           }
         }
       }
 
-      console.log('📋 Found events in pasted text:', eventsFoundInText);
+      console.log('📋 Total events found in pasted text:', eventsFoundInText.length);
 
       // Compare with existing events in Supabase
       const results = {
@@ -158,24 +190,37 @@ export default function EventScannerModal({
           const found = dbEvents.some(dbEvent => {
             const gymMatch = dbEvent.gym_id === textEvent.gym;
             const dateMatch = dbEvent.date === textEvent.date;
-            const timeMatch = !textEvent.time || normalizeTime(dbEvent.time) === normalizeTime(textEvent.time);
+            
+            // Match by time if available, otherwise just gym + date
+            let timeMatch = true;
+            if (textEvent.time && dbEvent.time) {
+              const normalizedTextTime = normalizeTime(textEvent.time);
+              const normalizedDbTime = normalizeTime(dbEvent.time);
+              timeMatch = normalizedTextTime === normalizedDbTime;
+              
+              if (!timeMatch) {
+                console.log('⏰ Time mismatch:', {
+                  text: textEvent.title?.substring(0, 40),
+                  textTime: textEvent.time,
+                  dbTime: dbEvent.time,
+                  normalizedText: normalizedTextTime,
+                  normalizedDb: normalizedDbTime
+                });
+              }
+            }
             
             const isMatch = gymMatch && dateMatch && timeMatch;
-            
-            if (!isMatch && gymMatch && dateMatch) {
-              console.log('⚠️ Date match but not full match:', {
-                text: textEvent.title?.substring(0, 30),
-                textTime: textEvent.time,
-                dbTime: dbEvent.time,
-                timeMatch
-              });
-            }
             
             return isMatch;
           });
           
           if (!found) {
-            console.log('✅ NEW EVENT:', textEvent.title, textEvent.date, textEvent.gym);
+            console.log('🆕 NEW EVENT DETECTED:', {
+              gym: textEvent.gym,
+              title: textEvent.title?.substring(0, 50),
+              date: textEvent.date,
+              time: textEvent.time
+            });
           }
           
           return !found;
