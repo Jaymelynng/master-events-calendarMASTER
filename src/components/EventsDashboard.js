@@ -805,7 +805,7 @@ const EventsDashboard = () => {
     );
   }
 
-  // Add Event Function
+  // Add/Update Event Function
   const handleAddEvent = async () => {
     try {
       // Calculate day of week
@@ -818,21 +818,46 @@ const EventsDashboard = () => {
         price: newEvent.price ? parseFloat(newEvent.price) : null
       };
       
-      const result = await eventsApi.create(eventData);
-      
-      // Log to audit system
-      if (result && result.id) {
-        await logEventChange(
-          result.id,
-          eventData.gym_id,
-          'CREATE',
-          null,
-          null,
-          null,
-          'Manual Add', // This identifies it was manually added
-          eventData.title,
-          eventData.date
-        );
+      // Check if we're editing or creating
+      if (editingEvent) {
+        // UPDATE existing event
+        const result = await eventsApi.update(editingEvent.id, eventData);
+        
+        // Log to audit system
+        if (result) {
+          await logEventChange(
+            editingEvent.id,
+            eventData.gym_id,
+            'UPDATE',
+            'all',
+            'Manual Edit',
+            'Updated',
+            eventData.title,
+            eventData.date
+          );
+        }
+        
+        setCopySuccess('✅ Event updated successfully!');
+      } else {
+        // CREATE new event
+        const result = await eventsApi.create(eventData);
+        
+        // Log to audit system
+        if (result && result.id) {
+          await logEventChange(
+            result.id,
+            eventData.gym_id,
+            'CREATE',
+            null,
+            null,
+            null,
+            'Manual Add',
+            eventData.title,
+            eventData.date
+          );
+        }
+        
+        setCopySuccess('✅ Event added successfully!');
       }
       
       // Refresh events list
@@ -841,6 +866,7 @@ const EventsDashboard = () => {
       
       // Close modal and reset form
       setShowAddEventModal(false);
+      setEditingEvent(null);
       setNewEvent({
         gym_id: '',
         title: '',
@@ -851,11 +877,10 @@ const EventsDashboard = () => {
         event_url: ''
       });
       
-      setCopySuccess('✅ Event added successfully!');
       setTimeout(() => setCopySuccess(''), 3000);
     } catch (error) {
-      console.error('Error adding event:', error);
-      setCopySuccess('❌ Error adding event');
+      console.error('Error saving event:', error);
+      setCopySuccess(editingEvent ? '❌ Error updating event' : '❌ Error adding event');
       setTimeout(() => setCopySuccess(''), 3000);
     }
   };
