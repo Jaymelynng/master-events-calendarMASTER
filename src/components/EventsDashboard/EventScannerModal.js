@@ -46,14 +46,30 @@ export default function EventScannerModal({
     return str.trim().toUpperCase().replace(/\s+/g, ' ');
   };
 
+  // Extract core title (first part before details)
+  const getCoreTitle = (title) => {
+    if (!title) return '';
+    // Get first part before first pipe or date
+    return title.split('|')[0].trim();
+  };
+
+  // Check title similarity (simple 80% match)
+  const titlesSimilar = (title1, title2) => {
+    const core1 = normalize(getCoreTitle(title1));
+    const core2 = normalize(getCoreTitle(title2));
+    return core1.includes(core2) || core2.includes(core1);
+  };
+
   const scanForDifferences = async () => {
     setScanning(true);
     
     try {
       const lines = pastedText.split('\n');
-      const differences = [];
+      const parsedEvents = [];
+      const newEvents = [];
+      const changedEvents = [];
       
-      // Parse each line that looks like an event
+      // STEP 1: Parse all events from text
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         
@@ -81,38 +97,69 @@ export default function EventScannerModal({
             const timeLine = lines[i + 3];
             const timeMatch = timeLine.match(/(\d{1,2}:\d{2})\s*([AP]M)?\s*-\s*(\d{1,2}:\d{2})\s*([AP]M)?/i);
             if (timeMatch) {
-              time = `${timeMatch[1]} ${timeMatch[2] || timeMatch[4] || 'AM'} - ${timeMatch[3]} ${timeMatch[4] || 'PM'}`;
+              const startPeriod = timeMatch[2] || timeMatch[4] || 'AM';
+              const endPeriod = timeMatch[4] || 'PM';
+              time = `${timeMatch[1]} ${startPeriod.toUpperCase()} - ${timeMatch[3]} ${endPeriod.toUpperCase()}`;
             }
           }
           
           if (date && time) {
-            // Find matching event in database
-            const matches = allEvents.filter(dbEvent => 
-              dbEvent.date === date &&
-              normalize(dbEvent.time) === normalize(time)
-            );
-            
-            if (matches.length > 0) {
-              // Found event(s) with same date/time - check if title matches
-              matches.forEach(dbEvent => {
-                if (normalize(dbEvent.title) !== normalize(title)) {
-                  differences.push({
-                    type: 'title_changed',
-                    dbEvent: dbEvent,
-                    websiteTitle: title,
-                    date: date,
-                    time: time
-                  });
-                }
-              });
-            }
+            parsedEvents.push({ title, date, time });
           }
         }
       }
       
+      console.log(`📋 Parsed ${parsedEvents.length} events from text`);
+      
+      // STEP 2: Compare each parsed event against database
+      parsedEvents.forEach(textEvent => {
+        let foundMatch = null;
+        let changeType = null;
+        
+        // Try to find matching event in database
+        for (const dbEvent of allEvents) {
+          // Method 1: Match by title similarity
+          if (titlesSimilar(textEvent.title, dbEvent.title)) {
+            foundMatch = dbEvent;
+            
+            // Check what changed
+            if (dbEvent.date !== textEvent.date) {
+              changeType = 'date';
+            } else if (normalize(dbEvent.time) !== normalize(textEvent.time)) {
+              changeType = 'time';
+            } else {
+              changeType = 'title'; // Title wording changed
+            }
+            break;
+          }
+          
+          // Method 2: Match by date + time (if title changed completely)
+          if (dbEvent.date === textEvent.date && 
+              normalize(dbEvent.time) === normalize(textEvent.time)) {
+            foundMatch = dbEvent;
+            changeType = 'title';
+            break;
+          }
+        }
+        
+        if (!foundMatch) {
+          // NEW EVENT - not in database
+          newEvents.push(textEvent);
+        } else if (changeType) {
+          // CHANGED EVENT - found but different
+          changedEvents.push({
+            textEvent,
+            dbEvent: foundMatch,
+            changeType
+          });
+        }
+      });
+      
       setResults({
-        differences: differences,
-        totalScanned: allEvents.length
+        newEvents,
+        changedEvents,
+        totalScanned: allEvents.length,
+        totalParsed: parsedEvents.length
       });
       
     } catch (error) {
@@ -173,37 +220,73 @@ export default function EventScannerModal({
         </button>
 
         {results && (
-          <div className="border-t pt-4">
-            {results.differences.length === 0 ? (
-              <div className="text-center py-8 bg-green-50 rounded">
+          <div className="border-t pt-4 space-y-4">
+            {/* Summary */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-green-50 p-3 rounded text-center border-2 border-green-300">
+                <div className="text-2xl font-bold text-green-600">{results.newEvents.length}</div>
+                <div className="text-sm text-green-700">NEW Events</div>
+              </div>
+              <div className="bg-orange-50 p-3 rounded text-center border-2 border-orange-300">
+                <div className="text-2xl font-bold text-orange-600">{results.changedEvents.length}</div>
+                <div className="text-sm text-orange-700">CHANGED Events</div>
+              </div>
+            </div>
+
+            {/* All Clear */}
+            {results.newEvents.length === 0 && results.changedEvents.length === 0 && (
+              <div className="text-center py-8 bg-green-50 rounded border-2 border-green-300">
                 <div className="text-4xl mb-2">✅</div>
                 <div className="text-xl font-bold text-green-800">Everything Matches!</div>
                 <div className="text-sm text-green-600 mt-2">
-                  No differences detected. Your data is accurate!
+                  Scanned {results.totalParsed} events - no differences detected!
                 </div>
               </div>
-            ) : (
-              <div>
-                <div className="bg-orange-50 p-4 rounded mb-4">
-                  <div className="font-bold text-orange-800 mb-2">
-                    ⚠️ {results.differences.length} Difference{results.differences.length > 1 ? 's' : ''} Found
-                  </div>
+            )}
+
+            {/* NEW EVENTS */}
+            {results.newEvents.length > 0 && (
+              <div className="border-2 border-green-300 rounded p-4 bg-green-50">
+                <div className="font-bold text-green-800 mb-3">
+                  ✨ NEW EVENTS ({results.newEvents.length}) - Do F12 Import
                 </div>
-                
+                <div className="space-y-2">
+                  {results.newEvents.map((event, idx) => (
+                    <div key={idx} className="bg-white p-3 rounded border border-green-200">
+                      <div className="font-medium text-green-700">{event.title.substring(0, 60)}</div>
+                      <div className="text-sm text-gray-600">{event.date} • {event.time}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* CHANGED EVENTS */}
+            {results.changedEvents.length > 0 && (
+              <div className="border-2 border-orange-300 rounded p-4 bg-orange-50">
+                <div className="font-bold text-orange-800 mb-3">
+                  ⚠️ CHANGED EVENTS ({results.changedEvents.length}) - Manually Update
+                </div>
                 <div className="space-y-3">
-                  {results.differences.map((diff, idx) => (
-                    <div key={idx} className="border border-orange-300 rounded p-3 bg-white">
+                  {results.changedEvents.map((change, idx) => (
+                    <div key={idx} className="bg-white p-3 rounded border border-orange-200">
                       <div className="font-semibold text-orange-800 mb-2">
-                        {diff.dbEvent.gym_name} • {diff.date} • {diff.time}
+                        {change.dbEvent.gym_name} - {change.changeType.toUpperCase()} Changed
                       </div>
                       <div className="text-sm space-y-1">
                         <div className="bg-red-50 p-2 rounded">
                           <span className="font-semibold text-red-700">Your Database:</span>
-                          <div className="ml-4 text-red-600">{diff.dbEvent.title}</div>
+                          <div className="ml-2 text-red-600">
+                            {change.dbEvent.title.substring(0, 50)}
+                            <div className="text-xs">{change.dbEvent.date} • {change.dbEvent.time}</div>
+                          </div>
                         </div>
                         <div className="bg-green-50 p-2 rounded">
-                          <span className="font-semibold text-green-700">Website:</span>
-                          <div className="ml-4 text-green-600">{diff.websiteTitle}</div>
+                          <span className="font-semibold text-green-700">Website Now:</span>
+                          <div className="ml-2 text-green-600">
+                            {change.textEvent.title.substring(0, 50)}
+                            <div className="text-xs">{change.textEvent.date} • {change.textEvent.time}</div>
+                          </div>
                         </div>
                       </div>
                     </div>
