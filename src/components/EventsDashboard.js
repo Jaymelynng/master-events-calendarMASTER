@@ -1664,6 +1664,10 @@ The system will add new events and update any changed events automatically.`;
                         setShowAdminPortal(false);
                         setTimeout(() => setShowBulkImportModal(true), 100);
                       }}
+            onOpenSyncModal={() => {
+              setShowAdminPortal(false);
+              setTimeout(() => setShowSyncModal(true), 100);
+            }}
             onOpenAuditHistory={() => {
               setShowAdminPortal(false);
               setTimeout(() => {
@@ -1673,6 +1677,15 @@ The system will add new events and update any changed events automatically.`;
             }}
           />
         </Suspense>
+      )}
+
+      {/* Automated Sync Modal */}
+      {showSyncModal && (
+        <SyncModal
+          theme={theme}
+          onClose={() => setShowSyncModal(false)}
+          gyms={gymsList}
+        />
       )}
 
       {/* Audit History Modal - Secret Feature */}
