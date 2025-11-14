@@ -277,18 +277,10 @@ const EventsDashboard = () => {
   const [selectedEventType, setSelectedEventType] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('calendar');
-  // Dynamic month - starts with default month (November)
-  const [defaultMonth, setDefaultMonth] = useState(10); // Default month (November = 10, 0-indexed)
-  const [currentMonth, setCurrentMonth] = useState(10); // Start with November (0-indexed)  
+  // Dynamic month - starts with current month
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth()); // Current month (0-indexed)  
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear()); // Current year
   const [calendarView, setCalendarView] = useState('full'); // Start with full month view
-
-  // Function to reset to default month
-  const resetToDefaultMonth = () => {
-    setCurrentMonth(defaultMonth);
-    setCurrentYear(new Date().getFullYear());
-    setCalendarView('full');
-  };
   const [selectedEventForPanel, setSelectedEventForPanel] = useState(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
@@ -478,7 +470,7 @@ const EventsDashboard = () => {
       ].filter(Boolean);
 
       // Check if user has seen the pop-up alert before
-      const hasSeenPopupAlert = localStorage.getItem('hasSeenSparklePopupAlert') === 'true';
+      const hasSeenPopupAlert = localStorage.getItem('hasSeenSparklePopupAlert');
       
       console.log('🔍 Sparkle popup check:', { hasSeenPopupAlert, willShow: !hasSeenPopupAlert });
       
@@ -1783,65 +1775,26 @@ The system will add new events and update any changed events automatically.`;
             </h1>
               <p className="text-white text-lg opacity-90">All gyms special events in one place</p>
             
-            {/* Secret Magic Wand - Ctrl+Click */}
+            {/* Secret audit history trigger - Ctrl+Click */}
             <div 
                 className="text-sm text-white opacity-70 mt-3 cursor-default select-none hover:opacity-100 transition-opacity"
               onClick={(e) => {
                 if (e.ctrlKey || e.metaKey) {
                   e.preventDefault();
-                  
-                  if (e.shiftKey) {
-                    // Shift+Ctrl+Click: Magic Wand Settings Menu
-                    const choice = prompt(`🔮 F12 Magic Wand Settings:
-1. Set Default Month (current: ${new Date(new Date().getFullYear(), defaultMonth).toLocaleDateString('en-US', { month: 'long' })})
-2. Clear Cache & Refresh Data
-3. Reset to Default Month
-4. Show Audit History
-
-Enter choice (1-4):`, '1');
-                    
-                    switch(choice) {
-                      case '1':
-                        const newDefaultMonth = prompt(`Set default month (0=Jan, 1=Feb, ..., 10=Nov, 11=Dec):`, defaultMonth);
-                        if (newDefaultMonth !== null && !isNaN(newDefaultMonth) && newDefaultMonth >= 0 && newDefaultMonth <= 11) {
-                          setDefaultMonth(parseInt(newDefaultMonth));
-                          alert(`✅ Default month set to: ${new Date(new Date().getFullYear(), parseInt(newDefaultMonth)).toLocaleDateString('en-US', { month: 'long' })}`);
-                        }
-                        break;
-                      case '2':
-                        cache.clearAll();
-                        localStorage.removeItem('eventsCacheData');
-                        alert('✅ Cache cleared! Refreshing...');
-                        window.location.reload();
-                        break;
-                      case '3':
-                        resetToDefaultMonth();
-                        alert(`✅ Reset to default month: ${new Date(new Date().getFullYear(), defaultMonth).toLocaleDateString('en-US', { month: 'long' })}`);
-                        break;
-                      case '4':
-                        loadAuditHistory();
-                        setShowAuditHistory(true);
-                        break;
-                      default:
-                        alert('❌ Invalid choice');
-                    }
-                  } else {
-                    // Ctrl+Click: Quick reset to default month
-                    resetToDefaultMonth();
-                    alert(`✨ Reset to default month: ${new Date(new Date().getFullYear(), defaultMonth).toLocaleDateString('en-US', { month: 'long' })}`);
-                  }
+                  loadAuditHistory();
+                  setShowAuditHistory(true);
                 }
               }}
-              title="Ctrl+Click: Quick Reset to Default | Shift+Ctrl+Click: Magic Wand Settings"
+              title="Ctrl+Click for secret features"
             >
-              ✨ F12 Magic Wand: {new Date().toLocaleString('en-US', { 
+              {new Date().toLocaleString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
-              })} ✨
+              })}
               </div>
             </div>
             
@@ -1863,7 +1816,6 @@ Enter choice (1-4):`, '1');
                 <ChevronLeft className="w-4 h-4" />
                 Previous
               </button>
-              
               
               <div className="flex-shrink-0">
                 <h2 className="text-3xl font-bold px-10 py-4 rounded-full bg-white text-gray-800 text-center whitespace-nowrap"

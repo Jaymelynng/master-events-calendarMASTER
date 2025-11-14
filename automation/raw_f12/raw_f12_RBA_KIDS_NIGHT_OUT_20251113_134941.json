@@ -1,0 +1,55 @@
+{
+  "data": {
+    "id": 2085,
+    "name": "Tie Dye Night |Kids Night Out | Ages 4-13 | December 5th",
+    "description": "<p><strong>Kids Night Out - Tie Dye</strong></p>\n<p>December 5 - 7:00pm - 9:30pm</p>\n<p>Ages 4+</p>\n<p>$35&nbsp;</p>\n<p>Take the night off while we keep your kids entertained with nonstop fun!&nbsp;At Kids' Night Out, we'll have open play, games, gymnastics, crafts, and a pizza dinner! Each Kids' Night Out has an exciting theme, keeping the kids engaged while you enjoy a night out.</p>\n<p>What To Wear: Come dressed in comfortable clothes.&nbsp; NO shoes in the gym.</p>\n<p>What to Bring: Make sure you bring a water bottle.</p>",
+    "typeId": 35,
+    "image": "33849/camps/1757534723.46aa1010d723be235aa94626b985cfaaf294f16c.png",
+    "minAge": 4,
+    "maxAge": 12,
+    "startDate": "2025-12-05",
+    "endDate": "2025-12-05",
+    "registrationStartDate": "2024-08-25",
+    "registrationEndDate": "2025-12-05",
+    "allowWebRegistration": true,
+    "schedule": [
+      {
+        "id": 2713,
+        "campId": 2085,
+        "dayInt": 6,
+        "startTime": "7:00 PM",
+        "endTime": "9:30 PM",
+        "maxStudents": null,
+        "alias": "",
+        "type": "weekdays",
+        "dayNumber": 6,
+        "tsId": 2713
+      }
+    ],
+    "blocks": [
+      {
+        "bid": 3310,
+        "tsid": 2713,
+        "sqlDate": "2025-12-05 00:00:00",
+        "duration": 9000,
+        "startDateTime": "2025-12-05 19:00:00",
+        "endDateTime": "2025-12-05 21:30:00",
+        "day": "Friday",
+        "dayNumber": 6,
+        "alias": false
+      }
+    ],
+    "programId": 172,
+    "programName": "KIDS NIGHT OUT",
+    "roomName": null,
+    "instructors": [],
+    "hasOpenings": true,
+    "allowToRequestCampThatIsFull": false,
+    "showAlias": false,
+    "autoApprove": true,
+    "programIsDeleted": false,
+    "campRegisterExpired": false
+  },
+  "message": "",
+  "errors": []
+}

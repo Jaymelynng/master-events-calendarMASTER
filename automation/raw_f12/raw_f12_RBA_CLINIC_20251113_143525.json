@@ -1,0 +1,57 @@
+{
+  "data": [
+    {
+      "id": 2096,
+      "name": "Back Walkover |Clinic| Ages 6+| November 22nd",
+      "description": "<p><strong>Tumbling Clinic</strong></p>\n<p>October 11th from 12:00pm - 1:00pm</p>\n<p>Ages 5+</p>\n<p>Price $25</p>\n<p>Our specialized skill clinics provide students with the opportunity to work with our experienced coaches on new drills and techniques to take their skills to the next level.</p>\n<p><strong data-olk-copy-source=\"MessageBody\">What to Wear:<span>&nbsp;</span></strong>Students should wear a fitted leotard or athletic clothing that allows for easy movement, with hair securely tied back. All shoes are to be removed before entering the gym and stored in designated cubbies. For safety and to prevent lost items, please limit wearing jewelry during class.</p>\n<div style=\"color: black; font-size: 12pt;\"><strong>What to Bring:<span>&nbsp;</span></strong>Students should bring a labeled water bottle to each class to stay hydrated. All other personal items, such as bags or extra clothing, should be kept in a designated cubby during class. Please leave toys, electronics, and valuables at home to avoid distractions and prevent lost or damaged items.</div>",
+      "typeId": 33,
+      "image": "33849/camps/1757535539.278cadb5c5a600fd354bbb4a32acf34407bf98f0.png",
+      "minAge": 6,
+      "maxAge": 18,
+      "startDate": "2025-11-22",
+      "endDate": "2025-11-22",
+      "registrationStartDate": "2024-08-25",
+      "registrationEndDate": "2025-11-22",
+      "allowWebRegistration": true,
+      "schedule": [
+        {
+          "id": 2725,
+          "campId": 2096,
+          "dayInt": 7,
+          "startTime": "12:00 PM",
+          "endTime": "1:00 PM",
+          "maxStudents": null,
+          "alias": "",
+          "type": "weekdays",
+          "dayNumber": 7,
+          "tsId": 2725
+        }
+      ],
+      "blocks": [
+        {
+          "bid": 3323,
+          "tsid": 2725,
+          "sqlDate": "2025-11-22 00:00:00",
+          "duration": 3600,
+          "startDateTime": "2025-11-22 12:00:00",
+          "endDateTime": "2025-11-22 13:00:00",
+          "day": "Saturday",
+          "dayNumber": 7,
+          "alias": false
+        }
+      ],
+      "programId": 171,
+      "programName": "CLINICS",
+      "roomName": null,
+      "instructors": [],
+      "hasOpenings": true,
+      "allowToRequestCampThatIsFull": false,
+      "showAlias": false,
+      "autoApprove": true,
+      "programIsDeleted": false,
+      "campRegisterExpired": false
+    }
+  ],
+  "message": "",
+  "errors": []
+}

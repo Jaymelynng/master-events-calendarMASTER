@@ -1,0 +1,256 @@
+{
+  "data": [
+    {
+      "id": 2106,
+      "name": "K-POP KARAOKE | Kids Night Out | Ages 4-13 | November 14th",
+      "description": "<p><strong>Kids Night Out - KPOP Karaoke</strong></p>\n<p>November 14 : 7:00pm - 9:30pm</p>\n<p>Ages 4+</p>\n<p>$35&nbsp;</p>\n<p>Take the night off while we keep your kids entertained with nonstop fun! At Kids' Night Out, we'll have K-pop Karaoke, open play, games, gymnastics, crafts, and a pizza dinner! Each Kids' Night Out has an exciting theme, keeping the kids engaged while you enjoy a night out.</p>\n<p><strong>What To Wear: </strong>Come dressed in comfortable clothes.&nbsp; NO shoes in the gym.</p>\n<p><strong>What to Bring:</strong> Make sure you bring a water bottle.</p>\n<p style=\"text-align: center;\"><img id=\"image_1760637238449\" style=\"border: 5px solid #ffffff; margin: 15px 15px;\" src=\"https://files.iclasspro.com/33849/camps/1760637231.KPoPKNO.png\" alt=\"KPoPKNO\" width=\"896\" height=\"1161\" /></p>",
+      "typeId": 35,
+      "image": "33849/camps/1761851406.6b2b2b301448d5ca814499847a0a54461ba1e591.png",
+      "minAge": 4,
+      "maxAge": 12,
+      "startDate": "2025-11-14",
+      "endDate": "2025-11-14",
+      "registrationStartDate": "2024-08-25",
+      "registrationEndDate": "2025-11-14",
+      "allowWebRegistration": true,
+      "schedule": [
+        {
+          "id": 2754,
+          "campId": 2106,
+          "dayInt": 6,
+          "startTime": "7:00 PM",
+          "endTime": "9:30 PM",
+          "maxStudents": null,
+          "alias": "",
+          "type": "weekdays",
+          "dayNumber": 6,
+          "tsId": 2754
+        }
+      ],
+      "blocks": [
+        {
+          "bid": 3352,
+          "tsid": 2754,
+          "sqlDate": "2025-11-14 00:00:00",
+          "duration": 9000,
+          "startDateTime": "2025-11-14 19:00:00",
+          "endDateTime": "2025-11-14 21:30:00",
+          "day": "Friday",
+          "dayNumber": 6,
+          "alias": false
+        }
+      ],
+      "programId": 172,
+      "programName": "KIDS NIGHT OUT",
+      "roomName": null,
+      "instructors": [
+        {
+          "id": 388,
+          "firstName": "Summer",
+          "lastName": "L."
+        },
+        {
+          "id": 234,
+          "firstName": "Jamie",
+          "lastName": "S."
+        },
+        {
+          "id": 378,
+          "firstName": "Xiana",
+          "lastName": "G."
+        },
+        {
+          "id": 383,
+          "firstName": "Isabella",
+          "lastName": "L."
+        },
+        {
+          "id": 336,
+          "firstName": "Hope",
+          "lastName": "B."
+        },
+        {
+          "id": 363,
+          "firstName": "Brandi",
+          "lastName": "B."
+        },
+        {
+          "id": 32,
+          "firstName": "Dena",
+          "lastName": "C."
+        },
+        {
+          "id": 393,
+          "firstName": "Lylia",
+          "lastName": "L."
+        },
+        {
+          "id": 392,
+          "firstName": "Mia",
+          "lastName": "S."
+        }
+      ],
+      "hasOpenings": true,
+      "allowToRequestCampThatIsFull": false,
+      "showAlias": false,
+      "autoApprove": true,
+      "programIsDeleted": false,
+      "campRegisterExpired": false
+    },
+    {
+      "id": 2086,
+      "name": "Holiday Party - BRING A FRIEND FOR FREE|Kids Night Out | Ages 4-13 | December 19th (MEMBERS)",
+      "description": "<p><strong>Kids Night Out - Tie Dye</strong></p>\n<p>December 5 - 7:00pm - 9:30pm</p>\n<p>Ages 4+</p>\n<p>$35&nbsp;</p>\n<p>Take the night off while we keep your kids entertained with nonstop fun!&nbsp;At Kids' Night Out, we'll have open play, games, gymnastics, crafts, and a pizza dinner! Each Kids' Night Out has an exciting theme, keeping the kids engaged while you enjoy a night out.</p>\n<p>What To Wear: Come dressed in comfortable clothes.&nbsp; NO shoes in the gym.</p>\n<p>What to Bring: Make sure you bring a water bottle.</p>",
+      "typeId": 35,
+      "image": "33849/camps/1757534711.5cf5977507eb3131516f22abd457ab9151b6efd2.png",
+      "minAge": 4,
+      "maxAge": 12,
+      "startDate": "2025-12-19",
+      "endDate": "2025-12-19",
+      "registrationStartDate": "2024-08-25",
+      "registrationEndDate": "2025-12-19",
+      "allowWebRegistration": true,
+      "schedule": [
+        {
+          "id": 2714,
+          "campId": 2086,
+          "dayInt": 6,
+          "startTime": "7:00 PM",
+          "endTime": "9:30 PM",
+          "maxStudents": null,
+          "alias": "",
+          "type": "weekdays",
+          "dayNumber": 6,
+          "tsId": 2714
+        }
+      ],
+      "blocks": [
+        {
+          "bid": 3311,
+          "tsid": 2714,
+          "sqlDate": "2025-12-19 00:00:00",
+          "duration": 9000,
+          "startDateTime": "2025-12-19 19:00:00",
+          "endDateTime": "2025-12-19 21:30:00",
+          "day": "Friday",
+          "dayNumber": 6,
+          "alias": false
+        }
+      ],
+      "programId": 172,
+      "programName": "KIDS NIGHT OUT",
+      "roomName": null,
+      "instructors": [],
+      "hasOpenings": true,
+      "allowToRequestCampThatIsFull": false,
+      "showAlias": false,
+      "autoApprove": true,
+      "programIsDeleted": false,
+      "campRegisterExpired": false
+    },
+    {
+      "id": 2085,
+      "name": "Tie Dye Night |Kids Night Out | Ages 4-13 | December 5th",
+      "description": "<p><strong>Kids Night Out - Tie Dye</strong></p>\n<p>December 5 - 7:00pm - 9:30pm</p>\n<p>Ages 4+</p>\n<p>$35&nbsp;</p>\n<p>Take the night off while we keep your kids entertained with nonstop fun!&nbsp;At Kids' Night Out, we'll have open play, games, gymnastics, crafts, and a pizza dinner! Each Kids' Night Out has an exciting theme, keeping the kids engaged while you enjoy a night out.</p>\n<p>What To Wear: Come dressed in comfortable clothes.&nbsp; NO shoes in the gym.</p>\n<p>What to Bring: Make sure you bring a water bottle.</p>",
+      "typeId": 35,
+      "image": "33849/camps/1757534723.46aa1010d723be235aa94626b985cfaaf294f16c.png",
+      "minAge": 4,
+      "maxAge": 12,
+      "startDate": "2025-12-05",
+      "endDate": "2025-12-05",
+      "registrationStartDate": "2024-08-25",
+      "registrationEndDate": "2025-12-05",
+      "allowWebRegistration": true,
+      "schedule": [
+        {
+          "id": 2713,
+          "campId": 2085,
+          "dayInt": 6,
+          "startTime": "7:00 PM",
+          "endTime": "9:30 PM",
+          "maxStudents": null,
+          "alias": "",
+          "type": "weekdays",
+          "dayNumber": 6,
+          "tsId": 2713
+        }
+      ],
+      "blocks": [
+        {
+          "bid": 3310,
+          "tsid": 2713,
+          "sqlDate": "2025-12-05 00:00:00",
+          "duration": 9000,
+          "startDateTime": "2025-12-05 19:00:00",
+          "endDateTime": "2025-12-05 21:30:00",
+          "day": "Friday",
+          "dayNumber": 6,
+          "alias": false
+        }
+      ],
+      "programId": 172,
+      "programName": "KIDS NIGHT OUT",
+      "roomName": null,
+      "instructors": [],
+      "hasOpenings": true,
+      "allowToRequestCampThatIsFull": false,
+      "showAlias": false,
+      "autoApprove": true,
+      "programIsDeleted": false,
+      "campRegisterExpired": false
+    },
+    {
+      "id": 2094,
+      "name": "Holiday Party - BRING A FRIEND FOR FREE|Kids Night Out | Ages 4-13 | December 19th (FREE FRIEND)",
+      "description": "<p><strong>Kids Night Out - Tie Dye</strong></p>\n<p>December 5 - 7:00pm - 9:30pm</p>\n<p>Ages 4+</p>\n<p>$35&nbsp;</p>\n<p>Take the night off while we keep your kids entertained with nonstop fun!&nbsp;At Kids' Night Out, we'll have open play, games, gymnastics, crafts, and a pizza dinner! Each Kids' Night Out has an exciting theme, keeping the kids engaged while you enjoy a night out.</p>\n<p>What To Wear: Come dressed in comfortable clothes.&nbsp; NO shoes in the gym.</p>\n<p>What to Bring: Make sure you bring a water bottle.</p>",
+      "typeId": 35,
+      "image": "33849/camps/1757534699.5cf5977507eb3131516f22abd457ab9151b6efd2.png",
+      "minAge": 4,
+      "maxAge": 12,
+      "startDate": "2025-12-19",
+      "endDate": "2025-12-19",
+      "registrationStartDate": "2024-08-25",
+      "registrationEndDate": "2025-12-19",
+      "allowWebRegistration": true,
+      "schedule": [
+        {
+          "id": 2723,
+          "campId": 2094,
+          "dayInt": 6,
+          "startTime": "7:00 PM",
+          "endTime": "9:30 PM",
+          "maxStudents": null,
+          "alias": "",
+          "type": "weekdays",
+          "dayNumber": 6,
+          "tsId": 2723
+        }
+      ],
+      "blocks": [
+        {
+          "bid": 3321,
+          "tsid": 2723,
+          "sqlDate": "2025-12-19 00:00:00",
+          "duration": 9000,
+          "startDateTime": "2025-12-19 19:00:00",
+          "endDateTime": "2025-12-19 21:30:00",
+          "day": "Friday",
+          "dayNumber": 6,
+          "alias": false
+        }
+      ],
+      "programId": 172,
+      "programName": "KIDS NIGHT OUT",
+      "roomName": null,
+      "instructors": [],
+      "hasOpenings": true,
+      "allowToRequestCampThatIsFull": false,
+      "showAlias": false,
+      "autoApprove": true,
+      "programIsDeleted": false,
+      "campRegisterExpired": false
+    }
+  ],
+  "message": "",
+  "errors": []
+}
