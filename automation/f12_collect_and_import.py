@@ -142,53 +142,78 @@ async def collect_events_via_f12(gym_id, camp_type):
     async with aiohttp.ClientSession() as session:
         # Method 1: Use Open API v1 (gym-specific, more reliable)
         try:
+            print(f"🔍 Step 1: Getting locations for {slug}...")
             # Step 1: Get locations
             locations_url = f"https://app.iclasspro.com/api/open/v1/{slug}/locations"
+            print(f"   URL: {locations_url}")
             async with session.get(locations_url) as loc_response:
+                print(f"   Response status: {loc_response.status}")
                 if loc_response.status == 200:
                     loc_data = await loc_response.json()
                     locations = loc_data.get('data', [])
+                    print(f"   Found {len(locations)} locations")
                     
                     for location in locations:
                         location_id = location.get('id') or location.get('locationId')
+                        location_name = location.get('name', 'Unknown')
+                        print(f"   Checking location: {location_name} (ID: {location_id})")
                         if not location_id:
                             continue
                         
                         # Step 2: Get programs for this location
                         programs_url = f"https://app.iclasspro.com/api/open/v1/{slug}/camp-programs/{location_id}"
+                        print(f"   Getting programs from: {programs_url}")
                         async with session.get(programs_url) as prog_response:
+                            print(f"   Programs response status: {prog_response.status}")
                             if prog_response.status == 200:
                                 prog_data = await prog_response.json()
                                 programs = prog_data.get('data', [])
+                                print(f"   Found {len(programs)} programs")
                                 
                                 for program in programs:
-                                    program_name = program.get('name', '').upper()
+                                    program_name = program.get('name', '')
                                     program_id = program.get('id')
+                                    print(f"      Program: {program_name} (ID: {program_id})")
                                     
                                     # Check if program name matches our event type
-                                    name_matches = any(keyword in program_name for keyword in keywords)
+                                    name_matches = any(keyword in program_name.upper() for keyword in keywords)
+                                    print(f"         Matches '{camp_type}'? {name_matches} (keywords: {keywords})")
                                     
                                     if name_matches and program_id:
                                         # Step 3: Get events for this program
                                         events_url = f"https://app.iclasspro.com/api/open/v1/{slug}/camps?locationId={location_id}&typeId={program_id}&limit=50&page=1&sortBy=time"
+                                        print(f"         Getting events from: {events_url}")
                                         async with session.get(events_url) as events_response:
+                                            print(f"         Events response status: {events_response.status}")
                                             if events_response.status == 200:
                                                 events_data = await events_response.json()
                                                 camps = events_data.get('data', [])
+                                                print(f"         Found {len(camps)} events")
                                                 
                                                 if camps:
                                                     events = camps
                                                     print(f"✅ Found {len(events)} events using Open API v1")
-                                                    print(f"   Program: {program.get('name')} (ID: {program_id})")
+                                                    print(f"   Program: {program_name} (ID: {program_id})")
                                                     break
+                                            else:
+                                                error_text = await events_response.text()
+                                                print(f"         Error response: {error_text[:200]}")
                                 
                                 if events:
                                     break
+                            else:
+                                error_text = await prog_response.text()
+                                print(f"   Programs error: {error_text[:200]}")
                         
                         if events:
                             break
+                else:
+                    error_text = await loc_response.text()
+                    print(f"   Locations error (status {loc_response.status}): {error_text[:200]}")
         except Exception as e:
-            print(f"Open API v1 error: {str(e)[:100]}")
+            import traceback
+            print(f"❌ Open API v1 error: {str(e)}")
+            print(traceback.format_exc()[:500])
         
         # Method 2: Fallback to portal API (if Open API didn't work)
         if not events:
