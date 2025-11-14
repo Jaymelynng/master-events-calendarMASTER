@@ -11,6 +11,7 @@ import { cachedApi, cache } from '../lib/cache';
 import { supabase } from '../lib/supabase';
 import { useRealtimeEvents, useRealtimeGymLinks, useRealtimeGyms } from '../lib/useRealtimeEvents';
 import AdminPortalModal from './EventsDashboard/AdminPortalModal';
+import SyncModal from './EventsDashboard/SyncModal';
 
 // Exact Color Theme from user's specification
 const theme = {
@@ -289,6 +290,7 @@ const EventsDashboard = () => {
 
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [bulkImportData, setBulkImportData] = useState('');
   const [rawEventListings, setRawEventListings] = useState('');

@@ -5,6 +5,7 @@ export default function AdminPortalModal({
   onClose,
   onOpenAddEvent,
   onOpenBulkImport,
+  onOpenSyncModal,
   onOpenAuditHistory,
 }) {
   return (
@@ -82,6 +83,17 @@ export default function AdminPortalModal({
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   Open JSON Import
+                </button>
+              </div>
+
+              <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <h4 className="font-semibold text-purple-800 mb-2">⚡ Automated Sync</h4>
+                <p className="text-sm text-purple-600 mb-3">Automatically collect events from iClassPro portals</p>
+                <button
+                  onClick={onOpenSyncModal}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Open Automated Sync
                 </button>
               </div>
 
