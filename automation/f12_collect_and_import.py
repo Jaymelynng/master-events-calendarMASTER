@@ -126,54 +126,93 @@ async def collect_events_via_f12(gym_id, camp_type):
     portal_url = event_type_urls[camp_type][gym_id]
     print(f"Collecting events from: {portal_url}")
     
-    # Extract event ID from URL pattern
-    # URLs are like: https://portal.iclasspro.com/{slug}/camps/{typeId}?sortBy=time
-    # We need to extract the typeId and make API calls
-    
-    # Try to extract typeId from URL or make API calls to discover events
+    slug = GYMS[gym_id]['slug']
     events = []
     
     async with aiohttp.ClientSession() as session:
-        # Parse the portal URL to get the subdomain
-        # URL format: https://portal.iclasspro.com/{slug}/camps/{typeId}?sortBy=time
-        match = re.search(r'portal\.iclasspro\.com/([^/]+)/camps/(\d+)', portal_url)
+        # Parse the portal URL to extract program ID
+        # URL format: https://portal.iclasspro.com/{slug}/camps/{programId}?sortBy=time
+        match = re.search(r'/camps/(\d+)', portal_url)
+        program_ids_to_try = []
+        
         if match:
-            slug = match.group(1)
-            type_id = match.group(2)
+            # Use the program ID from the URL
+            program_id_from_url = int(match.group(1))
+            program_ids_to_try.append(program_id_from_url)
+            print(f"Extracted program ID {program_id_from_url} from URL")
+        
+        # Also try common program IDs as fallback
+        program_ids_to_try.extend([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 102])
+        program_ids_to_try = list(dict.fromkeys(program_ids_to_try))  # Remove duplicates, preserve order
+        
+        # Map event type to keywords for matching
+        event_type_keywords = {
+            'KIDS NIGHT OUT': ['KIDS NIGHT OUT', 'KNO', 'KID', 'NIGHT'],
+            'CLINIC': ['CLINIC', 'SKILL'],
+            'OPEN GYM': ['OPEN GYM', 'OPEN'],
+            'SCHOOL YEAR CAMP': ['CAMP', 'SCHOOL YEAR'],
+            'SPECIAL EVENT': ['SPECIAL', 'EVENT']
+        }
+        keywords = event_type_keywords.get(camp_type, [camp_type.upper()])
+        
+        # Try each program ID
+        for program_id in program_ids_to_try:
+            # Try multiple API endpoint formats
+            api_endpoints = [
+                f"https://app.iclasspro.com/portal/api/camps/search?programId={program_id}",
+                f"https://app.iclasspro.com/api/open/v1/{slug}/camps?typeId={program_id}&limit=50&sortBy=time",
+                f"https://app.iclasspro.com/portal/api/{slug}/camps/search?programId={program_id}",
+            ]
             
-            # Make API call to get events
-            api_url = f"https://app.iclasspro.com/portal/api/camps/search?programId={type_id}"
-            
-            try:
-                async with session.get(api_url) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if data.get('data'):
-                            events = data['data']
-                            print(f"Found {len(events)} events")
-                    else:
-                        print(f"API returned status {response.status}")
-            except Exception as e:
-                print(f"Error calling API: {e}")
-        else:
-            # Fallback: try to discover events by making API calls
-            slug = GYMS[gym_id]['slug']
-            # Try common program IDs
-            for program_id in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 102]:
-                api_url = f"https://app.iclasspro.com/portal/api/camps/search?programId={program_id}"
+            for api_url in api_endpoints:
                 try:
                     async with session.get(api_url) as response:
                         if response.status == 200:
                             data = await response.json()
-                            if data.get('data') and len(data['data']) > 0:
-                                # Check if campTypeName matches
-                                camp_type_name = data.get('campTypeName', '').upper()
-                                if camp_type.upper() in camp_type_name or camp_type_name in camp_type.upper():
-                                    events = data['data']
-                                    print(f"Found {len(events)} events for program {program_id}")
-                                    break
+                            
+                            # Handle different response formats
+                            event_data = None
+                            if isinstance(data, dict):
+                                if 'data' in data:
+                                    event_data = data['data']
+                                elif 'campTypeName' in data:
+                                    # Single event or different structure
+                                    event_data = [data] if data else []
+                            
+                            if event_data and len(event_data) > 0:
+                                # Check if campTypeName matches our event type
+                                camp_type_name = data.get('campTypeName', '').upper() if isinstance(data, dict) else ''
+                                
+                                # Check if any keyword matches
+                                matches = any(keyword in camp_type_name for keyword in keywords) if camp_type_name else False
+                                
+                                if matches or not camp_type_name:
+                                    # If no campTypeName, check event names
+                                    if not matches:
+                                        event_names = ' '.join([str(ev.get('name', '')) for ev in event_data[:3]]).upper()
+                                        matches = any(keyword in event_names for keyword in keywords)
+                                    
+                                    if matches or len(program_ids_to_try) == 1:
+                                        events = event_data
+                                        print(f"✅ Found {len(events)} events for program {program_id} (endpoint: {api_url})")
+                                        if camp_type_name:
+                                            print(f"   Event type: {camp_type_name}")
+                                        break
+                        elif response.status == 404:
+                            # Program ID doesn't exist, skip
+                            continue
+                        else:
+                            print(f"   Program {program_id}: API returned status {response.status}")
                 except Exception as e:
+                    print(f"   Program {program_id} error: {str(e)[:100]}")
                     continue
+            
+            if events:
+                break
+    
+    if not events:
+        print(f"⚠️ No events found for {gym_id} - {camp_type}")
+        print(f"   Tried {len(program_ids_to_try)} program IDs")
     
     return events
 
