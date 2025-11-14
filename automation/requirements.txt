@@ -13,6 +13,13 @@ postgrest>=0.10.0
 # Data processing
 python-dateutil>=2.8.0
 
+# Browser automation (for F12 collection)
+playwright>=1.40.0
+
+# Local API server
+flask>=2.3.0
+flask-cors>=4.0.0
+
 # Optional: For advanced scheduling
 schedule>=1.2.0
 
