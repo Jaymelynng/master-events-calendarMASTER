@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import sys
+import os
 from pathlib import Path
 from datetime import date
 
@@ -20,9 +21,28 @@ sys.path.insert(0, str(Path(__file__).parent))
 app = Flask(__name__)
 CORS(app)  # Allow your React app to call this
 
+# API Key authentication
+API_KEY = os.environ.get('API_KEY', '')  # Get from environment variable
+
+def check_api_key():
+    """Check if request has valid API key"""
+    if not API_KEY:
+        return True  # No API key set = allow all (for local dev)
+    
+    provided_key = request.headers.get('X-API-Key') or request.args.get('api_key')
+    if provided_key == API_KEY:
+        return True
+    
+    return False
+
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint"""
+    return jsonify({"status": "ok", "message": "F12 API server is running", "endpoints": ["/health", "/sync-events"]})
+
 @app.route('/health', methods=['GET'])
 def health():
-    """Health check endpoint"""
+    """Health check endpoint (no auth required)"""
     return jsonify({"status": "ok", "message": "Local F12 API server is running"})
 
 @app.route('/sync-events', methods=['POST'])
@@ -30,7 +50,15 @@ def sync_events():
     """
     Sync events for a specific gym and event type
     Expects JSON: { "gymId": "RBA", "eventType": "KIDS NIGHT OUT" }
+    Requires API key in header: X-API-Key or query param: api_key
     """
+    # Check API key
+    if not check_api_key():
+        return jsonify({
+            "success": False,
+            "error": "Invalid or missing API key"
+        }), 401
+    
     try:
         data = request.get_json()
         gym_id = data.get('gymId')
