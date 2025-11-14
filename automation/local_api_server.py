@@ -9,6 +9,7 @@ from flask_cors import CORS
 import json
 import sys
 import os
+import asyncio
 from pathlib import Path
 from datetime import date
 
@@ -87,8 +88,8 @@ def sync_events():
         print(f"SYNC REQUEST: {gym_id} - {event_type}")
         print(f"{'='*60}\n")
         
-        # Step 1: Collect raw events using your working Playwright script
-        events_raw = collect_events_via_f12(gym_id=gym_id, camp_type=event_type)
+        # Step 1: Collect raw events using your working script (async function)
+        events_raw = asyncio.run(collect_events_via_f12(gym_id=gym_id, camp_type=event_type))
         
         if not events_raw:
             return jsonify({
