@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 F12 Event Collection Script
-Uses Playwright to intercept network requests from iClassPro portal pages
+Uses Playwright to intercept /camps/{id} detail calls (like the working script)
 """
 
 import asyncio
@@ -100,15 +100,11 @@ def get_event_type_urls():
 
 async def collect_events_via_f12(gym_id, camp_type):
     """
-    Collect events for a specific gym and event type using Playwright
-    (Like the original working script - intercepts network requests)
-    
-    Args:
-        gym_id: Gym ID (e.g., 'RBA', 'RBK')
-        camp_type: Event type (e.g., 'KIDS NIGHT OUT', 'CLINIC')
+    Opens the camp listing page and collects JSON from /camps/<id> detail calls.
+    (EXACT same approach as the working script)
     
     Returns:
-        List of raw event dictionaries
+        events_raw: list of event dicts (one per event)
     """
     if gym_id not in GYMS:
         print(f"Unknown gym ID: {gym_id}")
@@ -124,153 +120,113 @@ async def collect_events_via_f12(gym_id, camp_type):
         print(f"Gym '{gym_id}' does not have URL for '{camp_type}'")
         return []
     
-    portal_url = event_type_urls[camp_type][gym_id]
-    print(f"🌐 Opening portal page: {portal_url}")
+    gym = GYMS[gym_id]
+    slug = gym["slug"]
+    url = event_type_urls[camp_type][gym_id]
     
-    events = []
+    print(f"[INFO] Collecting '{camp_type}' from {gym['name']} ({gym_id})")
+    print(f"[INFO] Portal URL: {url}")
+    
+    captured_events = []
+    seen_ids = set()
+    
+    def handle_response(response):
+        """Intercept /camps/{id} detail calls (NOT search calls)"""
+        nonlocal captured_events, seen_ids
+        try:
+            response_url = response.url
+            content_type = response.headers.get("content-type", "")
+        except Exception:
+            return
+        
+        # Only care about JSON
+        if "application/json" not in content_type:
+            return
+        
+        # We want detail calls like /camps/2106, NOT the ? query
+        # So require "/camps/" and NO "?" in the URL.
+        if "/camps/" in response_url and "?" not in response_url:
+            try:
+                body = response.json()
+            except Exception:
+                return
+            
+            if not isinstance(body, dict):
+                return
+            
+            data = body.get("data")
+            if not isinstance(data, dict):
+                return
+            
+            event_id = data.get("id")
+            if event_id is None:
+                return
+            
+            if event_id in seen_ids:
+                return
+            
+            seen_ids.add(event_id)
+            captured_events.append(data)
+            print(f"[INFO] Captured event {event_id} from: {response_url}")
     
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         
-        # Store intercepted events
-        intercepted_events = []
-        
-        def handle_response(response):
-            """Intercept network responses and extract event data"""
-            try:
-                response_url = response.url
-                content_type = response.headers.get("content-type", "")
-                
-                # Look for JSON responses from camps API
-                if "application/json" not in content_type:
-                    return
-                
-                # Check if this is a camp detail API call (like /camps/2106)
-                # or a camp search API call
-                if "/camps/" in response_url or "/camps?" in response_url:
-                    try:
-                        # Get the response body
-                        body = response.json()
-                        
-                        # Handle different response formats
-                        if isinstance(body, dict):
-                            # Format 1: Search API response with 'data' array
-                            if 'data' in body and isinstance(body['data'], list):
-                                for event in body['data']:
-                                    if event.get('id'):
-                                        intercepted_events.append(event)
-                            
-                            # Format 2: Single event detail (like /camps/2106)
-                            elif body.get('id'):
-                                intercepted_events.append(body)
-                            
-                            # Format 3: Nested data structure
-                            elif 'data' in body and isinstance(body['data'], dict):
-                                if body['data'].get('id'):
-                                    intercepted_events.append(body['data'])
-                    except Exception as e:
-                        print(f"   Error parsing response from {response_url}: {str(e)[:100]}")
-            except Exception as e:
-                pass
-        
-        # Set up response handler
         page.on("response", handle_response)
         
-        try:
-            # Navigate to the portal page (this triggers API calls)
-            print(f"   Loading page...")
-            await page.goto(portal_url, wait_until="domcontentloaded", timeout=30000)
-            
-            # Wait a bit for all API calls to complete
-            print(f"   Waiting for API calls...")
-            await page.wait_for_timeout(3000)  # Wait 3 seconds for async API calls
-            
-            # Check if we got events
-            if intercepted_events:
-                # Deduplicate by event ID
-                seen_ids = set()
-                for event in intercepted_events:
-                    event_id = event.get('id')
-                    if event_id and event_id not in seen_ids:
-                        events.append(event)
-                        seen_ids.add(event_id)
-                
-                print(f"✅ Intercepted {len(events)} unique events from network requests")
-            else:
-                print(f"⚠️ No events intercepted. The page might not have made API calls yet.")
-                print(f"   This could mean:")
-                print(f"   - The page uses a different API endpoint")
-                print(f"   - The page loads events dynamically after initial load")
-                print(f"   - The URL might be incorrect")
+        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        await page.reload(wait_until="networkidle", timeout=30000)
+        await page.wait_for_timeout(1500)
         
-        except Exception as e:
-            print(f"❌ Error loading page: {str(e)}")
-            import traceback
-            print(traceback.format_exc()[:500])
-        finally:
-            await browser.close()
+        await browser.close()
     
-    return events
+    print(f"\n[INFO] Total raw events captured (detail JSON): {len(captured_events)}\n")
+    return captured_events
 
 def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
     """
     Convert raw event dictionaries to flat format for database
-    
-    Args:
-        events: List of raw event dictionaries from API
-        gym_id: Gym ID
-        portal_slug: Portal subdomain/slug
-        camp_type_label: Event type label
-    
-    Returns:
-        List of flat event dictionaries ready for database
+    (EXACT same logic as the working script)
     """
     if not events:
         return []
     
     processed = []
-    seen_urls = set()
-    today = date.today()
+    seen_ids = set()
+    today_str = date.today().isoformat()  # e.g. "2025-11-13"
     
     for ev in events:
-        # Extract event ID
-        event_id = ev.get('id')
-        if not event_id:
+        event_id = ev.get("id")
+        if event_id is None:
             continue
         
-        # Build event URL
+        # 1) dedupe by ID
+        if event_id in seen_ids:
+            continue
+        seen_ids.add(event_id)
+        
+        # 2) future-only filter
+        start_date = (ev.get("startDate") or "").strip()
+        if start_date and start_date < today_str:
+            continue
+        
+        # 3) build URL from ID (your source of truth)
         event_url = f"https://portal.iclasspro.com/{portal_slug}/camp-details/{event_id}"
         
-        # Skip duplicates
-        if event_url in seen_urls:
-            continue
-        seen_urls.add(event_url)
-        
-        # Extract dates
-        start_date = ev.get('startDate')
-        if not start_date:
-            continue
-        
-        # Filter to future events only
-        try:
-            event_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-            if event_date < today:
-                continue
-        except (ValueError, AttributeError):
-            continue
-        
-        # Extract time from schedule
-        time_str = None
-        if ev.get('schedule') and len(ev['schedule']) > 0:
-            schedule = ev['schedule'][0]
-            start_time = schedule.get('startTime', '')
-            end_time = schedule.get('endTime', '')
+        # 4) time from schedule
+        time_str = "10:00 AM - 11:30 AM"  # default
+        schedule_list = ev.get("schedule") or []
+        if schedule_list:
+            sched = schedule_list[0]
+            start_time = (sched.get("startTime") or "").strip()
+            end_time = (sched.get("endTime") or "").strip()
             if start_time and end_time:
                 time_str = f"{start_time} - {end_time}"
         
-        # Extract title
-        title = ev.get('name', 'Untitled Event')
+        # 5) title
+        title = (ev.get("name") or "Untitled Event").strip()
+        title = " ".join(title.split())
         
         # Extract price from title or description
         price = None
