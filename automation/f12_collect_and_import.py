@@ -129,14 +129,27 @@ async def collect_events_via_f12(gym_id, camp_type):
     
     captured_events = []
     seen_ids = set()
+    all_responses = []  # Debug: track all responses
     
     def handle_response(response):
         """Intercept /camps/{id} detail calls (NOT search calls)"""
-        nonlocal captured_events, seen_ids
+        nonlocal captured_events, seen_ids, all_responses
         try:
             response_url = response.url
             content_type = response.headers.get("content-type", "")
-        except Exception:
+            status = response.status
+            
+            # Debug: track all /camps/ responses
+            if "/camps/" in response_url:
+                all_responses.append({
+                    "url": response_url,
+                    "status": status,
+                    "content_type": content_type,
+                    "has_query": "?" in response_url
+                })
+                print(f"[DEBUG] Found /camps/ response: {response_url} (status: {status}, type: {content_type})")
+        except Exception as e:
+            print(f"[DEBUG] Error getting response info: {e}")
             return
         
         # Only care about JSON
@@ -146,28 +159,34 @@ async def collect_events_via_f12(gym_id, camp_type):
         # We want detail calls like /camps/2106, NOT the ? query
         # So require "/camps/" and NO "?" in the URL.
         if "/camps/" in response_url and "?" not in response_url:
+            print(f"[DEBUG] Processing detail call: {response_url}")
             try:
                 body = response.json()
-            except Exception:
+            except Exception as e:
+                print(f"[DEBUG] Error parsing JSON: {e}")
                 return
             
             if not isinstance(body, dict):
+                print(f"[DEBUG] Body is not a dict: {type(body)}")
                 return
             
             data = body.get("data")
             if not isinstance(data, dict):
+                print(f"[DEBUG] data is not a dict: {type(data)}")
                 return
             
             event_id = data.get("id")
             if event_id is None:
+                print(f"[DEBUG] No event ID in data")
                 return
             
             if event_id in seen_ids:
+                print(f"[DEBUG] Event {event_id} already seen")
                 return
             
             seen_ids.add(event_id)
             captured_events.append(data)
-            print(f"[INFO] Captured event {event_id} from: {response_url}")
+            print(f"[INFO] ✅ Captured event {event_id} from: {response_url}")
     
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -175,13 +194,23 @@ async def collect_events_via_f12(gym_id, camp_type):
         
         page.on("response", handle_response)
         
+        print(f"[INFO] Loading page: {url}")
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        print(f"[INFO] Page loaded, waiting for network...")
         await page.reload(wait_until="networkidle", timeout=30000)
+        print(f"[INFO] Network idle, waiting additional 1.5s...")
         await page.wait_for_timeout(1500)
         
         await browser.close()
     
-    print(f"\n[INFO] Total raw events captured (detail JSON): {len(captured_events)}\n")
+    print(f"\n[INFO] Total raw events captured (detail JSON): {len(captured_events)}")
+    print(f"[DEBUG] Total /camps/ responses found: {len(all_responses)}")
+    if all_responses:
+        print(f"[DEBUG] Response details:")
+        for resp in all_responses[:10]:  # Show first 10
+            print(f"  - {resp['url']} (status: {resp['status']}, query: {resp['has_query']})")
+    print()
+    
     return captured_events
 
 def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
