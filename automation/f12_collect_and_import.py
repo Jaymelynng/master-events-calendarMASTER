@@ -131,7 +131,7 @@ async def collect_events_via_f12(gym_id, camp_type):
     seen_ids = set()
     all_responses = []  # Debug: track all responses
     
-    def handle_response(response):
+    async def handle_response(response):
         """Intercept /camps/{id} detail calls (NOT search calls)"""
         nonlocal captured_events, seen_ids, all_responses
         try:
@@ -161,7 +161,7 @@ async def collect_events_via_f12(gym_id, camp_type):
         if "/camps/" in response_url and "?" not in response_url:
             print(f"[DEBUG] Processing detail call: {response_url}")
             try:
-                body = response.json()
+                body = await response.json()  # FIX: await the async call
             except Exception as e:
                 print(f"[DEBUG] Error parsing JSON: {e}")
                 return
