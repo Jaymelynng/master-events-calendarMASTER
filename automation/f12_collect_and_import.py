@@ -198,8 +198,12 @@ async def collect_events_via_f12(gym_id, camp_type):
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
         print(f"[INFO] Page loaded, waiting for network...")
         await page.reload(wait_until="networkidle", timeout=30000)
-        print(f"[INFO] Network idle, waiting additional 1.5s...")
-        await page.wait_for_timeout(1500)
+        print(f"[INFO] Network idle, waiting additional 3s for all responses...")
+        await page.wait_for_timeout(3000)  # Wait longer for async handlers to complete
+        
+        # Give async handlers time to finish processing
+        import asyncio
+        await asyncio.sleep(1)
         
         await browser.close()
     
