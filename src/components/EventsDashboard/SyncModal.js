@@ -40,7 +40,7 @@ export default function SyncModal({ theme, onClose, gyms }) {
     try {
       // Use environment variable for API URL, fallback to localhost for local dev
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      const API_KEY = process.env.REACT_APP_API_KEY || ''; // API key for Railway
+      const API_KEY = process.env.REACT_APP_API_KEY || ''; // API key for Railway (if needed)
       
       // Call API (local or Railway)
       const headers = {
@@ -101,12 +101,12 @@ export default function SyncModal({ theme, onClose, gyms }) {
       }
     } catch (error) {
       console.error('Sync error:', error);
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-        setResult({
-          success: false,
-          message: `Failed to connect to API server at ${API_URL}\n\nError: ${error.message}\n\nMake sure the server is running.`,
-          events: []
-        });
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      setResult({
+        success: false,
+        message: `Failed to connect to API server at ${API_URL}\n\nError: ${error.message}\n\n${API_URL.includes('localhost') ? 'Make sure the local server is running.' : 'Check if Railway is deployed and running.'}`,
+        events: []
+      });
     } finally {
       setSyncing(false);
     }
@@ -211,22 +211,37 @@ export default function SyncModal({ theme, onClose, gyms }) {
     }
   };
 
+  // Detect if using Railway or local
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const isRailway = API_URL.includes('railway.app') || API_URL.includes('railway');
+  const isLocal = !isRailway && API_URL.includes('localhost');
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-hidden">
       <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto flex flex-col">
         <div className="flex justify-between items-center mb-4 flex-shrink-0">
           <h2 className="text-2xl font-bold text-purple-800 flex items-center gap-2">
-            ⚡ Automated Sync (Local)
+            ⚡ Automated Sync {isRailway ? '(Railway)' : isLocal ? '(Local)' : ''}
           </h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
         </div>
 
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800">
-            <strong>⚠️ Make sure the local API server is running:</strong><br />
-            <code className="bg-yellow-100 px-2 py-1 rounded">cd automation && python local_api_server.py</code>
-          </p>
-        </div>
+        {isLocal && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              <strong>⚠️ Make sure the local API server is running:</strong><br />
+              <code className="bg-yellow-100 px-2 py-1 rounded">cd automation && python local_api_server.py</code>
+            </p>
+          </div>
+        )}
+
+        {isRailway && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-800">
+              <strong>✅ Using Railway API:</strong> {API_URL}
+            </p>
+          </div>
+        )}
 
         {/* Step 1: Gym Selection - Radio Buttons (Like F12 Modal) */}
         <div className="mb-4">
