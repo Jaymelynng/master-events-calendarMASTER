@@ -4,3 +4,8 @@ echo "Installing Playwright browsers..."
 playwright install chromium
 playwright install-deps chromium
 
+
+
+
+
+
