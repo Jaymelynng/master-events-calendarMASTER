@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, Suspense, lazy } from 'react';
 import { 
   Calendar, Clock, DollarSign, MapPin, Filter, Search, Grid, List, Plus, 
-  ChevronUp, ChevronLeft, ChevronRight, AlertCircle, Loader, Copy, CheckCircle
+  ChevronUp, ChevronLeft, ChevronRight, AlertCircle, Loader, Copy, CheckCircle, Users
 } from 'lucide-react';
 
 // Import real API functions
@@ -3158,11 +3158,38 @@ The system will add new events and update any changed events automatically.`;
                           {selectedEventForPanel.price ? (
                             <div className="font-bold text-lg" style={{ color: theme.colors.primary }}>${selectedEventForPanel.price}</div>
                           ) : (
-                            <div className="text-sm text-gray-500 italic">Price not in title</div>
+                            <div className="text-sm text-gray-500 italic">Price not in event details</div>
                           )}
                         </div>
                       </div>
+                      {/* Age Range */}
+                      {(selectedEventForPanel.age_min || selectedEventForPanel.age_max) && (
+                        <div className="flex items-start gap-3">
+                          <Users className="w-5 h-5 text-gray-400 mt-0.5" />
+                          <div>
+                            <div className="font-semibold text-xs text-gray-500 uppercase mb-1">Ages</div>
+                            <div>
+                              {selectedEventForPanel.age_min && selectedEventForPanel.age_max 
+                                ? `${selectedEventForPanel.age_min} - ${selectedEventForPanel.age_max} years`
+                                : selectedEventForPanel.age_min 
+                                  ? `${selectedEventForPanel.age_min}+ years`
+                                  : `Up to ${selectedEventForPanel.age_max} years`
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
+                    
+                    {/* Description */}
+                    {selectedEventForPanel.description && (
+                      <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
+                        <div className="font-semibold text-xs text-gray-500 uppercase mb-2">Description</div>
+                        <div className="text-sm text-gray-700 leading-relaxed">
+                          {selectedEventForPanel.description}
+                        </div>
+                      </div>
+                    )}
                     
                     {/* Quick Access - Check gym_links table for what THIS gym offers */}
                     {selectedEventForPanel.type === 'CAMP' && (() => {
