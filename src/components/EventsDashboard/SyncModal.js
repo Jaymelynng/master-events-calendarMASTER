@@ -296,7 +296,7 @@ export default function SyncModal({ theme, onClose, gyms }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-hidden">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto flex flex-col">
+      <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto flex flex-col">
         <div className="flex justify-between items-center mb-4 flex-shrink-0">
           <h2 className="text-2xl font-bold text-purple-800 flex items-center gap-2">
             ⚡ Automated Sync
@@ -338,83 +338,110 @@ export default function SyncModal({ theme, onClose, gyms }) {
           </div>
         )}
 
-        {/* Sync Progress Toggle */}
+        {/* Sync Progress Grid - Always visible, compact */}
         <div className="mb-4">
-          <button
-            onClick={() => setShowProgress(!showProgress)}
-            className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
-          >
-            {showProgress ? '▼' : '▶'} 📊 Sync Progress Tracker
-            <span className="text-xs text-gray-500 ml-2">
-              ({syncLog.length} syncs logged)
-            </span>
-          </button>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-purple-800">📊 Sync Progress ({syncLog.length} logged)</span>
+            <button
+              onClick={() => setShowProgress(!showProgress)}
+              className="text-xs text-purple-600 hover:text-purple-800"
+            >
+              {showProgress ? '[ Collapse ]' : '[ Expand ]'}
+            </button>
+          </div>
         </div>
 
         {/* Sync Progress Grid */}
-        {showProgress && (
-          <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-gray-300">
-                  <th className="text-left py-2 px-1 font-semibold text-gray-700">Gym</th>
-                  {eventTypes.map(type => (
-                    <th key={type} className="text-center py-2 px-1 font-semibold text-gray-700" style={{ minWidth: '60px' }}>
-                      {type === 'KIDS NIGHT OUT' ? 'KNO' : 
-                       type === 'OPEN GYM' ? 'OG' :
-                       type === 'SPECIAL EVENT' ? 'SE' :
-                       type}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {gyms.map(gym => (
-                  <tr key={gym.id} className={`border-b border-gray-100 ${selectedGym === gym.id ? 'bg-purple-50' : ''}`}>
-                    <td className="py-1 px-1 font-medium text-gray-800 truncate" style={{ maxWidth: '120px' }}>
-                      {gym.name.replace('Capital Gymnastics ', 'Cap ').replace('Rowland Ballard ', 'RB ').replace(' Gymnastics', '')}
-                    </td>
-                    {eventTypes.map(type => {
-                      const status = getSyncStatus(gym.id, type);
-                      const isSelected = selectedGym === gym.id && selectedEventType === type;
-                      return (
-                        <td key={type} className="text-center py-1 px-1">
-                          {status ? (
-                            <div 
-                              className={`inline-block px-1 py-0.5 rounded text-xs cursor-pointer ${
-                                isSelected ? 'ring-2 ring-purple-500' : ''
-                              } ${
-                                status.events_found > 0 
-                                  ? 'bg-green-100 text-green-700' 
-                                  : 'bg-yellow-100 text-yellow-700'
-                              }`}
-                              title={`Last synced: ${new Date(status.last_synced).toLocaleString()}\nEvents: ${status.events_found}`}
-                              onClick={() => { setSelectedGym(gym.id); setSelectedEventType(''); setResult(null); }}
-                            >
-                              ✓ {timeAgo(status.last_synced)}
-                            </div>
-                          ) : (
-                            <div 
-                              className={`inline-block px-1 py-0.5 rounded text-xs bg-gray-200 text-gray-500 cursor-pointer ${
-                                isSelected ? 'ring-2 ring-purple-500' : ''
-                              }`}
-                              onClick={() => { setSelectedGym(gym.id); setSelectedEventType(''); setResult(null); }}
-                            >
-                              —
-                            </div>
-                          )}
-                        </td>
-                      );
-                    })}
+        {showProgress ? (
+          <div className="mb-4 p-4 bg-white border-2 border-purple-300 rounded-lg shadow-lg">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-purple-100">
+                    <th className="text-left py-2 px-2 font-bold text-purple-800 border border-purple-200 sticky left-0 bg-purple-100">Gym</th>
+                    {eventTypes.map(type => (
+                      <th key={type} className="text-center py-2 px-2 font-bold text-purple-800 border border-purple-200" style={{ minWidth: '70px' }}>
+                        {type === 'KIDS NIGHT OUT' ? 'KNO' : 
+                         type === 'OPEN GYM' ? 'OG' :
+                         type === 'SPECIAL EVENT' ? 'SE' :
+                         type}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="mt-2 text-xs text-gray-500 flex gap-4">
-              <span>✓ = Synced</span>
-              <span className="text-green-600">Green = Has events</span>
-              <span className="text-yellow-600">Yellow = No events</span>
-              <span>— = Never synced</span>
+                </thead>
+                <tbody>
+                  {gyms.map((gym, idx) => (
+                    <tr key={gym.id} className={`${selectedGym === gym.id ? 'bg-purple-50' : idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
+                      <td className="py-2 px-2 font-semibold text-gray-800 border border-gray-200 sticky left-0 whitespace-nowrap" style={{ backgroundColor: selectedGym === gym.id ? '#faf5ff' : idx % 2 === 0 ? '#f9fafb' : 'white' }}>
+                        {gym.name.replace('Capital Gymnastics ', 'Cap ').replace('Rowland Ballard ', 'RB ').replace(' Gymnastics', '')}
+                      </td>
+                      {eventTypes.map(type => {
+                        const status = getSyncStatus(gym.id, type);
+                        const isSelected = selectedGym === gym.id && selectedEventType === type;
+                        return (
+                          <td key={type} className="text-center py-2 px-2 border border-gray-200">
+                            {status ? (
+                              <div 
+                                className={`inline-block px-2 py-1 rounded font-medium cursor-pointer transition-all hover:scale-105 ${
+                                  isSelected ? 'ring-2 ring-purple-500' : ''
+                                } ${
+                                  status.events_found > 0 
+                                    ? 'bg-green-200 text-green-800' 
+                                    : 'bg-yellow-200 text-yellow-800'
+                                }`}
+                                title={`Last synced: ${new Date(status.last_synced).toLocaleString()}\nEvents: ${status.events_found}`}
+                                onClick={() => { setSelectedGym(gym.id); setSelectedEventType(''); setResult(null); }}
+                              >
+                                ✓ {timeAgo(status.last_synced)}
+                              </div>
+                            ) : (
+                              <div 
+                                className={`inline-block px-2 py-1 rounded font-medium bg-red-100 text-red-600 cursor-pointer transition-all hover:scale-105 hover:bg-red-200 ${
+                                  isSelected ? 'ring-2 ring-purple-500' : ''
+                                }`}
+                                onClick={() => { setSelectedGym(gym.id); setSelectedEventType(''); setResult(null); }}
+                              >
+                                ✗ Need
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap gap-4 text-sm">
+              <span className="flex items-center gap-1"><span className="inline-block w-4 h-4 bg-green-200 rounded"></span> Synced (has events)</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-4 h-4 bg-yellow-200 rounded"></span> Synced (no events)</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-4 h-4 bg-red-100 rounded"></span> Needs sync</span>
+            </div>
+          </div>
+        ) : (
+          /* Compact mini-view when collapsed */
+          <div className="mb-4 p-2 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="flex flex-wrap gap-1">
+              {gyms.map(gym => {
+                const gymSyncs = eventTypes.filter(type => getSyncStatus(gym.id, type)).length;
+                const total = eventTypes.length;
+                const allDone = gymSyncs === total;
+                const shortName = gym.name.replace('Capital Gymnastics ', '').replace('Rowland Ballard ', 'RB ').replace(' Gymnastics', '').substring(0, 8);
+                return (
+                  <div 
+                    key={gym.id}
+                    className={`px-2 py-1 rounded text-xs font-medium cursor-pointer ${
+                      allDone ? 'bg-green-200 text-green-800' : 
+                      gymSyncs > 0 ? 'bg-yellow-200 text-yellow-800' : 
+                      'bg-red-100 text-red-600'
+                    } ${selectedGym === gym.id ? 'ring-2 ring-purple-500' : ''}`}
+                    onClick={() => { setSelectedGym(gym.id); setResult(null); }}
+                    title={`${gym.name}: ${gymSyncs}/${total} synced`}
+                  >
+                    {shortName} {gymSyncs}/{total}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
