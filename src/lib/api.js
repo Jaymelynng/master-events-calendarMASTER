@@ -123,7 +123,7 @@ export const eventsApi = {
     }
   },
 
-  async getAll(startDate, endDate) {
+  async getAll(startDate, endDate, includeDeleted = false) {
     let query = supabase
       .from('events_with_gym')
       .select('*')
@@ -134,6 +134,11 @@ export const eventsApi = {
     }
     if (endDate) {
       query = query.lte('date', endDate)
+    }
+    
+    // Filter out deleted events unless explicitly requested
+    if (!includeDeleted) {
+      query = query.is('deleted_at', null)
     }
     
     const { data, error } = await query
@@ -196,6 +201,32 @@ export const eventsApi = {
       .eq('id', id)
     
     if (error) throw new Error(error.message)
+  },
+
+  // Soft delete - marks event as deleted without removing from database
+  async markAsDeleted(id) {
+    const { data, error } = await supabase
+      .from('events')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw new Error(error.message)
+    return data
+  },
+
+  // Restore a soft-deleted event
+  async restore(id) {
+    const { data, error } = await supabase
+      .from('events')
+      .update({ deleted_at: null })
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw new Error(error.message)
+    return data
   }
 }
 
@@ -241,6 +272,46 @@ export const monthlyRequirementsApi = {
       .from('monthly_requirements')
       .select('*')
       .order('event_type');
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+};
+
+// Sync Log API - tracks when each gym/event type was last synced
+export const syncLogApi = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('sync_log')
+      .select('*')
+      .order('last_synced', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async log(gymId, eventType, eventsFound, eventsImported = 0) {
+    // Upsert - update if exists, insert if not
+    const { data, error } = await supabase
+      .from('sync_log')
+      .upsert({
+        gym_id: gymId,
+        event_type: eventType,
+        last_synced: new Date().toISOString(),
+        events_found: eventsFound,
+        events_imported: eventsImported
+      }, {
+        onConflict: 'gym_id,event_type'
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async getByGym(gymId) {
+    const { data, error } = await supabase
+      .from('sync_log')
+      .select('*')
+      .eq('gym_id', gymId);
     if (error) throw new Error(error.message);
     return data || [];
   }

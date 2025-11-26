@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Loader, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { eventsApi } from '../../lib/api';
+import { eventsApi, syncLogApi } from '../../lib/api';
 import { compareEvents, getComparisonSummary } from '../../lib/eventComparison';
 
 export default function SyncModal({ theme, onClose, gyms }) {
@@ -13,6 +13,21 @@ export default function SyncModal({ theme, onClose, gyms }) {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [devMode, setDevMode] = useState(false);
+  const [syncLog, setSyncLog] = useState([]);
+  const [showProgress, setShowProgress] = useState(false);
+
+  // Load sync log on mount
+  useEffect(() => {
+    const loadSyncLog = async () => {
+      try {
+        const log = await syncLogApi.getAll();
+        setSyncLog(log);
+      } catch (err) {
+        console.error('Failed to load sync log:', err);
+      }
+    };
+    loadSyncLog();
+  }, []);
 
   // Secret dev mode: Press Shift+D to toggle
   useEffect(() => {
@@ -25,12 +40,36 @@ export default function SyncModal({ theme, onClose, gyms }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Helper to get sync status for a gym/type combo
+  const getSyncStatus = (gymId, eventType) => {
+    const entry = syncLog.find(s => s.gym_id === gymId && s.event_type === eventType);
+    if (!entry) return null;
+    return entry;
+  };
+
+  // Helper to format time ago
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return 'Never';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
   // Event types from your working script
   const eventTypes = [
     'KIDS NIGHT OUT',
     'CLINIC',
     'OPEN GYM',
-    'SCHOOL YEAR CAMP',
+    'CAMP',
     'SPECIAL EVENT'
   ];
 
@@ -103,6 +142,34 @@ export default function SyncModal({ theme, onClose, gyms }) {
           events: data.events,
           message: data.message
         });
+        
+        // Log the sync to track progress
+        try {
+          await syncLogApi.log(selectedGym, eventType, data.eventsFound || data.events.length, 0);
+          // Refresh sync log
+          const updatedLog = await syncLogApi.getAll();
+          setSyncLog(updatedLog);
+        } catch (err) {
+          console.error('Failed to log sync:', err);
+        }
+      } else if (data.noEvents) {
+        // No events scheduled - still counts as a successful sync check
+        setResult({
+          success: true,
+          noEvents: true,
+          eventsFound: 0,
+          events: [],
+          message: data.message || `No ${eventType} events scheduled`
+        });
+        
+        // Log even when no events (so we know we checked)
+        try {
+          await syncLogApi.log(selectedGym, eventType, 0, 0);
+          const updatedLog = await syncLogApi.getAll();
+          setSyncLog(updatedLog);
+        } catch (err) {
+          console.error('Failed to log sync:', err);
+        }
       } else {
         setResult({
           success: false,
@@ -268,6 +335,87 @@ export default function SyncModal({ theme, onClose, gyms }) {
                 API: {API_URL}
               </p>
             )}
+          </div>
+        )}
+
+        {/* Sync Progress Toggle */}
+        <div className="mb-4">
+          <button
+            onClick={() => setShowProgress(!showProgress)}
+            className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
+          >
+            {showProgress ? '▼' : '▶'} 📊 Sync Progress Tracker
+            <span className="text-xs text-gray-500 ml-2">
+              ({syncLog.length} syncs logged)
+            </span>
+          </button>
+        </div>
+
+        {/* Sync Progress Grid */}
+        {showProgress && (
+          <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-300">
+                  <th className="text-left py-2 px-1 font-semibold text-gray-700">Gym</th>
+                  {eventTypes.map(type => (
+                    <th key={type} className="text-center py-2 px-1 font-semibold text-gray-700" style={{ minWidth: '60px' }}>
+                      {type === 'KIDS NIGHT OUT' ? 'KNO' : 
+                       type === 'OPEN GYM' ? 'OG' :
+                       type === 'SPECIAL EVENT' ? 'SE' :
+                       type}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {gyms.map(gym => (
+                  <tr key={gym.id} className={`border-b border-gray-100 ${selectedGym === gym.id ? 'bg-purple-50' : ''}`}>
+                    <td className="py-1 px-1 font-medium text-gray-800 truncate" style={{ maxWidth: '120px' }}>
+                      {gym.name.replace('Capital Gymnastics ', 'Cap ').replace('Rowland Ballard ', 'RB ').replace(' Gymnastics', '')}
+                    </td>
+                    {eventTypes.map(type => {
+                      const status = getSyncStatus(gym.id, type);
+                      const isSelected = selectedGym === gym.id && selectedEventType === type;
+                      return (
+                        <td key={type} className="text-center py-1 px-1">
+                          {status ? (
+                            <div 
+                              className={`inline-block px-1 py-0.5 rounded text-xs cursor-pointer ${
+                                isSelected ? 'ring-2 ring-purple-500' : ''
+                              } ${
+                                status.events_found > 0 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}
+                              title={`Last synced: ${new Date(status.last_synced).toLocaleString()}\nEvents: ${status.events_found}`}
+                              onClick={() => { setSelectedGym(gym.id); setSelectedEventType(''); setResult(null); }}
+                            >
+                              ✓ {timeAgo(status.last_synced)}
+                            </div>
+                          ) : (
+                            <div 
+                              className={`inline-block px-1 py-0.5 rounded text-xs bg-gray-200 text-gray-500 cursor-pointer ${
+                                isSelected ? 'ring-2 ring-purple-500' : ''
+                              }`}
+                              onClick={() => { setSelectedGym(gym.id); setSelectedEventType(''); setResult(null); }}
+                            >
+                              —
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="mt-2 text-xs text-gray-500 flex gap-4">
+              <span>✓ = Synced</span>
+              <span className="text-green-600">Green = Has events</span>
+              <span className="text-yellow-600">Yellow = No events</span>
+              <span>— = Never synced</span>
+            </div>
           </div>
         )}
 
