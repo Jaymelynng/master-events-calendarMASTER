@@ -509,7 +509,7 @@ export default function SyncModal({ theme, onClose, gyms }) {
                 ✏️ Edit prices in the table below if needed, then click Import
               </p>
             </div>
-            <div className="max-h-64 overflow-y-auto">
+            <div className="max-h-96 overflow-y-auto border border-gray-200 rounded">
               <table className="w-full text-sm">
                 <thead className="bg-gray-100 sticky top-0">
                   <tr>
