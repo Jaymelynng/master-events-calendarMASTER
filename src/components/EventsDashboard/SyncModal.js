@@ -295,8 +295,8 @@ export default function SyncModal({ theme, onClose, gyms }) {
   const isLocal = !isRailway && API_URL.includes('localhost');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-hidden">
-      <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-hidden p-4">
+      <div className="bg-white rounded-lg p-6 w-full max-w-6xl h-[95vh] overflow-y-auto flex flex-col">
         <div className="flex justify-between items-center mb-4 flex-shrink-0">
           <h2 className="text-2xl font-bold text-purple-800 flex items-center gap-2">
             ⚡ Automated Sync
