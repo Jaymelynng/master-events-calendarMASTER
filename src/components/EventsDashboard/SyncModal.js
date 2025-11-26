@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Loader, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { syncEvents } from '../../lib/syncApi';
 import { eventsApi } from '../../lib/api';
 import { compareEvents, getComparisonSummary } from '../../lib/eventComparison';
 
@@ -346,6 +345,31 @@ export default function SyncModal({ theme, onClose, gyms }) {
                 )}
               </div>
             </div>
+            {/* Buttons for failed sync or no events - allow quick navigation */}
+            {!result.success && (
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => {
+                    setResult(null);
+                    setSelectedEventType('');
+                    // Keep selectedGym
+                  }}
+                  className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors text-sm"
+                >
+                  🔄 Sync Another Program
+                </button>
+                <button
+                  onClick={() => {
+                    setResult(null);
+                    setSelectedEventType('');
+                    setSelectedGym('');
+                  }}
+                  className="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors text-sm"
+                >
+                  🏢 Sync Another Gym
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -566,20 +590,36 @@ export default function SyncModal({ theme, onClose, gyms }) {
               </div>
             </div>
             {importResult.success && (
-              <button
-                onClick={() => {
-                  // Reset form for next sync
-                  setResult(null);
-                  setImportResult(null);
-                  setEditableEvents([]);
-                  setComparison(null);
-                  setSelectedEventType('');
-                  // Keep selectedGym so they don't have to reselect it
-                }}
-                className="mt-3 w-full px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors"
-              >
-                🔄 Sync Another Program
-              </button>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => {
+                    // Reset form for next sync - keep gym selected
+                    setResult(null);
+                    setImportResult(null);
+                    setEditableEvents([]);
+                    setComparison(null);
+                    setSelectedEventType('');
+                    // Keep selectedGym so they don't have to reselect it
+                  }}
+                  className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors text-sm"
+                >
+                  🔄 Sync Another Program
+                </button>
+                <button
+                  onClick={() => {
+                    // Reset everything - pick new gym
+                    setResult(null);
+                    setImportResult(null);
+                    setEditableEvents([]);
+                    setComparison(null);
+                    setSelectedEventType('');
+                    setSelectedGym('');
+                  }}
+                  className="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors text-sm"
+                >
+                  🏢 Sync Another Gym
+                </button>
+              </div>
             )}
           </div>
         )}
