@@ -832,36 +832,66 @@ export default function SyncModal({ theme, onClose, gyms }) {
               </div>
             </div>
             {importResult.success && (
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={() => {
-                    // Reset form for next sync - keep gym selected
-                    setResult(null);
-                    setImportResult(null);
-                    setEditableEvents([]);
-                    setComparison(null);
-                    setSelectedEventType('');
-                    // Keep selectedGym so they don't have to reselect it
-                  }}
-                  className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors text-sm"
-                >
-                  🔄 Sync Another Program
-                </button>
-                <button
-                  onClick={() => {
-                    // Reset everything - pick new gym
-                    setResult(null);
-                    setImportResult(null);
-                    setEditableEvents([]);
-                    setComparison(null);
-                    setSelectedEventType('');
-                    setSelectedGym('');
-                  }}
-                  className="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors text-sm"
-                >
-                  🏢 Sync Another Gym
-                </button>
-              </div>
+              <>
+                {/* Mini progress for current gym */}
+                <div className="mt-3 p-2 bg-white rounded border border-gray-200">
+                  <div className="text-xs font-semibold text-gray-600 mb-2">
+                    📊 {gyms.find(g => g.id === selectedGym)?.name || selectedGym} Progress:
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {eventTypes.map(type => {
+                      const status = getSyncStatus(selectedGym, type);
+                      const shortType = type === 'KIDS NIGHT OUT' ? 'KNO' : 
+                                       type === 'OPEN GYM' ? 'OG' :
+                                       type === 'SPECIAL EVENT' ? 'SE' : type;
+                      return (
+                        <span 
+                          key={type}
+                          className={`px-2 py-1 rounded text-xs font-medium ${
+                            status 
+                              ? status.events_found > 0 
+                                ? 'bg-green-200 text-green-800' 
+                                : 'bg-yellow-200 text-yellow-800'
+                              : 'bg-red-100 text-red-600'
+                          }`}
+                        >
+                          {shortType} {status ? '✓' : '✗'}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => {
+                      // Reset form for next sync - keep gym selected
+                      setResult(null);
+                      setImportResult(null);
+                      setEditableEvents([]);
+                      setComparison(null);
+                      setSelectedEventType('');
+                      // Keep selectedGym so they don't have to reselect it
+                    }}
+                    className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors text-sm"
+                  >
+                    🔄 Sync Another Program
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Reset everything - pick new gym
+                      setResult(null);
+                      setImportResult(null);
+                      setEditableEvents([]);
+                      setComparison(null);
+                      setSelectedEventType('');
+                      setSelectedGym('');
+                    }}
+                    className="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors text-sm"
+                  >
+                    🏢 Sync Another Gym
+                  </button>
+                </div>
+              </>
             )}
           </div>
         )}
