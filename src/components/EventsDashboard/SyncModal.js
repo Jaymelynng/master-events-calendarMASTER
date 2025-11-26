@@ -295,8 +295,8 @@ export default function SyncModal({ theme, onClose, gyms }) {
   const isLocal = !isRailway && API_URL.includes('localhost');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-hidden p-4">
-      <div className="bg-white rounded-lg p-6 w-full max-w-6xl h-[95vh] overflow-y-auto flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 overflow-y-auto p-4">
+      <div className="bg-white rounded-lg p-6 w-full max-w-7xl my-4 flex flex-col">
         <div className="flex justify-between items-center mb-4 flex-shrink-0">
           <h2 className="text-2xl font-bold text-purple-800 flex items-center gap-2">
             ⚡ Automated Sync
@@ -338,21 +338,23 @@ export default function SyncModal({ theme, onClose, gyms }) {
           </div>
         )}
 
-        {/* Sync Progress Grid - Always visible, compact */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
+        {/* Sync Progress Grid - Compact when results showing */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-purple-800">📊 Sync Progress ({syncLog.length} logged)</span>
-            <button
-              onClick={() => setShowProgress(!showProgress)}
-              className="text-xs text-purple-600 hover:text-purple-800"
-            >
-              {showProgress ? '[ Collapse ]' : '[ Expand ]'}
-            </button>
+            {!result && (
+              <button
+                onClick={() => setShowProgress(!showProgress)}
+                className="text-xs text-purple-600 hover:text-purple-800"
+              >
+                {showProgress ? '[ Collapse ]' : '[ Expand ]'}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Sync Progress Grid */}
-        {showProgress ? (
+        {/* Sync Progress Grid - Full when no results, compact when results */}
+        {!result && showProgress ? (
           <div className="mb-4 p-4 bg-white border-2 border-purple-300 rounded-lg shadow-lg">
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
@@ -456,7 +458,8 @@ export default function SyncModal({ theme, onClose, gyms }) {
           </div>
         )}
 
-        {/* Step 1: Gym Selection - Radio Buttons (Like F12 Modal) */}
+        {/* Step 1: Gym Selection - Hide when we have results */}
+        {!result && (
         <div className="mb-4">
           <h3 className="font-semibold text-gray-800 mb-3">🏢 Step 1: Select Gym</h3>
           <div className="grid grid-cols-2 gap-2 border border-gray-300 rounded-lg p-3 bg-gray-50">
@@ -481,6 +484,7 @@ export default function SyncModal({ theme, onClose, gyms }) {
             ))}
           </div>
         </div>
+        )}
 
         {/* Step 2: Event Type Buttons - Only show when gym is selected */}
         {selectedGym && !result && (
