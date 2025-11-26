@@ -311,23 +311,43 @@ export default function SyncModal({ theme, onClose, gyms }) {
         {/* Results */}
         {result && (
           <div className={`p-4 rounded-lg border-2 mb-4 ${
-            result.success 
-              ? 'bg-green-50 border-green-300' 
-              : 'bg-red-50 border-red-300'
+            result.noEvents
+              ? 'bg-yellow-50 border-yellow-300'
+              : result.success 
+                ? 'bg-green-50 border-green-300' 
+                : 'bg-red-50 border-red-300'
           }`}>
             <div className="flex items-start gap-3">
-              {result.success ? (
+              {result.noEvents ? (
+                <span className="text-2xl">📭</span>
+              ) : result.success ? (
                 <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
               ) : (
                 <XCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
               )}
               <div className="flex-1">
-                <p className={`font-semibold ${result.success ? 'text-green-800' : 'text-red-800'}`}>
-                  {result.success ? '✅ Sync Successful!' : '❌ Sync Failed'}
+                <p className={`font-semibold ${
+                  result.noEvents 
+                    ? 'text-yellow-800' 
+                    : result.success 
+                      ? 'text-green-800' 
+                      : 'text-red-800'
+                }`}>
+                  {result.noEvents 
+                    ? '📅 No Events Scheduled' 
+                    : result.success 
+                      ? '✅ Sync Successful!' 
+                      : '❌ Sync Failed'}
                 </p>
                 {/* Show selected gym and event type for cross-checking */}
                 {selectedGym && selectedEventType && (
-                  <div className={`text-sm mt-1 font-medium ${result.success ? 'text-green-700' : 'text-red-700'}`}>
+                  <div className={`text-sm mt-1 font-medium ${
+                    result.noEvents 
+                      ? 'text-yellow-700' 
+                      : result.success 
+                        ? 'text-green-700' 
+                        : 'text-red-700'
+                  }`}>
                     <span className="inline-block bg-white px-2 py-1 rounded border border-gray-300">
                       🏢 <strong>{gyms.find(g => g.id === selectedGym)?.name || selectedGym}</strong> 
                       {' • '}
@@ -335,8 +355,16 @@ export default function SyncModal({ theme, onClose, gyms }) {
                     </span>
                   </div>
                 )}
-                <p className={`text-sm mt-2 ${result.success ? 'text-green-700' : 'text-red-700'}`}>
-                  {result.message}
+                <p className={`text-sm mt-2 ${
+                  result.noEvents 
+                    ? 'text-yellow-700' 
+                    : result.success 
+                      ? 'text-green-700' 
+                      : 'text-red-700'
+                }`}>
+                  {result.noEvents 
+                    ? `This gym doesn't have any ${selectedEventType} events scheduled right now.`
+                    : result.message}
                 </p>
                 {result.success && result.eventsFound > 0 && (
                   <div className="text-sm text-green-700 mt-2">
@@ -345,8 +373,8 @@ export default function SyncModal({ theme, onClose, gyms }) {
                 )}
               </div>
             </div>
-            {/* Buttons for failed sync or no events - allow quick navigation */}
-            {!result.success && (
+            {/* Buttons for no events or failed sync - allow quick navigation */}
+            {(result.noEvents || !result.success) && (
               <div className="mt-4 flex gap-3">
                 <button
                   onClick={() => {

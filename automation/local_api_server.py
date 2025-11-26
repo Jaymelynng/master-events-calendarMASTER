@@ -11,7 +11,14 @@ import sys
 import os
 import asyncio
 from pathlib import Path
-from datetime import date
+from datetime import date, datetime
+from typing import Optional
+
+try:
+    from supabase import create_client, Client  # type: ignore
+except ImportError:
+    create_client = None
+    Client = None
 
 # Import your working script functions
 sys.path.insert(0, str(Path(__file__).parent))
@@ -25,6 +32,21 @@ CORS(app)  # Allow your React app to call this
 # API Key authentication
 API_KEY = os.environ.get('API_KEY', '')  # Get from environment variable
 
+# Supabase client configuration (used for imports)
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_SERVICE_KEY = (
+    os.environ.get('SUPABASE_SERVICE_KEY')
+    or os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+    or os.environ.get('SUPABASE_ANON_KEY')
+)
+
+supabase_client: Optional[Client] = None
+if create_client and SUPABASE_URL and SUPABASE_SERVICE_KEY:
+    try:
+        supabase_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    except Exception as supabase_err:  # pragma: no cover - defensive logging
+        print(f"⚠️  Failed to initialize Supabase client: {supabase_err}")
+
 def check_api_key():
     """Check if request has valid API key"""
     if not API_KEY:
@@ -34,6 +56,94 @@ def check_api_key():
     if provided_key == API_KEY:
         return True
     
+    return False
+
+def get_supabase_client():
+    """Ensure we have a Supabase client configured."""
+    if not create_client:
+        raise RuntimeError("Supabase client library not installed. Run: pip install supabase")
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        raise RuntimeError("Supabase environment variables (SUPABASE_URL / SUPABASE_SERVICE_KEY) are not configured.")
+    if supabase_client is None:
+        raise RuntimeError("Supabase client failed to initialize. Check server logs for details.")
+    return supabase_client
+
+def normalize_value(value):
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value.strip()
+    return value
+
+COMPARISON_FIELDS = [
+    'title',
+    'date',
+    'start_date',
+    'end_date',
+    'time',
+    'price',
+    'day_of_week',
+    'type',
+    'age_min',
+    'age_max',
+    'description',
+    'availability_status'
+]
+
+ALLOWED_EVENT_FIELDS = {
+    'gym_id',
+    'event_type_id',
+    'title',
+    'date',
+    'time',
+    'price',
+    'day_of_week',
+    'type',
+    'event_url',
+    'start_date',
+    'end_date',
+    'availability_status',
+    'age_min',
+    'age_max',
+    'description',
+    'event_type',
+    'event_id',
+    'gym_code',
+    'age',
+    'age_range',
+    'capacity',
+    'spots_remaining',
+    'location',
+    'registration_url'
+}
+
+def sanitize_event_payload(event: dict, gym_id: str, event_type: str) -> dict:
+    """Prepare an event record for insertion/updating in Supabase."""
+    sanitized = {}
+    for field in ALLOWED_EVENT_FIELDS:
+        if field in event:
+            value = event[field]
+            sanitized[field] = None if value in ['', None] else value
+    sanitized['gym_id'] = gym_id
+    sanitized['type'] = event_type
+    sanitized.setdefault('event_type', event.get('event_type') or event_type)
+    sanitized.setdefault('start_date', event.get('start_date') or event.get('date'))
+    sanitized.setdefault('end_date', event.get('end_date') or sanitized.get('start_date') or event.get('date'))
+    sanitized.setdefault('event_url', event.get('event_url'))
+    sanitized.setdefault('day_of_week', event.get('day_of_week'))
+    sanitized['deleted_at'] = None
+    return sanitized
+
+def events_differ(existing: dict, incoming: dict) -> bool:
+    """Compare key fields to determine if an update is required."""
+    for field in COMPARISON_FIELDS:
+        existing_val = normalize_value(existing.get(field))
+        incoming_val = normalize_value(incoming.get(field))
+        if existing_val != incoming_val:
+            return True
+    # Restore if previously deleted
+    if existing.get('deleted_at') is not None:
+        return True
     return False
 
 @app.route('/', methods=['GET'])
@@ -93,9 +203,13 @@ def sync_events():
         
         if not events_raw:
             return jsonify({
-                "success": False,
-                "error": "No events collected. Check if the gym/event type combination is correct.",
-                "events": []
+                "success": True,
+                "noEvents": True,
+                "gymId": gym_id,
+                "eventType": event_type,
+                "eventsFound": 0,
+                "events": [],
+                "message": f"No {event_type} events currently scheduled for this gym."
             }), 200
         
         # Step 2: Convert to flat format (your existing function)
@@ -131,6 +245,129 @@ def sync_events():
         return jsonify({
             "success": False,
             "error": f"Server error: {str(e)}"
+        }), 500
+
+@app.route('/import-events', methods=['POST'])
+def import_events():
+    """
+    Import collected events into Supabase.
+    Body: {
+      "gymId": "EST",
+      "eventType": "CLINIC",
+      "events": [...]
+    }
+    """
+    if not check_api_key():
+        return jsonify({
+            "success": False,
+            "error": "Invalid or missing API key"
+        }), 401
+
+    try:
+        client = get_supabase_client()
+    except RuntimeError as err:
+        return jsonify({
+            "success": False,
+            "error": str(err)
+        }), 500
+
+    try:
+        payload = request.get_json() or {}
+        events = payload.get('events') or []
+        gym_id = payload.get('gymId')
+        event_type = payload.get('eventType')
+
+        if not gym_id or not event_type:
+            return jsonify({
+                "success": False,
+                "error": "Missing gymId or eventType"
+            }), 400
+
+        if not events:
+            return jsonify({
+                "success": False,
+                "error": "No events provided for import"
+            }), 400
+
+        today_str = date.today().isoformat()
+        existing_response = client.table('events') \
+            .select('*') \
+            .eq('gym_id', gym_id) \
+            .eq('type', event_type) \
+            .gte('date', today_str) \
+            .execute()
+
+        if getattr(existing_response, 'error', None):
+            raise RuntimeError(existing_response.error.message)
+
+        existing_events = existing_response.data or []
+        existing_by_url = {
+            ev['event_url']: ev
+            for ev in existing_events
+            if ev.get('event_url')
+        }
+
+        new_records = []
+        updates = []
+        skipped = 0
+        restored = 0
+
+        for event in events:
+            event_url = event.get('event_url')
+            if not event_url:
+                skipped += 1
+                continue
+
+            sanitized = sanitize_event_payload(event, gym_id, event_type)
+            if not sanitized.get('event_url'):
+                skipped += 1
+                continue
+
+            existing_event = existing_by_url.get(event_url)
+            if not existing_event:
+                new_records.append(sanitized)
+            else:
+                if events_differ(existing_event, sanitized):
+                    update_payload = sanitized.copy()
+                    update_payload.pop('event_url', None)
+                    update_payload.pop('created_at', None)
+                    update_payload.pop('id', None)
+                    updates.append((existing_event['id'], update_payload))
+                    if existing_event.get('deleted_at') is not None:
+                        restored += 1
+
+        inserted_count = 0
+        if new_records:
+            insert_response = client.table('events').insert(new_records).execute()
+            if getattr(insert_response, 'error', None):
+                raise RuntimeError(insert_response.error.message)
+            inserted_count = len(insert_response.data or [])
+
+        updated_count = 0
+        for record_id, update_payload in updates:
+            update_response = client.table('events').update(update_payload).eq('id', record_id).execute()
+            if getattr(update_response, 'error', None):
+                raise RuntimeError(update_response.error.message)
+            updated_count += len(update_response.data or [])
+
+        return jsonify({
+            "success": True,
+            "imported": inserted_count,
+            "updated": updated_count,
+            "restored": restored,
+            "deleted": 0,  # Soft delete logic intentionally disabled for now
+            "skipped": skipped,
+            "totalProcessed": len(events),
+            "message": f"Imported {inserted_count} new / updated {updated_count} events"
+        })
+
+    except Exception as e:
+        print(f"IMPORT ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": f"Import error: {str(e)}"
         }), 500
 
 @app.route('/gyms', methods=['GET'])
