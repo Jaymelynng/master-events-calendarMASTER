@@ -345,16 +345,17 @@ export default function SyncModal({ theme, onClose, gyms }) {
                 )}
               </div>
             </div>
+          </div>
             {/* Buttons for failed sync or no events - allow quick navigation */}
             {!result.success && (
-              <div className="mt-3 flex gap-2">
+              <div className="mt-4 flex gap-3">
                 <button
                   onClick={() => {
                     setResult(null);
                     setSelectedEventType('');
                     // Keep selectedGym
                   }}
-                  className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors text-sm"
+                  className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition-colors shadow-md"
                 >
                   🔄 Sync Another Program
                 </button>
@@ -364,13 +365,13 @@ export default function SyncModal({ theme, onClose, gyms }) {
                     setSelectedEventType('');
                     setSelectedGym('');
                   }}
-                  className="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors text-sm"
+                  className="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-700 transition-colors shadow-md"
                 >
                   🏢 Sync Another Gym
                 </button>
               </div>
             )}
-          </div>
+        </div>
         )}
 
         {/* Comparison Summary - PROMINENT DISPLAY */}
