@@ -1,6 +1,10 @@
 # 🎯 MASTER EVENTS APP - COMPLETE TECHNICAL FORMULA 2025
 ## Updated Production-Ready Documentation
 
+**Last Updated:** November 26, 2025  
+**Version:** Production 3.0  
+**Status:** ✅ FULLY DEPLOYED & WORKING
+
 ---
 
 ## 🚨 CRITICAL: AI VERIFICATION PROTOCOL
@@ -13,7 +17,7 @@
 - ❌ WRONG: Read code → "Yes, it works!"
 - ✅ CORRECT: "Let me test it to be sure" → Test with real data → Verify results → Then confirm
 
-**See full protocol:** [AI_VERIFICATION_PROTOCOL.md](./OPERATIONS/AI_VERIFICATION_PROTOCOL.md)
+**See full protocol:** [AI_VERIFICATION_PROTOCOL.md](../OPERATIONS/AI_VERIFICATION_PROTOCOL.md)
 
 ---
 
@@ -21,31 +25,31 @@
 1. [What This App Does Now](#what-this-app-does-now)
 2. [Complete Feature Set](#complete-feature-set)
 3. [Database Architecture (100% Supabase)](#database-architecture)
-4. [Advanced Features](#advanced-features)
+4. [Automated Sync System](#automated-sync-system)
 5. [Admin Bulk Import System](#admin-bulk-import)
-6. [Calendar UX Improvements](#calendar-improvements)
-7. [Automation Capabilities](#automation)
-8. [Technical Specifications](#technical-specs)
+6. [Secret Admin Mode](#secret-admin-mode)
+7. [Technical Specifications](#technical-specs)
+8. [Deployment Architecture](#deployment-architecture)
 9. [Future Roadmap](#future-roadmap)
 
 ---
 
 ## 🎪 WHAT THIS APP DOES NOW
 
-Your Master Events Calendar is now a **enterprise-grade event management platform** for all 10 gymnastics locations:
+Your Master Events Calendar is a **production-deployed event management platform** for all 10 gymnastics locations:
 
 ### **Core Capabilities:**
 1. **📅 Real-Time Calendar** - Live event tracking across all gyms and months
-2. **📊 Analytics Dashboard** - Comprehensive statistics and requirement monitoring  
-3. **🚀 Bulk Import System** - Admin tools for mass data collection
-4. **🔗 Link Management** - Direct integration with all iClass Pro pages
+2. **⚡ Automated Sync** - One-click event collection from iClassPro portals
+3. **📊 Sync Progress Tracker** - Visual grid showing sync status for all gyms
+4. **🔐 Secret Admin Mode** - 3-tier access system (Normal/Admin/Super Admin)
 5. **📱 Responsive Design** - Works on mobile, tablet, desktop
-6. **⚡ Live Data** - Everything updates in real-time from database
+6. **📈 Vercel Analytics** - Track visitors and page views
 
 ### **Business Value:**
-- **📈 Operational Efficiency** - Reduces manual tracking by 90%
-- **🎯 Compliance Monitoring** - Instant visibility into monthly requirements
-- **📊 Performance Analytics** - Real-time gym performance data
+- **📈 Time Savings** - 5 hours/month → 20 minutes/month
+- **🎯 100% Accuracy** - Verified against live iClassPro data
+- **📊 Real-time Visibility** - Instant sync status across all gyms
 - **🚀 Scalable Architecture** - Easy to add gyms, events, features
 
 ---
@@ -53,26 +57,31 @@ Your Master Events Calendar is now a **enterprise-grade event management platfor
 ## 🏗️ COMPLETE FEATURE SET
 
 ### **Manager Features (Daily Use):**
-- ✅ **Add Individual Events** - Professional form validation
-- ✅ **Edit/Delete Events** - Full CRUD operations
 - ✅ **View All Events** - Clean calendar interface
+- ✅ **Event Details** - Click to see full info (description, age, price)
 - ✅ **Copy Registration URLs** - One-click sharing
 - ✅ **Monthly Navigation** - Browse any month/year
+- ✅ **Smart Filtering** - By gym, event type, search terms
 
-### **Admin Features (You & Kim):**
-- ✅ **Bulk Import System** - Mass data collection from gym portals
-- ✅ **Data Validation** - Smart error detection and prevention
-- ✅ **Bulk Actions** - Open all gym pages with one click
-- ✅ **Link Management** - All gym URLs managed in database
-- ✅ **Analytics Dashboard** - Complete performance overview
+### **Admin Features (Jayme - Level 2):**
+- ✅ **Quick Add Event** - Add single events manually
+- ✅ **JSON Import (F12)** - Bulk import via copy/paste
+- ✅ **Automated Sync** - One-click iClassPro collection
+- ✅ **Sync Progress Tracker** - See what's synced, what needs sync
+- ✅ **Coming Soon Features** - Export Data, Import Analytics, etc.
+
+### **Super Admin Features (Jayme - Level 3):**
+- ✅ **Supabase Dashboard Link** - Direct database access
+- ✅ **Railway Dashboard Link** - Direct API server access
+- ✅ **Audit History** - See all changes made to events
 
 ### **Advanced Features:**
 - ✅ **Real-Time Sync** - Changes appear instantly everywhere
-- ✅ **Smart Filtering** - By gym, event type, search terms
-- ✅ **Hover Details** - Rich event information on hover
-- ✅ **Requirement Tracking** - Visual compliance monitoring
-- ✅ **Historical Data** - All events preserved by date
-- ✅ **Export Capabilities** - JSON, table, and URL formats
+- ✅ **Event Comparison** - Detects new/changed/deleted events
+- ✅ **Soft Delete** - Removed events kept in DB, hidden from calendar
+- ✅ **Description Display** - Full event descriptions in details panel
+- ✅ **Age Range Display** - Shows min/max ages from iClass settings
+- ✅ **Vercel Analytics** - Visitor and page view tracking
 
 ---
 
@@ -87,15 +96,20 @@ Your Master Events Calendar is now a **enterprise-grade event management platfor
 ```sql
 Columns:
 - id: UUID primary key
-- gym_id: References gyms.id  
+- gym_id: References gyms.id (CCP, EST, etc.)
 - title: Event name ("Ninja Night Out")
 - date: YYYY-MM-DD format
 - time: "6:30 PM - 9:30 PM" 
-- price: Decimal cost
-- type: Event category (CLINIC/KIDS NIGHT OUT/OPEN GYM)
+- price: Text (can be "25" or null)
+- type: Event category (CLINIC/KIDS NIGHT OUT/OPEN GYM/CAMP/SPECIAL EVENTS)
 - event_url: Direct registration link
 - day_of_week: Auto-calculated
+- description: Full event description (NEW!)
+- age_min: Minimum age (NEW!)
+- age_max: Maximum age (NEW!)
+- deleted_at: Soft delete timestamp (NEW!)
 - created_at: Timestamp
+- updated_at: Timestamp
 ```
 
 #### **2. `gyms` - Gym Information**  
@@ -113,7 +127,7 @@ Columns:
 Columns: 
 - id: UUID primary key
 - name: Full name (KIDS NIGHT OUT)
-- display_name: Short name (KNO) ← NEW!
+- display_name: Short name (KNO)
 - description: Category description
 - color: Theme color for calendar
 - is_tracked: Include in requirements
@@ -127,148 +141,123 @@ Columns:
 - gym_id: References gyms.id
 - link_type_id: skill_clinics/kids_night_out/open_gym/booking
 - url: iClass Pro page URL
+- portal_slug: For automation (capgymavery, estrellagymnastics, etc.)
 - is_active: Boolean
 ```
 
-#### **5. `monthly_requirements` - Business Rules**
+#### **5. `sync_log` - Sync Progress Tracking (NEW!)**
 ```sql
 Columns:
-- event_type: CLINIC/KIDS NIGHT OUT/OPEN GYM
-- required_count: 1/2/1 respectively
+- id: UUID primary key
+- gym_id: Which gym (CCP, EST, etc.)
+- event_type: Which type (KIDS NIGHT OUT, CLINIC, etc.)
+- last_synced: Timestamp of last sync
+- events_found: How many events were collected
+- events_imported: How many were actually imported
+UNIQUE(gym_id, event_type)
 ```
 
 ### **Smart Views:**
-- **`events_with_gym`** - Events joined with gym names
-- **`gym_links_detailed`** - Links with readable gym/type names
+- **`events_with_gym`** - Events joined with gym names + ALL columns including description, age_min, age_max
 
 ---
 
-## 🚀 ADVANCED FEATURES
+## ⚡ AUTOMATED SYNC SYSTEM
 
-### **Admin Bulk Import System:**
+### **How It Works:**
 
-#### **Workflow Integration:**
-Your manual collection process is now **streamlined**:
-
-1. **Visit gym event category page** → Copy event listings
-2. **Open individual events** → Use browser extension for URLs
-3. **Access admin panel** → Ctrl+Click "🚀 Admin" button
-4. **Paste both data sets** → Auto-converter processes everything
-5. **Validate & Import** → All events appear instantly
-
-#### **Smart Conversion Features:**
-- ✅ **Auto-detects gym** from URLs (all 10 gyms supported)
-- ✅ **Parses event data** from pipe-separated format
-- ✅ **Deduplicates URLs** from HTML format automatically
-- ✅ **Validates completeness** (events vs URLs count matching)
-- ✅ **Error prevention** (missing fields, duplicate detection)
-
-#### **Event Type Auto-Detection:**
-```javascript
-"Gym Fun Fridays" → OPEN GYM
-"Homeschool Free Play" → OPEN GYM  
-"Ninja Night Out" → KIDS NIGHT OUT
-"Skill Clinic" → CLINIC
+```
+You click "Sync" in the UI
+    ↓
+React app (Vercel) sends POST /sync-events
+    ↓
+Flask API (Railway) receives request
+    ↓
+Playwright opens iClassPro portal
+    ↓
+Intercepts JSON responses with event data
+    ↓
+Extracts: title, date, time, price, age, description
+    ↓
+Returns events to React
+    ↓
+Frontend compares with existing database events
+    ↓
+Shows: NEW | CHANGED | DELETED | UNCHANGED
+    ↓
+You click "Import"
+    ↓
+Data saved to Supabase
+    ↓
+Sync log updated
+    ↓
+Calendar refreshes!
 ```
 
-### **Calendar UX Enhancements:**
+### **What Gets Collected:**
+- ✅ Event title (exactly as shown on portal)
+- ✅ Event date (parsed correctly)
+- ✅ Event time (start and end)
+- ✅ Price (from iClass settings, not title)
+- ✅ Age min/max (from iClass settings)
+- ✅ Full description (truncated at ~500 chars)
+- ✅ Registration URL (direct link to event)
 
-#### **Display Name System:**
-- **Database stores**: "KIDS NIGHT OUT" (full data integrity)
-- **Calendar shows**: "KNO" (space-efficient display)
-- **Configurable**: Change display names in Supabase event_types table
+### **Event Comparison Logic:**
+The system compares events by `event_url` (unique identifier):
 
-#### **Smart Layout:**
-- **Day indicators** in each cell (no more guessing dates)
-- **Compact cards** that fit single day columns
-- **Full-screen calendar** option for optimal viewing
-- **Responsive design** works on all devices
+| Scenario | What Happens |
+|----------|--------------|
+| **New Event** | URL not in database → Shows as NEW → Import creates it |
+| **Changed Event** | URL exists but data different → Shows as CHANGED → Import updates it |
+| **Deleted Event** | URL in database but not in portal → Shows as DELETED → Import soft-deletes it |
+| **Unchanged** | URL exists and data matches → Shows as UNCHANGED → Skip import |
+
+### **Fields Checked for Changes:**
+- title
+- date
+- time
+- price
+- age_min
+- age_max
+- description
 
 ---
 
-## 🔧 ADMIN BULK IMPORT
+## 🔐 SECRET ADMIN MODE
+
+### **Three-Tier Access System:**
+
+| Level | Who | Access Method | Features |
+|-------|-----|---------------|----------|
+| **1 - Normal** | Everyone | Just visit URL | Calendar, event details, stats |
+| **2 - Admin** | Jayme | Shift + Click 🪄 | Quick Add, JSON Import, Automated Sync |
+| **3 - Super Admin** | Jayme only | Inside Admin, click 🔒 + PIN `1426` | Supabase link, Railway link, Audit History |
+
+**Full documentation:** `docs/OPERATIONS/SECRET_ADMIN_MODE.md`
+
+---
+
+## 🚀 ADMIN BULK IMPORT
 
 ### **Access Method:**
-**Ctrl+Click** the "🚀 Admin" button to open bulk import panel
+**Shift+Click** the Magic Wand (🪄) button → "JSON Import (F12 Method)"
 
-### **Input Format:**
+### **F12 Method Workflow:**
+1. Open iClassPro portal in browser
+2. Press F12 → Network tab
+3. Navigate to events page
+4. Find the API response with event data
+5. Right-click → Copy Response
+6. Paste into JSON Import modal
+7. Click Import
 
-#### **Event Listings (Step 1):**
-```
-Gym Fun Fridays | Sept 12 | 10:00-11:30am | $10
-Homeschool Free Play| September 10 |10:00-11:30am |$10
-```
-
-#### **Event URLs (Step 2):**
-```html
-<a href="https://portal.iclasspro.com/capgymhp/camp-details/2478?...">https://...</a>
-<a href="https://portal.iclasspro.com/capgymhp/camp-details/2479?...">https://...</a>
-```
-
-### **Processing Features:**
-- ✅ **Automatic gym detection** from URL patterns
-- ✅ **Date parsing** supports multiple formats  
-- ✅ **Time conversion** (10:00-11:30am → 10:00 AM - 11:30 AM)
-- ✅ **Price extraction** ($10 → 10.00)
-- ✅ **URL deduplication** (HTML contains 2x URLs per event)
-- ✅ **Validation dashboard** shows counts and warnings
-
-### **Error Prevention:**
-- 🚨 **Count mismatches** (7 events vs 6 URLs)
-- 🚨 **Duplicate URLs** detection  
-- 🚨 **Missing required fields** validation
-- 🚨 **Database duplicate** prevention
-- 🚨 **Confirmation dialogs** for risky imports
-
----
-
-## 📱 CALENDAR UX IMPROVEMENTS
-
-### **Visual Enhancements:**
-- **Day Numbers** visible in each cell corner
-- **Compact Event Cards** with category names only
-- **Rich Hover Popups** with full event details
-- **Color-Coded Categories** (CLINIC/KNO/OPEN GYM)
-- **Thinner Gym Column** (150px vs previous 200px)
-
-### **Navigation Improvements:**
-- **Top-Level Month Navigation** (Previous/Next always visible)
-- **Multiple View Options** (Days 1-15, Full Month, etc.)
-- **Smart Month Detection** (starts with current month, not hardcoded)
-- **Event Type Legend** (compact, space-saving)
-
-### **Responsive Design:**
-- **Mobile-First** approach
-- **Flexible grid** that adapts to screen size
-- **Touch-Friendly** buttons and interactions
-- **Minimal padding** to maximize content space
-
----
-
-## 🤖 AUTOMATION CAPABILITIES
-
-### **Explored Solutions:**
-
-#### **1. Firecrawl Integration:**
-- **✅ Tested successfully** with Houston Gymnastics Academy
-- **✅ Extracts event data** from customer portal pages  
-- **❌ Registration URLs** not available (requires individual page visits)
-- **Cost**: ~$1.50 per complete gym collection
-- **Accuracy**: ~80-90% for visible data
-
-#### **2. iClass Pro Admin APIs:**
-- **✅ Discovered internal APIs** in admin portal
-- **✅ Complete event data** with UIDs and details
-- **✅ Registration URL pattern** confirmed (camp-details/{uid})
-- **❌ Session management** complexity
-- **Accuracy**: 100% for accessible gyms
-
-#### **3. Current Manual + Bulk Import:**
-- **✅ 100% accuracy** for registration URLs
-- **✅ Proven reliable** across all gym platforms
-- **✅ Enhanced with automation** tools (bulk import)
-- **Time**: ~30-40 minutes for all 10 gyms monthly
-- **Recommended approach** for reliability
+### **Smart Conversion Features:**
+- ✅ **Auto-detects gym** from URLs
+- ✅ **Parses event data** from JSON
+- ✅ **Validates completeness**
+- ✅ **Deduplicates** events
+- ✅ **Error prevention** with warnings
 
 ---
 
@@ -279,123 +268,163 @@ Homeschool Free Play| September 10 |10:00-11:30am |$10
 - **Styling**: Tailwind CSS with custom theme
 - **Icons**: Lucide React icon library
 - **State Management**: React useState/useEffect
-- **API Integration**: Custom hooks for data fetching
+- **Analytics**: Vercel Analytics (@vercel/analytics)
+- **API Integration**: Custom hooks + fetch to Railway
 
 ### **Backend Architecture:**
+- **Server**: Flask (Python)
+- **Automation**: Playwright (browser automation)
+- **Hosting**: Railway.app
 - **Database**: Supabase PostgreSQL
-- **Authentication**: API key based  
+- **CORS**: Enabled for Vercel domain
+
+### **Database Architecture:**
+- **Provider**: Supabase
+- **Auth**: API key based (anon key for frontend)
 - **Security**: Row Level Security configured
-- **API**: RESTful with real-time subscriptions
-- **Backup**: Git version control + Supabase backups
+- **Real-time**: Subscriptions enabled
+- **Backups**: Supabase automatic backups
 
 ### **Data Flow:**
-```javascript
-User Input → React State → API Layer → Supabase → Real-time Updates
+```
+User Action → React State → API Layer → Railway/Supabase → Real-time Updates
 ```
 
-### **Performance Optimizations:**
-- **Lazy Loading** of non-critical data
-- **Memoized Calculations** for statistics
-- **Optimized Queries** with date range filters
-- **Responsive Grid** system for fast rendering
+---
+
+## 🌐 DEPLOYMENT ARCHITECTURE
+
+### **Current Production Setup:**
+
+| Component | Platform | URL |
+|-----------|----------|-----|
+| **Frontend** | Vercel | Your Vercel URL |
+| **Backend API** | Railway | `https://master-events-calendarmaster-production.up.railway.app` |
+| **Database** | Supabase | `https://xftiwouxpefchwoxxgpf.supabase.co` |
+
+### **Environment Variables:**
+
+**Vercel (Frontend):**
+```
+REACT_APP_SUPABASE_URL=https://xftiwouxpefchwoxxgpf.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=your-anon-key
+REACT_APP_API_URL=https://master-events-calendarmaster-production.up.railway.app
+```
+
+**Railway (Backend):**
+```
+PORT=auto-assigned
+SUPABASE_URL=https://xftiwouxpefchwoxxgpf.supabase.co
+SUPABASE_SERVICE_KEY=your-service-key
+```
+
+### **Key Files:**
+
+**Frontend (React):**
+| File | Purpose |
+|------|---------|
+| `src/components/EventsDashboard/SyncModal.js` | Automated sync UI |
+| `src/components/EventsDashboard/AdminPortalModal.js` | Admin portal with tiers |
+| `src/lib/api.js` | Database API functions |
+| `src/lib/eventComparison.js` | New/changed/deleted logic |
+| `src/App.js` | Main app with Analytics |
+
+**Backend (Python):**
+| File | Purpose |
+|------|---------|
+| `automation/local_api_server.py` | Flask API server |
+| `automation/f12_collect_and_import.py` | Playwright event collection |
+| `automation/requirements.txt` | Python dependencies |
+| `automation/Procfile` | Railway start command |
 
 ---
 
 ## 🎯 FUTURE ROADMAP
 
 ### **Immediate Enhancements:**
-- **📋 List View Tab** - Sortable table format
-- **❌ Missing Events Tab** - Requirements dashboard
-- **📧 Notification System** - Change alerts
-- **📊 Advanced Analytics** - Trends and insights
+- **📋 Export Data** - Download events as CSV/JSON
+- **📊 Import Analytics** - Track import history
+- **🧹 Data Cleanup Tools** - Bulk delete/edit
+- **💾 Backup & Restore** - Manual backup option
 
 ### **Automation Goals:**
-- **🔄 Daily Sync** - Automated change detection
-- **📱 Mobile App** - Native iOS/Android versions
-- **🤖 AI Integration** - Smart event categorization
-- **📈 Predictive Analytics** - Event planning insights
+- **🔄 Daily Auto-Sync** - Scheduled sync without clicking
+- **📧 Email Notifications** - Alert when sync fails
+- **🚨 Stale Detection** - Warn if sync is too old
 
 ### **Integration Opportunities:**
 - **💌 Email Marketing** - Event promotion campaigns
 - **📞 SMS Notifications** - Event reminders
-- **💳 Payment Processing** - Direct registration and payment
 - **📊 Business Intelligence** - Advanced reporting
 
 ---
 
 ## 🏆 PRODUCTION STATUS
 
-### **Current State: ✅ PRODUCTION READY**
+### **Current State: ✅ FULLY DEPLOYED & VERIFIED**
 
-#### **Deployment:**
-- **✅ Vercel Configuration** complete
-- **✅ Environment Variables** configured  
-- **✅ Domain Ready** for public access
-- **✅ Performance Optimized** for production load
-
-#### **Data Integrity:**
-- **✅ Single Source of Truth** (Supabase only)
-- **✅ No Hardcoded Data** (everything database-driven)
-- **✅ Backup Systems** in place
-- **✅ Version Control** active
-
-#### **User Experience:**
-- **✅ Intuitive Interface** for all user types
-- **✅ Responsive Design** for all devices
-- **✅ Error Handling** comprehensive  
-- **✅ Performance** optimized
+**Verified November 26, 2025:**
+- ✅ All 10 gyms syncing correctly
+- ✅ All 5 event types working
+- ✅ 226+ events in database
+- ✅ Descriptions pulling correctly
+- ✅ Ages pulling from iClass settings
+- ✅ Prices pulling correctly
+- ✅ 100% accuracy on cross-check vs live iClassPro data
 
 ### **Success Metrics:**
-- **📊 30+ Events** across multiple months
+- **📊 226+ Events** across multiple months
 - **🏢 10 Gyms** fully integrated
-- **🔗 40+ Links** working from database
+- **🔗 5 Event Types** supported
 - **⚡ <2 second** load times
-- **💯 Zero Data Loss** record
+- **💯 100% Accuracy** verified
 
 ---
 
-## 🚨 MAINTENANCE GUIDE
+## 🚨 TROUBLESHOOTING
 
-### **Monthly Data Collection:**
-1. **Use bulk import** for efficiency
-2. **Validate all data** before import
-3. **Test registration URLs** after import
-4. **Monitor requirements** compliance
+### **API Not Responding:**
+1. Check Railway dashboard - is service running?
+2. Test: `https://master-events-calendarmaster-production.up.railway.app/health`
+3. Check Railway logs for errors
 
-### **System Health Checks:**
-- **Database connectivity** (monthly)
-- **Link validity** (quarterly)  
-- **Performance metrics** (ongoing)
-- **Backup verification** (monthly)
+### **Events Not Importing:**
+1. Check browser console (F12 → Console)
+2. Verify Supabase is accessible
+3. Check `REACT_APP_API_URL` in Vercel
 
-### **Emergency Procedures:**
-1. **Git Backup** - Always commit before major changes
-2. **Database Export** - Monthly Supabase backups
-3. **Documentation Updates** - Keep this guide current
-4. **Contact Information** - Maintain admin access
+### **Sync Shows No Events When There Should Be:**
+1. Verify gym's iClassPro portal has events
+2. Check if event type URL is correct
+3. Try syncing a different gym to isolate issue
+
+### **Description/Age Not Showing:**
+1. Verify `events_with_gym` view includes all columns
+2. Check if event was synced AFTER the column was added
+3. Re-sync the event to pull latest data
 
 ---
 
 ## 💡 FINAL NOTES
 
 ### **What Makes This Special:**
-- **🎯 Built for your exact workflow** - Bulk import matches your process
-- **📊 Real business value** - Tracks meaningful metrics
-- **🚀 Production quality** - Enterprise-grade reliability
+- **🎯 Built for your exact workflow** - Automated sync matches your process
+- **📊 Real business value** - 5 hours → 20 minutes monthly
+- **🚀 Production quality** - Deployed and verified
 - **🔮 Future-ready** - Scalable architecture for growth
 
 ### **Key Success Factors:**
 1. **100% Supabase-driven** - No hardcoded dependencies
-2. **Proven data collection** - Reliable manual + automated hybrid
+2. **Automated sync** - One-click data collection
 3. **Professional UX** - Intuitive for all user types  
 4. **Comprehensive validation** - Prevents data issues
 5. **Complete documentation** - Self-maintainable system
 
-**Your Master Events Calendar is now a production-ready, enterprise-grade application ready for company-wide deployment!** 🌟
+**Your Master Events Calendar is now a production-ready, verified, enterprise-grade application!** 🌟
 
 ---
 
-**Last Updated:** September 9, 2025  
-**Version:** Production 2.0  
-**Status:** ✅ Ready for Enterprise Deployment
+**Last Updated:** November 26, 2025  
+**Version:** Production 3.0  
+**Status:** ✅ FULLY DEPLOYED & VERIFIED - Cross-checked against live iClassPro data
 

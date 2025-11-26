@@ -1,5 +1,9 @@
 # 📚 Master Events Calendar - Documentation Index
 
+**Last Updated:** November 26, 2025  
+**Status:** ✅ FULLY DEPLOYED & VERIFIED  
+**Maintained by:** Jayme
+
 ---
 
 ## 🚨 CRITICAL: AI VERIFICATION PROTOCOL
@@ -15,6 +19,20 @@
 ## 🗂️ How to Navigate This Documentation
 
 This documentation is organized into three strategic categories based on your role and needs.
+
+---
+
+## 🆕 START HERE - November 2025 Updates
+
+### **[SYSTEM_STATUS_NOVEMBER_2025.md](OPERATIONS/SYSTEM_STATUS_NOVEMBER_2025.md)** ⭐ **CURRENT STATUS**
+**What it contains:**
+- Complete system status (FULLY DEPLOYED & WORKING!)
+- All 10 gyms, 5 event types, 226+ events
+- Verified 100% accuracy against live iClassPro data
+- Feature list with what's working NOW
+- Troubleshooting guide
+
+**Why it's valuable:** THE source of truth for what's working right now. Read this first!
 
 ---
 
@@ -39,15 +57,16 @@ This documentation is organized into three strategic categories based on your ro
 
 **For:** Developers, system architects, technical planning
 
-### **[TECHNICAL-REFERENCE.md](TECHNICAL/TECHNICAL-REFERENCE.md)**
+### **[TECHNICAL-REFERENCE.md](TECHNICAL/TECHNICAL-REFERENCE.md)** ⭐ **UPDATED NOV 2025**
 **What it contains:**
-- Complete system architecture (React + Supabase)
-- Database schema and relationships
+- Complete system architecture (React + Flask + Supabase)
+- Database schema with NEW columns (description, age_min, age_max, deleted_at)
+- Automated Sync System documentation
+- Secret Admin Mode documentation
+- Deployment architecture (Vercel + Railway + Supabase)
 - API design and data flow
-- Component structure
-- Security and performance considerations
 
-**Why it's valuable:** The "Owner's Manual" - reduces key-person dependency. Anyone can pick up and understand the system.
+**Why it's valuable:** The "Owner's Manual" - updated with all November 2025 features.
 
 **Use it for:** Developer onboarding, technical handoff, system understanding
 
@@ -80,18 +99,26 @@ This documentation is organized into three strategic categories based on your ro
 
 ---
 
-### **[SUPABASE_AUDIT_REPORT.md](TECHNICAL/SUPABASE_AUDIT_REPORT.md)** ⭐ **NEW!**
+### **[SUPABASE_AUDIT_REPORT.md](TECHNICAL/SUPABASE_AUDIT_REPORT.md)**
 **What it contains:**
-- Complete database structure analysis (all 7 tables + 2 views)
-- Live data audit (476 records across all tables)
-- Data flow architecture (React → Supabase)
-- Performance analysis and caching strategy
-- Data quality assessment with recommendations
-- SQL scripts for improvements
+- Complete database structure analysis
+- Live data audit
+- Data flow architecture
+- Performance analysis
 
-**Why it's valuable:** Complete technical audit proving your database is production-ready and professionally architected.
+**Why it's valuable:** Complete technical audit proving your database is production-ready.
 
-**Use it for:** Technical due diligence, developer onboarding, performance optimization
+**Use it for:** Technical due diligence, developer onboarding
+
+---
+
+### **[MAGIC_CONTROL_FEATURES.md](TECHNICAL/MAGIC_CONTROL_FEATURES.md)**
+**What it contains:**
+- Secret keyboard shortcuts
+- Hidden admin features
+- Magic wand button functionality
+
+**Why it's valuable:** Documents the "hidden" features only you know about.
 
 ---
 
@@ -99,12 +126,74 @@ This documentation is organized into three strategic categories based on your ro
 
 **For:** Users, managers, daily operations, training
 
+### **[SYSTEM_STATUS_NOVEMBER_2025.md](OPERATIONS/SYSTEM_STATUS_NOVEMBER_2025.md)** 🆕 **START HERE**
+**What it contains:**
+- Current system status (everything working!)
+- All features verified
+- Troubleshooting guide
+- What was verified November 26, 2025
+
+**Why it's valuable:** THE source of truth for what's working right now.
+
+---
+
+### **[SECRET_ADMIN_MODE.md](OPERATIONS/SECRET_ADMIN_MODE.md)** 🆕 **NEW!**
+**What it contains:**
+- Three-tier access system explained
+- Level 1 (Normal), Level 2 (Admin), Level 3 (Super Admin)
+- How to access each level
+- PIN code: 1426
+- What each level can see/do
+
+**Why it's valuable:** Complete guide to the hidden admin system only you know about.
+
+**Use it for:** Remembering how to access admin features, training future admins
+
+---
+
+### **[SYNC_PROGRESS_TRACKER.md](OPERATIONS/SYNC_PROGRESS_TRACKER.md)** 🆕 **NEW!**
+**What it contains:**
+- Visual grid showing sync status
+- Color coding (green/yellow/red)
+- How to never lose track of what you've synced
+- sync_log table structure
+
+**Why it's valuable:** Solves "where did I leave off?" problem.
+
+**Use it for:** Understanding the progress tracker, debugging sync issues
+
+---
+
+### **[AUTO-SYNC-GUIDE.md](OPERATIONS/AUTO-SYNC-GUIDE.md)** ⭐ **MAIN WORKFLOW**
+**What it contains:**
+- Complete automated sync workflow
+- Step-by-step instructions
+- What gets collected (title, date, time, price, age, description)
+
+**Why it's valuable:** THE guide for the main feature - automated sync.
+
+**Use it for:** Daily operations, training
+
+---
+
+### **[DEPLOYMENT_PLAN.md](OPERATIONS/DEPLOYMENT_PLAN.md)** ⭐ **UPDATED NOV 2025**
+**What it contains:**
+- Deployment architecture (Vercel + Railway + Supabase)
+- Environment variables
+- How to redeploy
+- Troubleshooting
+
+**Why it's valuable:** Updated from "plan" to "completed deployment guide."
+
+**Use it for:** Understanding deployment, redeploying, troubleshooting
+
+---
+
 ### **[AI_VERIFICATION_PROTOCOL.md](OPERATIONS/AI_VERIFICATION_PROTOCOL.md)** 🚨 **MANDATORY**
 **What it contains:**
 - AI testing requirements before confirming functionality
 - Why "reading code" ≠ "verifying it works"
 - Trust protocol for non-technical users
-- Example of failure (duplicate detection bug October 2025)
 
 **Why it's critical:** Prevents AI from wasting user's time by assuming code works without testing.
 
@@ -112,73 +201,71 @@ This documentation is organized into three strategic categories based on your ro
 
 ---
 
-### **[F12-IMPORT-GUIDE.md](OPERATIONS/F12-IMPORT-GUIDE.md)** ⭐ THE SECRET RECIPE
+### **[F12-IMPORT-GUIDE.md](OPERATIONS/F12-IMPORT-GUIDE.md)**
 **What it contains:**
-- Complete F12 import workflow (900+ lines!)
-- **NEW: Intelligent gym auto-detection system** (October 2025)
-- Step-by-step instructions with screenshots in mind
-- The "magic trick" that makes the app 95% more efficient
-- Technical implementation details
-- Troubleshooting common issues
+- Complete F12 import workflow
+- Step-by-step instructions
+- The "manual" method (still works, but automated sync is easier!)
 
-**Why it's valuable:** Documents the core innovation that saves 5 hours per month. This is a trainable, repeatable process. Now with 100% accurate gym detection!
+**Why it's valuable:** Backup method if automated sync ever fails.
 
-**Use it for:** Training new users, troubleshooting imports, understanding the workflow
+**Use it for:** Backup import method, understanding how data is structured
 
 ---
 
-### **[GYM_AUTO_DETECTION_FEATURE.md](OPERATIONS/GYM_AUTO_DETECTION_FEATURE.md)** 🤖 **NEW!**
+### **[AUTOMATED_SYNC_SYSTEM_DETAILED.md](OPERATIONS/AUTOMATED_SYNC_SYSTEM_DETAILED.md)**
 **What it contains:**
-- Intelligent gym identification from F12 data
-- 100% accurate subdomain-to-gym matching
-- Manual override warning system
-- Technical implementation details
-- Performance metrics (30% faster workflow)
+- Detailed technical breakdown of sync system
+- Playwright automation details
+- API endpoints
 
-**Why it's valuable:** Eliminates human error in gym selection, prevents database inconsistencies, increases user confidence.
+**Why it's valuable:** Deep technical details for debugging.
 
-**Use it for:** Understanding auto-detection, debugging detection issues, training users on the feature
+---
+
+### **[EVENT_COMPARISON_LOGIC.md](OPERATIONS/EVENT_COMPARISON_LOGIC.md)**
+**What it contains:**
+- How events are compared (by event_url)
+- NEW vs CHANGED vs DELETED logic
+- What fields are checked
+
+**Why it's valuable:** Understanding why events show as "changed."
+
+---
+
+### **[VERCEL_ENVIRONMENT_SETUP.md](OPERATIONS/VERCEL_ENVIRONMENT_SETUP.md)**
+**What it contains:**
+- Environment variables for Vercel
+- How to update them
+
+**Why it's valuable:** Quick reference for environment setup.
 
 ---
 
 ### **[AUDIT-SYSTEM.md](OPERATIONS/AUDIT-SYSTEM.md)**
 **What it contains:**
-- How to access audit history (Ctrl+Click date)
-- What gets tracked (creates, updates, deletes)
-- How to use audit trail for accountability
-- Real-time change tracking
+- How to access audit history
+- What gets tracked
 
-**Why it's valuable:** Proves the system is professional and accountable - not just a "nice-to-have" but a business-critical system of record.
-
-**Use it for:** Data integrity verification, compliance, troubleshooting
+**Why it's valuable:** Accountability and tracking.
 
 ---
 
 ### **[BULK-IMPORT-LEARNINGS.md](OPERATIONS/BULK-IMPORT-LEARNINGS.md)**
 **What it contains:**
-- Lessons learned from September 2025 session
-- Gym ID structure discoveries
-- Date parsing fixes
-- Duplicate detection improvements
+- Lessons learned from past imports
 - Common gotchas and solutions
 
-**Why it's valuable:** Saves future developers days or weeks of frustration. This is a history of solved problems.
-
-**Use it for:** Debugging import issues, understanding edge cases
+**Why it's valuable:** History of solved problems.
 
 ---
 
-### **[README.md](README.md)**
+### **[GYM_AUTO_DETECTION_FEATURE.md](OPERATIONS/GYM_AUTO_DETECTION_FEATURE.md)**
 **What it contains:**
-- How to run the app
-- Project status summary
-- Database connection info
-- File structure overview
-- Quick reference guide
+- Intelligent gym identification from F12 data
+- 100% accurate subdomain-to-gym matching
 
-**Why it's valuable:** The "start here" document for developers.
-
-**Use it for:** Getting up and running quickly
+**Why it's valuable:** Understanding auto-detection.
 
 ---
 
@@ -186,41 +273,43 @@ This documentation is organized into three strategic categories based on your ro
 
 ### **I need to:**
 
+**Understand what's working RIGHT NOW**
+→ Read: `OPERATIONS/SYSTEM_STATUS_NOVEMBER_2025.md` ⭐
+
 **Sell or present the project**
-→ Read: `BUSINESS/BOSS-PRESENTATION.md` ⭐
+→ Read: `BUSINESS/BOSS-PRESENTATION.md`
 
 **Understand how it works technically**
 → Read: `TECHNICAL/TECHNICAL-REFERENCE.md`
 
-**Learn how to use the import system**
-→ Read: `OPERATIONS/F12-IMPORT-GUIDE.md` ⭐
+**Learn how to use automated sync**
+→ Read: `OPERATIONS/AUTO-SYNC-GUIDE.md`
 
-**Plan future scaling**
-→ Read: `TECHNICAL/SCALABILITY-ROADMAP.md`
+**Understand the secret admin system**
+→ Read: `OPERATIONS/SECRET_ADMIN_MODE.md`
 
-**Troubleshoot an import issue**
-→ Read: `OPERATIONS/BULK-IMPORT-LEARNINGS.md`
+**See sync progress / never lose track**
+→ Read: `OPERATIONS/SYNC_PROGRESS_TRACKER.md`
+
+**Troubleshoot deployment issues**
+→ Read: `OPERATIONS/DEPLOYMENT_PLAN.md`
 
 **Onboard a new developer**
 → Read in order:
-1. `docs/README.md`
+1. `OPERATIONS/SYSTEM_STATUS_NOVEMBER_2025.md`
 2. `TECHNICAL/TECHNICAL-REFERENCE.md`
-3. `OPERATIONS/F12-IMPORT-GUIDE.md`
-
-**Present to investors**
-→ Read: `BUSINESS/BOSS-PRESENTATION.md` + `TECHNICAL/SCALABILITY-ROADMAP.md`
+3. `OPERATIONS/AUTO-SYNC-GUIDE.md`
 
 ---
 
 ## 💎 The Crown Jewels (Most Valuable Docs)
 
-According to live analysis, these are your most valuable assets:
-
-1. **🏆 BOSS-PRESENTATION.md** - More valuable than any code
-2. **📚 F12-IMPORT-GUIDE.md** - The secret recipe (774 lines of gold)
-3. **🔍 SUPABASE_AUDIT_REPORT.md** - Complete database analysis (NEW!)
-4. **🚀 SCALABILITY-ROADMAP.md** - Proves growth potential
-5. **🔧 TECHNICAL-REFERENCE.md** - De-risks the asset
+1. **🆕 SYSTEM_STATUS_NOVEMBER_2025.md** - Current truth (START HERE!)
+2. **🏆 BOSS-PRESENTATION.md** - More valuable than any code
+3. **🔐 SECRET_ADMIN_MODE.md** - Your hidden power
+4. **📊 SYNC_PROGRESS_TRACKER.md** - Never lose track
+5. **🔧 TECHNICAL-REFERENCE.md** - Complete system guide
+6. **🚀 AUTO-SYNC-GUIDE.md** - Main workflow
 
 **Together, these documents elevate this from "personal project" to "valuable, transferable intellectual property."**
 
@@ -228,10 +317,10 @@ According to live analysis, these are your most valuable assets:
 
 ## 📊 Documentation Stats
 
-- **Total Pages:** 3,000+ lines across 7 major documents
+- **Total Documents:** 15+ major documents
 - **Coverage:** Business value, technical architecture, operations
 - **Quality Level:** Enterprise-grade, investor-ready
-- **Maintenance:** Updated October 2025, current and accurate
+- **Last Major Update:** November 26, 2025
 
 ---
 
@@ -239,8 +328,8 @@ According to live analysis, these are your most valuable assets:
 
 **When to update:**
 - Major feature additions → Update TECHNICAL-REFERENCE.md
-- Process changes → Update F12-IMPORT-GUIDE.md
-- New learnings → Add to BULK-IMPORT-LEARNINGS.md
+- System status changes → Update SYSTEM_STATUS_NOVEMBER_2025.md
+- Process changes → Update relevant OPERATIONS doc
 - Business metrics change → Update BOSS-PRESENTATION.md
 
 **How to update:**
@@ -257,8 +346,6 @@ Code can be rewritten, but this knowledge is irreplaceable.
 
 ---
 
-**Last Updated:** October 6, 2025  
+**Last Updated:** November 26, 2025  
 **Maintained by:** Jayme
-
-
 

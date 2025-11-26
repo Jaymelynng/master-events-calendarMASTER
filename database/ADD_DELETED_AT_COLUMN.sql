@@ -17,3 +17,4 @@ COMMENT ON INDEX idx_events_deleted_at IS 'Index for filtering active (non-delet
 
 
 
+
