@@ -345,7 +345,6 @@ export default function SyncModal({ theme, onClose, gyms }) {
                 )}
               </div>
             </div>
-          </div>
             {/* Buttons for failed sync or no events - allow quick navigation */}
             {!result.success && (
               <div className="mt-4 flex gap-3">
@@ -371,7 +370,7 @@ export default function SyncModal({ theme, onClose, gyms }) {
                 </button>
               </div>
             )}
-        </div>
+          </div>
         )}
 
         {/* Comparison Summary - PROMINENT DISPLAY */}
