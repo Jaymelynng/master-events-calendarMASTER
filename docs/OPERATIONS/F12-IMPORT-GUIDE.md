@@ -1,8 +1,29 @@
 # 🚀 F12 DATA COLLECTION PROCESS - COMPLETE GUIDE
-## Master Events Calendar - Automated Import System
+## Master Events Calendar - Manual Import System (Backup Method)
 
-**Date:** September 18, 2025  
-**Purpose:** Comprehensive guide for anyone helping with the F12 import system
+**Last Updated:** November 26, 2025  
+**Original Date:** September 18, 2025  
+**Purpose:** Comprehensive guide for F12 import (backup to Automated Sync)
+
+---
+
+## 🚨 IMPORTANT: USE AUTOMATED SYNC FIRST!
+
+**As of November 2025, the Automated Sync system is the PRIMARY method for importing events.**
+
+**Automated Sync advantages:**
+- ✅ One-click sync (no F12 needed)
+- ✅ Pulls descriptions automatically
+- ✅ Pulls ages from iClass settings
+- ✅ Progress tracker shows what's synced
+- ✅ Faster and more reliable
+
+**Use F12 method only when:**
+- Automated Sync is down
+- You need to debug data issues
+- You want to see raw iClassPro data
+
+**See:** `AUTO-SYNC-GUIDE.md` for the primary method.
 
 ---
 
@@ -952,4 +973,7 @@ The system is designed to be **robust, fast, and user-friendly** while maintaini
 ---
 
 *Document created September 18, 2025*  
-*For: Master Events Calendar - F12 Import System*
+*Last Updated: November 26, 2025*  
+*For: Master Events Calendar - F12 Import System (Backup Method)*
+
+**Note:** This is now a backup method. Use Automated Sync (`AUTO-SYNC-GUIDE.md`) as the primary method.

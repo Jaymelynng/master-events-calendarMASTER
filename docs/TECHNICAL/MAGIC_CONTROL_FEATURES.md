@@ -1,9 +1,9 @@
 # 🪄 Magic Control Features Documentation
 ## Admin Power User Tools
 
-**Last Updated:** January 7, 2025  
+**Last Updated:** November 26, 2025  
 **Access:** Shift+Click the 🪄 Magic Control button  
-**Status:** Production Ready ✅
+**Status:** ✅ Production Ready - FULLY DEPLOYED
 
 ---
 
@@ -11,11 +11,23 @@
 
 Magic Control is your **hidden admin portal** with power-user tools for managing events across all 10 gyms. It's accessed via a keyboard shortcut to keep the main UI clean for regular users.
 
+**IMPORTANT:** This has been upgraded to a **3-tier access system** as of November 2025!
+
 ---
 
-## ✨ ICON LEGEND - IMPORTANT!
+## 🔐 THREE-TIER ACCESS SYSTEM (NEW!)
 
-Your calendar uses **two different icons** with different purposes:
+| Level | Who | Access | Features |
+|-------|-----|--------|----------|
+| **Level 1** | Everyone | Visit URL | Calendar, event details, stats |
+| **Level 2** | Admin (Jayme) | Shift + Click 🪄 | Quick Add, JSON Import, Automated Sync |
+| **Level 3** | Super Admin (Jayme) | Inside Level 2, click 🔒 + PIN `1426` | Supabase link, Railway link, Audit History |
+
+**Full documentation:** See `docs/OPERATIONS/SECRET_ADMIN_MODE.md`
+
+---
+
+## ✨ ICON LEGEND
 
 | Icon | Name | Access Level | What It Does | How to Use |
 |------|------|--------------|--------------|------------|
@@ -28,69 +40,28 @@ Your calendar uses **two different icons** with different purposes:
 - **✨ Sparkles** = Public quick-access tool (regular click)
 - **This prevents confusion** - different icons = different functions!
 
-### **Where You'll See Them:**
-
-**🪄 Wand (Admin):**
-- Small button at top of dashboard (requires Shift+Click)
-- Opens full admin portal with database access, bulk import, audit history
-
-**✨ Sparkles (Everyone):**
-- Next to each gym name in the stats table
-- Opens Clinic, KNO, Open Gym, and Camp pages for that specific gym
-- Also used as hover indicator on calendar events
-
 ---
 
-## 🔓 How to Access Magic Control (Admin)
+## 🔓 How to Access Magic Control (Level 2)
 
 **Keyboard Shortcut:**
 ```
 Shift + Click on "🪄" button
 ```
 
-**Location:** Top of the Events Dashboard, centered above bulk actions
-
-**Visual Design:**
-- Small 32×32px button
-- Just the 🪄 emoji (no text)
-- Low opacity until hover
-- Tooltip: "Shift+Click for Admin Access"
+**Location:** Top of the Events Dashboard
 
 **Why Hidden?**
 - Keeps main UI clean and simple
 - Prevents accidental admin actions
 - Professional presentation for demos
 - Power users can access instantly
-- Regular users won't know it's there
 
 ---
 
-## 🎨 Features
+## 🎨 Level 2 Features (Admin)
 
-### **1. 🗄️ Supabase Database Quick Access** ⭐ NEW!
-
-**What it does:**
-- One-click access to Supabase dashboard
-- Opens directly to events table editor
-- Bypasses need to bookmark or search
-
-**Design:**
-- Big green prominent button at top
-- Gradient background (green to emerald)
-- Database icon (🗄️)
-- Opens in new tab
-
-**URL:** `https://supabase.com/dashboard/project/xftiwouxpefchwoxxgpf/editor`
-
-**Use cases:**
-- Quick database verification
-- Manual data editing if needed
-- Check audit logs
-- View table structures
-
----
-
-### **2. ➕ Quick Add Event**
+### **1. ➕ Quick Add Event**
 
 **What it does:**
 - Opens the Add Event modal
@@ -103,11 +74,9 @@ Shift + Click on "🪄" button
 - Manual event entry
 - Quick corrections
 
-**Opens:** AddEventModal component
-
 ---
 
-### **3. 🚀 JSON Import (F12 Method)**
+### **2. 🚀 JSON Import (F12 Method)**
 
 **What it does:**
 - Opens bulk import wizard
@@ -122,85 +91,117 @@ Shift + Click on "🪄" button
 4. Review validation
 5. Import new events
 
-**Opens:** BulkImportModal component
-
-**Documentation:** See `F12-IMPORT-GUIDE.md` (774 lines)
+**Documentation:** See `F12-IMPORT-GUIDE.md`
 
 ---
 
-### **4. 🔍 Audit History**
+### **3. ⚡ Automated Sync** ⭐ MAIN FEATURE!
 
 **What it does:**
-- Shows last 100 database changes
-- Tracks CREATE, UPDATE, DELETE
-- Shows old value → new value
-- Identifies who made changes
+- One-click event collection from iClassPro portals
+- Uses Playwright browser automation on Railway
+- Collects: title, date, time, price, age, description
+- Compares with database: NEW | CHANGED | DELETED | UNCHANGED
+- Import with one click
 
-**Opens:** Audit history modal
+**This is the crown jewel feature!**
 
-**Data source:** `event_audit_log` table in Supabase
+**Documentation:** See `AUTO-SYNC-GUIDE.md`
 
 ---
 
-### **5. 🎨 Magic Manager** (Coming Soon)
+### **4. 🔮 Coming Soon**
 
-**Planned features:**
-- Bulk edit tools
-- Advanced filtering
-- Data cleanup utilities
-- Custom reports
+Planned features:
+- 🗄️ Export Data
+- 📊 Import Analytics
+- 🧹 Data Cleanup Tools
+- 💾 Backup & Restore
 
-**Status:** Placeholder for future development
+---
+
+## 🔒 Level 3 Features (Super Admin)
+
+**How to access:** Inside Level 2, click the 🔒 lock icon, then enter PIN `1426` or press `*`
+
+### **1. 🗄️ Supabase Dashboard Link**
+
+**What it does:**
+- One-click access to Supabase dashboard
+- Opens directly to your database
+- Full database management
+
+**URL:** `https://supabase.com/dashboard/project/xftiwouxpefchwoxxgpf`
+
+---
+
+### **2. 🚂 Railway Dashboard Link**
+
+**What it does:**
+- One-click access to Railway dashboard
+- Manage your API server
+- View logs, restart service
+
+---
+
+### **3. 📜 Audit History**
+
+**What it does:**
+- Shows database changes
+- Tracks CREATE, UPDATE, DELETE
+- Shows old value → new value
 
 ---
 
 ## 🎨 Design Specifications
 
-### **Modal Layout:**
+### **Modal Layout (Level 2):**
 ```
 ┌─────────────────────────────────────────┐
-│ 🪄 Magic Control Center [Power User] ×  │
+│ 🪄 Magic Control Center              ×  │
 ├─────────────────────────────────────────┤
 │                                          │
-│  🗄️ Supabase Database                   │
-│  View and manage your event data        │
-│                    [Open Supabase →]    │
+│  📥 Import & Data                       │
 │                                          │
-├──────────┬──────────────────────────────┤
-│ 📥 Import│  ➕ Quick Add Event          │
-│ & Data   │  Add single event manually   │
-│          │  [Add New Event]             │
-│ 🔍 Audit │                              │
-│ History  │  🚀 JSON Import (F12)        │
-│          │  Bulk import via F12 method  │
-│ 🎨 Magic │  [Open JSON Import]          │
-│ Manager  │                              │
-│ (Soon)   │  🔮 Coming Soon              │
-│          │  • Export Data               │
-│          │  • Import Analytics          │
-└──────────┴──────────────────────────────┘
+│  ➕ Quick Add Event                     │
+│  Add a single event manually            │
+│  [Add New Event]                        │
+│                                          │
+│  🚀 JSON Import (F12 Method)            │
+│  Import multiple events from F12        │
+│  [Open JSON Import]                     │
+│                                          │
+│  ⚡ Automated Sync                      │
+│  Automatically collect from iClassPro   │
+│  [Open Automated Sync]                  │
+│                                          │
+│  🔮 Coming Soon                         │
+│  • Export Data                          │
+│  • Import Analytics                     │
+│                                          │
+│  🔒 [Click for Super Admin access]      │
+└─────────────────────────────────────────┘
 ```
 
-### **Color Scheme:**
-- **Purple** - Main theme (#8B5CF6)
-- **Green** - Supabase section (#10B981)
-- **Blue** - Add Event (#3B82F6)
-- **Emerald** - JSON Import (#059669)
-
-### **Responsive:**
-- Max width: 1200px
-- Max height: 90vh
-- Scrollable content
-- Mobile-friendly (stacked layout)
+### **Super Admin Unlocked:**
+```
+┌─────────────────────────────────────────┐
+│ 🔓 Super Admin Tools                    │
+│                                          │
+│  🗄️ Supabase Dashboard                 │
+│  🚂 Railway Dashboard                   │
+│  📜 Audit History                       │
+└─────────────────────────────────────────┘
+```
 
 ---
 
-## 🔐 Security Considerations
+## 🔐 Security Notes
 
 ### **Access Control:**
-- **Currently:** No authentication (single-user app)
-- **Future:** Could add role-based access
-- **Keyboard shortcut:** Provides basic "security through obscurity"
+- **Level 1:** No authentication needed (public calendar)
+- **Level 2:** Shift+Click required (obscurity)
+- **Level 3:** PIN required (1426) or * key
 
 ### **Data Protection:**
 - All changes logged in audit_log
@@ -208,96 +209,53 @@ Shift + Click on "🪄" button
 - Rollback possible via audit trail
 - Database backup via Supabase
 
----
-
-## 🚀 Future Enhancements
-
-### **Planned Features:**
-
-1. **Keyboard Shortcuts**
-   - `Alt + A` - Add event
-   - `Alt + I` - Open import
-   - `Alt + H` - View audit history
-
-2. **Bulk Actions**
-   - Select multiple events
-   - Bulk delete
-   - Bulk edit (change gym, dates, etc.)
-   - Bulk export
-
-3. **Advanced Filters**
-   - Date range picker
-   - Multi-gym selection
-   - Custom queries
-   - Saved filters
-
-4. **Analytics Dashboard**
-   - Import success rates
-   - Event trends over time
-   - Gym performance metrics
-   - Missing events report
-
-5. **Data Quality Tools**
-   - Find duplicate events
-   - Detect missing data
-   - URL validation
-   - Price consistency check
+### **PIN Storage:**
+- PIN is hardcoded in `AdminPortalModal.js`
+- Change it by editing the code
+- Not stored in database (yet)
 
 ---
 
-## 📊 Usage Statistics
+## 📁 Code Location
 
-**Since Launch:**
-- 229 audit log entries (changes tracked)
-- 167 events currently in system
-- 54 gym links configured
-- 10 gyms actively managed
+**Main Component:** `src/components/EventsDashboard/AdminPortalModal.js`
 
----
-
-## 🐛 Known Issues
-
-**None currently!** All features working as expected.
-
----
-
-## 📝 Developer Notes
-
-### **Component Structure:**
-```
-src/components/EventsDashboard/AdminPortalModal.js
-├── Supabase Quick Access (lines 21-41)
-├── Sidebar Navigation (lines 43-50)
-└── Content Area
-    ├── Add Event Section (lines 54-63)
-    ├── JSON Import Section (lines 65-74)
-    └── Coming Soon Section (lines 76-84)
-```
-
-### **Props:**
+**Key Code:**
 ```javascript
-AdminPortalModal({
-  theme,              // Color theme object
-  onClose,            // Close modal handler
-  onOpenAddEvent,     // Open add event modal
-  onOpenBulkImport,   // Open bulk import modal
-  onOpenAuditHistory  // Open audit history modal
-})
-```
+const SUPER_ADMIN_PIN = '1426';
 
-### **State Management:**
-- Modal visibility controlled by parent (EventsDashboard.js)
-- No internal state (stateless component)
-- All actions passed as callbacks
+// Unlock with PIN
+if (pinInput === SUPER_ADMIN_PIN) {
+  setSuperAdminUnlocked(true);
+}
+
+// Or unlock with * key
+if (e.key === '*') {
+  setSuperAdminUnlocked(true);
+}
+```
 
 ---
 
 ## 📚 Related Documentation
 
-- **F12-IMPORT-GUIDE.md** - Complete guide to bulk import
-- **AUDIT-SYSTEM.md** - How audit logging works
-- **SUPABASE_AUDIT_REPORT.md** - Database structure analysis
+- **SECRET_ADMIN_MODE.md** - Complete 3-tier access guide
+- **AUTO-SYNC-GUIDE.md** - Automated sync workflow
+- **SYNC_PROGRESS_TRACKER.md** - Tracking sync status
+- **F12-IMPORT-GUIDE.md** - Manual import method
 - **TECHNICAL-REFERENCE.md** - Overall system architecture
+
+---
+
+## 📝 Change Log
+
+| Date | Change |
+|------|--------|
+| Jan 2025 | Original Magic Control created |
+| Nov 26, 2025 | Added 3-tier access system |
+| Nov 26, 2025 | Added Automated Sync feature |
+| Nov 26, 2025 | Added Super Admin with PIN 1426 |
+| Nov 26, 2025 | Added Railway + Supabase links |
 
 ---
 

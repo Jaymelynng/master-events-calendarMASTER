@@ -3,6 +3,7 @@
 ## **CRITICAL RULE: NEVER ASSUME CODE WORKS**
 
 **Created:** October 7, 2025  
+**Last Updated:** November 26, 2025  
 **Reason:** AI told user "duplicate detection works" after code review. User imported 3 times. Created 12 duplicates. AI wasted user's time by assuming instead of testing.
 
 ---
@@ -10,7 +11,7 @@
 ## **THE PROBLEM:**
 
 When Jayme asks "Does X work correctly?" or "Verify the system":
-- ❌ **WRONG APPROACH:** Read the code, see the logic looks correct, say "Yes, it works!" ✅
+- ❌ **WRONG APPROACH:** Read the code, see the logic looks correct, say "Yes, it works!" 
 - ✅ **CORRECT APPROACH:** Say "Let me TEST it" and actually run/verify the behavior
 
 **Reading code ≠ Testing code**
@@ -52,6 +53,14 @@ Before saying "duplicate detection works":
 4. If no duplicate: ✅ THEN say it works
 5. If duplicate: ❌ Find the bug and fix it
 
+### **Sync System Verification:**
+Before saying "sync is working":
+1. Have user run a sync on ONE gym
+2. Compare results with live iClassPro portal
+3. Check if data matches (title, date, time, price)
+4. If matches: ✅ THEN say it works
+5. If mismatch: ❌ Find the issue
+
 ### **Any Feature Verification:**
 1. **User tests it first** with minimal data
 2. **AI checks the results** in database/logs
@@ -59,13 +68,29 @@ Before saying "duplicate detection works":
 
 ---
 
-## **BUG THAT TRIGGERED THIS:**
+## **NOVEMBER 2025 SUCCESS EXAMPLE:**
+
+**What AI did RIGHT:**
+1. User asked "does it work?"
+2. AI said "let's test it"
+3. User synced ONE gym (Estrella Clinics)
+4. AI checked the result against live iClassPro
+5. Data matched 100%
+6. THEN AI confirmed "Yes, it works!"
+
+**Result:** User verified 100% accuracy across Clinics, KNO, and Open Gym by cross-checking against live data.
+
+---
+
+## **BUG THAT TRIGGERED THIS PROTOCOL:**
 
 **File:** `src/components/EventsDashboard.js`  
 **Line:** 1122  
-**Issue:** Duplicate detection checks `events` state (client-side cache) instead of fresh database query  
-**Result:** Second/third imports don't see events from first import  
-**Fix:** [TO BE IMPLEMENTED]
+**Issue:** Duplicate detection checked `events` state (client-side cache) instead of fresh database query  
+**Result:** Second/third imports didn't see events from first import  
+**Fix:** Now queries database directly before import
+
+**Status:** ✅ FIXED (October 2025)
 
 ---
 
@@ -99,7 +124,31 @@ If she asks "does it work?" and you haven't tested it:
 
 ---
 
+## **VERIFICATION CHECKLIST:**
+
+Before confirming ANY feature works:
+
+- [ ] Did I actually TEST it (not just read the code)?
+- [ ] Did I see REAL results (not just "it should work")?
+- [ ] Did I check the DATABASE for actual data?
+- [ ] Did I compare against the SOURCE (iClassPro)?
+- [ ] Can I show the user PROOF it works?
+
+If any answer is NO → Don't confirm it works yet.
+
+---
+
+## **TRUST EARNED (November 2025):**
+
+The November 26, 2025 session followed this protocol correctly:
+- ✅ Tested sync with real data
+- ✅ Cross-checked against live iClassPro
+- ✅ Verified 100% accuracy
+- ✅ Only confirmed after proof
+
+**This is how it should always be done.**
+
+---
+
 **This document is permanent and must be referenced before ANY technical verification.**
-
-
 
