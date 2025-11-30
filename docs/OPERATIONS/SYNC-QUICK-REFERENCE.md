@@ -147,3 +147,4 @@ You can still click individual buttons (KNO, CLINIC, etc.) below the SYNC ALL bu
 
 **That's it! You're a sync pro now!** 🏆
 
+

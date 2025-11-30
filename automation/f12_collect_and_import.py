@@ -294,8 +294,14 @@ async def collect_all_programs_for_gym(gym_id):
         seen_ids = set()
         
         for link_type, url in urls:
-            print(f"  - Fetching from {link_type}...")
+            print(f"  - Fetching from {link_type}: {url}")
             events = await _collect_events_from_url(gym_id, url)
+            print(f"  - Raw events returned: {len(events)}")
+            
+            # Debug: Check if events have description
+            for ev in events:
+                has_desc = bool(ev.get("description"))
+                print(f"    Event {ev.get('id')}: has_description={has_desc}")
             
             # Dedupe within this event type
             for ev in events:
@@ -352,18 +358,24 @@ async def _collect_events_from_url(gym_id, url):
             
             seen_ids.add(event_id)
             captured_events.append(data)
+            print(f"    [CAPTURED] Event {event_id}: {data.get('name', 'Unknown')[:50]}...")
     
+    print(f"  [BROWSER] Opening: {url}")
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         
         page.on("response", handle_response)
         
+        print(f"  [BROWSER] Loading page...")
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        print(f"  [BROWSER] Reloading for network idle...")
         await page.reload(wait_until="networkidle", timeout=30000)
-        await page.wait_for_timeout(3000)
-        await asyncio.sleep(1)
+        print(f"  [BROWSER] Waiting for async responses (5s)...")
+        await page.wait_for_timeout(5000)  # Increased from 3000
+        await asyncio.sleep(2)  # Increased from 1
         
+        print(f"  [BROWSER] Captured {len(captured_events)} events, closing browser...")
         await browser.close()
     
     return captured_events

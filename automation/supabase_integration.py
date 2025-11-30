@@ -136,7 +136,7 @@ class SupabaseEventImporter:
     def _event_has_changes(self, existing: Dict, new: Dict) -> bool:
         """Check if event has meaningful changes"""
         # Compare key fields that matter for updates
-        fields_to_check = ['title', 'time', 'price', 'event_url']
+        fields_to_check = ['title', 'time', 'price', 'event_url', 'age_min', 'age_max', 'description']
         
         for field in fields_to_check:
             if existing.get(field) != new.get(field):
@@ -165,7 +165,10 @@ class SupabaseEventImporter:
             'price': event_data.get('price'), # DECIMAL - Cost
             'type': event_data['type'],      # TEXT - Event category (CLINIC, KIDS NIGHT OUT, etc.)
             'event_url': event_data['event_url'],  # TEXT - Registration link
-            'day_of_week': day_of_week       # TEXT - Computed field
+            'day_of_week': day_of_week,      # TEXT - Computed field
+            'age_min': event_data.get('age_min'),  # INTEGER - Minimum age
+            'age_max': event_data.get('age_max'),  # INTEGER - Maximum age
+            'description': event_data.get('description')  # TEXT - Event description
             # Note: id is UUID PRIMARY KEY (auto-generated)
             # Note: event_type_id is UUID FK to event_types (nullable)
             # Note: created_at/updated_at are auto-generated
@@ -198,7 +201,8 @@ class SupabaseEventImporter:
             'price': event_data.get('price'),
             'event_url': event_data['event_url'],
             'age_min': event_data.get('age_min'),
-            'age_max': event_data.get('age_max')
+            'age_max': event_data.get('age_max'),
+            'description': event_data.get('description')
         }
         
         # Update in database

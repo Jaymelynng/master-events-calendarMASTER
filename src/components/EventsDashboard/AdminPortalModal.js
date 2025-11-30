@@ -79,17 +79,17 @@ export default function AdminPortalModal({
         </div>
       )}
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-hidden">
-        <div className="bg-white rounded-lg p-6 w-full max-w-6xl mx-4 max-h-[90vh] overflow-y-auto flex flex-col">
-          <div className="flex justify-between items-center mb-4 flex-shrink-0">
-            <h2 className="text-3xl font-bold text-purple-800 flex items-center gap-3">
-              🪄 Magic Control Center
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-hidden">
+      <div className="bg-white rounded-lg p-6 w-full max-w-6xl mx-4 max-h-[90vh] overflow-y-auto flex flex-col">
+        <div className="flex justify-between items-center mb-4 flex-shrink-0">
+          <h2 className="text-3xl font-bold text-purple-800 flex items-center gap-3">
+            🪄 Magic Control Center
               {superAdminMode ? (
                 <span className="text-lg bg-red-100 text-red-700 px-3 py-1 rounded-full">🔐 Super Admin</span>
               ) : (
                 <span className="text-lg bg-purple-100 text-purple-700 px-3 py-1 rounded-full">Admin Mode</span>
               )}
-            </h2>
+          </h2>
             <div className="flex items-center gap-2">
               {!superAdminMode && (
                 <button
@@ -108,7 +108,7 @@ export default function AdminPortalModal({
                   Exit Super Admin
                 </button>
               )}
-              <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
             </div>
           </div>
 
@@ -120,10 +120,10 @@ export default function AdminPortalModal({
                 <span className="text-xs text-red-600 font-normal">(Press * to exit)</span>
               </h3>
               <div className="flex gap-3">
-                <a
-                  href="https://supabase.com/dashboard/project/xftiwouxpefchwoxxgpf/editor"
-                  target="_blank"
-                  rel="noopener noreferrer"
+            <a
+              href="https://supabase.com/dashboard/project/xftiwouxpefchwoxxgpf/editor"
+              target="_blank"
+              rel="noopener noreferrer"
                   className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-semibold text-center"
                 >
                   🗄️ Supabase
@@ -133,7 +133,7 @@ export default function AdminPortalModal({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 px-4 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all font-semibold text-center"
-                >
+            >
                   🚂 Railway
                 </a>
                 <button
@@ -142,22 +142,22 @@ export default function AdminPortalModal({
                 >
                   🔍 Audit History
                 </button>
-              </div>
-            </div>
+          </div>
+        </div>
           )}
 
-          <div className="flex-1 flex overflow-hidden">
-            <div className="w-48 border-r border-gray-200 pr-4">
-              <div className="space-y-2">
-                <button className="w-full text-left px-4 py-3 rounded-lg bg-purple-100 text-purple-800 font-semibold">
-                  📥 Import & Data
-                </button>
-                <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-400 cursor-not-allowed">
-                  🎨 Magic Manager
-                  <div className="text-xs">Coming Soon</div>
-                </button>
-              </div>
+        <div className="flex-1 flex overflow-hidden">
+          <div className="w-48 border-r border-gray-200 pr-4">
+            <div className="space-y-2">
+              <button className="w-full text-left px-4 py-3 rounded-lg bg-purple-100 text-purple-800 font-semibold">
+                📥 Import & Data
+              </button>
+              <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 text-gray-400 cursor-not-allowed">
+                🎨 Magic Manager
+                <div className="text-xs">Coming Soon</div>
+              </button>
             </div>
+          </div>
 
           <div className="flex-1 pl-6 overflow-y-auto">
             <div className="h-full">

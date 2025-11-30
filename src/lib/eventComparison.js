@@ -96,7 +96,8 @@ function hasEventChanged(existing, incoming) {
     'price',
     'type',
     'age_min',
-    'age_max'
+    'age_max',
+    'description'
   ];
 
   for (const field of fieldsToCompare) {
@@ -124,7 +125,8 @@ function getChangedFields(existing, incoming) {
     'price',
     'type',
     'age_min',
-    'age_max'
+    'age_max',
+    'description'
   ];
 
   const changes = [];

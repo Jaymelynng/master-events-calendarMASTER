@@ -277,6 +277,7 @@ export default function SyncModal({ theme, onClose, gyms }) {
                 price: changed.incoming.price,
                 age_min: changed.incoming.age_min,
                 age_max: changed.incoming.age_max,
+                description: changed.incoming.description,
                 deleted_at: null  // Ensure it's not marked as deleted
               });
               updatedCount++;
@@ -611,8 +612,8 @@ export default function SyncModal({ theme, onClose, gyms }) {
             result.noEvents
               ? 'bg-yellow-50 border-yellow-300'
               : result.success 
-                ? 'bg-green-50 border-green-300' 
-                : 'bg-red-50 border-red-300'
+              ? 'bg-green-50 border-green-300' 
+              : 'bg-red-50 border-red-300'
           }`}>
             <div className="flex items-start gap-3">
               {result.noEvents ? (
@@ -954,20 +955,20 @@ export default function SyncModal({ theme, onClose, gyms }) {
                   </div>
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => {
+              <button
+                onClick={() => {
                       // Reset form for next sync - keep gym selected
-                      setResult(null);
-                      setImportResult(null);
-                      setEditableEvents([]);
-                      setComparison(null);
-                      setSelectedEventType('');
-                      // Keep selectedGym so they don't have to reselect it
-                    }}
+                  setResult(null);
+                  setImportResult(null);
+                  setEditableEvents([]);
+                  setComparison(null);
+                  setSelectedEventType('');
+                  // Keep selectedGym so they don't have to reselect it
+                }}
                     className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors text-sm"
-                  >
-                    🔄 Sync Another Program
-                  </button>
+              >
+                🔄 Sync Another Program
+              </button>
                   <button
                     onClick={() => {
                       // Reset everything - pick new gym
