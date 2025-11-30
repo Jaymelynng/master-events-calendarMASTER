@@ -571,6 +571,20 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         else:
             description = None
         
+        # Get age values and convert to integers (database expects integers)
+        age_min = ev.get("minAge")
+        age_max = ev.get("maxAge")
+        if age_min is not None:
+            try:
+                age_min = int(float(age_min))
+            except (ValueError, TypeError):
+                age_min = None
+        if age_max is not None:
+            try:
+                age_max = int(float(age_max))
+            except (ValueError, TypeError):
+                age_max = None
+        
         processed.append({
             "gym_id": gym_id,
             "title": title,
@@ -581,8 +595,8 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "price": price,
             "type": camp_type_label,
             "event_url": event_url,
-            "age_min": ev.get("minAge"),
-            "age_max": ev.get("maxAge"),
+            "age_min": age_min,
+            "age_max": age_max,
             "day_of_week": day_of_week,
             "description": description,
         })
