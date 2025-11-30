@@ -161,6 +161,7 @@ def sync_events():
     """
     Sync events for a specific gym and event type
     Expects JSON: { "gymId": "RBA", "eventType": "KIDS NIGHT OUT" }
+    For ALL programs: { "gymId": "RBA", "eventType": "ALL" }
     Requires API key in header: X-API-Key or query param: api_key
     """
     # Check API key
@@ -198,7 +199,50 @@ def sync_events():
         print(f"SYNC REQUEST: {gym_id} - {event_type}")
         print(f"{'='*60}\n")
         
-        # Step 1: Collect raw events using your working script (async function)
+        slug = GYMS[gym_id]["slug"]
+        
+        # Special handling for "ALL" - sync all program types
+        if event_type == "ALL":
+            results = asyncio.run(collect_events_via_f12(gym_id=gym_id, camp_type="ALL"))
+            
+            if not results:
+                return jsonify({
+                    "success": True,
+                    "noEvents": True,
+                    "gymId": gym_id,
+                    "eventType": "ALL",
+                    "eventsFound": 0,
+                    "eventsByType": {},
+                    "message": "No events currently scheduled for this gym."
+                }), 200
+            
+            # Convert each event type to flat format
+            events_by_type = {}
+            total_events = 0
+            
+            for et, events_raw in results.items():
+                if events_raw:
+                    events_flat = convert_event_dicts_to_flat(
+                        events=events_raw,
+                        gym_id=gym_id,
+                        portal_slug=slug,
+                        camp_type_label=et,
+                    )
+                    events_by_type[et] = events_flat
+                    total_events += len(events_flat)
+            
+            print(f"\n✅ Collected {total_events} total events across {len(events_by_type)} types")
+            
+            return jsonify({
+                "success": True,
+                "gymId": gym_id,
+                "eventType": "ALL",
+                "eventsFound": total_events,
+                "eventsByType": events_by_type,
+                "message": f"Successfully collected {total_events} events across {len(events_by_type)} program types"
+            })
+        
+        # Standard single event type handling
         events_raw = asyncio.run(collect_events_via_f12(gym_id=gym_id, camp_type=event_type))
         
         if not events_raw:
@@ -213,7 +257,6 @@ def sync_events():
             }), 200
         
         # Step 2: Convert to flat format (your existing function)
-        slug = GYMS[gym_id]["slug"]
         events_flat = convert_event_dicts_to_flat(
             events=events_raw,
             gym_id=gym_id,

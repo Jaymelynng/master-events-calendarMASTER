@@ -34,9 +34,36 @@ LINK_TYPE_TO_EVENT_TYPE = {
     "kids_night_out": "KIDS NIGHT OUT",
     "skill_clinics": "CLINIC",
     "open_gym": "OPEN GYM",
-    "camps": "SCHOOL YEAR CAMP",
-    "camps_holiday": "SCHOOL YEAR CAMP",
+    "camps": "CAMP",
+    "camps_half": "CAMP",
+    "camps_holiday": "CAMP",
+    "camps_summer_full": "CAMP",
+    "camps_summer_half": "CAMP",
     "special_events": "SPECIAL EVENT"
+}
+
+# All camp-related link types (for fetching ALL camps with one button)
+CAMP_LINK_TYPES = [
+    "camps",           # School Year Full Day
+    "camps_half",      # School Year Half Day
+    "camps_holiday",   # Holiday camps
+    "camps_summer_full",   # Summer Full Day
+    "camps_summer_half",   # Summer Half Day
+]
+
+# All program types for "SYNC ALL" functionality
+ALL_PROGRAM_TYPES = {
+    "kids_night_out": "KIDS NIGHT OUT",
+    "skill_clinics": "CLINIC",
+    "open_gym": "OPEN GYM",
+    "special_events": "SPECIAL EVENT",
+    # Camp types are handled separately via CAMP_LINK_TYPES
+}
+
+# Aliases for event type names (for backwards compatibility)
+EVENT_TYPE_ALIASES = {
+    "SCHOOL YEAR CAMP": "CAMP",
+    "CAMP": "CAMP",
 }
 
 def fetch_event_type_urls():
@@ -98,17 +125,267 @@ def get_event_type_urls():
         _EVENT_TYPE_URLS_CACHE = fetch_event_type_urls()
     return _EVENT_TYPE_URLS_CACHE
 
+def fetch_all_camp_urls_for_gym(gym_id):
+    """
+    Fetch ALL camp URLs for a specific gym from gym_links table.
+    Returns a list of (link_type_id, url) tuples.
+    """
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/gym_links?gym_id=eq.{gym_id}&is_active=eq.true&select=link_type_id,url"
+        req = Request(url)
+        req.add_header("apikey", SUPABASE_KEY)
+        req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
+        
+        with urlopen(req) as response:
+            links = json.loads(response.read().decode())
+        
+        camp_urls = []
+        for link in links:
+            link_type = link.get('link_type_id')
+            url_str = link.get('url')
+            
+            # Only include camp-related link types
+            if link_type not in CAMP_LINK_TYPES:
+                continue
+            
+            if not url_str or 'REPLACE_WITH' in url_str or not url_str.startswith('http'):
+                continue
+            
+            # Ensure URL has ?sortBy=time
+            if 'sortBy=' in url_str:
+                url_str = re.sub(r'[?&]sortBy=[^&]*', '', url_str)
+            if '?' in url_str:
+                url_str = url_str + '&sortBy=time'
+            else:
+                url_str = url_str + '?sortBy=time'
+            
+            camp_urls.append((link_type, url_str))
+        
+        return camp_urls
+    except Exception as e:
+        print(f"Error fetching camp URLs for {gym_id}: {e}")
+        return []
+
+async def collect_all_camps_for_gym(gym_id):
+    """
+    Collect ALL camp types for a gym (school year, summer, full day, half day).
+    Returns combined list of all camp events.
+    """
+    if gym_id not in GYMS:
+        print(f"Unknown gym ID: {gym_id}")
+        return []
+    
+    gym = GYMS[gym_id]
+    slug = gym["slug"]
+    
+    # Get all camp URLs for this gym
+    camp_urls = fetch_all_camp_urls_for_gym(gym_id)
+    
+    if not camp_urls:
+        print(f"No camp URLs found for gym '{gym_id}'")
+        return []
+    
+    print(f"\n[INFO] Found {len(camp_urls)} camp URL(s) for {gym['name']}:")
+    for link_type, url in camp_urls:
+        print(f"  - {link_type}: {url}")
+    
+    all_events = []
+    seen_ids = set()
+    
+    for link_type, url in camp_urls:
+        print(f"\n[INFO] Collecting from {link_type}...")
+        events = await _collect_events_from_url(gym_id, url)
+        
+        # Dedupe across all camp types
+        for ev in events:
+            event_id = ev.get("id")
+            if event_id and event_id not in seen_ids:
+                seen_ids.add(event_id)
+                all_events.append(ev)
+                print(f"  ✅ Added event {event_id}")
+            elif event_id:
+                print(f"  ⏭️ Skipped duplicate {event_id}")
+    
+    print(f"\n[INFO] Total unique camp events collected: {len(all_events)}")
+    return all_events
+
+def fetch_all_program_urls_for_gym(gym_id):
+    """
+    Fetch ALL program URLs for a specific gym from gym_links table.
+    Returns a dict: { event_type: [(link_type_id, url), ...] }
+    """
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/gym_links?gym_id=eq.{gym_id}&is_active=eq.true&select=link_type_id,url"
+        req = Request(url)
+        req.add_header("apikey", SUPABASE_KEY)
+        req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
+        
+        with urlopen(req) as response:
+            links = json.loads(response.read().decode())
+        
+        program_urls = {}
+        
+        for link in links:
+            link_type = link.get('link_type_id')
+            url_str = link.get('url')
+            
+            if not url_str or 'REPLACE_WITH' in url_str or not url_str.startswith('http'):
+                continue
+            
+            # Ensure URL has ?sortBy=time
+            if 'sortBy=' in url_str:
+                url_str = re.sub(r'[?&]sortBy=[^&]*', '', url_str)
+            if '?' in url_str:
+                url_str = url_str + '&sortBy=time'
+            else:
+                url_str = url_str + '?sortBy=time'
+            
+            # Determine event type
+            if link_type in CAMP_LINK_TYPES:
+                event_type = "CAMP"
+            elif link_type in ALL_PROGRAM_TYPES:
+                event_type = ALL_PROGRAM_TYPES[link_type]
+            else:
+                continue  # Skip unknown link types
+            
+            if event_type not in program_urls:
+                program_urls[event_type] = []
+            program_urls[event_type].append((link_type, url_str))
+        
+        return program_urls
+    except Exception as e:
+        print(f"Error fetching program URLs for {gym_id}: {e}")
+        return {}
+
+async def collect_all_programs_for_gym(gym_id):
+    """
+    Collect ALL programs for a gym (KNO, CLINIC, OPEN GYM, CAMP, SPECIAL EVENT).
+    Returns a dict: { event_type: [events...] }
+    """
+    if gym_id not in GYMS:
+        print(f"Unknown gym ID: {gym_id}")
+        return {}
+    
+    gym = GYMS[gym_id]
+    
+    # Get all program URLs for this gym
+    program_urls = fetch_all_program_urls_for_gym(gym_id)
+    
+    if not program_urls:
+        print(f"No program URLs found for gym '{gym_id}'")
+        return {}
+    
+    print(f"\n{'='*60}")
+    print(f"SYNC ALL PROGRAMS: {gym['name']} ({gym_id})")
+    print(f"{'='*60}")
+    print(f"Found {len(program_urls)} program type(s):")
+    for event_type, urls in program_urls.items():
+        print(f"  - {event_type}: {len(urls)} URL(s)")
+    
+    all_results = {}
+    
+    for event_type, urls in program_urls.items():
+        print(f"\n[INFO] Collecting {event_type}...")
+        all_events = []
+        seen_ids = set()
+        
+        for link_type, url in urls:
+            print(f"  - Fetching from {link_type}...")
+            events = await _collect_events_from_url(gym_id, url)
+            
+            # Dedupe within this event type
+            for ev in events:
+                event_id = ev.get("id")
+                if event_id and event_id not in seen_ids:
+                    seen_ids.add(event_id)
+                    all_events.append(ev)
+        
+        all_results[event_type] = all_events
+        print(f"  ✅ Collected {len(all_events)} {event_type} events")
+    
+    total = sum(len(evs) for evs in all_results.values())
+    print(f"\n{'='*60}")
+    print(f"TOTAL: {total} events across {len(all_results)} program types")
+    print(f"{'='*60}\n")
+    
+    return all_results
+
+async def _collect_events_from_url(gym_id, url):
+    """
+    Internal function to collect events from a single URL.
+    """
+    captured_events = []
+    seen_ids = set()
+    
+    async def handle_response(response):
+        nonlocal captured_events, seen_ids
+        try:
+            response_url = response.url
+            content_type = response.headers.get("content-type", "")
+        except Exception:
+            return
+        
+        if "application/json" not in content_type:
+            return
+        
+        if "/camps/" in response_url and "?" not in response_url:
+            try:
+                body = await response.json()
+            except Exception:
+                return
+            
+            if not isinstance(body, dict):
+                return
+            
+            data = body.get("data")
+            if not isinstance(data, dict):
+                return
+            
+            event_id = data.get("id")
+            if event_id is None or event_id in seen_ids:
+                return
+            
+            seen_ids.add(event_id)
+            captured_events.append(data)
+    
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        
+        page.on("response", handle_response)
+        
+        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        await page.reload(wait_until="networkidle", timeout=30000)
+        await page.wait_for_timeout(3000)
+        await asyncio.sleep(1)
+        
+        await browser.close()
+    
+    return captured_events
+
 async def collect_events_via_f12(gym_id, camp_type):
     """
     Opens the camp listing page and collects JSON from /camps/<id> detail calls.
     (EXACT same approach as the working script)
     
+    If camp_type is "CAMP", collects from ALL camp URLs for the gym.
+    If camp_type is "ALL", collects ALL program types for the gym.
+    
     Returns:
         events_raw: list of event dicts (one per event)
+        OR for "ALL": dict of { event_type: [events...] }
     """
     if gym_id not in GYMS:
         print(f"Unknown gym ID: {gym_id}")
-        return []
+        return [] if camp_type != "ALL" else {}
+    
+    # Special handling for "ALL" - collect ALL program types
+    if camp_type == "ALL":
+        return await collect_all_programs_for_gym(gym_id)
+    
+    # Special handling for "CAMP" - collect ALL camp types
+    if camp_type == "CAMP":
+        return await collect_all_camps_for_gym(gym_id)
     
     event_type_urls = get_event_type_urls()
     

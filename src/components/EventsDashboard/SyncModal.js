@@ -73,6 +73,9 @@ export default function SyncModal({ theme, onClose, gyms }) {
     'SPECIAL EVENT'
   ];
 
+  // All sync option (includes ALL event types at once)
+  const ALL_PROGRAMS = 'ALL';
+
 
   const handleSyncForType = async (eventType) => {
     if (!selectedGym || !eventType) {
@@ -113,7 +116,41 @@ export default function SyncModal({ theme, onClose, gyms }) {
 
       const data = await response.json();
 
-      if (data.success && data.events && data.events.length > 0) {
+      // Handle "ALL" response (eventsByType instead of events)
+      if (eventType === ALL_PROGRAMS && data.success && data.eventsByType) {
+        // Combine all events from all types
+        const allEvents = [];
+        const eventsByTypeMap = data.eventsByType;
+        
+        for (const [type, events] of Object.entries(eventsByTypeMap)) {
+          for (const ev of events) {
+            allEvents.push({ ...ev, _eventType: type });
+          }
+        }
+        
+        const eventsWithIndex = allEvents.map((ev, idx) => ({ ...ev, _index: idx }));
+        setEditableEvents(eventsWithIndex);
+        
+        // For ALL, we'll show a summary but skip detailed comparison
+        setResult({
+          success: true,
+          eventsFound: data.eventsFound,
+          eventsByType: data.eventsByType,
+          message: data.message,
+          isAllPrograms: true
+        });
+        
+        // Log sync for each event type
+        try {
+          for (const [type, events] of Object.entries(eventsByTypeMap)) {
+            await syncLogApi.log(selectedGym, type, events.length, 0);
+          }
+          const updatedLog = await syncLogApi.getAll();
+          setSyncLog(updatedLog);
+        } catch (err) {
+          console.error('Failed to log sync:', err);
+        }
+      } else if (data.success && data.events && data.events.length > 0) {
         // Make events editable (add index for React keys)
         const eventsWithIndex = data.events.map((ev, idx) => ({ ...ev, _index: idx }));
         setEditableEvents(eventsWithIndex);
@@ -210,8 +247,8 @@ export default function SyncModal({ theme, onClose, gyms }) {
     setImportResult(null);
 
     try {
-      // Remove the _index field before importing
-      const eventsToImport = editableEvents.map(({ _index, ...ev }) => ev);
+      // Remove the _index and _eventType fields before importing
+      const eventsToImport = editableEvents.map(({ _index, _eventType, ...ev }) => ev);
       
       // Import new events
       const imported = await eventsApi.bulkImport(eventsToImport);
@@ -490,6 +527,45 @@ export default function SyncModal({ theme, onClose, gyms }) {
         {selectedGym && !result && (
           <div className="mb-4">
             <h3 className="font-semibold text-gray-800 mb-3">⚡ Step 2: Select Program & Sync</h3>
+            
+            {/* SYNC ALL PROGRAMS - Featured Button */}
+            <div className="mb-4">
+              <button
+                onClick={() => handleSyncForType(ALL_PROGRAMS)}
+                disabled={syncing}
+                className={`w-full px-4 py-4 rounded-lg font-bold transition-all transform hover:scale-102 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3 ${
+                  syncing && selectedEventType === ALL_PROGRAMS
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
+                    : 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-lg'
+                }`}
+              >
+                {syncing && selectedEventType === ALL_PROGRAMS ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    <span>Syncing ALL Programs... (this may take 30-60 seconds)</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xl">🚀</span>
+                    <span className="text-lg">SYNC ALL PROGRAMS</span>
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded">KNO + CLINIC + OPEN GYM + CAMP + SPECIAL</span>
+                  </>
+                )}
+              </button>
+              <p className="text-xs text-gray-500 mt-1 text-center">
+                ⏱️ Takes ~30-60 seconds - syncs everything at once
+              </p>
+            </div>
+            
+            <div className="relative mb-3">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">or sync individual programs</span>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-2 gap-3">
               {eventTypes.map((type) => {
                 const isSyncing = syncing && selectedEventType === type;
@@ -587,6 +663,15 @@ export default function SyncModal({ theme, onClose, gyms }) {
                 {result.success && result.eventsFound > 0 && (
                   <div className="text-sm text-green-700 mt-2">
                     <p>Found <strong>{result.eventsFound}</strong> events from source</p>
+                    {result.isAllPrograms && result.eventsByType && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {Object.entries(result.eventsByType).map(([type, events]) => (
+                          <span key={type} className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                            {type}: {events.length}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
