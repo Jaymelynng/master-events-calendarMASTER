@@ -1,8 +1,9 @@
 # ⚡ AUTOMATED SYNC GUIDE
 ## One-Click Event Collection from iClassPro
 
-**Last Updated:** November 26, 2025  
-**Status:** ✅ FULLY WORKING - Verified against live data
+**Last Updated:** November 30, 2025  
+**Status:** ✅ FULLY WORKING - Verified against live data  
+**New Feature:** 🚀 SYNC ALL PROGRAMS - One click syncs everything!
 
 ---
 
@@ -14,7 +15,7 @@ Automated Sync is the **main feature** of the Master Events Calendar. It lets yo
 2. **See what's new/changed/deleted** before importing
 3. **Import with one click** - done!
 
-**Time saved:** 5 hours/month → 20 minutes/month
+**Time saved:** 5 hours/month → 10 minutes/month (even faster with SYNC ALL!)
 
 ---
 
@@ -43,16 +44,44 @@ You'll see all 10 gyms:
 
 **Click the gym you want to sync.**
 
-### Step 3: Select an Event Type
+### Step 3: Choose Sync Method
 
-After selecting a gym, you'll see event type buttons:
+After selecting a gym, you have TWO options:
+
+---
+
+#### 🚀 OPTION A: SYNC ALL PROGRAMS (Recommended!)
+
+**NEW FEATURE!** One button syncs EVERYTHING for that gym:
+
+1. Click the big purple **"🚀 SYNC ALL PROGRAMS"** button
+2. Wait 30-60 seconds (it's syncing 5 program types!)
+3. See results broken down by type
+4. Import all at once
+
+**What it syncs:**
+- ✅ Kids Night Out (KNO)
+- ✅ Clinic
+- ✅ Open Gym
+- ✅ Camp (ALL types: School Year Full/Half, Summer Full/Half)
+- ✅ Special Events
+
+**Best for:** Monthly full sync, getting everything at once
+
+---
+
+#### ⚡ OPTION B: Individual Program Sync
+
+Click individual buttons to sync one type at a time:
 - 🎉 **Kids Night Out** (KNO)
 - 🎯 **Clinic**
 - 🏃 **Open Gym**
 - 🏕️ **Camp**
 - ⭐ **Special Events**
 
-**Click the event type you want to sync.**
+**Best for:** Quick updates when you know only one thing changed
+
+---
 
 ### Step 4: Wait for Collection
 
@@ -62,7 +91,11 @@ The system will:
 3. Capture event data from JSON responses
 4. Return results to you
 
-**This takes 10-30 seconds.** You'll see a loading indicator.
+**Timing:**
+- Single program: 10-30 seconds
+- SYNC ALL: 30-60 seconds (syncing multiple pages)
+
+You'll see a loading indicator.
 
 ### Step 5: Review Results
 
@@ -123,6 +156,56 @@ At the top of the sync modal, you'll see a **progress grid** showing:
 
 ---
 
+## 🚀 SYNC ALL PROGRAMS - DETAILED
+
+### What Happens When You Click "SYNC ALL"
+
+1. **System checks `gym_links` table** for all URLs configured for that gym
+2. **Opens each iClassPro page** (KNO page, Clinic page, Camp pages, etc.)
+3. **Collects events from each page**
+4. **Combines and deduplicates** all events
+5. **Returns summary** showing count by type
+
+### Camp Syncing (Special!)
+
+When syncing CAMP, the system automatically syncs ALL camp types:
+
+| Camp Type | What It Includes |
+|-----------|------------------|
+| **School Year Full Day** | Holiday camps, no-school day camps |
+| **School Year Half Day** | Morning-only camps (where offered) |
+| **Summer Full Day** | Full week summer camps |
+| **Summer Half Day** | Morning-only summer camps (where offered) |
+
+**All camp types are stored as type "CAMP"** in the database, but each has its own unique registration URL.
+
+### What Shows in Progress Tracker
+
+After SYNC ALL completes:
+- **All program types that were checked** get their timestamp updated
+- Even if a type has 0 events, the timestamp updates (so you know you checked it)
+- Types without URLs configured (gym doesn't offer that program) won't update
+
+### Example Results
+
+```
+✅ Sync Successful!
+🏢 Tigar Gymnastics • ⚡ ALL
+
+Successfully collected 40 events across 3 program types
+Found 40 events from source
+
+CAMP: 36    KIDS NIGHT OUT: 2    OPEN GYM: 2
+```
+
+This means Tigar has:
+- 36 camp events (summer + school year combined)
+- 2 KNO events
+- 2 Open Gym events
+- No Clinic or Special Events (gym doesn't offer those)
+
+---
+
 ## 📋 WHAT GETS COLLECTED
 
 For each event, the system collects:
@@ -179,27 +262,31 @@ If a gym doesn't have any events of that type scheduled:
 
 ## 🔄 RECOMMENDED WORKFLOW
 
-### Monthly Full Sync (Recommended)
+### Monthly Full Sync (Recommended - Using SYNC ALL)
 
 1. Open Automated Sync modal
-2. Look at progress tracker - see what needs syncing (red cells)
-3. Start with first gym
-4. Sync each event type (KNO, Clinic, Open Gym, Camp, Special Events)
-5. Use "Sync Another Program" to stay on same gym
-6. When done with gym, use "Sync Another Gym"
-7. Repeat until all cells are green/yellow
-8. Done for the month!
+2. Look at progress tracker - see what needs syncing
+3. Select first gym
+4. Click **"🚀 SYNC ALL PROGRAMS"**
+5. Wait 30-60 seconds
+6. Review results and click **"Import"**
+7. Click **"Sync Another Gym"**
+8. Repeat for each gym
+9. Done for the month!
 
-**Time:** ~20-30 minutes for all 10 gyms
+**Time:** ~10-15 minutes for all 10 gyms (vs 30+ minutes the old way!)
 
 ### Quick Update (Daily/Weekly)
 
 1. Open Automated Sync modal
 2. Look at progress tracker
-3. Sync any gyms that look stale or that you know changed
-4. Done!
+3. Select gym that needs update
+4. Either:
+   - **SYNC ALL** if you want everything refreshed
+   - **Individual button** if you know only one thing changed
+5. Import and done!
 
-**Time:** ~5 minutes
+**Time:** ~2-5 minutes
 
 ---
 
