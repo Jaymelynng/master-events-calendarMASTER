@@ -136,13 +136,16 @@ export default function SyncModal({ theme, onClose, gyms }) {
           success: true,
           eventsFound: data.eventsFound,
           eventsByType: data.eventsByType,
+          checkedTypes: data.checkedTypes || [],
           message: data.message,
           isAllPrograms: true
         });
         
-        // Log sync for each event type
+        // Log sync for ALL checked types (even if 0 events)
         try {
-          for (const [type, events] of Object.entries(eventsByTypeMap)) {
+          const checkedTypes = data.checkedTypes || Object.keys(eventsByTypeMap);
+          for (const type of checkedTypes) {
+            const events = eventsByTypeMap[type] || [];
             await syncLogApi.log(selectedGym, type, events.length, 0);
           }
           const updatedLog = await syncLogApi.getAll();

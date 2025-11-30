@@ -203,7 +203,16 @@ def sync_events():
         
         # Special handling for "ALL" - sync all program types
         if event_type == "ALL":
-            results = asyncio.run(collect_events_via_f12(gym_id=gym_id, camp_type="ALL"))
+            result_data = asyncio.run(collect_events_via_f12(gym_id=gym_id, camp_type="ALL"))
+            
+            # Handle new return format: {'events': {...}, 'checked_types': [...]}
+            if isinstance(result_data, dict) and 'events' in result_data:
+                results = result_data.get('events', {})
+                checked_types = result_data.get('checked_types', [])
+            else:
+                # Fallback for old format
+                results = result_data if result_data else {}
+                checked_types = list(results.keys()) if results else []
             
             if not results:
                 return jsonify({
@@ -213,6 +222,7 @@ def sync_events():
                     "eventType": "ALL",
                     "eventsFound": 0,
                     "eventsByType": {},
+                    "checkedTypes": checked_types,
                     "message": "No events currently scheduled for this gym."
                 }), 200
             
@@ -221,17 +231,17 @@ def sync_events():
             total_events = 0
             
             for et, events_raw in results.items():
-                if events_raw:
-                    events_flat = convert_event_dicts_to_flat(
-                        events=events_raw,
-                        gym_id=gym_id,
-                        portal_slug=slug,
-                        camp_type_label=et,
-                    )
-                    events_by_type[et] = events_flat
-                    total_events += len(events_flat)
+                events_flat = convert_event_dicts_to_flat(
+                    events=events_raw,
+                    gym_id=gym_id,
+                    portal_slug=slug,
+                    camp_type_label=et,
+                )
+                events_by_type[et] = events_flat
+                total_events += len(events_flat)
             
             print(f"\n✅ Collected {total_events} total events across {len(events_by_type)} types")
+            print(f"✅ Checked types: {checked_types}")
             
             return jsonify({
                 "success": True,
@@ -239,6 +249,7 @@ def sync_events():
                 "eventType": "ALL",
                 "eventsFound": total_events,
                 "eventsByType": events_by_type,
+                "checkedTypes": checked_types,
                 "message": f"Successfully collected {total_events} events across {len(events_by_type)} program types"
             })
         

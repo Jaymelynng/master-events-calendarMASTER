@@ -260,11 +260,14 @@ def fetch_all_program_urls_for_gym(gym_id):
 async def collect_all_programs_for_gym(gym_id):
     """
     Collect ALL programs for a gym (KNO, CLINIC, OPEN GYM, CAMP, SPECIAL EVENT).
-    Returns a dict: { event_type: [events...] }
+    Returns a dict: { 
+        'events': { event_type: [events...] },
+        'checked_types': [list of all types that were checked]
+    }
     """
     if gym_id not in GYMS:
         print(f"Unknown gym ID: {gym_id}")
-        return {}
+        return {'events': {}, 'checked_types': []}
     
     gym = GYMS[gym_id]
     
@@ -273,7 +276,7 @@ async def collect_all_programs_for_gym(gym_id):
     
     if not program_urls:
         print(f"No program URLs found for gym '{gym_id}'")
-        return {}
+        return {'events': {}, 'checked_types': []}
     
     print(f"\n{'='*60}")
     print(f"SYNC ALL PROGRAMS: {gym['name']} ({gym_id})")
@@ -283,6 +286,7 @@ async def collect_all_programs_for_gym(gym_id):
         print(f"  - {event_type}: {len(urls)} URL(s)")
     
     all_results = {}
+    checked_types = list(program_urls.keys())  # Track all types we're checking
     
     for event_type, urls in program_urls.items():
         print(f"\n[INFO] Collecting {event_type}...")
@@ -306,9 +310,10 @@ async def collect_all_programs_for_gym(gym_id):
     total = sum(len(evs) for evs in all_results.values())
     print(f"\n{'='*60}")
     print(f"TOTAL: {total} events across {len(all_results)} program types")
+    print(f"CHECKED TYPES: {checked_types}")
     print(f"{'='*60}\n")
     
-    return all_results
+    return {'events': all_results, 'checked_types': checked_types}
 
 async def _collect_events_from_url(gym_id, url):
     """
