@@ -115,14 +115,24 @@ def fetch_event_type_urls():
         print(f"Error fetching URLs from database: {e}")
         return {}
 
-# Cache for EVENT_TYPE_URLS
+# Cache for EVENT_TYPE_URLS (with TTL to pick up database changes)
 _EVENT_TYPE_URLS_CACHE = None
+_EVENT_TYPE_URLS_CACHE_TIME = None
+_CACHE_TTL_SECONDS = 300  # 5 minutes - refresh from database periodically
 
 def get_event_type_urls():
-    """Get EVENT_TYPE_URLS (cached)"""
-    global _EVENT_TYPE_URLS_CACHE
-    if _EVENT_TYPE_URLS_CACHE is None:
+    """Get EVENT_TYPE_URLS (cached for 5 minutes, then refreshes from database)"""
+    global _EVENT_TYPE_URLS_CACHE, _EVENT_TYPE_URLS_CACHE_TIME
+    import time
+    
+    current_time = time.time()
+    
+    # Refresh cache if it's None or older than TTL
+    if _EVENT_TYPE_URLS_CACHE is None or _EVENT_TYPE_URLS_CACHE_TIME is None or (current_time - _EVENT_TYPE_URLS_CACHE_TIME) > _CACHE_TTL_SECONDS:
+        print("🔄 Refreshing EVENT_TYPE_URLS from database...")
         _EVENT_TYPE_URLS_CACHE = fetch_event_type_urls()
+        _EVENT_TYPE_URLS_CACHE_TIME = current_time
+    
     return _EVENT_TYPE_URLS_CACHE
 
 def fetch_all_camp_urls_for_gym(gym_id):
