@@ -2160,7 +2160,6 @@ The system will add new events and update any changed events automatically.`;
                       </th>
                     ))}
                     <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>Status</th>
-                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>CAMPS</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2278,111 +2277,6 @@ The system will add new events and update any changed events automatically.`;
                                 </span>
                               );
                             }
-                          })()}
-                        </td>
-                        <td className="p-1 border text-center text-xs">
-                          {(() => {
-                            // Link presence
-                            const hasFullDay = gymLinks.some(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'camps'
-                            );
-                            const hasHalfDay = gymLinks.some(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'camps_half'
-                            );
-                            const hasHoliday = gymLinks.some(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'camps_holiday'
-                            );
-                            const hasSpecial = gymLinks.some(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'special_events'
-                            );
-
-                            const fullDayUrl = gymLinks.find(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'camps'
-                            )?.url;
-                            const halfDayUrl = gymLinks.find(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'camps_half'
-                            )?.url;
-                            const holidayUrl = gymLinks.find(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'camps_holiday'
-                            )?.url;
-                            const specialUrl = gymLinks.find(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'special_events'
-                            )?.url;
-
-                            // Count actual camp events for current month (does not affect tracked totals)
-                            // Need to match gym name against event's gym_id by finding the gym object
-                            const gymObj = gymsList.find(g => g.name === gym);
-                            const campEvents = events.filter(event => 
-                              (event.gym_name === gym || event.gym_id === gymObj?.id) &&
-                              (
-                                (event.type && event.type.toLowerCase().includes('camp')) ||
-                                (event.title && event.title.toLowerCase().includes('camp'))
-                              )
-                            );
-
-                            let fullCount = 0, halfCount = 0, holidayCount = 0, specialCount = 0;
-                            const holidayRegex = /(thanksgiving|holiday|winter break|spring break|fall break|mlk|presidents|labor day|memorial|veterans|new year|christmas)/i;
-                            const halfRegex = /half[-\s]?day|1\/2\s*day/i;
-                            const specialRegex = /special\s*event/i;
-
-                            campEvents.forEach(ev => {
-                              const t = (ev.title || '').toLowerCase();
-                              if (halfRegex.test(t)) {
-                                halfCount += 1;
-                              } else if (holidayRegex.test(t)) {
-                                holidayCount += 1;
-                              } else if (specialRegex.test(t)) {
-                                specialCount += 1;
-                              } else {
-                                fullCount += 1;
-                              }
-                            });
-
-                            const chips = [];
-                            if (fullCount > 0 || hasFullDay) {
-                              chips.push(
-                                <a key="full" href={fullDayUrl || '#'} target="_blank" rel="noopener noreferrer"
-                                   className="px-2 py-1 rounded text-sm font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
-                                   style={{ backgroundColor: '#f0f9ff', color: '#0369a1' }} title="Full Day Camps">
-                                  🏕️ {fullCount}
-                                </a>
-                              );
-                            }
-                            if (halfCount > 0 || hasHalfDay) {
-                              chips.push(
-                                <a key="half" href={halfDayUrl || '#'} target="_blank" rel="noopener noreferrer"
-                                   className="px-2 py-1 rounded text-sm font-semibold hover:bg-amber-100 transition-colors cursor-pointer"
-                                   style={{ backgroundColor: '#fef3c7', color: '#d97706' }} title="Half Day Camps">
-                                  🕐 {halfCount}
-                                </a>
-                              );
-                            }
-                            if (holidayCount > 0 || hasHoliday) {
-                              chips.push(
-                                <a key="holiday" href={holidayUrl || '#'} target="_blank" rel="noopener noreferrer"
-                                   className="px-2 py-1 rounded text-sm font-semibold hover:bg-green-100 transition-colors cursor-pointer"
-                                   style={{ backgroundColor: '#ecfccb', color: '#166534' }} title="Holiday/Break Camps">
-                                  🍂 {holidayCount}
-                                </a>
-                              );
-                            }
-                            if (specialCount > 0 || hasSpecial) {
-                              chips.push(
-                                <a key="special" href={specialUrl || '#'} target="_blank" rel="noopener noreferrer"
-                                   className="px-2 py-1 rounded text-sm font-semibold hover:bg-purple-100 transition-colors cursor-pointer"
-                                   style={{ backgroundColor: '#f5f3ff', color: '#6d28d9' }} title="Special Events">
-                                  ✨ {specialCount}
-                                </a>
-                              );
-                            }
-
-                            if (chips.length === 0) {
-                              return (
-                                <span className="px-2 py-1 rounded text-sm" style={{ backgroundColor: '#f3f4f6', color: '#6b7280' }}>-</span>
-                              );
-                            }
-
-                            return <div className="flex items-center justify-center gap-1">{chips}</div>;
                           })()}
                         </td>
                       </tr>
