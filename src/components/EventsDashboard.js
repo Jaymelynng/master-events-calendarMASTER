@@ -2918,10 +2918,12 @@ The system will add new events and update any changed events automatically.`;
                                               .replace(/^Ninja\s+Warrior\s+/i, '')
                                               .replace(/^COED\s+Ninja\s+/i, '');
                                             
-                                            // Handle titles with activity AFTER pipe (e.g., "Winter Camp | Gymnastics | ...")
+                                            // Handle titles with activity AFTER pipe (e.g., "Winter Break Week 1 | Girls Gymnastics Camp Full Day | Ages 5-13 | ...")
+                                            // This removes everything from the first pipe that contains Gymnastics/Ninja Camp info
                                             baseName = baseName
-                                              .replace(/\s*\|\s*(Girls?\s*)?(Co-ed\s*|COED\s*)?Gymnastics\s*Camp.*$/i, '')
-                                              .replace(/\s*\|\s*(Parkour\s*&\s*)?Ninja\s*(Warrior\s*)?Camp.*$/i, '')
+                                              // Match: | Girls Gymnastics Camp Full Day | Ages... OR | Co-ed Ninja Warrior Camp Full Day | Ages...
+                                              .replace(/\s*\|\s*(Girls?\s*)?(Co-ed\s*|COED\s*)?(Gymnastics|Ninja\s*Warrior)\s*Camp.*$/i, '')
+                                              // Fallback patterns
                                               .replace(/\s*\|\s*Gymnastics\s*\|.*$/i, '')
                                               .replace(/\s*\|\s*Ninja\s*\|.*$/i, '')
                                               .replace(/\s*\|\s*Full\s*Day.*$/i, '')
@@ -2933,12 +2935,14 @@ The system will add new events and update any changed events automatically.`;
                                             const endDate = event.end_date || event.date;
                                             const groupKey = `${event.gym_id}-${baseName}-${startDate}-${endDate}`;
                                             
-                                            // Debug log
-                                            if (event.title.includes('Fall Break')) {
-                                              console.log('Base name extraction:', {
+                                            // Debug log for camp grouping
+                                            if (event.gym_id === 'OAS' || event.title.includes('Winter Break') || event.title.includes('Fall Break')) {
+                                              console.log('🏕️ Camp grouping:', {
                                                 original: event.title,
                                                 baseName: baseName,
-                                                groupKey: groupKey
+                                                groupKey: groupKey,
+                                                start: startDate,
+                                                end: endDate
                                               });
                                             }
                                             

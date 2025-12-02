@@ -26,3 +26,4 @@ WHERE gym_id = 'RBA' AND link_type_id = 'open_gym';
 -- DONE! RBA Open Gym now points to correct URL
 -- ============================================
 
+
