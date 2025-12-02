@@ -131,7 +131,19 @@ export default function SyncModal({ theme, onClose, gyms }) {
         const eventsWithIndex = allEvents.map((ev, idx) => ({ ...ev, _index: idx }));
         setEditableEvents(eventsWithIndex);
         
-        // For ALL, we'll show a summary but skip detailed comparison
+        // Compare with existing events in database for ALL types
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const existingEvents = await eventsApi.getAll(today, '2026-12-31', true);
+          const gymExistingEvents = existingEvents.filter(ev => ev.gym_id === selectedGym);
+          
+          // Compare all incoming events vs existing
+          const comparisonResult = compareEvents(allEvents, gymExistingEvents);
+          setComparison(comparisonResult);
+        } catch (err) {
+          console.error('Error comparing events:', err);
+        }
+        
         setResult({
           success: true,
           eventsFound: data.eventsFound,
