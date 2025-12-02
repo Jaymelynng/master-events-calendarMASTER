@@ -2001,7 +2001,7 @@ The system will add new events and update any changed events automatically.`;
                 🚀 Bulk Actions - Open All Gyms
                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">One-Click Access</span>
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 <button
                   onClick={() => {
                     const clinicUrls = getAllUrlsForEventType('CLINIC');
@@ -2074,22 +2074,22 @@ The system will add new events and update any changed events automatically.`;
                   </div>
                 </button>
 
-                <div className="flex flex-col gap-1.5">
+                {/* School Year Camps */}
+                <div className="flex flex-col gap-1">
                   <button
                     onClick={() => {
                       const campUrls = getAllUrlsForEventType('camps');
                       openMultipleTabs(
                         campUrls,
-                        `🏕️ Opening ${campUrls.length} full day camp pages... (allow pop-ups!)`,
-                        `✨ Successfully opened all ${campUrls.length} full day camp pages!`
+                        `🏕️ Opening ${campUrls.length} school year full day camp pages... (allow pop-ups!)`,
+                        `✨ Successfully opened all ${campUrls.length} school year full day camp pages!`
                       );
                     }}
-                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 bg-white rounded border border-teal-200 hover:border-teal-400 hover:bg-teal-50 transition-all duration-200 group text-center"
+                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-white rounded border border-teal-200 hover:border-teal-400 hover:bg-teal-50 transition-all duration-200 group text-center"
                   >
-                    <span className="text-base group-hover:scale-110 transition-transform">🏕️</span>
+                    <span className="text-sm group-hover:scale-110 transition-transform">🏕️</span>
                     <div>
-                      <div className="text-xs font-semibold text-teal-800">School Year Camps (Full Day)</div>
-                      <div className="text-xs text-teal-600">Full day camps</div>
+                      <div className="text-xs font-semibold text-teal-800">School Year Full</div>
                     </div>
                   </button>
 
@@ -2098,19 +2098,54 @@ The system will add new events and update any changed events automatically.`;
                       const halfDayCampUrls = getAllUrlsForEventType('camps_half');
                       openMultipleTabs(
                         halfDayCampUrls,
-                        `🕐 Opening ${halfDayCampUrls.length} half day camp pages... (allow pop-ups!)`,
-                        `✨ Successfully opened all ${halfDayCampUrls.length} half day camp pages!`
+                        `🕐 Opening ${halfDayCampUrls.length} school year half day camp pages... (allow pop-ups!)`,
+                        `✨ Successfully opened all ${halfDayCampUrls.length} school year half day camp pages!`
                       );
                     }}
-                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 bg-white rounded border border-amber-200 hover:border-amber-400 hover:bg-amber-50 transition-all duration-200 group text-center"
+                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-white rounded border border-amber-200 hover:border-amber-400 hover:bg-amber-50 transition-all duration-200 group text-center"
                   >
-                    <span className="text-base group-hover:scale-110 transition-transform">🕐</span>
+                    <span className="text-sm group-hover:scale-110 transition-transform">🕐</span>
                     <div>
-                      <div className="text-xs font-semibold text-amber-800">Half Day Camps</div>
-                      <div className="text-xs text-amber-600">Half day options</div>
+                      <div className="text-xs font-semibold text-amber-800">School Year Half</div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Summer Camps */}
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => {
+                      const summerFullUrls = getAllUrlsForEventType('camps_summer_full');
+                      openMultipleTabs(
+                        summerFullUrls,
+                        `☀️ Opening ${summerFullUrls.length} summer full day camp pages... (allow pop-ups!)`,
+                        `✨ Successfully opened all ${summerFullUrls.length} summer full day camp pages!`
+                      );
+                    }}
+                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-white rounded border border-yellow-200 hover:border-yellow-400 hover:bg-yellow-50 transition-all duration-200 group text-center"
+                  >
+                    <span className="text-sm group-hover:scale-110 transition-transform">☀️</span>
+                    <div>
+                      <div className="text-xs font-semibold text-yellow-800">Summer Full Day</div>
                     </div>
                   </button>
 
+                  <button
+                    onClick={() => {
+                      const summerHalfUrls = getAllUrlsForEventType('camps_summer_half');
+                      openMultipleTabs(
+                        summerHalfUrls,
+                        `🌤️ Opening ${summerHalfUrls.length} summer half day camp pages... (allow pop-ups!)`,
+                        `✨ Successfully opened all ${summerHalfUrls.length} summer half day camp pages!`
+                      );
+                    }}
+                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-white rounded border border-orange-200 hover:border-orange-400 hover:bg-orange-50 transition-all duration-200 group text-center"
+                  >
+                    <span className="text-sm group-hover:scale-110 transition-transform">🌤️</span>
+                    <div>
+                      <div className="text-xs font-semibold text-orange-800">Summer Half Day</div>
+                    </div>
+                  </button>
                 </div>
               </div>
               
