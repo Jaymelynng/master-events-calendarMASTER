@@ -357,13 +357,10 @@ const EventsDashboard = () => {
       'KIDS NIGHT OUT': 'kids_night_out',
       'OPEN GYM': 'open_gym', 
       'BOOKING': 'booking',
-      // School year camps
       'camps': 'camps',
       'camps_half': 'camps_half',
-      // Summer camps
       'camps_summer_full': 'camps_summer_full',
       'camps_summer_half': 'camps_summer_half',
-      // Optional extras
       'camps_holiday': 'camps_holiday',
       'special_events': 'special_events'
     };
@@ -2005,7 +2002,7 @@ The system will add new events and update any changed events automatically.`;
                 🚀 Bulk Actions - Open All Gyms
                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">One-Click Access</span>
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 <button
                   onClick={() => {
                     const clinicUrls = getAllUrlsForEventType('CLINIC');
@@ -2078,43 +2075,76 @@ The system will add new events and update any changed events automatically.`;
                   </div>
                 </button>
 
-                <div className="flex flex-col gap-1.5">
+                {/* School Year Camps */}
+                <div className="flex flex-col gap-1">
                   <button
                     onClick={() => {
                       const campUrls = getAllUrlsForEventType('camps');
                       openMultipleTabs(
                         campUrls,
-                        `🏕️ Opening ${campUrls.length} full day camp pages... (allow pop-ups!)`,
-                        `✨ Successfully opened all ${campUrls.length} full day camp pages!`
+                        `🏕️ Opening ${campUrls.length} school year full day camp pages...`,
+                        `✨ Opened ${campUrls.length} school year full day camp pages!`
                       );
                     }}
-                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 bg-white rounded border border-teal-200 hover:border-teal-400 hover:bg-teal-50 transition-all duration-200 group text-center"
+                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-white rounded border border-teal-200 hover:border-teal-400 hover:bg-teal-50 transition-all duration-200 group text-center"
                   >
-                    <span className="text-base group-hover:scale-110 transition-transform">🏕️</span>
+                    <span className="text-sm group-hover:scale-110 transition-transform">🏕️</span>
                     <div>
-                      <div className="text-xs font-semibold text-teal-800">School Year Camps (Full Day)</div>
-                      <div className="text-xs text-teal-600">Full day camps</div>
+                      <div className="text-xs font-semibold text-teal-800">School Year Full</div>
                     </div>
                   </button>
-
                   <button
                     onClick={() => {
                       const halfDayCampUrls = getAllUrlsForEventType('camps_half');
                       openMultipleTabs(
                         halfDayCampUrls,
-                        `🕐 Opening ${halfDayCampUrls.length} half day camp pages... (allow pop-ups!)`,
-                        `✨ Successfully opened all ${halfDayCampUrls.length} half day camp pages!`
+                        `🕐 Opening ${halfDayCampUrls.length} school year half day camp pages...`,
+                        `✨ Opened ${halfDayCampUrls.length} school year half day camp pages!`
                       );
                     }}
-                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 bg-white rounded border border-amber-200 hover:border-amber-400 hover:bg-amber-50 transition-all duration-200 group text-center"
+                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-white rounded border border-amber-200 hover:border-amber-400 hover:bg-amber-50 transition-all duration-200 group text-center"
                   >
-                    <span className="text-base group-hover:scale-110 transition-transform">🕐</span>
+                    <span className="text-sm group-hover:scale-110 transition-transform">🕐</span>
                     <div>
-                      <div className="text-xs font-semibold text-amber-800">Half Day Camps</div>
-                      <div className="text-xs text-amber-600">Half day options</div>
+                      <div className="text-xs font-semibold text-amber-800">School Year Half</div>
                     </div>
                   </button>
+                </div>
 
+                {/* Summer Camps */}
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => {
+                      const summerFullUrls = getAllUrlsForEventType('camps_summer_full');
+                      openMultipleTabs(
+                        summerFullUrls,
+                        `☀️ Opening ${summerFullUrls.length} summer full day camp pages...`,
+                        `✨ Opened ${summerFullUrls.length} summer full day camp pages!`
+                      );
+                    }}
+                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-white rounded border border-yellow-200 hover:border-yellow-400 hover:bg-yellow-50 transition-all duration-200 group text-center"
+                  >
+                    <span className="text-sm group-hover:scale-110 transition-transform">☀️</span>
+                    <div>
+                      <div className="text-xs font-semibold text-yellow-800">Summer Full Day</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      const summerHalfUrls = getAllUrlsForEventType('camps_summer_half');
+                      openMultipleTabs(
+                        summerHalfUrls,
+                        `🌤️ Opening ${summerHalfUrls.length} summer half day camp pages...`,
+                        `✨ Opened ${summerHalfUrls.length} summer half day camp pages!`
+                      );
+                    }}
+                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-white rounded border border-orange-200 hover:border-orange-400 hover:bg-orange-50 transition-all duration-200 group text-center"
+                  >
+                    <span className="text-sm group-hover:scale-110 transition-transform">🌤️</span>
+                    <div>
+                      <div className="text-xs font-semibold text-orange-800">Summer Half Day</div>
+                    </div>
+                  </button>
                 </div>
               </div>
               
@@ -2164,7 +2194,6 @@ The system will add new events and update any changed events automatically.`;
                       </th>
                     ))}
                     <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>Status</th>
-                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>CAMPS</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2282,111 +2311,6 @@ The system will add new events and update any changed events automatically.`;
                                 </span>
                               );
                             }
-                          })()}
-                        </td>
-                        <td className="p-1 border text-center text-xs">
-                          {(() => {
-                            // Link presence
-                            const hasFullDay = gymLinks.some(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'camps'
-                            );
-                            const hasHalfDay = gymLinks.some(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'camps_half'
-                            );
-                            const hasHoliday = gymLinks.some(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'camps_holiday'
-                            );
-                            const hasSpecial = gymLinks.some(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'special_events'
-                            );
-
-                            const fullDayUrl = gymLinks.find(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'camps'
-                            )?.url;
-                            const halfDayUrl = gymLinks.find(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'camps_half'
-                            )?.url;
-                            const holidayUrl = gymLinks.find(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'camps_holiday'
-                            )?.url;
-                            const specialUrl = gymLinks.find(gl => 
-                              (gl.gym_id === gym.gym_code || gl.gym_id === gym.id) && gl.link_type_id === 'special_events'
-                            )?.url;
-
-                            // Count actual camp events for current month (does not affect tracked totals)
-                            // Need to match gym name against event's gym_id by finding the gym object
-                            const gymObj = gymsList.find(g => g.name === gym);
-                            const campEvents = events.filter(event => 
-                              (event.gym_name === gym || event.gym_id === gymObj?.id) &&
-                              (
-                                (event.type && event.type.toLowerCase().includes('camp')) ||
-                                (event.title && event.title.toLowerCase().includes('camp'))
-                              )
-                            );
-
-                            let fullCount = 0, halfCount = 0, holidayCount = 0, specialCount = 0;
-                            const holidayRegex = /(thanksgiving|holiday|winter break|spring break|fall break|mlk|presidents|labor day|memorial|veterans|new year|christmas)/i;
-                            const halfRegex = /half[-\s]?day|1\/2\s*day/i;
-                            const specialRegex = /special\s*event/i;
-
-                            campEvents.forEach(ev => {
-                              const t = (ev.title || '').toLowerCase();
-                              if (halfRegex.test(t)) {
-                                halfCount += 1;
-                              } else if (holidayRegex.test(t)) {
-                                holidayCount += 1;
-                              } else if (specialRegex.test(t)) {
-                                specialCount += 1;
-                              } else {
-                                fullCount += 1;
-                              }
-                            });
-
-                            const chips = [];
-                            if (fullCount > 0 || hasFullDay) {
-                              chips.push(
-                                <a key="full" href={fullDayUrl || '#'} target="_blank" rel="noopener noreferrer"
-                                   className="px-2 py-1 rounded text-sm font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
-                                   style={{ backgroundColor: '#f0f9ff', color: '#0369a1' }} title="Full Day Camps">
-                                  🏕️ {fullCount}
-                                </a>
-                              );
-                            }
-                            if (halfCount > 0 || hasHalfDay) {
-                              chips.push(
-                                <a key="half" href={halfDayUrl || '#'} target="_blank" rel="noopener noreferrer"
-                                   className="px-2 py-1 rounded text-sm font-semibold hover:bg-amber-100 transition-colors cursor-pointer"
-                                   style={{ backgroundColor: '#fef3c7', color: '#d97706' }} title="Half Day Camps">
-                                  🕐 {halfCount}
-                                </a>
-                              );
-                            }
-                            if (holidayCount > 0 || hasHoliday) {
-                              chips.push(
-                                <a key="holiday" href={holidayUrl || '#'} target="_blank" rel="noopener noreferrer"
-                                   className="px-2 py-1 rounded text-sm font-semibold hover:bg-green-100 transition-colors cursor-pointer"
-                                   style={{ backgroundColor: '#ecfccb', color: '#166534' }} title="Holiday/Break Camps">
-                                  🍂 {holidayCount}
-                                </a>
-                              );
-                            }
-                            if (specialCount > 0 || hasSpecial) {
-                              chips.push(
-                                <a key="special" href={specialUrl || '#'} target="_blank" rel="noopener noreferrer"
-                                   className="px-2 py-1 rounded text-sm font-semibold hover:bg-purple-100 transition-colors cursor-pointer"
-                                   style={{ backgroundColor: '#f5f3ff', color: '#6d28d9' }} title="Special Events">
-                                  ✨ {specialCount}
-                                </a>
-                              );
-                            }
-
-                            if (chips.length === 0) {
-                              return (
-                                <span className="px-2 py-1 rounded text-sm" style={{ backgroundColor: '#f3f4f6', color: '#6b7280' }}>-</span>
-                              );
-                            }
-
-                            return <div className="flex items-center justify-center gap-1">{chips}</div>;
                           })()}
                         </td>
                       </tr>
