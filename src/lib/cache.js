@@ -38,6 +38,11 @@ class CacheManager {
     this.timestamps.delete(key);
   }
 
+  // Alias for clear (used by realtime subscriptions)
+  invalidate(type, params = {}) {
+    this.clear(type, params);
+  }
+
   // Clear all caches
   clearAll() {
     this.cache.clear();

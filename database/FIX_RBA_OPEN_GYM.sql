@@ -27,3 +27,5 @@ WHERE gym_id = 'RBA' AND link_type_id = 'open_gym';
 -- ============================================
 
 
+
+
