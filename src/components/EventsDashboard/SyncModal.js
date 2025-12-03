@@ -132,10 +132,13 @@ export default function SyncModal({ theme, onClose, gyms }) {
         setEditableEvents(eventsWithIndex);
         
         // Compare with existing events in database for ALL types
+        // IMPORTANT: Fetch ALL events (no date filter) to properly compare
+        // The sync may include past events that are already in the database
         try {
-          const today = new Date().toISOString().split('T')[0];
-          const existingEvents = await eventsApi.getAll(today, '2026-12-31', true);
+          const existingEvents = await eventsApi.getAll(null, null, true); // No date filter, include deleted
           const gymExistingEvents = existingEvents.filter(ev => ev.gym_id === selectedGym);
+          
+          console.log('🔍 Comparison: incoming=', allEvents.length, 'existing=', gymExistingEvents.length);
           
           // Compare all incoming events vs existing
           const comparisonResult = compareEvents(allEvents, gymExistingEvents);
@@ -171,16 +174,17 @@ export default function SyncModal({ theme, onClose, gyms }) {
         setEditableEvents(eventsWithIndex);
         
         // Compare with existing events in database
+        // IMPORTANT: Fetch ALL events (no date filter) to properly compare
+        // The sync may include past events that are already in the database
         try {
-          // Get existing events for this gym - ONLY FUTURE EVENTS (today and forward)
-          // Include deleted events in comparison so we can detect if they should be restored
-          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-          const existingEvents = await eventsApi.getAll(today, '2026-12-31', true); // includeDeleted = true
+          const existingEvents = await eventsApi.getAll(null, null, true); // No date filter, include deleted
           const gymExistingEvents = existingEvents.filter(
             ev => ev.gym_id === selectedGym && ev.type === eventType
           );
           
-          // Compare new vs existing (only future events, including deleted ones)
+          console.log('🔍 Comparison: incoming=', data.events.length, 'existing=', gymExistingEvents.length);
+          
+          // Compare new vs existing
           const comparisonResult = compareEvents(data.events, gymExistingEvents);
           setComparison(comparisonResult);
         } catch (err) {
@@ -879,24 +883,41 @@ export default function SyncModal({ theme, onClose, gyms }) {
           </div>
         )}
 
-        {/* Import Button (only show if sync was successful) */}
+        {/* Import Button (only show if sync was successful and there's something to import) */}
         {result && result.success && editableEvents.length > 0 && !importResult && (
-          <button
-            onClick={handleImport}
-            disabled={importing}
-            className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-4"
-          >
-            {importing ? (
-              <>
-                <Loader className="w-5 h-5 animate-spin" />
-                Importing {editableEvents.length} Events...
-              </>
-            ) : (
-              <>
-                🚀 Import {editableEvents.length} Events to Database
-              </>
-            )}
-          </button>
+          (() => {
+            const newCount = comparison?.new?.length || 0;
+            const changedCount = comparison?.changed?.length || 0;
+            const hasChanges = newCount > 0 || changedCount > 0;
+            
+            if (!hasChanges) {
+              // All events are unchanged - show informational message
+              return (
+                <div className="w-full px-4 py-3 bg-gray-100 text-gray-600 rounded-lg border-2 border-gray-300 text-center mb-4">
+                  ✅ All {editableEvents.length} events are already up-to-date in the database
+                </div>
+              );
+            }
+            
+            return (
+              <button
+                onClick={handleImport}
+                disabled={importing}
+                className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-4"
+              >
+                {importing ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    🚀 Import {newCount > 0 ? `${newCount} new` : ''}{newCount > 0 && changedCount > 0 ? ' + ' : ''}{changedCount > 0 ? `${changedCount} changed` : ''} Events
+                  </>
+                )}
+              </button>
+            );
+          })()
         )}
 
         {/* Import Results */}

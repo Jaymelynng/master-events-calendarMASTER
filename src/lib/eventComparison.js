@@ -11,6 +11,11 @@
  * - UNCHANGED: event_url exists and data is the same
  */
 export function compareEvents(newEvents, existingEvents) {
+  // DEBUG: Log what we're comparing
+  console.log('🔍 compareEvents called:');
+  console.log('  - newEvents count:', (newEvents || []).length);
+  console.log('  - existingEvents count:', (existingEvents || []).length);
+  
   // Create maps for fast lookup
   const existingByUrl = new Map();
   (existingEvents || []).forEach(ev => {
@@ -21,6 +26,10 @@ export function compareEvents(newEvents, existingEvents) {
   (newEvents || []).forEach(ev => {
     newByUrl.set(ev.event_url, ev);
   });
+  
+  // DEBUG: Log first few URLs from each
+  console.log('  - First 3 existing URLs:', [...existingByUrl.keys()].slice(0, 3));
+  console.log('  - First 3 new URLs:', [...newByUrl.keys()].slice(0, 3));
 
   // Get all unique URLs
   const allUrls = new Set([
