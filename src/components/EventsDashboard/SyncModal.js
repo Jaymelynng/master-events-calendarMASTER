@@ -14,7 +14,7 @@ export default function SyncModal({ theme, onClose, gyms }) {
   const [importResult, setImportResult] = useState(null);
   const [devMode, setDevMode] = useState(false);
   const [syncLog, setSyncLog] = useState([]);
-  const [showProgress, setShowProgress] = useState(false);
+  const [showProgress, setShowProgress] = useState(true); // Expanded by default
 
   // Load sync log on mount
   useEffect(() => {
