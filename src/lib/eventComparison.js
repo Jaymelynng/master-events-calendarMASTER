@@ -101,10 +101,12 @@ function hasEventChanged(existing, incoming) {
   ];
 
   for (const field of fieldsToCompare) {
-    const existingValue = normalizeValue(existing[field]);
-    const incomingValue = normalizeValue(incoming[field]);
+    const existingValue = normalizeValue(existing[field], field);
+    const incomingValue = normalizeValue(incoming[field], field);
 
     if (existingValue !== incomingValue) {
+      // Debug log for troubleshooting
+      console.log(`Field "${field}" changed:`, { existing: existingValue, incoming: incomingValue });
       return true; // Found a change
     }
   }
@@ -132,8 +134,8 @@ function getChangedFields(existing, incoming) {
   const changes = [];
 
   for (const field of fieldsToCompare) {
-    const existingValue = normalizeValue(existing[field]);
-    const incomingValue = normalizeValue(incoming[field]);
+    const existingValue = normalizeValue(existing[field], field);
+    const incomingValue = normalizeValue(incoming[field], field);
 
     if (existingValue !== incomingValue) {
       changes.push({
@@ -150,10 +152,23 @@ function getChangedFields(existing, incoming) {
 /**
  * Normalize values for comparison (handle null, undefined, empty strings)
  */
-function normalizeValue(value) {
+function normalizeValue(value, fieldName = '') {
   if (value === null || value === undefined || value === '') {
     return null;
   }
+  
+  // Special handling for price - convert to number for consistent comparison
+  if (fieldName === 'price') {
+    const num = parseFloat(value);
+    return isNaN(num) ? null : num;
+  }
+  
+  // Special handling for age fields - convert to integer
+  if (fieldName === 'age_min' || fieldName === 'age_max') {
+    const num = parseInt(value, 10);
+    return isNaN(num) ? null : num;
+  }
+  
   if (typeof value === 'number') {
     return value;
   }
