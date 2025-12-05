@@ -278,8 +278,8 @@ export default function SyncModal({ theme, onClose, gyms }) {
         for (const changed of comparison.changed) {
           try {
             // Find the event in database by URL (include deleted events to restore them)
-            const today = new Date().toISOString().split('T')[0];
-            const existingEvents = await eventsApi.getAll(today, '2026-12-31', true); // includeDeleted = true
+            // Use null dates to search ALL events, not just future ones
+            const existingEvents = await eventsApi.getAll(null, null, true); // includeDeleted = true, no date filter
             const existingEvent = existingEvents.find(e => e.event_url === changed.incoming.event_url);
             
             if (existingEvent) {
@@ -333,6 +333,11 @@ export default function SyncModal({ theme, onClose, gyms }) {
         total: editableEvents.length
       });
 
+      // Explicitly invalidate cache to ensure fresh data
+      // Real-time subscription should also trigger, but this is a safety net
+      const { cache } = await import('../../lib/cache');
+      cache.invalidate('events');
+      
       // Don't reload - keep modal open for continued syncing
       // Events will refresh automatically via Supabase real-time subscription
     } catch (error) {
