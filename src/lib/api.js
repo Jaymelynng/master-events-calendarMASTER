@@ -124,15 +124,23 @@ export const eventsApi = {
   },
 
   async getAll(startDate, endDate, includeDeleted = false) {
+    // For multi-day events, we need to fetch:
+    // 1. Events that START within the date range (date >= startDate AND date <= endDate)
+    // 2. Events that SPAN into the date range (start_date < startDate AND end_date >= startDate)
+    
     let query = supabase
       .from('events_with_gym')
       .select('*')
       .order('date', { ascending: true })
     
-    if (startDate) {
+    if (startDate && endDate) {
+      // Use OR to get both:
+      // - Events starting in range: date >= startDate AND date <= endDate
+      // - Multi-day events spanning into range: start_date < startDate AND end_date >= startDate
+      query = query.or(`and(date.gte.${startDate},date.lte.${endDate}),and(start_date.lt.${startDate},end_date.gte.${startDate})`)
+    } else if (startDate) {
       query = query.gte('date', startDate)
-    }
-    if (endDate) {
+    } else if (endDate) {
       query = query.lte('date', endDate)
     }
     
