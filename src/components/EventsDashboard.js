@@ -2707,7 +2707,15 @@ The system will add new events and update any changed events automatically.`;
                   {/* Calendar Body */}
                   <div className="divide-y divide-gray-200 relative">
                     {allGymsFromList.map(gym => {
-                      const gymEvents = filteredEvents.filter(e => (e.gym_name || e.gym_code) === gym);
+                      // Find the gym data to get both name and id (gym code like "CRR")
+                      const gymData = gymsList.find(g => g.name === gym);
+                      const gymId = gymData?.id; // This is the gym_code like "CRR"
+                      
+                      // Match events by gym_name, gym_code, OR gym_id
+                      const gymEvents = filteredEvents.filter(e => 
+                        (e.gym_name || e.gym_code) === gym || 
+                        e.gym_id === gymId
+                      );
                       
                       
                       return (
