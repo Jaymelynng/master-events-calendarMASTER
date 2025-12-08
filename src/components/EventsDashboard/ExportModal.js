@@ -10,22 +10,19 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const [includeMissing, setIncludeMissing] = useState(false);
   
   // Date range - default to current month
-  const [useCustomDateRange, setUseCustomDateRange] = useState(false);
   const [startDate, setStartDate] = useState(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`);
   const [endDate, setEndDate] = useState(new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0]);
   
-  // Events from custom date range (fetched from database)
-  const [customEvents, setCustomEvents] = useState([]);
-  const [loadingEvents, setLoadingEvents] = useState(false);
+  // Events fetched from database based on date range
+  const [fetchedEvents, setFetchedEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
   const eventTypes = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM', 'CAMP', 'SPECIAL EVENT'];
 
   // Fetch events when date range changes
   useEffect(() => {
-    if (useCustomDateRange) {
-      fetchEventsForDateRange();
-    }
-  }, [startDate, endDate, useCustomDateRange]);
+    fetchEventsForDateRange();
+  }, [startDate, endDate]);
 
   const fetchEventsForDateRange = async () => {
     setLoadingEvents(true);
@@ -40,16 +37,16 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         .order('date', { ascending: true });
       
       if (error) throw error;
-      setCustomEvents(data || []);
+      setFetchedEvents(data || []);
     } catch (err) {
       console.error('Error fetching events:', err);
-      setCustomEvents([]);
+      setFetchedEvents([]);
     }
     setLoadingEvents(false);
   };
 
-  // Use custom events if date range is enabled, otherwise use current month events
-  const activeEvents = useCustomDateRange ? customEvents : events;
+  // Always use fetched events based on date picker values
+  const activeEvents = fetchedEvents;
 
   const toggleGym = (gymId) => {
     setSelectedGyms(prev => 
@@ -125,12 +122,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   };
 
   const handleExport = () => {
-    let dateRangeLabel;
-    if (useCustomDateRange) {
-      dateRangeLabel = `${startDate} to ${endDate}`;
-    } else {
-      dateRangeLabel = new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    }
+    const dateRangeLabel = `${startDate} to ${endDate}`;
     const timestamp = new Date().toISOString().split('T')[0];
     
     if (exportFormat === 'csv') {
@@ -250,67 +242,39 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
         </div>
 
-        {/* Date Range Selection */}
+        {/* Date Range Selection - Simple date pickers */}
         <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <h3 className="font-semibold text-gray-800 mb-3">📅 Date Range:</h3>
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 cursor-pointer">
+          <div className="flex items-center gap-4">
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">From:</label>
               <input 
-                type="radio" 
-                name="dateRange" 
-                checked={!useCustomDateRange} 
-                onChange={() => setUseCustomDateRange(false)}
-                className="w-4 h-4 text-gray-600"
+                type="date" 
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
               />
-              <span className="text-gray-700">
-                Current Month ({new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })})
-              </span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">To:</label>
               <input 
-                type="radio" 
-                name="dateRange" 
-                checked={useCustomDateRange} 
-                onChange={() => setUseCustomDateRange(true)}
-                className="w-4 h-4 text-gray-600"
+                type="date" 
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
               />
-              <span className="text-gray-700">Custom Date Range</span>
-            </label>
-            
-            {useCustomDateRange && (
-              <div className="ml-6 flex items-center gap-3 mt-2">
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">From:</label>
-                  <input 
-                    type="date" 
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">To:</label>
-                  <input 
-                    type="date" 
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                {loadingEvents && (
-                  <div className="text-sm text-blue-600 flex items-center gap-2">
-                    <span className="animate-spin">⏳</span> Loading...
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {useCustomDateRange && !loadingEvents && (
-              <div className="ml-6 text-sm text-gray-600">
-                Found <span className="font-semibold text-blue-600">{activeEvents.length}</span> events in selected range
+            </div>
+            {loadingEvents && (
+              <div className="text-sm text-blue-600 flex items-center gap-2 self-end pb-2">
+                <span className="animate-spin">⏳</span> Loading...
               </div>
             )}
           </div>
+          {!loadingEvents && (
+            <div className="mt-2 text-sm text-gray-600">
+              Found <span className="font-semibold text-blue-600">{activeEvents.length}</span> events in selected range
+            </div>
+          )}
         </div>
 
         {/* What to Export */}
