@@ -305,6 +305,7 @@ const EventsDashboard = () => {
   
   // New Admin Portal State (safe addition)
   const [showAdminPortal, setShowAdminPortal] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [newEvent, setNewEvent] = useState({
     gym_id: '',
     title: '',
@@ -398,6 +399,64 @@ const EventsDashboard = () => {
     if (!timeString) return '';
     // Remove AM/PM and spaces for compact display
     return timeString.replace(/ AM| PM/g, '').replace(' - ', '-');
+  };
+
+  // Export functions
+  const exportToCSV = (events, gyms) => {
+    if (!events || events.length === 0) {
+      alert('No events to export');
+      return;
+    }
+    
+    const headers = ['Gym', 'Title', 'Type', 'Date', 'Time', 'Price', 'Ages', 'URL'];
+    const rows = events.map(event => {
+      const gym = gyms.find(g => g.id === event.gym_id);
+      return [
+        gym?.name || event.gym_id,
+        `"${(event.title || '').replace(/"/g, '""')}"`,
+        event.type || '',
+        event.date || '',
+        event.time || '',
+        event.price || '',
+        event.age_min && event.age_max ? `${event.age_min}-${event.age_max}` : (event.age_min ? `${event.age_min}+` : ''),
+        event.event_url || ''
+      ].join(',');
+    });
+    
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `events-export-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToJSON = (events) => {
+    if (!events || events.length === 0) {
+      alert('No events to export');
+      return;
+    }
+    
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      totalEvents: events.length,
+      events: events
+    };
+    
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `events-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Helper to open multiple tabs with best compatibility (avoids pop-up blockers)
@@ -1986,8 +2045,8 @@ The system will add new events and update any changed events automatically.`;
 
           </div>
 
-          {/* ✨ Jayme's Command Center - TOP SECTION */}
-          <div className="flex justify-center mb-2">
+          {/* ✨ Jayme's Command Center + Export - TOP SECTION */}
+          <div className="flex justify-center items-center gap-3 mb-2">
             <button
               onClick={(e) => {
                 if (e.shiftKey) {
@@ -1995,10 +2054,51 @@ The system will add new events and update any changed events automatically.`;
                 }
               }}
               className="flex items-center justify-center w-8 h-8 bg-white rounded border border-pink-300 hover:border-pink-500 hover:bg-pink-50 transition-all duration-200 group opacity-70 hover:opacity-100"
-              title="🔐 Jayme's Command Center"
+              title="🔐 Jayme's Command Center (Shift+Click)"
             >
               <span className="text-lg group-hover:scale-125 transition-transform">✨</span>
             </button>
+
+            {/* Export Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 rounded-lg border border-amber-300 hover:border-amber-500 transition-all duration-200 text-amber-800 text-sm font-medium hover:scale-105"
+                title="Export Events Data"
+              >
+                <span>📤</span>
+                <span>Export</span>
+              </button>
+              
+              {showExportMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                  <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 min-w-[180px]">
+                    <div className="px-3 py-1.5 text-xs text-gray-500 font-medium border-b mb-1">
+                      Export {eventsList.length} events
+                    </div>
+                    <button
+                      onClick={() => {
+                        exportToCSV(eventsList, gymsList);
+                        setShowExportMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-amber-50 text-sm flex items-center gap-2 text-gray-700"
+                    >
+                      <span>📊</span> CSV (for Excel)
+                    </button>
+                    <button
+                      onClick={() => {
+                        exportToJSON(eventsList);
+                        setShowExportMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-amber-50 text-sm flex items-center gap-2 text-gray-700"
+                    >
+                      <span>📋</span> JSON (backup)
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* 🚀 BULK ACTION BUTTONS - Open All Gyms for Each Event Type */}
