@@ -3057,17 +3057,7 @@ The system will add new events and update any changed events automatically.`;
                       )}
                     </div>
                     
-                    {/* Description */}
-                    {selectedEventForPanel.description && (
-                      <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
-                        <div className="font-semibold text-xs text-gray-500 uppercase mb-2">Description</div>
-                        <div className="text-sm text-gray-700 leading-relaxed">
-                          {selectedEventForPanel.description}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Quick Access - Check gym_links table for what THIS gym offers */}
+                    {/* Quick Access - MOVED ABOVE DESCRIPTION - Check gym_links table for what THIS gym offers */}
                     {selectedEventForPanel.type === 'CAMP' && (() => {
                       const gymId = selectedEventForPanel.gym_id;
                       
@@ -3108,6 +3098,25 @@ The system will add new events and update any changed events automatically.`;
                         </div>
                       );
                     })()}
+
+                    {/* Description - with proper text formatting */}
+                    {selectedEventForPanel.description && (
+                      <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
+                        <div className="font-semibold text-xs text-gray-500 uppercase mb-2">Description</div>
+                        <div 
+                          className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap"
+                          style={{ wordBreak: 'break-word' }}
+                        >
+                          {selectedEventForPanel.description
+                            .replace(/&nbsp;/g, ' ')
+                            .replace(/&amp;/g, '&')
+                            .replace(/ - /g, '\n• ')
+                            .replace(/Description /g, '\n\n')
+                            .trim()
+                          }
+                        </div>
+                      </div>
+                    )}
                     
                     {/* Registration Options - Detect from ACTUAL grouped event titles */}
                     <div className="border-t pt-4" style={{ borderColor: theme.colors.secondary }}>
