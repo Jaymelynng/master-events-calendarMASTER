@@ -30,8 +30,9 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const fetchEventsForDateRange = async () => {
     setLoadingEvents(true);
     try {
+      // Use events_with_gym view to include both active AND archived events
       const { data, error } = await supabase
-        .from('events')
+        .from('events_with_gym')
         .select('*')
         .gte('date', startDate)
         .lte('date', endDate)
@@ -323,7 +324,10 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 onChange={(e) => setIncludeEvents(e.target.checked)}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">📋 Event Details ({filteredEvents.length} events)</span>
+              <span className="text-gray-700">
+                📋 Event Details 
+                {loadingEvents ? ' (loading...)' : ` (${filteredEvents.length} events)`}
+              </span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input 
@@ -341,7 +345,10 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 onChange={(e) => setIncludeMissing(e.target.checked)}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">⚠️ Missing Requirements Only ({getMissingGyms().length} gyms)</span>
+              <span className="text-gray-700">
+                ⚠️ Missing Requirements Only 
+                {loadingEvents ? ' (loading...)' : ` (${getMissingGyms().length} gyms)`}
+              </span>
             </label>
           </div>
         </div>
