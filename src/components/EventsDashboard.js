@@ -2820,47 +2820,18 @@ The system will add new events and update any changed events automatically.`;
                                 <div className="space-y-1 pt-1">
                                   {dateEvents.length > 0 ? (
                                     (() => {
-                                      // 🏕️ GROUP CAMP EVENTS BY BASE NAME (Display-only consolidation)
+                                      // 🏕️ GROUP CAMP EVENTS BY DATE (Display-only consolidation)
+                                      // ALL camps on the same date for the same gym should group together
                                       const groupCampEventsForDisplay = (events) => {
                                         const campGroups = new Map();
                                         const regularEvents = [];
                                         
                                         events.forEach(event => {
                                           if (event.type === 'CAMP') {
-                                            // Extract base camp name by removing option identifiers
-                                            let baseName = event.title;
-                                            
-                                            // Handle titles that START with activity type (e.g., "Girls Gymnastics Fall Break Camp...")
-                                            baseName = baseName
-                                              .replace(/^Girls?\s+Gymnastics\s+/i, '')
-                                              .replace(/^Co-ed\s+Ninja\s+Warrior\s+/i, '')
-                                              .replace(/^Parkour\s*&\s*Ninja\s+/i, '')
-                                              .replace(/^Ninja\s+Warrior\s+/i, '')
-                                              .replace(/^COED\s+Ninja\s+/i, '');
-                                            
-                                            // Handle titles with activity AFTER pipe (e.g., "Winter Camp | Gymnastics | ...")
-                                            baseName = baseName
-                                              .replace(/\s*\|\s*(Girls?\s*)?(Co-ed\s*|COED\s*)?Gymnastics\s*Camp.*$/i, '')
-                                              .replace(/\s*\|\s*(Parkour\s*&\s*)?Ninja\s*(Warrior\s*)?Camp.*$/i, '')
-                                              .replace(/\s*\|\s*Gymnastics\s*\|.*$/i, '')
-                                              .replace(/\s*\|\s*Ninja\s*\|.*$/i, '')
-                                              .replace(/\s*\|\s*Full\s*Day.*$/i, '')
-                                              .replace(/\s*\|\s*Half\s*Day.*$/i, '')
-                                              .trim();
-                                            
-                                            // Group key: gym + base name + start date + end date
-                                            const startDate = event.start_date || event.date;
-                                            const endDate = event.end_date || event.date;
-                                            const groupKey = `${event.gym_id}-${baseName}-${startDate}-${endDate}`;
-                                            
-                                            // Debug log
-                                            if (event.title.includes('Fall Break')) {
-                                              console.log('Base name extraction:', {
-                                                original: event.title,
-                                                baseName: baseName,
-                                                groupKey: groupKey
-                                              });
-                                            }
+                                            // SIMPLE: Group ALL camps by gym + date only
+                                            // This ensures all camp options on the same day show together
+                                            const eventDate = event.date;
+                                            const groupKey = `${event.gym_id}-CAMP-${eventDate}`;
                                             
                                             if (!campGroups.has(groupKey)) {
                                               campGroups.set(groupKey, []);
@@ -2893,21 +2864,6 @@ The system will add new events and update any changed events automatically.`;
                                       
                                       // Group the events for this date
                                       const displayEvents = groupCampEventsForDisplay(dateEvents);
-                                      
-                                      // Debug: Log grouping results
-                                      if (dateEvents.some(e => e.type === 'CAMP')) {
-                                        console.log('Date events:', dateEvents.filter(e => e.type === 'CAMP').map(e => ({
-                                          title: e.title,
-                                          gym: e.gym_id,
-                                          start: e.start_date,
-                                          end: e.end_date
-                                        })));
-                                        console.log('Display events:', displayEvents.filter(e => e.type === 'CAMP').map(e => ({
-                                          title: e.title,
-                                          isGrouped: e.isGrouped,
-                                          count: e.optionCount
-                                        })));
-                                      }
                                       
                                       return displayEvents.map(event => {
                                         const eventTypeName = event.type || event.event_type;
