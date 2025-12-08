@@ -1999,8 +1999,8 @@ The system will add new events and update any changed events automatically.`;
             </button>
           </div>
 
-          {/* 🚀 BULK ACTION BUTTONS - Open All Gyms for Each Event Type */}
-          <div className="bg-white rounded shadow p-2 mb-3 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
+          {/* 🚀 BULK ACTION BUTTONS - Hidden (available in Magic Control Center) */}
+          {false && <div className="bg-white rounded shadow p-2 mb-3 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded p-2 mb-2 border border-blue-200">
               <h3 className="text-sm font-medium text-gray-900 mb-2 flex items-center gap-2">
                 🚀 Bulk Actions - Open All Gyms
@@ -2157,47 +2157,39 @@ The system will add new events and update any changed events automatically.`;
                 <span>Pro tip: Each button opens multiple tabs - make sure your browser allows pop-ups!</span>
               </div>
             </div>
-          </div>
+          </div>}
 
-          {/* Special Event Statistics by Gym */}
-          <div className="bg-white rounded shadow p-2 mb-2 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
-            {/* Table Header */}
-            <div className="mb-2">
-              <h2 className="text-lg font-bold mb-1" style={{ color: theme.colors.textPrimary }}>
-                Special Event Statistics by Gym
-                <span className="text-sm font-normal ml-2" style={{ color: theme.colors.textSecondary }}>
-                  (Click counts to view event pages)
+          {/* Special Event Statistics by Gym - STICKY + COMPACT */}
+          <div className="bg-white rounded shadow-sm p-1.5 mb-1 mx-1 sticky top-0 z-40" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
+            {/* Compact Header - Single Row */}
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-sm font-bold flex items-center gap-2" style={{ color: theme.colors.textPrimary }}>
+                📊 Stats
+                <span className="text-xs font-normal bg-gray-100 px-1.5 py-0.5 rounded" style={{ color: theme.colors.textSecondary }}>
+                  {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
                 </span>
               </h2>
-              <div className="flex items-center justify-between">
-                <div className="text-xs bg-gray-50 px-2 py-1 rounded border">
-                  <span className="font-semibold text-gray-700">Monthly: </span>
-                  <span className="text-gray-600">
-                    {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
-                  </span>
-                </div>
-                <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
-                  {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { 
-                    month: 'long', 
-                    year: 'numeric' 
-                  })}
-                </div>
+              <div className="text-xs font-semibold px-2 py-0.5 bg-purple-100 text-purple-700 rounded">
+                {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  year: 'numeric' 
+                })}
               </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-full border border-gray-200">
+              <table className="min-w-full border border-gray-200 text-xs">
                 <thead>
                   <tr className="bg-gray-100">
-                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>
+                    <th className="px-1 py-0.5 border text-xs text-center font-semibold" style={{ color: theme.colors.textPrimary }}>
                       Gym
                     </th>
                     {eventTypes.filter(et => et.is_tracked).map((eventType, i) => (
-                      <th key={i} className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>
+                      <th key={i} className="px-1 py-0.5 border text-xs text-center font-semibold" style={{ color: theme.colors.textPrimary }}>
                         {eventType.display_name || eventType.name}
                       </th>
                     ))}
-                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>Status</th>
+                    <th className="px-1 py-0.5 border text-xs text-center font-semibold" style={{ color: theme.colors.textPrimary }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2206,16 +2198,16 @@ The system will add new events and update any changed events automatically.`;
                     
                     return (
                       <tr key={i} className="border-b hover:bg-gray-50 transition-colors">
-                        <td className="p-1 border font-medium text-sm" style={{ color: theme.colors.textPrimary }}>
-                          <div className="flex items-center justify-center">
+                        <td className="px-0.5 py-0.5 border font-medium text-xs" style={{ color: theme.colors.textPrimary }}>
+                          <div className="flex items-center justify-center gap-0.5">
                             <button
                               onClick={() => scrollToGym(gym)}
-                              className="hover:underline inline-flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors font-bold cursor-pointer text-base"
+                              className="hover:underline inline-flex items-center gap-0.5 hover:bg-blue-50 px-1 py-0.5 rounded transition-colors font-bold cursor-pointer text-xs"
                               style={{ color: '#4a4a4a' }}
                               title={`Jump to ${gym} in calendar`}
                             >
                               {gym}
-                              <svg className="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                               </svg>
                             </button>
@@ -2224,7 +2216,7 @@ The system will add new events and update any changed events automatically.`;
                                 href={getGymLinkUrl(gym, 'Booking (Special Events)')} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 hover:scale-125 px-1 py-1 rounded transition-all text-xs"
+                                className="inline-flex items-center hover:scale-110 transition-all text-xs"
                                 title={`View all special events at ${gym}`}
                               >
                                 ✨
@@ -2233,11 +2225,11 @@ The system will add new events and update any changed events automatically.`;
                             {/* Quick Access: one-click opens all */}
                             <button
                               onClick={() => handleMagicControlClick(gym)}
-                              className="ml-1 inline-flex items-center justify-center px-2 py-1 rounded text-xs font-semibold hover:bg-purple-50 transition-colors hover:scale-110"
+                              className="inline-flex items-center justify-center hover:bg-purple-50 transition-colors hover:scale-110"
                               style={{ color: theme.colors.textPrimary }}
                               title={`Open Clinic, KNO, Open Gym${getGymLinkUrl(gym, 'camps') || getGymLinkUrl(gym, 'camps_half') ? ', Camps' : ''} for ${gym}`}
                             >
-                              <span aria-hidden>✨</span>
+                              <span aria-hidden className="text-xs">✨</span>
                               <span className="sr-only">Open All Events</span>
                             </button>
                           </div>
@@ -2268,24 +2260,24 @@ The system will add new events and update any changed events automatically.`;
                           }
                           
                           return (
-                            <td key={j} className="p-1 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
+                            <td key={j} className="px-0.5 py-0.5 border text-center" style={{ color: theme.colors.textPrimary }}>
                               <a 
                                 href={url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="font-bold inline-flex items-center justify-center gap-1 px-3 py-2 rounded transition-all duration-200 hover:scale-105 hover:shadow-md text-gray-700 min-w-[48px] h-[40px]"
+                                className="font-bold inline-flex items-center justify-center gap-0.5 px-1.5 py-0.5 rounded transition-all duration-200 hover:scale-105 text-gray-700 text-sm"
                                 style={{ backgroundColor: adjustedBackgroundColor }}
                                 title={`View ${eventType} page at ${gym} (${count}/${requiredCount})`}
                               >
-                                <span className="text-lg font-bold">{count}</span>
-                                <svg className="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                {count}
+                                <svg className="w-2 h-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                 </svg>
                               </a>
                             </td>
                           );
                         })}
-                        <td className="p-1 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
+                        <td className="px-0.5 py-0.5 border text-center text-xs" style={{ color: theme.colors.textPrimary }}>
                           {(() => {
                             // Check each requirement individually
                             let meetsAllRequirements = true;
@@ -2304,14 +2296,14 @@ The system will add new events and update any changed events automatically.`;
                             
                             if (meetsAllRequirements) {
                               return (
-                                <span className="text-green-700 font-bold bg-green-100 px-3 py-2 rounded-lg border border-green-200">
-                                  ✓ Complete
+                                <span className="text-green-700 font-semibold bg-green-100 px-1 py-0.5 rounded text-xs">
+                                  ✓
                                 </span>
                               );
                             } else {
                               return (
-                                <span className="text-red-700 font-bold bg-red-100 px-3 py-2 rounded-lg border border-red-200">
-                                  {missingItems.join(' • ')}
+                                <span className="text-red-700 font-semibold bg-red-100 px-1 py-0.5 rounded text-xs whitespace-nowrap">
+                                  {missingItems.join(' ')}
                                 </span>
                               );
                             }
@@ -2323,18 +2315,6 @@ The system will add new events and update any changed events automatically.`;
                 </tbody>
               </table>
             </div>
-            <p className="text-xs mt-2 flex items-center gap-1" style={{ color: theme.colors.textSecondary }}>
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              Click gym names or event counts to view their special event pages • ☀️ Summer camps are shown for reference but not required
-            </p>
-            </div>
-
-            {/* Help Text - Instructions for stats table */}
-            <div className="mt-3 text-xs text-center px-2" style={{ color: theme.colors.textSecondary }}>
-              <p>• Click ✨ next to gym names to open all their event pages at once</p>
-              <p>• Click gym buttons to jump to that gym's calendar section below</p>
             </div>
 
           {/* Controls */}
