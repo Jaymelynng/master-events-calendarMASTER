@@ -314,6 +314,22 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 {loadingEvents ? ' (loading...)' : ` (${getMissingGyms().length} gyms)`}
               </span>
             </label>
+            {/* Show which gyms are missing */}
+            {includeMissing && !loadingEvents && getMissingGyms().length > 0 && (
+              <div className="ml-6 mt-2 p-2 bg-red-50 rounded border border-red-200 text-xs">
+                <div className="font-semibold text-red-700 mb-1">Missing requirements:</div>
+                {getMissingGyms().map(gym => (
+                  <div key={gym.gym_id} className="text-red-600">
+                    • {gym.gym_id}: {gym.missing.join(', ')}
+                  </div>
+                ))}
+              </div>
+            )}
+            {includeMissing && (
+              <div className="ml-6 mt-1 text-xs text-gray-500 italic">
+                Note: Only checks CLINIC, KNO, OPEN GYM (CAMP & SPECIAL EVENT don't count)
+              </div>
+            )}
           </div>
         </div>
 
@@ -351,17 +367,26 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            {eventTypes.map(type => (
-              <label key={type} className="flex items-center gap-2 cursor-pointer text-sm">
-                <input 
-                  type="checkbox" 
-                  checked={selectedTypes.includes(type)} 
-                  onChange={() => toggleType(type)}
-                  className="w-4 h-4 text-purple-600"
-                />
-                <span className="text-gray-700">{type}</span>
-              </label>
-            ))}
+            {eventTypes.map(type => {
+              const isRequired = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'].includes(type);
+              return (
+                <label key={type} className={`flex items-center gap-2 cursor-pointer text-sm ${!isRequired ? 'opacity-60' : ''}`}>
+                  <input 
+                    type="checkbox" 
+                    checked={selectedTypes.includes(type)} 
+                    onChange={() => toggleType(type)}
+                    className="w-4 h-4 text-purple-600"
+                  />
+                  <span className="text-gray-700">
+                    {type}
+                    {isRequired && <span className="text-red-500 ml-0.5">*</span>}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            <span className="text-red-500">*</span> = Required for monthly compliance
           </div>
         </div>
 
