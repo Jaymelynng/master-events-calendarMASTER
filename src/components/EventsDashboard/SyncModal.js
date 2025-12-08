@@ -922,10 +922,37 @@ export default function SyncModal({ theme, onClose, gyms }) {
             const hasChanges = newCount > 0 || changedCount > 0;
             
             if (!hasChanges) {
-              // All events are unchanged - show informational message
+              // All events are unchanged - show informational message with navigation buttons
               return (
-                <div className="w-full px-4 py-3 bg-gray-100 text-gray-600 rounded-lg border-2 border-gray-300 text-center mb-4">
-                  ✅ All {editableEvents.length} events are already up-to-date in the database
+                <div className="mb-4">
+                  <div className="w-full px-4 py-3 bg-green-50 text-green-700 rounded-lg border-2 border-green-300 text-center mb-3">
+                    ✅ All {editableEvents.length} events are already up-to-date in the database
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setResult(null);
+                        setSelectedEventType('');
+                        setEditableEvents([]);
+                        setComparison(null);
+                      }}
+                      className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition-colors shadow-md"
+                    >
+                      🔄 Sync Another Program
+                    </button>
+                    <button
+                      onClick={() => {
+                        setResult(null);
+                        setSelectedEventType('');
+                        setSelectedGym('');
+                        setEditableEvents([]);
+                        setComparison(null);
+                      }}
+                      className="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-700 transition-colors shadow-md"
+                    >
+                      🏢 Sync Another Gym
+                    </button>
+                  </div>
                 </div>
               );
             }
