@@ -1735,7 +1735,7 @@ The system will add new events and update any changed events automatically.`;
                 setShowAuditHistory(true);
               }, 100);
             }}
-            events={eventsList}
+            events={events}
             gyms={gymsList}
           />
         </Suspense>
@@ -2075,11 +2075,11 @@ The system will add new events and update any changed events automatically.`;
                   <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
                   <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 min-w-[180px]">
                     <div className="px-3 py-1.5 text-xs text-gray-500 font-medium border-b mb-1">
-                      Export {eventsList.length} events
+                      Export {events.length} events
                     </div>
                     <button
                       onClick={() => {
-                        exportToCSV(eventsList, gymsList);
+                        exportToCSV(events, gymsList);
                         setShowExportMenu(false);
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-amber-50 text-sm flex items-center gap-2 text-gray-700"
@@ -2088,7 +2088,7 @@ The system will add new events and update any changed events automatically.`;
                     </button>
                     <button
                       onClick={() => {
-                        exportToJSON(eventsList);
+                        exportToJSON(events);
                         setShowExportMenu(false);
                       }}
                       className="w-full px-4 py-2 text-left hover:bg-amber-50 text-sm flex items-center gap-2 text-gray-700"
