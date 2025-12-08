@@ -3,7 +3,7 @@ import { Loader, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { eventsApi, syncLogApi } from '../../lib/api';
 import { compareEvents, getComparisonSummary } from '../../lib/eventComparison';
 
-export default function SyncModal({ theme, onClose, gyms }) {
+export default function SyncModal({ theme, onClose, onBack, gyms }) {
   const [selectedGym, setSelectedGym] = useState('');
   const [selectedEventType, setSelectedEventType] = useState('');
   const [syncing, setSyncing] = useState(false);
@@ -360,10 +360,20 @@ export default function SyncModal({ theme, onClose, gyms }) {
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 overflow-y-auto p-4">
       <div className="bg-white rounded-lg p-6 w-full max-w-7xl my-4 flex flex-col">
         <div className="flex justify-between items-center mb-4 flex-shrink-0">
-          <h2 className="text-2xl font-bold text-purple-800 flex items-center gap-2">
-            ⚡ Automated Sync
-            {devMode && <span className="text-xs bg-purple-200 text-purple-700 px-2 py-1 rounded">🔧 Dev Mode</span>}
-          </h2>
+          <div className="flex items-center gap-3">
+            {onBack && (
+              <button 
+                onClick={onBack}
+                className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+              >
+                ← Back
+              </button>
+            )}
+            <h2 className="text-2xl font-bold text-purple-800 flex items-center gap-2">
+              ⚡ Automated Sync
+              {devMode && <span className="text-xs bg-purple-200 text-purple-700 px-2 py-1 rounded">🔧 Dev Mode</span>}
+            </h2>
+          </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
         </div>
 

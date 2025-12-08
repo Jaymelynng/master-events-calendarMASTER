@@ -1685,6 +1685,10 @@ The system will add new events and update any changed events automatically.`;
         <SyncModal
           theme={theme}
           onClose={() => setShowSyncModal(false)}
+          onBack={() => {
+            setShowSyncModal(false);
+            setTimeout(() => setShowAdminPortal(true), 100);
+          }}
           gyms={gymsList}
         />
       )}
