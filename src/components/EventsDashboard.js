@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase';
 import { useRealtimeEvents, useRealtimeGymLinks, useRealtimeGyms } from '../lib/useRealtimeEvents';
 import AdminPortalModal from './EventsDashboard/AdminPortalModal';
 import SyncModal from './EventsDashboard/SyncModal';
+import ExportModal from './EventsDashboard/ExportModal';
 
 // Exact Color Theme from user's specification
 const theme = {
@@ -305,7 +306,7 @@ const EventsDashboard = () => {
   
   // New Admin Portal State (safe addition)
   const [showAdminPortal, setShowAdminPortal] = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [newEvent, setNewEvent] = useState({
     gym_id: '',
     title: '',
@@ -1754,6 +1755,18 @@ The system will add new events and update any changed events automatically.`;
         />
       )}
 
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          onClose={() => setShowExportModal(false)}
+          events={events}
+          gyms={gymsList}
+          monthlyRequirements={monthlyRequirements}
+          currentMonth={currentMonth}
+          currentYear={currentYear}
+        />
+      )}
+
       {/* Audit History Modal - Secret Feature */}
       {showAuditHistory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -2059,46 +2072,15 @@ The system will add new events and update any changed events automatically.`;
               <span className="text-lg group-hover:scale-125 transition-transform">✨</span>
             </button>
 
-            {/* Export Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowExportMenu(!showExportMenu)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 rounded-lg border border-amber-300 hover:border-amber-500 transition-all duration-200 text-amber-800 text-sm font-medium hover:scale-105"
-                title="Export Events Data"
-              >
-                <span>📤</span>
-                <span>Export</span>
-              </button>
-              
-              {showExportMenu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
-                  <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 min-w-[180px]">
-                    <div className="px-3 py-1.5 text-xs text-gray-500 font-medium border-b mb-1">
-                      Export {events.length} events
-                    </div>
-                    <button
-                      onClick={() => {
-                        exportToCSV(events, gymsList);
-                        setShowExportMenu(false);
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-amber-50 text-sm flex items-center gap-2 text-gray-700"
-                    >
-                      <span>📊</span> CSV (for Excel)
-                    </button>
-                    <button
-                      onClick={() => {
-                        exportToJSON(events);
-                        setShowExportMenu(false);
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-amber-50 text-sm flex items-center gap-2 text-gray-700"
-                    >
-                      <span>📋</span> JSON (backup)
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            {/* Export Button */}
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 rounded-lg border border-amber-300 hover:border-amber-500 transition-all duration-200 text-amber-800 text-sm font-medium hover:scale-105"
+              title="Export Events Data"
+            >
+              <span>📤</span>
+              <span>Export</span>
+            </button>
           </div>
 
           {/* 🚀 BULK ACTION BUTTONS - Open All Gyms for Each Event Type */}
