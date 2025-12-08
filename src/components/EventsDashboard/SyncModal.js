@@ -810,40 +810,66 @@ export default function SyncModal({ theme, onClose, gyms }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {editableEvents.map((event, idx) => {
-                    // Determine status from comparison
-                    let status = 'new';
-                    let statusColor = 'bg-blue-100 text-blue-800';
-                    let statusIcon = '🆕';
-                    let changeInfo = null;
-                    
-                    if (comparison) {
-                      const isNew = comparison.new.some(e => e.event_url === event.event_url);
-                      const isChanged = comparison.changed.find(c => c.incoming.event_url === event.event_url);
-                      const isUnchanged = comparison.unchanged.some(e => e.event_url === event.event_url);
+                  {/* Sort events: NEW first, then CHANGED, then UNCHANGED */}
+                  {[...editableEvents]
+                    .map((event, idx) => {
+                      // Determine status from comparison
+                      let status = 'new';
+                      let changeInfo = null;
                       
-                      if (isChanged) {
-                        status = 'changed';
-                        statusColor = 'bg-yellow-100 text-yellow-800';
-                        statusIcon = '🔄';
-                        changeInfo = isChanged._changes;
-                      } else if (isUnchanged) {
-                        status = 'unchanged';
-                        statusColor = 'bg-gray-100 text-gray-600';
-                        statusIcon = '✓';
-                      } else if (isNew) {
-                        status = 'new';
-                        statusColor = 'bg-green-100 text-green-800';
-                        statusIcon = '🆕';
+                      if (comparison) {
+                        const isNew = comparison.new.some(e => e.event_url === event.event_url);
+                        const isChanged = comparison.changed.find(c => c.incoming.event_url === event.event_url);
+                        const isUnchanged = comparison.unchanged.some(e => e.event_url === event.event_url);
+                        
+                        if (isChanged) {
+                          status = 'changed';
+                          changeInfo = isChanged._changes;
+                        } else if (isNew) {
+                          status = 'new';
+                        } else if (isUnchanged) {
+                          status = 'unchanged';
+                        }
                       }
-                    }
+                      
+                      return { ...event, _status: status, _changeInfo: changeInfo, _originalIdx: idx };
+                    })
+                    .sort((a, b) => {
+                      const order = { new: 0, changed: 1, unchanged: 2 };
+                      return order[a._status] - order[b._status];
+                    })
+                    .map((event) => {
+                      const status = event._status;
+                      const changeInfo = event._changeInfo;
+                      const idx = event._originalIdx;
+                      
+                      // Row colors based on status
+                      const rowColor = status === 'new' 
+                        ? 'bg-green-50 border-l-4 border-l-green-500' 
+                        : status === 'changed' 
+                          ? 'bg-yellow-50 border-l-4 border-l-yellow-500' 
+                          : 'bg-white border-l-4 border-l-gray-200';
+                      
+                      // Status badge colors
+                      const statusColor = status === 'new'
+                        ? 'bg-green-500 text-white font-bold'
+                        : status === 'changed'
+                          ? 'bg-yellow-500 text-white font-bold'
+                          : 'bg-gray-200 text-gray-600';
+                      
+                      // Status text
+                      const statusText = status === 'new' 
+                        ? '🆕 NEW' 
+                        : status === 'changed' 
+                          ? '🔄 CHANGED' 
+                          : '✓ Same';
                     
                     return (
-                      <tr key={event._index || idx} className="border-b border-gray-100 hover:bg-gray-50">
+                      <tr key={event._index || idx} className={`border-b border-gray-100 ${rowColor}`}>
                         <td className="px-3 py-2">
                           <div className="flex flex-col gap-1">
                             <span className={`text-xs px-2 py-1 rounded ${statusColor}`} title={changeInfo ? `Changed: ${changeInfo.map(c => c.field).join(', ')}` : ''}>
-                              {statusIcon}
+                              {statusText}
                             </span>
                             {changeInfo && changeInfo.length > 0 && (
                               <div className="text-xs text-gray-500 mt-1">

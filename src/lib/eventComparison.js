@@ -7,14 +7,24 @@
  * Compare new events with existing events to identify:
  * - NEW: event_url doesn't exist in database
  * - CHANGED: event_url exists but data is different
- * - DELETED: event_url exists in database but not in new sync
+ * - DELETED: event_url exists in database but not in new sync (FUTURE EVENTS ONLY)
  * - UNCHANGED: event_url exists and data is the same
+ * 
+ * IMPORTANT: We only consider FUTURE events as "deleted" because:
+ * - iClassPro only shows upcoming events
+ * - Past events naturally disappear from the portal after they occur
+ * - We should NOT mark past events as deleted just because they're not in the sync
  */
 export function compareEvents(newEvents, existingEvents) {
   // DEBUG: Log what we're comparing
   console.log('🔍 compareEvents called:');
   console.log('  - newEvents count:', (newEvents || []).length);
   console.log('  - existingEvents count:', (existingEvents || []).length);
+  
+  // Get today's date for filtering "deleted" detection
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
   
   // Create maps for fast lookup
   const existingByUrl = new Map();
@@ -56,12 +66,20 @@ export function compareEvents(newEvents, existingEvents) {
         _reason: 'Event not found in database'
       });
     } else if (existing && !incoming) {
-      // DELETED: Exists in database but not in new sync
-      comparison.deleted.push({
-        ...existing,
-        _status: 'deleted',
-        _reason: 'Event no longer available from source'
-      });
+      // POTENTIALLY DELETED: Exists in database but not in new sync
+      // ONLY mark as deleted if it's a FUTURE event
+      // Past events naturally disappear from iClassPro - that's expected behavior
+      const eventDate = existing.end_date || existing.date;
+      const isFutureEvent = eventDate && eventDate >= todayStr;
+      
+      if (isFutureEvent) {
+        comparison.deleted.push({
+          ...existing,
+          _status: 'deleted',
+          _reason: 'Future event no longer available from source'
+        });
+      }
+      // Past events are silently ignored - they're not "deleted", just expired
     } else if (existing && incoming) {
       // Check if event was previously deleted (should be restored)
       const wasDeleted = existing.deleted_at !== null && existing.deleted_at !== undefined;
@@ -109,15 +127,24 @@ function hasEventChanged(existing, incoming) {
     'description'
   ];
 
+  const changes = [];
+  
   for (const field of fieldsToCompare) {
     const existingValue = normalizeValue(existing[field], field);
     const incomingValue = normalizeValue(incoming[field], field);
 
     if (existingValue !== incomingValue) {
-      // Debug log for troubleshooting
-      console.log(`Field "${field}" changed:`, { existing: existingValue, incoming: incomingValue });
-      return true; // Found a change
+      changes.push({ field, existing: existingValue, incoming: incomingValue });
     }
+  }
+
+  if (changes.length > 0) {
+    // Debug log for troubleshooting - show all changes at once
+    console.log(`🔄 Event "${(incoming.title || '').substring(0, 40)}..." has ${changes.length} change(s):`);
+    changes.forEach(c => {
+      console.log(`   - ${c.field}: "${c.existing}" → "${c.incoming}"`);
+    });
+    return true;
   }
 
   return false; // No changes detected
@@ -162,6 +189,7 @@ function getChangedFields(existing, incoming) {
  * Normalize values for comparison (handle null, undefined, empty strings)
  */
 function normalizeValue(value, fieldName = '') {
+  // Treat null, undefined, empty string, and 0 as equivalent for optional fields
   if (value === null || value === undefined || value === '') {
     return null;
   }
@@ -169,13 +197,40 @@ function normalizeValue(value, fieldName = '') {
   // Special handling for price - convert to number for consistent comparison
   if (fieldName === 'price') {
     const num = parseFloat(value);
-    return isNaN(num) ? null : num;
+    // Treat 0 as null for price (no price = 0 = null)
+    return isNaN(num) || num === 0 ? null : num;
   }
   
   // Special handling for age fields - convert to integer
   if (fieldName === 'age_min' || fieldName === 'age_max') {
     const num = parseInt(value, 10);
-    return isNaN(num) ? null : num;
+    // Treat 0 as null for age (no age = 0 = null)
+    return isNaN(num) || num === 0 ? null : num;
+  }
+  
+  // Special handling for date fields - normalize to YYYY-MM-DD format
+  if (fieldName === 'date' || fieldName === 'start_date' || fieldName === 'end_date') {
+    if (typeof value === 'string') {
+      // Handle both ISO format and YYYY-MM-DD
+      const dateStr = value.split('T')[0]; // Remove time component if present
+      return dateStr.trim();
+    }
+  }
+  
+  // Special handling for time - normalize format
+  if (fieldName === 'time') {
+    if (typeof value === 'string') {
+      // Normalize whitespace and case
+      return value.trim().replace(/\s+/g, ' ');
+    }
+  }
+  
+  // Special handling for description - treat empty/whitespace as null
+  if (fieldName === 'description') {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed === '' ? null : trimmed;
+    }
   }
   
   if (typeof value === 'number') {
