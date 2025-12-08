@@ -1676,6 +1676,8 @@ The system will add new events and update any changed events automatically.`;
                 setShowAuditHistory(true);
               }, 100);
             }}
+            events={eventsList}
+            gyms={gymsList}
           />
         </Suspense>
       )}

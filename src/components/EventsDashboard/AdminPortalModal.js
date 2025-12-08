@@ -7,7 +7,78 @@ export default function AdminPortalModal({
   onOpenBulkImport,
   onOpenSyncModal,
   onOpenAuditHistory,
+  events = [],
+  gyms = [],
 }) {
+  // Export functions
+  const exportToCSV = () => {
+    if (!events || events.length === 0) {
+      alert('No events to export');
+      return;
+    }
+    
+    // CSV headers
+    const headers = ['Gym', 'Title', 'Type', 'Date', 'Time', 'Price', 'Ages', 'URL'];
+    
+    // Convert events to CSV rows
+    const rows = events.map(event => {
+      const gym = gyms.find(g => g.id === event.gym_id);
+      return [
+        gym?.name || event.gym_id,
+        `"${(event.title || '').replace(/"/g, '""')}"`,
+        event.type || '',
+        event.date || '',
+        event.time || '',
+        event.price || '',
+        event.age_min && event.age_max ? `${event.age_min}-${event.age_max}` : (event.age_min ? `${event.age_min}+` : ''),
+        event.event_url || ''
+      ].join(',');
+    });
+    
+    const csv = [headers.join(','), ...rows].join('\n');
+    downloadFile(csv, 'events-export.csv', 'text/csv');
+  };
+
+  const exportToJSON = () => {
+    if (!events || events.length === 0) {
+      alert('No events to export');
+      return;
+    }
+    
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      totalEvents: events.length,
+      events: events.map(event => ({
+        gym_id: event.gym_id,
+        title: event.title,
+        type: event.type,
+        date: event.date,
+        start_date: event.start_date,
+        end_date: event.end_date,
+        time: event.time,
+        price: event.price,
+        age_min: event.age_min,
+        age_max: event.age_max,
+        description: event.description,
+        event_url: event.event_url
+      }))
+    };
+    
+    const json = JSON.stringify(exportData, null, 2);
+    downloadFile(json, 'events-export.json', 'application/json');
+  };
+
+  const downloadFile = (content, filename, mimeType) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
   const [superAdminMode, setSuperAdminMode] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [showPinModal, setShowPinModal] = useState(false);
@@ -196,10 +267,28 @@ export default function AdminPortalModal({
                 </button>
               </div>
 
+              <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <h4 className="font-semibold text-amber-800 mb-2">📤 Export Data</h4>
+                <p className="text-sm text-amber-600 mb-3">Download all {events?.length || 0} events</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={exportToCSV}
+                    className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium"
+                  >
+                    📊 CSV (Excel)
+                  </button>
+                  <button
+                    onClick={exportToJSON}
+                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-medium"
+                  >
+                    📋 JSON
+                  </button>
+                </div>
+              </div>
+
               <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <h4 className="font-semibold text-gray-800 mb-2">🔮 Coming Soon</h4>
                 <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• 🗄️ Export Data</li>
                   <li>• 📊 Import Analytics</li>
                   <li>• 🧹 Data Cleanup Tools</li>
                   <li>• 💾 Backup & Restore</li>
