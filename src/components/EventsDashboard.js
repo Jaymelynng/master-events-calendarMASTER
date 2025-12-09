@@ -2076,10 +2076,13 @@ The system will add new events and update any changed events automatically.`;
           {/* 🚀 BULK ACTION BUTTONS - Open All Gyms for Each Event Type */}
           <div className="bg-white rounded shadow p-2 mb-3 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded p-2 mb-2 border border-blue-200">
-              <h3 className="text-sm font-medium text-gray-900 mb-2 flex items-center gap-2">
-                🚀 Bulk Actions - Open All Gyms
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">One-Click Access</span>
-              </h3>
+              <div className="flex items-center gap-2 mb-2 text-xs text-gray-700">
+                <span className="font-semibold text-gray-900">🚀 Bulk Actions</span>
+                <span className="text-gray-400">|</span>
+                <span className="text-blue-700">One-Click Access</span>
+                <span className="text-gray-400">|</span>
+                <span className="text-gray-500">💡 Each button opens multiple tabs - allow pop-ups!</span>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 <button
                   onClick={() => {
@@ -2224,11 +2227,6 @@ The system will add new events and update any changed events automatically.`;
                     </div>
                   </button>
                 </div>
-              </div>
-              
-              <div className="mt-3 text-xs text-gray-600 flex items-center gap-1">
-                <span>💡</span>
-                <span>Pro tip: Each button opens multiple tabs - make sure your browser allows pop-ups!</span>
               </div>
             </div>
           </div>
