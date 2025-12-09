@@ -2271,9 +2271,8 @@ The system will add new events and update any changed events automatically.`;
               <div className="mt-1 text-xs bg-yellow-50 px-2 py-1 rounded border border-yellow-200 inline-flex items-center gap-4 flex-wrap">
                 <span className="font-semibold text-gray-600">Legend:</span>
                 <span title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</span>
-                <span title="Has flyer image but no text description">⚠️ Flyer, no text</span>
+                <span title="Has flyer image but no text description - needs text added">⚠️ Flyer, no text</span>
                 <span title="No description at all">❌ No description</span>
-                <span title="Has flyer/promotional image">🖼️ Has flyer</span>
               </div>
             </div>
 
@@ -2421,33 +2420,23 @@ The system will add new events and update any changed events automatically.`;
                                      eventDate.getFullYear() === currentYear;
                             });
                             
-                            // Count issues
+                            // Count issues only (not informational stuff)
                             const errors = gymEvents.filter(e => e.validation_errors?.length > 0).length;
                             const warnings = gymEvents.filter(e => e.description_status === 'flyer_only').length;
                             const missing = gymEvents.filter(e => e.description_status === 'none').length;
-                            const flyers = gymEvents.filter(e => e.has_flyer || e.flyer_url).length;
                             const totalIssues = errors + warnings + missing;
                             
-                            if (totalIssues === 0 && flyers === 0) {
+                            if (totalIssues === 0) {
                               return (
-                                <span className="text-gray-400 text-xs">—</span>
-                              );
-                            }
-                            
-                            if (totalIssues === 0 && flyers > 0) {
-                              return (
-                                <span className="text-green-600 text-xs" title={`${flyers} events with flyers`}>
-                                  ✓ {flyers > 0 && <span>🖼️{flyers}</span>}
-                                </span>
+                                <span className="text-green-600 text-xs font-medium">✓ Clean</span>
                               );
                             }
                             
                             return (
                               <div className="flex items-center justify-center gap-1 text-xs flex-wrap">
-                                {errors > 0 && <span title={`${errors} data errors`} className="text-red-600">🚨{errors}</span>}
-                                {warnings > 0 && <span title={`${warnings} flyer-only`} className="text-yellow-600">⚠️{warnings}</span>}
-                                {missing > 0 && <span title={`${missing} no description`} className="text-gray-500">❌{missing}</span>}
-                                {flyers > 0 && <span title={`${flyers} with flyers`} className="text-blue-500">🖼️{flyers}</span>}
+                                {errors > 0 && <span title={`${errors} wrong info`} className="text-red-600 font-medium">🚨{errors}</span>}
+                                {warnings > 0 && <span title={`${warnings} flyer, no text`} className="text-yellow-600 font-medium">⚠️{warnings}</span>}
+                                {missing > 0 && <span title={`${missing} no description`} className="text-gray-500 font-medium">❌{missing}</span>}
                               </div>
                             );
                           })()}
@@ -3053,16 +3042,14 @@ The system will add new events and update any changed events automatically.`;
                                             borderColor: 'rgba(0,0,0,0.1)'
                                           }}
                                         >
-                                          {/* Validation status indicator */}
+                                          {/* Validation status indicator - only show problems */}
                                           {event.validation_errors && event.validation_errors.length > 0 ? (
-                                            <span className="absolute -top-1 -right-1 text-sm" title="Data mismatch - needs fix!">🚨</span>
+                                            <span className="absolute -top-1 -right-1 text-sm" title="Wrong info - data doesn't match!">🚨</span>
                                           ) : event.description_status === 'flyer_only' ? (
-                                            <span className="absolute -top-1 -right-1 text-xs" title="Flyer only - no text description">⚠️</span>
+                                            <span className="absolute -top-1 -right-1 text-xs" title="Has flyer but no text description">⚠️</span>
                                           ) : event.description_status === 'none' ? (
-                                            <span className="absolute -top-1 -right-1 text-xs" title="No description">❌</span>
-                                          ) : (event.has_flyer || event.flyer_url) && (
-                                            <span className="absolute -top-1 -right-1 text-xs" title="Has flyer image">🖼️</span>
-                                          )}
+                                            <span className="absolute -top-1 -right-1 text-xs" title="No description at all">❌</span>
+                                          ) : null}
                                           {/* Compact Card View */}
                                           <div className="font-semibold leading-tight text-sm">
                                             {displayName}
