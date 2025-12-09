@@ -63,6 +63,9 @@ When checking if an event changed, we compare:
 - `type` - Event category
 - `age_min` - Minimum age
 - `age_max` - Maximum age
+- `description` - Event description
+- `has_flyer` - Whether event has a flyer image (NEW Dec 2025)
+- `flyer_url` - URL of the flyer image (NEW Dec 2025)
 
 **Note:** `event_url` and `gym_id` are NOT compared (they're identifiers, not data)
 

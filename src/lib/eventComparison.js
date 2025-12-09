@@ -124,7 +124,9 @@ function hasEventChanged(existing, incoming) {
     'type',
     'age_min',
     'age_max',
-    'description'
+    'description',
+    'has_flyer',
+    'flyer_url'
   ];
 
   const changes = [];
@@ -164,7 +166,9 @@ function getChangedFields(existing, incoming) {
     'type',
     'age_min',
     'age_max',
-    'description'
+    'description',
+    'has_flyer',
+    'flyer_url'
   ];
 
   const changes = [];
