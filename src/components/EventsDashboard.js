@@ -2234,21 +2234,24 @@ The system will add new events and update any changed events automatically.`;
           {/* Special Event Statistics by Gym */}
           <div className="bg-white rounded shadow p-2 mb-2 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
             {/* Table Header */}
-            <div className="mb-2">
-              <h2 className="text-lg font-bold mb-1" style={{ color: theme.colors.textPrimary }}>
+            <div className="mb-2 text-center">
+              <h2 className="text-lg font-bold mb-2" style={{ color: theme.colors.textPrimary }}>
                 Special Event Statistics by Gym
-                <span className="text-sm font-normal ml-2" style={{ color: theme.colors.textSecondary }}>
-                  (Click counts to view event pages)
-                </span>
               </h2>
-              <div className="flex items-center justify-between">
-                <div className="text-xs bg-gray-50 px-2 py-1 rounded border">
+              
+              {/* Instructions - Prominent at top */}
+              <div className="text-xs bg-blue-50 px-3 py-2 rounded border border-blue-200 mb-2">
+                📍 Click gym → scroll to calendar | 🔢 Click number → open that page | ✨ Click sparkle → open all pages
+              </div>
+              
+              <div className="flex items-center justify-center gap-4 flex-wrap text-xs">
+                <div className="bg-gray-50 px-2 py-1 rounded border">
                   <span className="font-semibold text-gray-700">Monthly: </span>
                   <span className="text-gray-600">
                     {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
                   </span>
                 </div>
-                <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
+                <div className="font-medium" style={{ color: theme.colors.textSecondary }}>
                   {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { 
                     month: 'long', 
                     year: 'numeric' 
@@ -2256,7 +2259,7 @@ The system will add new events and update any changed events automatically.`;
                 </div>
               </div>
               {/* Emoji Legend */}
-              <div className="mt-1 text-xs bg-yellow-50 px-2 py-1 rounded border border-yellow-200 inline-flex items-center gap-4 flex-wrap">
+              <div className="mt-2 text-xs bg-yellow-50 px-2 py-1 rounded border border-yellow-200 inline-flex items-center gap-4 flex-wrap">
                 <span className="font-semibold text-gray-600">Legend:</span>
                 <span title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</span>
                 <span title="Has flyer image but no text description - needs text added">⚠️ Flyer, no text</span>
@@ -2435,9 +2438,6 @@ The system will add new events and update any changed events automatically.`;
                 </tbody>
               </table>
             </div>
-            <p className="text-xs mt-2 text-center" style={{ color: theme.colors.textSecondary }}>
-              📍 Click gym → scroll to calendar | 🔢 Click number → open that page | ✨ Click sparkle → open all pages for gym
-            </p>
             </div>
 
           {/* Controls */}
