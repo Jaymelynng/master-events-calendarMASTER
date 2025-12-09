@@ -689,6 +689,56 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             except ValueError:
                 pass  # Invalid date format, skip
             
+            # --- TIME VALIDATION: Compare structured time to description ---
+            if time_str:
+                # Extract hour from structured time (e.g., "6:30 PM - 7:30 PM" -> 6)
+                time_match = re.search(r'(\d{1,2}):?(\d{2})?\s*(am|pm)?', time_str.lower())
+                if time_match:
+                    event_hour = int(time_match.group(1))
+                    event_ampm = time_match.group(3) or ''
+                    
+                    # Look for times in description (first 200 chars)
+                    desc_times = re.findall(r'(\d{1,2}):?(\d{2})?\s*(am|pm|a\.m\.|p\.m\.)?', description_lower[:250])
+                    
+                    for desc_time in desc_times:
+                        desc_hour = int(desc_time[0])
+                        desc_ampm = desc_time[2].replace('.', '') if desc_time[2] else ''
+                        
+                        # Check if hours are significantly different (more than 2 hours apart)
+                        # and both have am/pm specified
+                        if event_ampm and desc_ampm:
+                            # Convert to 24hr for comparison
+                            event_hr_24 = event_hour + (12 if event_ampm == 'pm' and event_hour != 12 else 0)
+                            desc_hr_24 = desc_hour + (12 if desc_ampm == 'pm' and desc_hour != 12 else 0)
+                            
+                            if abs(event_hr_24 - desc_hr_24) >= 3:  # 3+ hours difference
+                                validation_errors.append({
+                                    "type": "time_mismatch",
+                                    "severity": "warning",
+                                    "message": f"Event time is {time_str} but description mentions {desc_hour}{desc_ampm}"
+                                })
+                                print(f"    ⚠️ TIME MISMATCH: Event is {time_str}, description says {desc_hour}{desc_ampm}")
+                                break
+            
+            # --- AGE VALIDATION: Compare structured MIN age to description ---
+            if age_min is not None:
+                # Look for age patterns in description (first 250 chars)
+                age_patterns = re.findall(r'ages?\s*(\d{1,2})\s*[-–to]+\s*\d{1,2}|ages?\s*(\d{1,2})\+?', description_lower[:250])
+                
+                for age_match in age_patterns:
+                    desc_age_min = int(age_match[0]) if age_match[0] else (int(age_match[1]) if age_match[1] else None)
+                    
+                    if desc_age_min is not None:
+                        # Check for mismatch (2+ years off on min age)
+                        if abs(age_min - desc_age_min) >= 2:
+                            validation_errors.append({
+                                "type": "age_mismatch",
+                                "severity": "warning",
+                                "message": f"Event min age is {age_min} but description says {desc_age_min}"
+                            })
+                            print(f"    ⚠️ AGE MISMATCH: Event min age is {age_min}, description says {desc_age_min}")
+                            break
+            
             # --- PROGRAM TYPE VALIDATION ---
             
             if event_type == 'KIDS NIGHT OUT':
