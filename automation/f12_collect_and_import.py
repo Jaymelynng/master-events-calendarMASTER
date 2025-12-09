@@ -691,34 +691,46 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             
             # --- TIME VALIDATION: Compare structured time to description ---
             if time_str:
-                # Extract hour from structured time (e.g., "6:30 PM - 7:30 PM" -> 6)
-                time_match = re.search(r'(\d{1,2}):?(\d{2})?\s*(am|pm)?', time_str.lower())
-                if time_match:
-                    event_hour = int(time_match.group(1))
-                    event_ampm = time_match.group(3) or ''
-                    
-                    # Look for times in description (first 200 chars)
-                    desc_times = re.findall(r'(\d{1,2}):?(\d{2})?\s*(am|pm|a\.m\.|p\.m\.)?', description_lower[:250])
+                # Extract ALL hours from structured time (e.g., "6:30 PM - 9:30 PM" -> [6, 9])
+                event_times = re.findall(r'(\d{1,2}):?(\d{2})?\s*(am|pm)?', time_str.lower())
+                event_hours = set()
+                for et in event_times:
+                    if et[0]:
+                        hour = int(et[0])
+                        ampm = et[2] or ''
+                        # Convert to 24hr
+                        if ampm == 'pm' and hour != 12:
+                            hour += 12
+                        elif ampm == 'am' and hour == 12:
+                            hour = 0
+                        event_hours.add(hour)
+                
+                if event_hours:
+                    # Look for times in description (first 250 chars)
+                    desc_times = re.findall(r'(\d{1,2}):(\d{2})\s*(am|pm|a\.m\.|p\.m\.)', description_lower[:250])
                     
                     for desc_time in desc_times:
                         desc_hour = int(desc_time[0])
                         desc_ampm = desc_time[2].replace('.', '') if desc_time[2] else ''
                         
-                        # Check if hours are significantly different (more than 2 hours apart)
-                        # and both have am/pm specified
-                        if event_ampm and desc_ampm:
-                            # Convert to 24hr for comparison
-                            event_hr_24 = event_hour + (12 if event_ampm == 'pm' and event_hour != 12 else 0)
-                            desc_hr_24 = desc_hour + (12 if desc_ampm == 'pm' and desc_hour != 12 else 0)
-                            
-                            if abs(event_hr_24 - desc_hr_24) >= 3:  # 3+ hours difference
-                                validation_errors.append({
-                                    "type": "time_mismatch",
-                                    "severity": "warning",
-                                    "message": f"Event time is {time_str} but description mentions {desc_hour}{desc_ampm}"
-                                })
-                                print(f"    ⚠️ TIME MISMATCH: Event is {time_str}, description says {desc_hour}{desc_ampm}")
-                                break
+                        # Convert to 24hr
+                        if desc_ampm == 'pm' and desc_hour != 12:
+                            desc_hour += 12
+                        elif desc_ampm == 'am' and desc_hour == 12:
+                            desc_hour = 0
+                        
+                        # Check if this time matches ANY of the event times (start OR end)
+                        matches_event = any(abs(desc_hour - eh) <= 1 for eh in event_hours)
+                        
+                        if not matches_event:
+                            # This description time doesn't match start or end
+                            validation_errors.append({
+                                "type": "time_mismatch",
+                                "severity": "warning",
+                                "message": f"Event time is {time_str} but description mentions {desc_time[0]}:{desc_time[1]} {desc_time[2]}"
+                            })
+                            print(f"    ⚠️ TIME MISMATCH: Event is {time_str}, description says {desc_time[0]}:{desc_time[1]} {desc_time[2]}")
+                            break
             
             # --- AGE VALIDATION: Compare structured MIN age to description ---
             if age_min is not None:
