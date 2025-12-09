@@ -2232,39 +2232,39 @@ The system will add new events and update any changed events automatically.`;
           </div>
 
           {/* Special Event Statistics by Gym */}
-          <div className="bg-white rounded shadow p-2 mb-2 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
-            {/* Table Header */}
-            <div className="mb-2 text-center">
-              <h2 className="text-lg font-bold mb-2" style={{ color: theme.colors.textPrimary }}>
-                Special Event Statistics by Gym
-              </h2>
-              
-              {/* Instructions - Prominent at top */}
-              <div className="text-xs bg-blue-50 px-3 py-2 rounded border border-blue-200 mb-2">
-                📍 Click gym → scroll to calendar | 🔢 Click number → open that page | ✨ Click sparkle → open all pages
-              </div>
-              
-              <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-                <div className="bg-gray-50 px-2 py-1 rounded border">
-                  <span className="font-semibold text-gray-700">Monthly: </span>
-                  <span className="text-gray-600">
-                    {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
-                  </span>
-                </div>
-                <div className="font-medium" style={{ color: theme.colors.textSecondary }}>
-                  {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { 
-                    month: 'long', 
-                    year: 'numeric' 
-                  })}
-                </div>
-                {/* Emoji Legend - stacked vertically on right */}
-                <div className="bg-yellow-50 px-2 py-1 rounded border border-yellow-200 text-xs">
-                  <div className="font-semibold text-gray-600">Legend:</div>
-                  <div title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</div>
-                  <div title="Has flyer image but no text description - needs text added">⚠️ Flyer, no text</div>
-                  <div title="No description at all">❌ No description</div>
+          <div className="bg-white rounded shadow p-3 mb-2 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
+            {/* Header Row - Title left, Legend right */}
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h2 className="text-lg font-bold" style={{ color: theme.colors.textPrimary }}>
+                  Special Event Statistics by Gym
+                </h2>
+                <div className="text-sm font-medium mt-1" style={{ color: theme.colors.textSecondary }}>
+                  {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </div>
               </div>
+              {/* Legend - top right */}
+              <div className="bg-yellow-50 px-3 py-2 rounded border border-yellow-200 text-xs text-right">
+                <div className="font-semibold text-gray-700 mb-1">Legend:</div>
+                <div title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</div>
+                <div title="Has flyer image but no text description">⚠️ Flyer, no text</div>
+                <div title="No description at all">❌ No description</div>
+              </div>
+            </div>
+            
+            {/* Monthly Requirements - centered */}
+            <div className="flex items-center justify-center gap-4 mb-2 text-xs">
+              <div className="bg-gray-50 px-3 py-1.5 rounded border">
+                <span className="font-semibold text-gray-700">Monthly Goal: </span>
+                <span className="text-gray-600">
+                  {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
+                </span>
+              </div>
+            </div>
+            
+            {/* Instructions - subtle, above table */}
+            <div className="text-xs text-gray-500 text-center mb-2">
+              📍 Gym → scroll | 🔢 Number → open page | ✨ Sparkle → open all
             </div>
 
             <div className="overflow-x-auto">
