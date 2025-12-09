@@ -590,8 +590,19 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         has_flyer = False
         flyer_url = None
         
-        if description_raw:
-            # Check for image tags in the raw HTML
+        # Check multiple possible image fields from iClassPro API
+        # Field 1: Direct image/imageUrl field
+        possible_image_fields = ['image', 'imageUrl', 'image_url', 'flyerUrl', 'flyer_url', 'mediaUrl', 'media_url', 'photo', 'photoUrl']
+        for field in possible_image_fields:
+            img_url = ev.get(field)
+            if img_url and isinstance(img_url, str) and img_url.startswith('http'):
+                has_flyer = True
+                flyer_url = img_url
+                print(f"    🖼️ Found flyer in '{field}': {flyer_url[:60]}...")
+                break
+        
+        # Field 2: Check for image in description HTML if not found above
+        if not has_flyer and description_raw:
             img_match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', description_raw, re.IGNORECASE)
             if img_match:
                 has_flyer = True
@@ -599,8 +610,18 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 # Make sure it's an absolute URL
                 if flyer_url and not flyer_url.startswith('http'):
                     flyer_url = f"https://portal.iclasspro.com{flyer_url}" if flyer_url.startswith('/') else None
-                print(f"    🖼️ Found flyer image: {flyer_url[:50]}..." if flyer_url else "    🖼️ Found flyer (relative URL)")
-            
+                print(f"    🖼️ Found flyer in description HTML: {flyer_url[:60] if flyer_url else 'relative URL'}...")
+        
+        # Debug: Log all fields in the event to help identify where images are stored
+        if not has_flyer:
+            # Check if any field contains 'image' or 'http' that we might have missed
+            for key, value in ev.items():
+                if isinstance(value, str) and ('image' in key.lower() or 'photo' in key.lower() or 'flyer' in key.lower() or 'media' in key.lower()):
+                    print(f"    [DEBUG] Potential image field '{key}': {str(value)[:100]}...")
+                elif isinstance(value, str) and value.startswith('http') and ('.jpg' in value.lower() or '.png' in value.lower() or '.gif' in value.lower() or '.webp' in value.lower()):
+                    print(f"    [DEBUG] Found URL with image extension in '{key}': {value[:100]}...")
+        
+        if description_raw:
             # Remove HTML tags but keep text content
             description = re.sub(r'<[^>]+>', '', description_raw)
             # Clean up whitespace
