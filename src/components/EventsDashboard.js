@@ -2268,12 +2268,12 @@ The system will add new events and update any changed events automatically.`;
                 </div>
               </div>
               {/* Emoji Legend */}
-              <div className="mt-1 text-xs bg-yellow-50 px-2 py-1 rounded border border-yellow-200 inline-flex items-center gap-3">
+              <div className="mt-1 text-xs bg-yellow-50 px-2 py-1 rounded border border-yellow-200 inline-flex items-center gap-4 flex-wrap">
                 <span className="font-semibold text-gray-600">Legend:</span>
-                <span title="Data mismatch error">🚨 Error</span>
-                <span title="Flyer only, no text">⚠️ Warning</span>
-                <span title="No description">❌ Missing</span>
-                <span title="Has flyer image">🖼️ Flyer</span>
+                <span title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</span>
+                <span title="Has flyer image but no text description">⚠️ Flyer, no text</span>
+                <span title="No description at all">❌ No description</span>
+                <span title="Has flyer/promotional image">🖼️ Has flyer</span>
               </div>
             </div>
 
