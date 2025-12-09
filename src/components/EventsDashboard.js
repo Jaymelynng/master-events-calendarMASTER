@@ -2267,6 +2267,14 @@ The system will add new events and update any changed events automatically.`;
                   })}
                 </div>
               </div>
+              {/* Emoji Legend */}
+              <div className="mt-1 text-xs bg-yellow-50 px-2 py-1 rounded border border-yellow-200 inline-flex items-center gap-3">
+                <span className="font-semibold text-gray-600">Legend:</span>
+                <span title="Data mismatch error">🚨 Error</span>
+                <span title="Flyer only, no text">⚠️ Warning</span>
+                <span title="No description">❌ Missing</span>
+                <span title="Has flyer image">🖼️ Flyer</span>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -2282,6 +2290,7 @@ The system will add new events and update any changed events automatically.`;
                       </th>
                     ))}
                     <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>Status</th>
+                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }} title="Data quality issues for this month">Quality</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2399,6 +2408,48 @@ The system will add new events and update any changed events automatically.`;
                                 </span>
                               );
                             }
+                          })()}
+                        </td>
+                        {/* Quality Column - Data Issues */}
+                        <td className="p-1 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
+                          {(() => {
+                            // Get events for this gym in current month
+                            const gymEvents = events.filter(e => {
+                              const eventDate = new Date(e.date);
+                              return e.gym_name === gym && 
+                                     eventDate.getMonth() === currentMonth && 
+                                     eventDate.getFullYear() === currentYear;
+                            });
+                            
+                            // Count issues
+                            const errors = gymEvents.filter(e => e.validation_errors?.length > 0).length;
+                            const warnings = gymEvents.filter(e => e.description_status === 'flyer_only').length;
+                            const missing = gymEvents.filter(e => e.description_status === 'none').length;
+                            const flyers = gymEvents.filter(e => e.has_flyer || e.flyer_url).length;
+                            const totalIssues = errors + warnings + missing;
+                            
+                            if (totalIssues === 0 && flyers === 0) {
+                              return (
+                                <span className="text-gray-400 text-xs">—</span>
+                              );
+                            }
+                            
+                            if (totalIssues === 0 && flyers > 0) {
+                              return (
+                                <span className="text-green-600 text-xs" title={`${flyers} events with flyers`}>
+                                  ✓ {flyers > 0 && <span>🖼️{flyers}</span>}
+                                </span>
+                              );
+                            }
+                            
+                            return (
+                              <div className="flex items-center justify-center gap-1 text-xs flex-wrap">
+                                {errors > 0 && <span title={`${errors} data errors`} className="text-red-600">🚨{errors}</span>}
+                                {warnings > 0 && <span title={`${warnings} flyer-only`} className="text-yellow-600">⚠️{warnings}</span>}
+                                {missing > 0 && <span title={`${missing} no description`} className="text-gray-500">❌{missing}</span>}
+                                {flyers > 0 && <span title={`${flyers} with flyers`} className="text-blue-500">🖼️{flyers}</span>}
+                              </div>
+                            );
                           })()}
                         </td>
                       </tr>
