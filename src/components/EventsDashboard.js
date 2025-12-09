@@ -2243,29 +2243,25 @@ The system will add new events and update any changed events automatically.`;
               </div>
             </div>
             
-            {/* Monthly Requirements - centered */}
-            <div className="flex items-center justify-center gap-4 mb-2 text-xs">
-              <div className="bg-gray-50 px-3 py-1.5 rounded border">
+            {/* Two column row: Monthly Goal left, Legend right */}
+            <div className="flex items-start justify-between mb-2 text-xs">
+              <div className="bg-gray-50 px-3 py-2 rounded border">
                 <span className="font-semibold text-gray-700">Monthly Goal: </span>
                 <span className="text-gray-600">
                   {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
                 </span>
+              </div>
+              <div className="bg-yellow-50 px-3 py-2 rounded border border-yellow-200">
+                <div className="font-semibold text-gray-700">Legend:</div>
+                <div title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</div>
+                <div title="Has flyer image but no text description">⚠️ Flyer, no text</div>
+                <div title="No description at all">❌ No description</div>
               </div>
             </div>
             
             {/* Instructions - subtle, above table */}
             <div className="text-xs text-gray-500 text-center mb-2">
               📍 Gym → scroll | 🔢 Number → open page | ✨ Sparkle → open all
-            </div>
-            
-            {/* Legend - positioned above Audit Check column */}
-            <div className="flex justify-end mb-1">
-              <div className="bg-yellow-50 px-3 py-2 rounded border border-yellow-200 text-xs">
-                <div className="font-semibold text-gray-700">Legend:</div>
-                <div title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</div>
-                <div title="Has flyer image but no text description">⚠️ Flyer, no text</div>
-                <div title="No description at all">❌ No description</div>
-              </div>
             </div>
 
             <div className="overflow-x-auto">
