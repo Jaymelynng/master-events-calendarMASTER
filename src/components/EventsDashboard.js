@@ -3009,7 +3009,7 @@ The system will add new events and update any changed events automatically.`;
                                             <span className="absolute -top-1 -right-1 text-xs" title="Flyer only - no text description">⚠️</span>
                                           ) : event.description_status === 'none' ? (
                                             <span className="absolute -top-1 -right-1 text-xs" title="No description">❌</span>
-                                          ) : event.has_flyer && (
+                                          ) : (event.has_flyer || event.flyer_url) && (
                                             <span className="absolute -top-1 -right-1 text-xs" title="Has flyer image">🖼️</span>
                                           )}
                                           {/* Compact Card View */}
@@ -3267,7 +3267,7 @@ The system will add new events and update any changed events automatically.`;
                     )}
 
                     {/* Flyer Image */}
-                    {selectedEventForPanel.has_flyer && selectedEventForPanel.flyer_url && (
+                    {selectedEventForPanel.flyer_url && (
                       <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
                         <div className="font-semibold text-xs text-gray-500 uppercase mb-2">🖼️ Event Flyer</div>
                         <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
