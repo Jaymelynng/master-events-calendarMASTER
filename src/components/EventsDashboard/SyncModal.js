@@ -294,6 +294,11 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                 age_min: changed.incoming.age_min,
                 age_max: changed.incoming.age_max,
                 description: changed.incoming.description,
+                // Data quality validation fields
+                has_flyer: changed.incoming.has_flyer || false,
+                flyer_url: changed.incoming.flyer_url || null,
+                description_status: changed.incoming.description_status || 'unknown',
+                validation_errors: changed.incoming.validation_errors || [],
                 deleted_at: null  // Ensure it's not marked as deleted
               });
               updatedCount++;
