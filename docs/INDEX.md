@@ -1,8 +1,8 @@
 # 📚 Master Events Calendar - Documentation Index
 
-**Last Updated:** November 30, 2025  
+**Last Updated:** December 9, 2025  
 **Status:** ✅ FULLY DEPLOYED & VERIFIED  
-**New Feature:** 🚀 SYNC ALL PROGRAMS  
+**New Feature:** 🗄️ AUTO-ARCHIVE SYSTEM  
 **Maintained by:** Jayme
 
 ---
@@ -87,16 +87,17 @@ This documentation is organized into three strategic categories based on your ro
 
 ---
 
-### **[SUPABASE-ARCHITECTURE.md](TECHNICAL/SUPABASE-ARCHITECTURE.md)**
+### **[SUPABASE-ARCHITECTURE.md](TECHNICAL/SUPABASE-ARCHITECTURE.md)** ⭐ **UPDATED DEC 2025**
 **What it contains:**
-- Database cleanup history
+- Complete database schema (events, events_archive, gyms, etc.)
+- Auto-archive system (pg_cron job)
+- events_with_gym view (UNION ALL both tables)
 - Table design decisions
-- Why certain features were removed
-- What to keep vs. what to delete
+- Data relationships
 
-**Why it's valuable:** Shows disciplined, focused architectural decision-making.
+**Why it's valuable:** Shows complete database architecture including auto-archiving.
 
-**Use it for:** Understanding the "why" behind database structure
+**Use it for:** Understanding database structure, auto-archive system
 
 ---
 
@@ -276,6 +277,36 @@ This documentation is organized into three strategic categories based on your ro
 
 ---
 
+### **[AUTO_ARCHIVE_SYSTEM.md](OPERATIONS/AUTO_ARCHIVE_SYSTEM.md)** 🆕 **NEW DEC 2025**
+**What it contains:**
+- How events auto-archive at midnight
+- events_archive table structure
+- pg_cron scheduled job details
+- Why calendar/stats are NOT affected
+- Manual operations (force archive, check history)
+- Troubleshooting guide
+
+**Why it's valuable:** Complete guide to the automatic event archiving system.
+
+**Use it for:** Understanding archiving, troubleshooting, manual operations
+
+---
+
+### **[EXPORT_DATA_GUIDE.md](OPERATIONS/EXPORT_DATA_GUIDE.md)** 🆕 **NEW DEC 2025**
+**What it contains:**
+- How to export events, analytics, and compliance reports
+- Date range selection (custom ranges)
+- Filtering by gym and event type
+- CSV vs JSON format differences
+- Missing requirements detection
+- Example use cases
+
+**Why it's valuable:** Complete guide to exporting data for reports and backups.
+
+**Use it for:** Monthly compliance reports, data backups, sharing with management
+
+---
+
 ### **[GYM_AUTO_DETECTION_FEATURE.md](OPERATIONS/GYM_AUTO_DETECTION_FEATURE.md)**
 **What it contains:**
 - Intelligent gym identification from F12 data
@@ -327,6 +358,8 @@ This documentation is organized into three strategic categories based on your ro
 5. **🔐 SECRET_ADMIN_MODE.md** - Your hidden power
 6. **📊 SYNC_PROGRESS_TRACKER.md** - Never lose track
 7. **🔧 TECHNICAL-REFERENCE.md** - Complete system guide
+8. **🗄️ AUTO_ARCHIVE_SYSTEM.md** - Automatic cleanup (NEW!)
+9. **📤 EXPORT_DATA_GUIDE.md** - Export & compliance reports (NEW!)
 
 **Together, these documents elevate this from "personal project" to "valuable, transferable intellectual property."**
 
@@ -334,10 +367,10 @@ This documentation is organized into three strategic categories based on your ro
 
 ## 📊 Documentation Stats
 
-- **Total Documents:** 15+ major documents
+- **Total Documents:** 17+ major documents
 - **Coverage:** Business value, technical architecture, operations
 - **Quality Level:** Enterprise-grade, investor-ready
-- **Last Major Update:** November 30, 2025 (SYNC ALL feature)
+- **Last Major Update:** December 9, 2025 (AUTO-ARCHIVE + EXPORT)
 
 ---
 
@@ -363,6 +396,6 @@ Code can be rewritten, but this knowledge is irreplaceable.
 
 ---
 
-**Last Updated:** November 30, 2025  
+**Last Updated:** December 9, 2025  
 **Maintained by:** Jayme
 

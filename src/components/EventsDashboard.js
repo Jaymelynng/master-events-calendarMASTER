@@ -2996,12 +2996,16 @@ The system will add new events and update any changed events automatically.`;
                                         onClick={() => setSelectedEventForPanel(event)}
                                       >
                                         <div
-                                          className="text-xs rounded text-gray-700 text-center font-medium transition-all duration-200 border p-2 hover:shadow-md hover:scale-105"
+                                          className="text-xs rounded text-gray-700 text-center font-medium transition-all duration-200 border p-2 hover:shadow-md hover:scale-105 relative"
                                           style={{ 
                                             backgroundColor: getEventTypeColor(eventTypeName),
                                             borderColor: 'rgba(0,0,0,0.1)'
                                           }}
                                         >
+                                          {/* Flyer indicator */}
+                                          {event.has_flyer && (
+                                            <span className="absolute -top-1 -right-1 text-xs" title="Has flyer image">🖼️</span>
+                                          )}
                                           {/* Compact Card View */}
                                           <div className="font-semibold leading-tight text-sm">
                                             {displayName}
@@ -3225,6 +3229,32 @@ The system will add new events and update any changed events automatically.`;
                         <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
                           {selectedEventForPanel.description}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Flyer Image */}
+                    {selectedEventForPanel.has_flyer && selectedEventForPanel.flyer_url && (
+                      <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
+                        <div className="font-semibold text-xs text-gray-500 uppercase mb-2">🖼️ Event Flyer</div>
+                        <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                          <img 
+                            src={selectedEventForPanel.flyer_url} 
+                            alt={`Flyer for ${selectedEventForPanel.title}`}
+                            className="w-full h-auto"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.parentElement.innerHTML = '<div class="p-4 text-center text-gray-500 text-sm">Unable to load flyer image</div>';
+                            }}
+                          />
+                        </div>
+                        <a 
+                          href={selectedEventForPanel.flyer_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-800 mt-2 inline-block"
+                        >
+                          Open flyer in new tab →
+                        </a>
                       </div>
                     )}
                     

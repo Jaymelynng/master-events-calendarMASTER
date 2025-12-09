@@ -585,11 +585,24 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         except (ValueError, AttributeError):
             day_of_week = None
         
-        # Extract description (clean HTML, keep text content)
-        description = ev.get("description", "")
-        if description:
+        # Extract description and check for flyer images
+        description_raw = ev.get("description", "")
+        has_flyer = False
+        flyer_url = None
+        
+        if description_raw:
+            # Check for image tags in the raw HTML
+            img_match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', description_raw, re.IGNORECASE)
+            if img_match:
+                has_flyer = True
+                flyer_url = img_match.group(1)
+                # Make sure it's an absolute URL
+                if flyer_url and not flyer_url.startswith('http'):
+                    flyer_url = f"https://portal.iclasspro.com{flyer_url}" if flyer_url.startswith('/') else None
+                print(f"    🖼️ Found flyer image: {flyer_url[:50]}..." if flyer_url else "    🖼️ Found flyer (relative URL)")
+            
             # Remove HTML tags but keep text content
-            description = re.sub(r'<[^>]+>', '', description)
+            description = re.sub(r'<[^>]+>', '', description_raw)
             # Clean up whitespace
             description = " ".join(description.split())
             # Limit length to avoid huge descriptions
@@ -626,6 +639,8 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "age_max": age_max,
             "day_of_week": day_of_week,
             "description": description,
+            "has_flyer": has_flyer,
+            "flyer_url": flyer_url,
         })
     
     return processed

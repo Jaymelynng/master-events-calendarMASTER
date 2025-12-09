@@ -1,8 +1,8 @@
 # 🎯 MASTER EVENTS APP - COMPLETE TECHNICAL FORMULA 2025
 ## Updated Production-Ready Documentation
 
-**Last Updated:** November 26, 2025  
-**Version:** Production 3.0  
+**Last Updated:** December 9, 2025  
+**Version:** Production 3.1  
 **Status:** ✅ FULLY DEPLOYED & WORKING
 
 ---
@@ -27,10 +27,11 @@
 3. [Database Architecture (100% Supabase)](#database-architecture)
 4. [Automated Sync System](#automated-sync-system)
 5. [Admin Bulk Import System](#admin-bulk-import)
-6. [Secret Admin Mode](#secret-admin-mode)
-7. [Technical Specifications](#technical-specs)
-8. [Deployment Architecture](#deployment-architecture)
-9. [Future Roadmap](#future-roadmap)
+6. [Export Data System](#-export-data-system)
+7. [Secret Admin Mode](#secret-admin-mode)
+8. [Technical Specifications](#technical-specs)
+9. [Deployment Architecture](#deployment-architecture)
+10. [Future Roadmap](#future-roadmap)
 
 ---
 
@@ -68,7 +69,7 @@ Your Master Events Calendar is a **production-deployed event management platform
 - ✅ **JSON Import (F12)** - Bulk import via copy/paste
 - ✅ **Automated Sync** - One-click iClassPro collection
 - ✅ **Sync Progress Tracker** - See what's synced, what needs sync
-- ✅ **Coming Soon Features** - Export Data, Import Analytics, etc.
+- ✅ **Export Data** - Export events, analytics, compliance reports (CSV/JSON)
 
 ### **Super Admin Features (Jayme - Level 3):**
 - ✅ **Supabase Dashboard Link** - Direct database access
@@ -82,6 +83,8 @@ Your Master Events Calendar is a **production-deployed event management platform
 - ✅ **Description Display** - Full event descriptions in details panel
 - ✅ **Age Range Display** - Shows min/max ages from iClass settings
 - ✅ **Vercel Analytics** - Visitor and page view tracking
+- ✅ **Auto-Archive** - Past events automatically archived at midnight
+- ✅ **Data Export** - Export to CSV/JSON with custom date ranges
 
 ---
 
@@ -221,6 +224,46 @@ The system compares events by `event_url` (unique identifier):
 - age_min
 - age_max
 - description
+
+---
+
+## 📤 EXPORT DATA SYSTEM
+
+### **Overview:**
+Export events, analytics, and compliance reports to CSV or JSON format.
+
+### **Component:**
+`src/components/EventsDashboard/ExportModal.js`
+
+### **Features:**
+
+| Feature | Description |
+|---------|-------------|
+| **Date Range** | Custom date picker (not limited to calendar view) |
+| **Gym Selection** | All, None, or individual gyms |
+| **Event Types** | Filter by CLINIC, KNO, OPEN GYM, CAMP, SPECIAL EVENT |
+| **Event Details** | Full event list with all fields |
+| **Analytics** | Counts per gym with requirement status |
+| **Missing Requirements** | Gyms not meeting monthly requirements |
+| **CSV Format** | Opens in Excel/Google Sheets |
+| **JSON Format** | Machine-readable backup |
+
+### **Data Source:**
+Uses `events_with_gym` view (includes both active AND archived events)
+
+### **Monthly Requirements Checked:**
+```javascript
+clinic_required: 1
+kno_required: 2
+open_gym_required: 1
+```
+
+### **Export File Names:**
+- CSV: `export-YYYY-MM-DD.csv`
+- JSON: `export-YYYY-MM-DD.json`
+
+### **See Full Guide:**
+[📤 EXPORT_DATA_GUIDE.md](../OPERATIONS/EXPORT_DATA_GUIDE.md)
 
 ---
 

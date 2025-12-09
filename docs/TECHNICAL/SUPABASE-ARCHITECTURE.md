@@ -1,7 +1,7 @@
 # 🧹 SUPABASE DATABASE ARCHITECTURE
 ## Master Events Calendar - Database Design
 
-**Last Updated:** November 26, 2025  
+**Last Updated:** December 9, 2025  
 **Database:** `https://xftiwouxpefchwoxxgpf.supabase.co`  
 **Status:** ✅ PRODUCTION READY
 
@@ -9,11 +9,12 @@
 
 ## 📋 CURRENT DATABASE STRUCTURE
 
-### **Core Tables (8 total):**
+### **Core Tables (9 total):**
 
 | Table | Purpose | Rows |
 |-------|---------|------|
-| `events` | All event data | 226+ |
+| `events` | Active/future event data | Dynamic |
+| `events_archive` | Past events (auto-archived) | Dynamic |
 | `gyms` | Gym information | 10 |
 | `event_types` | Event categories | 5 |
 | `gym_links` | Portal URLs | 54+ |
@@ -26,8 +27,14 @@
 
 | View | Purpose |
 |------|---------|
-| `events_with_gym` | Joins events + gyms (includes ALL columns) |
+| `events_with_gym` | **UNION of events + events_archive** with gym names |
 | `gym_links_detailed` | Joins links + types |
+
+### **Scheduled Jobs (pg_cron):**
+
+| Job | Schedule | Purpose |
+|-----|----------|---------|
+| `daily-archive-old-events` | Midnight (0 0 * * *) | Auto-moves past events to archive |
 
 ---
 
@@ -119,16 +126,44 @@ sync_log (
 )
 ```
 
+### **6. events_archive** (NEW December 2025)
+```sql
+events_archive (
+  id UUID PRIMARY KEY,
+  gym_id TEXT,
+  event_type_id UUID,
+  title TEXT,
+  date DATE,
+  start_date DATE,
+  end_date DATE,
+  time TEXT,
+  price TEXT,
+  day_of_week TEXT,
+  type TEXT,
+  event_url TEXT,
+  description TEXT,
+  age_min INTEGER,
+  age_max INTEGER,
+  deleted_at TIMESTAMPTZ,
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP
+  -- Same schema as events table (minus archived_at if not needed)
+)
+```
+
+**Purpose:** Stores past events that have been automatically archived. Keeps the main `events` table clean while preserving historical data for calendar display and analytics.
+
 ---
 
 ## 👁️ VIEW: events_with_gym
 
-**Purpose:** Main view used by the frontend to display events with gym names.
+**Purpose:** Main view used by the frontend to display ALL events (active + archived) with gym names.
 
-**IMPORTANT:** This view was recreated in November 2025 to include new columns!
+**CRITICAL:** This view uses UNION ALL to combine both tables - this ensures archived events still display on the calendar!
 
 ```sql
 CREATE OR REPLACE VIEW events_with_gym AS
+-- Active events from main table
 SELECT 
   e.id,
   e.gym_id,
@@ -143,20 +178,55 @@ SELECT
   e.created_at,
   e.updated_at,
   e.event_type,
+  e.gym_code,
   e.event_id,
   e.start_date,
   e.end_date,
   e.availability_status,
-  e.age_min,           -- NEW!
-  e.age_max,           -- NEW!
-  e.description,       -- NEW!
-  e.deleted_at,        -- NEW!
-  g.id AS gym_code,
+  e.age_min,
+  e.age_max,
+  e.description,
+  e.deleted_at,
   g.name AS gym_name
 FROM events e
 LEFT JOIN gyms g ON e.gym_id = g.id
-WHERE e.deleted_at IS NULL;  -- Only non-deleted events
+
+UNION ALL
+
+-- Archived events from archive table
+SELECT 
+  a.id,
+  a.gym_id,
+  a.event_type_id,
+  a.title,
+  a.date,
+  a.time,
+  a.price,
+  a.day_of_week,
+  a.type,
+  a.event_url,
+  a.created_at,
+  a.updated_at,
+  a.event_type,
+  a.gym_code,
+  a.event_id,
+  a.start_date,
+  a.end_date,
+  a.availability_status,
+  a.age_min,
+  a.age_max,
+  a.description,
+  a.deleted_at,
+  g.name AS gym_name
+FROM events_archive a
+LEFT JOIN gyms g ON a.gym_id = g.id;
 ```
+
+**Why UNION ALL?**
+- Archived events still appear on the calendar
+- Stats/analytics include historical data
+- No visual changes to the app when events are archived
+- Clean separation of active vs past data in database
 
 ---
 
@@ -190,6 +260,13 @@ WHERE e.deleted_at IS NULL;  -- Only non-deleted events
 - Upsert pattern (update if exists)
 - Powers the visual progress grid
 
+### **6. Auto-Archive System (NEW December 2025)**
+- Events automatically move to `events_archive` at midnight
+- Runs via pg_cron scheduled job
+- `events_with_gym` view combines both tables
+- **Calendar/stats display unaffected** by archiving
+- Keeps `events` table clean for sync comparisons
+
 ---
 
 ## 📊 DATA RELATIONSHIPS
@@ -197,14 +274,21 @@ WHERE e.deleted_at IS NULL;  -- Only non-deleted events
 ```
 gyms (10 rows)
   │
-  ├──< events (226+ rows)
+  ├──< events (active/future events)
   │     └── event_url is unique identifier
+  │
+  ├──< events_archive (past events)
+  │     └── auto-archived at midnight daily
   │
   ├──< gym_links (54+ rows)
   │     └── portal URLs for each event type
   │
   └──< sync_log (50+ rows)
         └── tracks sync progress
+
+events_with_gym (VIEW)
+  └── UNION ALL of events + events_archive
+      └── Used by frontend for ALL displays
 ```
 
 ---
@@ -267,6 +351,9 @@ CREATE INDEX idx_sync_log_gym_type ON sync_log(gym_id, event_type);
 | Nov 2025 | Added deleted_at column |
 | Nov 2025 | Created sync_log table |
 | Nov 2025 | Recreated events_with_gym view |
+| Dec 2025 | Created events_archive table |
+| Dec 2025 | Set up pg_cron auto-archive job |
+| Dec 2025 | Updated events_with_gym to UNION both tables |
 
 ---
 
@@ -309,15 +396,17 @@ SELECT
 
 **All Systems Working:**
 - ✅ 10 gyms configured
-- ✅ 226+ events stored
+- ✅ Active events in `events` table
+- ✅ Past events in `events_archive` table
 - ✅ 5 event types
 - ✅ Sync progress tracking
 - ✅ Soft delete working
 - ✅ Descriptions pulling
 - ✅ Ages pulling
-- ✅ Views updated
+- ✅ Views updated (UNION ALL)
+- ✅ Auto-archive running at midnight
 
-**Last Verified:** November 26, 2025
+**Last Verified:** December 9, 2025
 
 ---
 
