@@ -2233,22 +2233,13 @@ The system will add new events and update any changed events automatically.`;
 
           {/* Special Event Statistics by Gym */}
           <div className="bg-white rounded shadow p-3 mb-2 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
-            {/* Header Row - Title left, Legend right */}
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h2 className="text-lg font-bold" style={{ color: theme.colors.textPrimary }}>
-                  Special Event Statistics by Gym
-                </h2>
-                <div className="text-sm font-medium mt-1" style={{ color: theme.colors.textSecondary }}>
-                  {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </div>
-              </div>
-              {/* Legend - top right */}
-              <div className="bg-yellow-50 px-3 py-2 rounded border border-yellow-200 text-xs text-right">
-                <div className="font-semibold text-gray-700 mb-1">Legend:</div>
-                <div title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</div>
-                <div title="Has flyer image but no text description">⚠️ Flyer, no text</div>
-                <div title="No description at all">❌ No description</div>
+            {/* Header - Title and Date centered */}
+            <div className="text-center mb-3">
+              <h2 className="text-lg font-bold" style={{ color: theme.colors.textPrimary }}>
+                Special Event Statistics by Gym
+              </h2>
+              <div className="text-sm font-medium mt-1" style={{ color: theme.colors.textSecondary }}>
+                {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </div>
             </div>
             
@@ -2265,6 +2256,16 @@ The system will add new events and update any changed events automatically.`;
             {/* Instructions - subtle, above table */}
             <div className="text-xs text-gray-500 text-center mb-2">
               📍 Gym → scroll | 🔢 Number → open page | ✨ Sparkle → open all
+            </div>
+            
+            {/* Legend - positioned above Audit Check column */}
+            <div className="flex justify-end mb-1">
+              <div className="bg-yellow-50 px-3 py-2 rounded border border-yellow-200 text-xs">
+                <div className="font-semibold text-gray-700">Legend:</div>
+                <div title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</div>
+                <div title="Has flyer image but no text description">⚠️ Flyer, no text</div>
+                <div title="No description at all">❌ No description</div>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
