@@ -87,7 +87,12 @@ COMPARISON_FIELDS = [
     'age_min',
     'age_max',
     'description',
-    'availability_status'
+    'availability_status',
+    # Data quality validation fields
+    'has_flyer',
+    'flyer_url',
+    'description_status',
+    'validation_errors'
 ]
 
 ALLOWED_EVENT_FIELDS = {
@@ -114,7 +119,12 @@ ALLOWED_EVENT_FIELDS = {
     'capacity',
     'spots_remaining',
     'location',
-    'registration_url'
+    'registration_url',
+    # Data quality validation fields
+    'has_flyer',
+    'flyer_url',
+    'description_status',
+    'validation_errors'
 }
 
 def sanitize_event_payload(event: dict, gym_id: str, event_type: str) -> dict:
