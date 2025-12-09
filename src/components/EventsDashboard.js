@@ -2257,12 +2257,12 @@ The system will add new events and update any changed events automatically.`;
                     year: 'numeric' 
                   })}
                 </div>
-                {/* Emoji Legend - moved to right */}
-                <div className="bg-yellow-50 px-2 py-1 rounded border border-yellow-200 inline-flex items-center gap-3">
-                  <span className="font-semibold text-gray-600">Legend:</span>
-                  <span title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</span>
-                  <span title="Has flyer image but no text description - needs text added">⚠️ Flyer, no text</span>
-                  <span title="No description at all">❌ No description</span>
+                {/* Emoji Legend - stacked vertically on right */}
+                <div className="bg-yellow-50 px-2 py-1 rounded border border-yellow-200 text-xs">
+                  <div className="font-semibold text-gray-600">Legend:</div>
+                  <div title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</div>
+                  <div title="Has flyer image but no text description - needs text added">⚠️ Flyer, no text</div>
+                  <div title="No description at all">❌ No description</div>
                 </div>
               </div>
             </div>
