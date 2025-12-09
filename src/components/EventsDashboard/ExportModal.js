@@ -310,24 +310,32 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 className="w-4 h-4 text-amber-600"
               />
               <span className="text-gray-700">
-                ⚠️ Missing Requirements Only 
-                {loadingEvents ? ' (loading...)' : ` (${getMissingGyms().length} gyms)`}
+                ⚠️ Missing Requirements 
+                {loadingEvents ? ' (loading...)' : ''}
               </span>
             </label>
             {/* Show which gyms are missing */}
-            {includeMissing && !loadingEvents && getMissingGyms().length > 0 && (
+            {includeMissing && !loadingEvents && (
               <div className="ml-6 mt-2 p-2 bg-red-50 rounded border border-red-200 text-xs">
-                <div className="font-semibold text-red-700 mb-1">Missing requirements:</div>
-                {getMissingGyms().map(gym => (
-                  <div key={gym.gym_id} className="text-red-600">
-                    • {gym.gym_id}: {gym.missing.join(', ')}
+                {getMissingGyms().length > 0 ? (
+                  <>
+                    <div className="font-semibold text-red-700 mb-1">
+                      {getMissingGyms().length} gym{getMissingGyms().length !== 1 ? 's' : ''} missing requirements for selected dates:
+                    </div>
+                    {getMissingGyms().map(gym => (
+                      <div key={gym.gym_id} className="text-red-600">
+                        • {gym.gym_id}: needs {gym.missing.join(', ')}
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className="text-green-700 font-semibold">
+                    ✅ All gyms meet requirements for selected dates!
                   </div>
-                ))}
-              </div>
-            )}
-            {includeMissing && (
-              <div className="ml-6 mt-1 text-xs text-gray-500 italic">
-                Note: Only checks CLINIC, KNO, OPEN GYM (CAMP & SPECIAL EVENT don't count)
+                )}
+                <div className="mt-2 text-gray-500 italic border-t border-red-200 pt-1">
+                  Checks: 1 CLINIC, 2 KNO, 1 OPEN GYM per gym
+                </div>
               </div>
             )}
           </div>
