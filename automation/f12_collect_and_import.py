@@ -657,52 +657,153 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         elif description:
             description_status = 'full'
         
-        # Cross-check validation: compare title vs description for mismatches
-        if description:
+        # ========== SMART VALIDATION (KNO, CLINIC, OPEN GYM only - skip CAMP) ==========
+        event_type = camp_type_label.upper()
+        
+        if description and event_type != 'CAMP':
             description_lower = description.lower()
             title_lower = title.lower()
             
-            # Check for program type mismatches
-            program_keywords = {
-                'CLINIC': ['clinic', 'skill', 'training', 'workshop'],
-                'KIDS NIGHT OUT': ['kids night out', 'kno', 'night out', 'pizza', 'movie night'],
-                'OPEN GYM': ['open gym', 'free play', 'open play'],
-                'CAMP': ['camp', 'summer', 'winter', 'spring break', 'holiday'],
-            }
-            
-            # What program type is this event?
-            event_type = camp_type_label.upper()
-            
-            # Check if description mentions a DIFFERENT program type
-            for prog_type, keywords in program_keywords.items():
-                if prog_type != event_type:
-                    for keyword in keywords:
-                        if keyword in description_lower and keyword not in title_lower:
-                            # Potential mismatch - description mentions different program
+            # --- DATE VALIDATION: Compare structured date to description ---
+            # Extract month from structured start_date
+            try:
+                event_date = datetime.strptime(start_date, "%Y-%m-%d")
+                event_month = event_date.strftime("%B").lower()  # e.g., "january"
+                event_day = event_date.day
+                
+                # Check if description mentions a DIFFERENT month
+                import calendar
+                all_months = {m.lower(): i for i, m in enumerate(calendar.month_name) if m}
+                
+                for month_name, month_num in all_months.items():
+                    if month_name in description_lower and month_name != event_month:
+                        # Found a different month - check if it's prominent (in first 200 chars)
+                        if month_name in description_lower[:200]:
                             validation_errors.append({
-                                "type": "mismatch",
+                                "type": "date_mismatch",
                                 "severity": "error",
-                                "message": f"Event is {event_type} but description mentions '{keyword}' (typically {prog_type})"
+                                "message": f"Event is {event_month.title()} {event_day} but description says '{month_name.title()}'"
                             })
-                            print(f"    🚨 MISMATCH: {event_type} event mentions '{keyword}'")
+                            print(f"    🚨 DATE MISMATCH: Event is {event_month.title()}, description says {month_name.title()}")
                             break
+            except ValueError:
+                pass  # Invalid date format, skip
             
-            # Check for date mismatches in description
-            # Look for month names that don't match the event date
-            import calendar
-            event_month = datetime.strptime(start_date, "%Y-%m-%d").strftime("%B").lower()
-            all_months = [m.lower() for m in calendar.month_name if m]
+            # --- PROGRAM TYPE VALIDATION ---
             
-            for month in all_months:
-                if month in description_lower and month != event_month:
-                    # Check if this month is mentioned prominently (not just in passing)
-                    if description_lower.count(month) >= 1:
+            if event_type == 'KIDS NIGHT OUT':
+                # KNO: Must contain "kids night out" or "kno", should NOT say "clinic"
+                has_kno = 'kids night out' in description_lower or 'kno' in description_lower or "kids' night out" in description_lower
+                has_clinic = 'clinic' in description_lower[:100]  # Check start only
+                
+                if not has_kno:
+                    validation_errors.append({
+                        "type": "program_mismatch",
+                        "severity": "warning",
+                        "message": "KNO event but description doesn't mention 'Kids Night Out' or 'KNO'"
+                    })
+                    print(f"    ⚠️ KNO: Description missing 'Kids Night Out' or 'KNO'")
+                
+                if has_clinic:
+                    validation_errors.append({
+                        "type": "program_mismatch",
+                        "severity": "error",
+                        "message": "KNO event but description says 'Clinic'"
+                    })
+                    print(f"    🚨 KNO: Description says 'Clinic' - wrong program!")
+            
+            elif event_type == 'CLINIC':
+                # CLINIC: Must contain "clinic", check for skill mismatch, should NOT say KNO/Open Gym
+                has_clinic = 'clinic' in description_lower
+                has_kno = 'kids night out' in description_lower[:100] or description_lower[:50].startswith('kno')
+                has_open_gym = description_lower[:100].startswith('open gym')
+                
+                if not has_clinic:
+                    validation_errors.append({
+                        "type": "program_mismatch",
+                        "severity": "warning",
+                        "message": "CLINIC event but description doesn't mention 'Clinic'"
+                    })
+                    print(f"    ⚠️ CLINIC: Description missing 'Clinic'")
+                
+                if has_kno:
+                    validation_errors.append({
+                        "type": "program_mismatch",
+                        "severity": "error",
+                        "message": "CLINIC event but description says 'Kids Night Out'"
+                    })
+                    print(f"    🚨 CLINIC: Description says 'Kids Night Out' - wrong program!")
+                
+                if has_open_gym:
+                    validation_errors.append({
+                        "type": "program_mismatch",
+                        "severity": "error",
+                        "message": "CLINIC event but description starts with 'Open Gym'"
+                    })
+                    print(f"    🚨 CLINIC: Description starts with 'Open Gym' - wrong program!")
+                
+                # Check for SKILL MISMATCH
+                skills = ['cartwheel', 'back handspring', 'backhandspring', 'handstand', 'tumbling', 
+                         'bars', 'pullover', 'pullovers', 'front flip', 'roundoff', 'backbend', 
+                         'ninja', 'cheer', 'beam', 'vault', 'floor']
+                
+                title_skill = None
+                desc_skill = None
+                
+                for skill in skills:
+                    if skill in title_lower:
+                        title_skill = skill
+                        break
+                
+                # Check first 100 chars of description for a skill
+                desc_start = description_lower[:150]
+                for skill in skills:
+                    if skill in desc_start:
+                        desc_skill = skill
+                        break
+                
+                # Flag if BOTH have a skill and they're DIFFERENT
+                if title_skill and desc_skill and title_skill != desc_skill:
+                    # Handle "back handspring" vs "backhandspring"
+                    title_normalized = title_skill.replace(' ', '')
+                    desc_normalized = desc_skill.replace(' ', '')
+                    if title_normalized != desc_normalized:
                         validation_errors.append({
-                            "type": "date_mismatch", 
-                            "severity": "warning",
-                            "message": f"Description mentions '{month.title()}' but event is in {event_month.title()}"
+                            "type": "skill_mismatch",
+                            "severity": "error",
+                            "message": f"Title says '{title_skill}' but description says '{desc_skill}'"
                         })
-                        print(f"    ⚠️ DATE WARNING: Description mentions {month}, event is {event_month}")
+                        print(f"    🚨 SKILL MISMATCH: Title '{title_skill}' vs Description '{desc_skill}'")
+            
+            elif event_type == 'OPEN GYM':
+                # OPEN GYM: Must contain "open gym", should NOT say Clinic or KNO
+                has_open_gym = 'open gym' in description_lower
+                has_clinic = description_lower[:100].startswith('clinic') or 'clinic' in description_lower[:50]
+                has_kno = 'kids night out' in description_lower[:100]
+                
+                if not has_open_gym:
+                    validation_errors.append({
+                        "type": "program_mismatch",
+                        "severity": "warning",
+                        "message": "OPEN GYM event but description doesn't mention 'Open Gym'"
+                    })
+                    print(f"    ⚠️ OPEN GYM: Description missing 'Open Gym'")
+                
+                if has_clinic:
+                    validation_errors.append({
+                        "type": "program_mismatch",
+                        "severity": "error",
+                        "message": "OPEN GYM event but description says 'Clinic'"
+                    })
+                    print(f"    🚨 OPEN GYM: Description says 'Clinic' - wrong program!")
+                
+                if has_kno:
+                    validation_errors.append({
+                        "type": "program_mismatch",
+                        "severity": "error",
+                        "message": "OPEN GYM event but description says 'Kids Night Out'"
+                    })
+                    print(f"    🚨 OPEN GYM: Description says 'Kids Night Out' - wrong program!")
         
         # Log status
         if description_status == 'none':
