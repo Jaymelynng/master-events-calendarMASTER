@@ -2,7 +2,7 @@
 
 **Last Updated:** December 9, 2025  
 **Status:** ✅ FULLY DEPLOYED & VERIFIED  
-**New Feature:** 🗄️ AUTO-ARCHIVE SYSTEM  
+**New Feature:** 🔍 DATA QUALITY VALIDATION (auto-detect errors!)  
 **Maintained by:** Jayme
 
 ---
@@ -250,6 +250,21 @@ This documentation is organized into three strategic categories based on your ro
 
 ---
 
+### **[DATA_QUALITY_VALIDATION.md](OPERATIONS/DATA_QUALITY_VALIDATION.md)** 🆕 **NEW DEC 2025**
+**What it contains:**
+- How validation detects copy/paste errors
+- Date, time, age comparison (structured vs description)
+- Program type validation (KNO, CLINIC, OPEN GYM)
+- Skill mismatch detection for CLINIC events
+- Flyer detection and display
+- Icons: 🚨 errors, ⚠️ warnings, ❌ missing, 🖼️ flyer
+
+**Why it's valuable:** Complete guide to the automatic data quality validation system.
+
+**Use it for:** Understanding validation icons, troubleshooting false positives
+
+---
+
 ### **[VERCEL_ENVIRONMENT_SETUP.md](OPERATIONS/VERCEL_ENVIRONMENT_SETUP.md)**
 **What it contains:**
 - Environment variables for Vercel
@@ -358,8 +373,9 @@ This documentation is organized into three strategic categories based on your ro
 5. **🔐 SECRET_ADMIN_MODE.md** - Your hidden power
 6. **📊 SYNC_PROGRESS_TRACKER.md** - Never lose track
 7. **🔧 TECHNICAL-REFERENCE.md** - Complete system guide
-8. **🗄️ AUTO_ARCHIVE_SYSTEM.md** - Automatic cleanup (NEW!)
-9. **📤 EXPORT_DATA_GUIDE.md** - Export & compliance reports (NEW!)
+8. **🗄️ AUTO_ARCHIVE_SYSTEM.md** - Automatic cleanup
+9. **📤 EXPORT_DATA_GUIDE.md** - Export & compliance reports
+10. **🔍 DATA_QUALITY_VALIDATION.md** - Auto-detect copy/paste errors (NEW!)
 
 **Together, these documents elevate this from "personal project" to "valuable, transferable intellectual property."**
 
@@ -367,10 +383,10 @@ This documentation is organized into three strategic categories based on your ro
 
 ## 📊 Documentation Stats
 
-- **Total Documents:** 17+ major documents
+- **Total Documents:** 18+ major documents
 - **Coverage:** Business value, technical architecture, operations
 - **Quality Level:** Enterprise-grade, investor-ready
-- **Last Major Update:** December 9, 2025 (AUTO-ARCHIVE + EXPORT)
+- **Last Major Update:** December 9, 2025 (DATA QUALITY VALIDATION)
 
 ---
 

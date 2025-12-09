@@ -54,6 +54,7 @@ For each event_url:
 
 When checking if an event changed, we compare:
 
+### Core Fields
 - `title` - Event name
 - `date` - Event date
 - `start_date` - Multi-day start
@@ -64,10 +65,16 @@ When checking if an event changed, we compare:
 - `age_min` - Minimum age
 - `age_max` - Maximum age
 - `description` - Event description
-- `has_flyer` - Whether event has a flyer image (NEW Dec 2025)
-- `flyer_url` - URL of the flyer image (NEW Dec 2025)
+
+### Data Quality Fields (NEW Dec 2025)
+- `has_flyer` - Whether event has a flyer image
+- `flyer_url` - URL of the flyer image
+- `description_status` - 'full', 'flyer_only', 'none', or 'unknown'
+- `validation_errors` - JSON array of detected issues
 
 **Note:** `event_url` and `gym_id` are NOT compared (they're identifiers, not data)
+
+**See Also:** [DATA_QUALITY_VALIDATION.md](./DATA_QUALITY_VALIDATION.md) for full validation documentation
 
 ---
 
@@ -164,8 +171,8 @@ compareEvents(newEvents, existingEvents)
 
 ---
 
-**Last Updated:** November 14, 2025  
-**Status:** Implemented and working
+**Last Updated:** December 9, 2025  
+**Status:** Implemented and working (with data quality validation)
 
 
 
