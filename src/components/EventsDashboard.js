@@ -2435,18 +2435,9 @@ The system will add new events and update any changed events automatically.`;
                 </tbody>
               </table>
             </div>
-            <p className="text-xs mt-2 flex items-center gap-1" style={{ color: theme.colors.textSecondary }}>
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              Click gym names or event counts to view their special event pages • ☀️ Summer camps are shown for reference but not required
+            <p className="text-xs mt-2 text-center" style={{ color: theme.colors.textSecondary }}>
+              📍 Click gym → scroll to calendar | 🔢 Click number → open that page | ✨ Click sparkle → open all pages for gym
             </p>
-            </div>
-
-            {/* Help Text - Instructions for stats table */}
-            <div className="mt-3 text-xs text-center px-2" style={{ color: theme.colors.textSecondary }}>
-              <p>• Click ✨ next to gym names to open all their event pages at once</p>
-              <p>• Click gym buttons to jump to that gym's calendar section below</p>
             </div>
 
           {/* Controls */}
