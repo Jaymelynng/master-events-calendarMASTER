@@ -422,7 +422,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 onChange={() => setExportFormat('json')}
                 className="w-4 h-4 text-green-600"
               />
-              <span className="text-gray-700">📋 JSON (backup/developers)</span>
+              <span className="text-gray-700">📋 JSON</span>
             </label>
           </div>
         </div>
