@@ -838,8 +838,16 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         print(f"    🚨 SKILL MISMATCH: Title '{title_skill}' vs Description '{desc_skill}'")
             
             elif event_type == 'OPEN GYM':
-                # OPEN GYM: Must contain "open gym", should NOT say Clinic or KNO
-                has_open_gym = 'open gym' in description_lower
+                # OPEN GYM: Must contain "open gym" or variations, should NOT say Clinic or KNO
+                # Some gyms call it "Gym Fun Fridays", "Preschool Fun Gym", "Fun Gym", etc.
+                has_open_gym = (
+                    'open gym' in description_lower or
+                    'fun gym' in description_lower or
+                    'gym fun' in description_lower or
+                    'preschool fun' in description_lower or
+                    'play and explore the gym' in description_lower or
+                    'open to all' in description_lower
+                )
                 has_clinic = description_lower[:100].startswith('clinic') or 'clinic' in description_lower[:50]
                 has_kno = 'kids night out' in description_lower[:100]
                 
@@ -847,9 +855,9 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "warning",
-                        "message": "OPEN GYM event but description doesn't mention 'Open Gym'"
+                        "message": "OPEN GYM event but description doesn't mention 'Open Gym' or similar"
                     })
-                    print(f"    ⚠️ OPEN GYM: Description missing 'Open Gym'")
+                    print(f"    ⚠️ OPEN GYM: Description missing 'Open Gym' or similar")
                 
                 if has_clinic:
                     validation_errors.append({
