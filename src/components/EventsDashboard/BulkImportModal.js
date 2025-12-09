@@ -35,23 +35,6 @@ export default function BulkImportModal({
           🚀 Direct JSON Import - Copy Response from F12
         </h2>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-blue-800">Cross-Check Data:</span>
-            <a
-              href="https://supabase.com/dashboard/project/xftiwouxpefchwoxxgpf/editor"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors font-medium"
-            >
-              🗄️ Open Supabase Dashboard
-            </a>
-          </div>
-          <p className="text-xs text-blue-600 mt-1">
-            Click to open your Supabase database and verify existing data before importing
-          </p>
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
           <div>
             <h3 className="font-semibold mb-2 text-purple-800">📋 Step 1: Paste JSON from F12</h3>

@@ -12,7 +12,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
   const [comparison, setComparison] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
-  const [devMode, setDevMode] = useState(false);
   const [syncLog, setSyncLog] = useState([]);
   const [showProgress, setShowProgress] = useState(true); // Expanded by default
 
@@ -29,16 +28,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
     loadSyncLog();
   }, []);
 
-  // Secret dev mode: Press Shift+D to toggle
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.shiftKey && e.key === 'D') {
-        setDevMode(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   // Helper to get sync status for a gym/type combo
   const getSyncStatus = (gymId, eventType) => {
@@ -356,10 +345,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
     }
   };
 
-  // Detect if using Railway or local
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-  const isRailway = API_URL.includes('railway.app') || API_URL.includes('railway');
-  const isLocal = !isRailway && API_URL.includes('localhost');
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 overflow-y-auto p-4">
@@ -376,44 +361,10 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
             )}
             <h2 className="text-2xl font-bold text-purple-800 flex items-center gap-2">
               ⚡ Automated Sync
-              {devMode && <span className="text-xs bg-purple-200 text-purple-700 px-2 py-1 rounded">🔧 Dev Mode</span>}
             </h2>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
         </div>
-
-        {/* Dev Mode Panel - Only visible when Shift+D is pressed */}
-        {devMode && (
-          <div className="mb-4 p-3 bg-purple-50 border-2 border-purple-300 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-purple-800 text-sm">🔧 Developer Links</span>
-              <span className="text-xs text-purple-600">Press Shift+D to hide</span>
-            </div>
-            <div className="flex gap-3">
-              <a 
-                href="https://railway.app/dashboard" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex-1 px-3 py-2 bg-gray-800 text-white rounded text-sm font-medium hover:bg-gray-700 transition-colors text-center"
-              >
-                🚂 Railway Dashboard
-              </a>
-              <a 
-                href="https://supabase.com/dashboard" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex-1 px-3 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 transition-colors text-center"
-              >
-                🗄️ Supabase Dashboard
-              </a>
-            </div>
-            {isRailway && (
-              <p className="text-xs text-purple-600 mt-2">
-                API: {API_URL}
-              </p>
-            )}
-          </div>
-        )}
 
         {/* Sync Progress Grid - Compact when results showing */}
         <div className="mb-3">
@@ -522,16 +473,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                 );
               })}
             </div>
-          </div>
-        )}
-
-        {/* Local dev warning - only show in dev mode */}
-        {devMode && isLocal && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              <strong>⚠️ Local API:</strong> Make sure server is running<br />
-              <code className="bg-yellow-100 px-2 py-1 rounded text-xs">cd automation && python local_api_server.py</code>
-            </p>
           </div>
         )}
 

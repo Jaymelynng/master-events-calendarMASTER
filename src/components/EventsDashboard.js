@@ -1711,20 +1711,15 @@ The system will add new events and update any changed events automatically.`;
         </Suspense>
       )}
       
-      {/* Jayme's Command Center - Secret Admin Portal */}
+      {/* Admin Control Center */}
       {showAdminPortal && (
         <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"><div className="bg-white rounded-lg p-6">Loading...</div></div>}>
           <AdminPortalModal
-            theme={theme}
             onClose={() => setShowAdminPortal(false)}
-            onOpenAddEvent={() => {
-                        setShowAdminPortal(false);
-                        setTimeout(() => setShowAddEventModal(true), 100);
-                      }}
             onOpenBulkImport={() => {
-                        setShowAdminPortal(false);
-                        setTimeout(() => setShowBulkImportModal(true), 100);
-                      }}
+              setShowAdminPortal(false);
+              setTimeout(() => setShowBulkImportModal(true), 100);
+            }}
             onOpenSyncModal={() => {
               setShowAdminPortal(false);
               setTimeout(() => setShowSyncModal(true), 100);
@@ -1736,8 +1731,6 @@ The system will add new events and update any changed events automatically.`;
                 setShowAuditHistory(true);
               }, 100);
             }}
-            events={events}
-            gyms={gymsList}
           />
         </Suspense>
       )}
@@ -2061,15 +2054,12 @@ The system will add new events and update any changed events automatically.`;
           {/* ✨ Jayme's Command Center + Export - TOP SECTION */}
           <div className="flex justify-center items-center gap-3 mb-2">
             <button
-              onClick={(e) => {
-                if (e.shiftKey) {
-                  setShowAdminPortal(true);
-                }
-              }}
-              className="flex items-center justify-center w-8 h-8 bg-white rounded border border-pink-300 hover:border-pink-500 hover:bg-pink-50 transition-all duration-200 group opacity-70 hover:opacity-100"
-              title="🔐 Jayme's Command Center (Shift+Click)"
+              onClick={() => setShowAdminPortal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 hover:bg-purple-200 rounded-lg border border-purple-300 hover:border-purple-500 transition-all duration-200 text-purple-800 text-sm font-medium hover:scale-105"
+              title="Open Admin Control Center"
             >
-              <span className="text-lg group-hover:scale-125 transition-transform">✨</span>
+              <span>🪄</span>
+              <span>Admin</span>
             </button>
 
             {/* Export Button */}
