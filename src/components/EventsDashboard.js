@@ -3002,8 +3002,14 @@ The system will add new events and update any changed events automatically.`;
                                             borderColor: 'rgba(0,0,0,0.1)'
                                           }}
                                         >
-                                          {/* Flyer indicator */}
-                                          {event.has_flyer && (
+                                          {/* Validation status indicator */}
+                                          {event.validation_errors && event.validation_errors.length > 0 ? (
+                                            <span className="absolute -top-1 -right-1 text-sm" title="Data mismatch - needs fix!">🚨</span>
+                                          ) : event.description_status === 'flyer_only' ? (
+                                            <span className="absolute -top-1 -right-1 text-xs" title="Flyer only - no text description">⚠️</span>
+                                          ) : event.description_status === 'none' ? (
+                                            <span className="absolute -top-1 -right-1 text-xs" title="No description">❌</span>
+                                          ) : event.has_flyer && (
                                             <span className="absolute -top-1 -right-1 text-xs" title="Has flyer image">🖼️</span>
                                           )}
                                           {/* Compact Card View */}
@@ -3221,6 +3227,34 @@ The system will add new events and update any changed events automatically.`;
                         </div>
                       );
                     })()}
+
+                    {/* Validation Issues Alert */}
+                    {(selectedEventForPanel.validation_errors?.length > 0 || 
+                      selectedEventForPanel.description_status === 'flyer_only' || 
+                      selectedEventForPanel.description_status === 'none') && (
+                      <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                          <div className="font-semibold text-red-800 mb-2 flex items-center gap-2">
+                            {selectedEventForPanel.validation_errors?.length > 0 ? '🚨' : 
+                             selectedEventForPanel.description_status === 'flyer_only' ? '⚠️' : '❌'}
+                            Data Issues Detected
+                          </div>
+                          <ul className="text-sm text-red-700 space-y-1">
+                            {selectedEventForPanel.description_status === 'none' && (
+                              <li>❌ <strong>No description</strong> - Event has no description text</li>
+                            )}
+                            {selectedEventForPanel.description_status === 'flyer_only' && (
+                              <li>⚠️ <strong>Flyer only</strong> - Has image but no text description</li>
+                            )}
+                            {selectedEventForPanel.validation_errors?.map((error, idx) => (
+                              <li key={idx}>
+                                {error.severity === 'error' ? '🚨' : '⚠️'} <strong>{error.type === 'mismatch' ? 'Mismatch' : 'Warning'}:</strong> {error.message}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Description */}
                     {selectedEventForPanel.description && (

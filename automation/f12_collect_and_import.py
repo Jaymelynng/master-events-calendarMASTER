@@ -646,6 +646,70 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             except (ValueError, TypeError):
                 age_max = None
         
+        # Determine description status and validation errors
+        description_status = 'unknown'
+        validation_errors = []
+        
+        if not description and not has_flyer:
+            description_status = 'none'
+        elif has_flyer and not description:
+            description_status = 'flyer_only'
+        elif description:
+            description_status = 'full'
+        
+        # Cross-check validation: compare title vs description for mismatches
+        if description:
+            description_lower = description.lower()
+            title_lower = title.lower()
+            
+            # Check for program type mismatches
+            program_keywords = {
+                'CLINIC': ['clinic', 'skill', 'training', 'workshop'],
+                'KIDS NIGHT OUT': ['kids night out', 'kno', 'night out', 'pizza', 'movie night'],
+                'OPEN GYM': ['open gym', 'free play', 'open play'],
+                'CAMP': ['camp', 'summer', 'winter', 'spring break', 'holiday'],
+            }
+            
+            # What program type is this event?
+            event_type = camp_type_label.upper()
+            
+            # Check if description mentions a DIFFERENT program type
+            for prog_type, keywords in program_keywords.items():
+                if prog_type != event_type:
+                    for keyword in keywords:
+                        if keyword in description_lower and keyword not in title_lower:
+                            # Potential mismatch - description mentions different program
+                            validation_errors.append({
+                                "type": "mismatch",
+                                "severity": "error",
+                                "message": f"Event is {event_type} but description mentions '{keyword}' (typically {prog_type})"
+                            })
+                            print(f"    🚨 MISMATCH: {event_type} event mentions '{keyword}'")
+                            break
+            
+            # Check for date mismatches in description
+            # Look for month names that don't match the event date
+            import calendar
+            event_month = datetime.strptime(start_date, "%Y-%m-%d").strftime("%B").lower()
+            all_months = [m.lower() for m in calendar.month_name if m]
+            
+            for month in all_months:
+                if month in description_lower and month != event_month:
+                    # Check if this month is mentioned prominently (not just in passing)
+                    if description_lower.count(month) >= 1:
+                        validation_errors.append({
+                            "type": "date_mismatch", 
+                            "severity": "warning",
+                            "message": f"Description mentions '{month.title()}' but event is in {event_month.title()}"
+                        })
+                        print(f"    ⚠️ DATE WARNING: Description mentions {month}, event is {event_month}")
+        
+        # Log status
+        if description_status == 'none':
+            print(f"    ❌ NO DESCRIPTION")
+        elif description_status == 'flyer_only':
+            print(f"    ⚠️ FLYER ONLY (no text)")
+        
         processed.append({
             "gym_id": gym_id,
             "title": title,
@@ -662,6 +726,8 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "description": description,
             "has_flyer": has_flyer,
             "flyer_url": flyer_url,
+            "description_status": description_status,
+            "validation_errors": validation_errors,
         })
     
     return processed
