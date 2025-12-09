@@ -2290,7 +2290,7 @@ The system will add new events and update any changed events automatically.`;
                       </th>
                     ))}
                     <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>Status</th>
-                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }} title="Data quality issues for this month">Quality</th>
+                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }} title="Data audit check for this month">Audit Check</th>
                   </tr>
                 </thead>
                 <tbody>
