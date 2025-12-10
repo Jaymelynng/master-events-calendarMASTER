@@ -1,8 +1,9 @@
-# 📚 Master Events Calendar - Documentation Index
+# 📚 Team Calendar - Documentation Index
 
+**Live URL:** https://teamcalendar.mygymtools.com  
 **Last Updated:** December 9, 2025  
 **Status:** ✅ FULLY DEPLOYED & VERIFIED  
-**New Feature:** 🔍 DATA QUALITY VALIDATION (auto-detect errors!)  
+**Part of:** mygymtools.com suite  
 **Maintained by:** Jayme
 
 ---

@@ -728,6 +728,37 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                 All events from source are accounted for
               </div>
             )}
+            
+            {/* Deleted Events List - Show which events will be removed */}
+            {comparison.deleted.length > 0 && (
+              <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <h4 className="font-semibold text-orange-800 mb-2 text-sm">
+                  🗑️ Events To Be Removed ({comparison.deleted.length})
+                </h4>
+                <p className="text-xs text-orange-600 mb-2">
+                  These future events are in the database but no longer appear in iClassPro:
+                </p>
+                <div className="max-h-32 overflow-y-auto">
+                  {comparison.deleted.map((ev, idx) => (
+                    <div key={ev.id || idx} className="text-xs py-1 px-2 bg-white rounded mb-1 border border-orange-100 flex items-center gap-2">
+                      <span className="text-orange-600">🗑️</span>
+                      <span className="font-medium text-gray-800">{ev.title}</span>
+                      <span className="text-gray-500">|</span>
+                      <span className="text-gray-600">{ev.date}</span>
+                      {ev.time && (
+                        <>
+                          <span className="text-gray-500">|</span>
+                          <span className="text-gray-600">{ev.time}</span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-orange-500 mt-2 italic">
+                  ⚠️ These will be soft-deleted when you click Import
+                </p>
+              </div>
+            )}
           </div>
         )}
 

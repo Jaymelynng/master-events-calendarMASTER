@@ -1,9 +1,11 @@
-# 🎯 MASTER EVENTS APP - COMPLETE TECHNICAL FORMULA 2025
+# 🎯 TEAM CALENDAR - COMPLETE TECHNICAL FORMULA 2025
 ## Updated Production-Ready Documentation
 
+**Live URL:** https://teamcalendar.mygymtools.com  
 **Last Updated:** December 9, 2025  
 **Version:** Production 3.1  
-**Status:** ✅ FULLY DEPLOYED & WORKING
+**Status:** ✅ FULLY DEPLOYED & WORKING  
+**Part of:** mygymtools.com suite
 
 ---
 

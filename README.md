@@ -1,5 +1,13 @@
-# 🎯 Master Events Calendar
+# 🎯 Team Calendar - Master Events Hub
 ## Enterprise Event Management Platform for Multi-Location Gymnastics Operations
+
+---
+
+## 🌐 Live URL
+
+# **https://teamcalendar.mygymtools.com**
+
+Part of the **mygymtools.com** suite of tools.
 
 ---
 
@@ -15,21 +23,22 @@
 
 ### **Current Scale:**
 - **10 Facilities** actively managed
-- **167 Events** currently in system
+- **200+ Events** in system
 - **3 States** (TX, AZ, CA)
 - **Real-time** compliance monitoring
-- **476 Database Records** (gyms, events, links, audit logs)
 
 ---
 
 ## 🚀 Quick Start
 
-### **Run the App:**
+### **Live App:**
+Visit: **https://teamcalendar.mygymtools.com**
+
+### **Local Development:**
 ```bash
-cd "MASTER EVENTS( origional file) - Copy"
+npm install
 npm start
 ```
-
 App opens at: `http://localhost:3000`
 
 ### **Environment Setup:**
@@ -37,101 +46,65 @@ Create `.env.local` with:
 ```
 REACT_APP_SUPABASE_URL=https://xftiwouxpefchwoxxgpf.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=[your-key-here]
+REACT_APP_API_URL=https://master-events-calendarmaster-production.up.railway.app
 ```
 
 ---
 
-## 📚 Documentation Structure
+## 📚 Documentation
 
-### **🏆 Business Documents** (`docs/BUSINESS/`)
-- **BOSS-PRESENTATION.md** - ROI analysis, pitch deck, business value proposition
+| Category | Location | Description |
+|----------|----------|-------------|
+| **Business** | `docs/BUSINESS/` | ROI analysis, presentations |
+| **Technical** | `docs/TECHNICAL/` | Architecture, database, roadmap |
+| **Operations** | `docs/OPERATIONS/` | How-to guides, sync instructions |
 
-### **🔧 Technical Documentation** (`docs/TECHNICAL/`)
-- **TECHNICAL-REFERENCE.md** - Complete system architecture
-- **SCALABILITY-ROADMAP.md** - Path to 10,000+ users
-- **SUPABASE-ARCHITECTURE.md** - Database design decisions
-
-### **📋 Operations Guides** (`docs/OPERATIONS/`)
-- **F12-IMPORT-GUIDE.md** - The "secret recipe" bulk import system
-- **AUDIT-SYSTEM.md** - Change tracking and accountability
-- **BULK-IMPORT-LEARNINGS.md** - Solved problems and gotchas
+**Start here:** `docs/INDEX.md`
 
 ---
 
 ## ✨ Key Features
 
-### **For Managers (Daily Use):**
-- ✨ Per-event sparkle controls - Click to view full details
-- 📅 Real-time calendar across all locations
+### **For Everyone:**
+- 📅 Real-time calendar across all 10 gyms
 - 🔍 Smart filters by gym/event type
-- ➕ Add/edit/delete individual events
-- 📊 Compliance tracking with color-coded indicators
+- 📋 Click numbers to open registration pages
+- ✨ Click sparkle to open ALL pages for a gym
 
-### **For Admins (You & Kim):**
-- 🚀 F12 bulk import (20-50 events in seconds)
-- 🪄 Magic Control admin portal (Shift+Click)
-- 📈 Analytics dashboard
-- 🔗 Bulk actions (open all gym pages)
-- 📝 Complete audit trail
+### **For Admins:**
+- 🪄 Admin Control Center (click Admin button)
+- ⚡ Automated Sync from iClassPro
+- 🚀 F12 JSON bulk import
+- 📤 Export to CSV/JSON
+- 🔐 Super Admin mode (PIN protected)
 
-### **Revolutionary Features:**
-- **Sparkle Toggle System**: Click sparkles on events to expand details
-- **Hover Control**: Toggle quick previews on/off
-- **Compact Time Format**: Space-saving 6:30-9:30 display
-- **F12 Import Method**: Copy JSON directly from gym websites
+### **Data Quality:**
+- 🚨 Wrong info detection
+- ⚠️ Flyer-only warnings
+- ❌ Missing description alerts
+- Auto-archive past events
 
 ---
 
 ## 🏗️ Tech Stack
 
-**Frontend:**
-- React 18.2.0
-- Tailwind CSS
-- Lucide React Icons
-
-**Backend:**
-- Supabase (PostgreSQL)
-- Real-time subscriptions
-- Row Level Security
-
-**Deployment:**
-- Vercel (production-ready)
-- Environment variables configured
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | React 18, Tailwind CSS, Lucide Icons |
+| **Backend API** | Flask + Playwright (Railway) |
+| **Database** | Supabase (PostgreSQL) |
+| **Hosting** | Vercel |
+| **Domain** | teamcalendar.mygymtools.com |
 
 ---
 
-## 💼 Business Metrics
+## 🌐 Deployment Architecture
 
-### **Time Savings:**
-| Task | Before | After | Savings |
-|------|--------|-------|---------|
-| Monthly data collection | 5 hours | 20 min | 93% |
-| Error correction | 1 hour | 5 min | 92% |
-| Compliance checking | 30 min | Real-time | 100% |
-
-**Annual ROI:** 78 hours saved = 2 full work weeks
-
-### **Quality Improvements:**
-- Error rate: 10-15% → <1%
-- Missed events: 5-10/month → 0
-- Data accuracy: ~85% → 99%+
-
----
-
-## 🎯 Project Status
-
-### **✅ Production Ready**
-- Complete functionality
-- Professional UI/UX
-- Comprehensive documentation
-- Full backup system
-- Zero critical bugs
-
-### **🚀 Recently Added** (Oct 6, 2025)
-- Per-event sparkle controls
-- Compact time display format
-- Repositioned hover toggle
-- Full detail popup on sparkle click
+| Service | Platform | URL |
+|---------|----------|-----|
+| **Frontend** | Vercel | teamcalendar.mygymtools.com |
+| **API Server** | Railway | master-events-calendarmaster-production.up.railway.app |
+| **Database** | Supabase | xftiwouxpefchwoxxgpf.supabase.co |
 
 ---
 
@@ -143,115 +116,58 @@ master-events-calendar/
 │   ├── components/
 │   │   ├── EventsDashboard.js (main calendar)
 │   │   └── EventsDashboard/
-│   │       ├── AddEventModal.js
 │   │       ├── AdminPortalModal.js
+│   │       ├── SyncModal.js
 │   │       ├── BulkImportModal.js
-│   │       └── ...
-│   ├── lib/
-│   │   ├── api.js (Supabase CRUD)
-│   │   ├── supabase.js (connection)
-│   │   ├── gymLinksApi.js (portal links)
-│   │   └── ...
-│   └── index.js
+│   │       └── ExportModal.js
+│   └── lib/
+│       ├── api.js (Supabase CRUD)
+│       ├── supabase.js (connection)
+│       ├── eventComparison.js (sync logic)
+│       └── useRealtimeEvents.js (live updates)
+├── automation/
+│   ├── local_api_server.py (Flask API)
+│   └── f12_collect_and_import.py (Playwright)
 ├── docs/
-│   ├── BUSINESS/ (ROI, presentations)
-│   ├── TECHNICAL/ (architecture, roadmap)
-│   └── OPERATIONS/ (how-to guides)
-├── database/
-│   └── performance_indexes.sql
-└── [config files]
+│   ├── BUSINESS/
+│   ├── TECHNICAL/
+│   └── OPERATIONS/
+└── database/
 ```
 
 ---
 
-## 🔐 Database
+## 🔐 Access Levels
 
-**Supabase Instance:** `xftiwouxpefchwoxxgpf.supabase.co`
-
-**Core Tables:**
-- `events` - All event data
-- `gyms` - 10 facility locations
-- `event_types` - Category definitions (KNO, Clinic, Open Gym)
-- `gym_links` - Portal URLs for each facility
-- `event_audit_log` - Complete change history
+| Level | Access | Features |
+|-------|--------|----------|
+| **Everyone** | Visit URL | Calendar, event details, stats |
+| **Admin** | Click 🪄 Admin | Sync, Import, Export |
+| **Super Admin** | 🔐 + PIN 1426 | Supabase, Railway, Audit |
 
 ---
 
-## 🎓 For New Developers
+## 🎯 mygymtools.com Suite
 
-**Start here:**
-1. Read `docs/README.md` - Developer handoff guide
-2. Review `docs/TECHNICAL/TECHNICAL-REFERENCE.md` - System architecture
-3. Follow `docs/OPERATIONS/F12-IMPORT-GUIDE.md` - Learn the import workflow
-4. Check `docs/OPERATIONS/BULK-IMPORT-LEARNINGS.md` - Avoid common pitfalls
-
----
-
-## 🏆 What Makes This Special
-
-### **Innovation:**
-- F12 JSON import method (unique approach, 95% time savings)
-- Dual-sparkle control system (global + per-event)
-- Smart duplicate prevention (URL + composite key)
-- Automatic change detection
-
-### **Professional Quality:**
-- Enterprise-grade architecture
-- Complete audit trail
-- Real-time data synchronization
-- Production deployment ready
-
-### **Business Value:**
-- Solves real problems at scale
-- Proven ROI (94% time reduction)
-- Revenue protection ($5K-10K/year)
-- Scalable to 50+ locations
+| Tool | URL | Purpose |
+|------|-----|---------|
+| **Main Hub** | mygymtools.com | Landing page |
+| **Team Calendar** | teamcalendar.mygymtools.com | Event management |
+| **Bulk Link Pro** | bulklinkpro.com | Link management |
+| **Bio Page** | ourbiopage.com | Bio links |
 
 ---
 
-## 📞 Support & Maintenance
+## 📞 Support
 
-**For Help:**
-- Check `docs/OPERATIONS/` for how-to guides
-- Review `docs/TECHNICAL/TECHNICAL-REFERENCE.md` for architecture
-- See audit history (Ctrl+Click date/time in app)
-
-**Backup:**
-- Code: Git version control
-- Database: Supabase automatic backups
-- Documentation: Complete in `docs/` folder
+- **Docs:** `docs/` folder
+- **Issues:** Check browser console (F12)
+- **Database:** Supabase dashboard
+- **API:** Railway dashboard
 
 ---
 
-## 🚀 Future Enhancements
-
-See `docs/TECHNICAL/SCALABILITY-ROADMAP.md` for detailed plans:
-- Remember user preferences (localStorage)
-- Keyboard shortcuts (power users)
-- Export to CSV/Excel
-- Multi-user support with roles
-- Email notifications
-- Marketing automation integration
-
----
-
-## 📊 Success Metrics
-
-**What We Built:**
-- 7,000+ lines of production code
-- 3,000+ lines of professional documentation
-- 10 gym integrations
-- 93% time savings
-- <1% error rate
-- Zero data loss
-
-**Status:** ✅ **PRODUCTION READY - SHIP IT!**
-
----
-
-**Last Updated:** October 6, 2025  
-**Version:** 2.0 (Production)  
-**License:** Proprietary  
+**Last Updated:** December 9, 2025  
+**Version:** 3.0 (Production)  
+**Live URL:** https://teamcalendar.mygymtools.com  
 **Owner:** Jayme - Powers Gym Management
-
-

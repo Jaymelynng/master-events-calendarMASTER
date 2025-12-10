@@ -113,7 +113,8 @@ export function compareEvents(newEvents, existingEvents) {
  * Check if an event has changed by comparing key fields
  */
 function hasEventChanged(existing, incoming) {
-  // Fields to compare (excluding auto-generated fields)
+  // Fields to compare - ONLY source data from iClassPro
+  // EXCLUDE computed/derived fields like validation_errors, description_status
   const fieldsToCompare = [
     'title',
     'date',
@@ -126,9 +127,9 @@ function hasEventChanged(existing, incoming) {
     'age_max',
     'description',
     'has_flyer',
-    'flyer_url',
-    'description_status',
-    'validation_errors'
+    'flyer_url'
+    // NOTE: Removed 'description_status' and 'validation_errors' 
+    // These are COMPUTED fields, not source data - shouldn't trigger "changed"
   ];
 
   const changes = [];
@@ -158,6 +159,8 @@ function hasEventChanged(existing, incoming) {
  * Get list of fields that changed
  */
 function getChangedFields(existing, incoming) {
+  // Fields to compare - ONLY source data from iClassPro
+  // EXCLUDE computed/derived fields like validation_errors, description_status
   const fieldsToCompare = [
     'title',
     'date',
@@ -170,9 +173,9 @@ function getChangedFields(existing, incoming) {
     'age_max',
     'description',
     'has_flyer',
-    'flyer_url',
-    'description_status',
-    'validation_errors'
+    'flyer_url'
+    // NOTE: Removed 'description_status' and 'validation_errors' 
+    // These are COMPUTED fields, not source data
   ];
 
   const changes = [];
@@ -200,6 +203,16 @@ function normalizeValue(value, fieldName = '') {
   // Treat null, undefined, empty string, and 0 as equivalent for optional fields
   if (value === null || value === undefined || value === '') {
     return null;
+  }
+  
+  // Special handling for arrays (like validation_errors) - convert to JSON string for comparison
+  if (Array.isArray(value)) {
+    // Empty arrays are treated as null
+    if (value.length === 0) {
+      return null;
+    }
+    // Sort and stringify for consistent comparison
+    return JSON.stringify([...value].sort());
   }
   
   // Special handling for price - convert to number for consistent comparison
@@ -239,6 +252,22 @@ function normalizeValue(value, fieldName = '') {
       const trimmed = value.trim();
       return trimmed === '' ? null : trimmed;
     }
+  }
+  
+  // Special handling for boolean fields (like has_flyer)
+  if (fieldName === 'has_flyer') {
+    // Normalize to boolean
+    if (value === true || value === 'true' || value === 1) return true;
+    if (value === false || value === 'false' || value === 0) return false;
+    return null;
+  }
+  
+  // Special handling for description_status - normalize case
+  if (fieldName === 'description_status') {
+    if (typeof value === 'string') {
+      return value.trim().toLowerCase();
+    }
+    return null;
   }
   
   if (typeof value === 'number') {

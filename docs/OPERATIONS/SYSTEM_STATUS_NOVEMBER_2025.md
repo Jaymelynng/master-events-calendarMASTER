@@ -1,8 +1,10 @@
-# 🎉 SYSTEM STATUS - NOVEMBER 2025
-## Master Events Calendar - FULLY WORKING!
+# 🎉 SYSTEM STATUS - DECEMBER 2025
+## Team Calendar - FULLY WORKING!
 
-**Last Updated:** November 26, 2025  
+**Live URL:** https://teamcalendar.mygymtools.com  
+**Last Updated:** December 9, 2025  
 **Status:** ✅ **PRODUCTION READY & DEPLOYED**  
+**Part of:** mygymtools.com suite  
 **Verified By:** Cross-checked against live iClassPro data - 100% accuracy
 
 ---
@@ -105,7 +107,8 @@ Tracks visitors and page views on your calendar.
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| **Calendar App** | Your Vercel URL | What your boss sees |
+| **Team Calendar** | `https://teamcalendar.mygymtools.com` | Main app URL |
+| **Backup URL** | `https://master-events-calendar-master.vercel.app` | Vercel default |
 | **API Server** | `https://master-events-calendarmaster-production.up.railway.app` | Backend that collects events |
 | **Health Check** | `https://master-events-calendarmaster-production.up.railway.app/health` | Verify API is running |
 | **Supabase** | `https://supabase.com/dashboard/project/xftiwouxpefchwoxxgpf` | Database management |
