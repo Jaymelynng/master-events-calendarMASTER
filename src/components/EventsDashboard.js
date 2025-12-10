@@ -2233,35 +2233,40 @@ The system will add new events and update any changed events automatically.`;
 
           {/* Special Event Statistics by Gym */}
           <div className="bg-white rounded shadow p-3 mb-2 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
-            {/* Header - Title and Date centered */}
-            <div className="text-center mb-3">
-              <h2 className="text-lg font-bold" style={{ color: theme.colors.textPrimary }}>
-                Special Event Statistics by Gym
-              </h2>
-              <div className="text-sm font-medium mt-1" style={{ color: theme.colors.textSecondary }}>
-                {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            {/* Compact Header Row */}
+            <div className="flex items-center justify-center gap-4 flex-wrap mb-2">
+              {/* Title & Date */}
+              <div className="text-center">
+                <h2 className="text-base font-bold" style={{ color: theme.colors.textPrimary }}>
+                  Special Event Statistics by Gym
+                </h2>
+                <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                  {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </div>
               </div>
-            </div>
-            
-            {/* Two column row: Monthly Goal left, Legend right */}
-            <div className="flex items-start justify-between mb-2 text-xs">
-              <div className="bg-gray-50 px-3 py-2 rounded border">
-                <span className="font-semibold text-gray-700">Monthly Goal: </span>
+              
+              {/* Monthly Goal */}
+              <div className="bg-gray-50 px-2 py-1 rounded border text-xs">
+                <span className="font-semibold text-gray-700">Goal: </span>
                 <span className="text-gray-600">
                   {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
                 </span>
               </div>
-              <div className="bg-yellow-50 px-3 py-2 rounded border border-yellow-200">
-                <div className="font-semibold text-gray-700">Legend:</div>
-                <div title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</div>
-                <div title="Has flyer image but no text description">⚠️ Flyer, no text</div>
-                <div title="No description at all">❌ No description</div>
+              
+              {/* Legend - compact inline */}
+              <div className="bg-yellow-50 px-2 py-1 rounded border border-yellow-200 text-xs">
+                <span className="font-semibold text-gray-700">Audit: </span>
+                <span title="Data doesn't match">🚨 Wrong</span>
+                <span className="mx-1">•</span>
+                <span title="Has flyer but no text">⚠️ Flyer only</span>
+                <span className="mx-1">•</span>
+                <span title="No description at all">❌ Missing desc</span>
               </div>
             </div>
             
-            {/* Instructions - subtle, above table */}
+            {/* How to use - clear sentence */}
             <div className="text-xs text-gray-500 text-center mb-2">
-              📍 Gym → scroll | 🔢 Number → open page | ✨ Sparkle → open all
+              Click a <strong>gym name</strong> to scroll to calendar • Click a <strong>number</strong> to open that event page • Click <strong>✨</strong> to open all pages for a gym
             </div>
 
             <div className="overflow-x-auto">
