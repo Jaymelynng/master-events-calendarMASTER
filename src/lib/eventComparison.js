@@ -293,3 +293,95 @@ export function getComparisonSummary(comparison) {
   };
 }
 
+/**
+ * Generate an exportable report from comparison results
+ * Returns CSV string and triggers download
+ */
+export function exportComparisonReport(comparison, gymName = 'All Gyms', eventType = 'All Types') {
+  const timestamp = new Date().toISOString().split('T')[0];
+  const filename = `sync-report-${gymName.replace(/\s+/g, '-')}-${timestamp}.csv`;
+  
+  // Build CSV rows
+  const rows = [];
+  
+  // Header
+  rows.push(['Status', 'Title', 'Gym', 'Date', 'Time', 'Type', 'Price', 'Ages', 'Changed Fields', 'Reason'].join(','));
+  
+  // NEW events
+  comparison.new.forEach(ev => {
+    rows.push([
+      'NEW',
+      `"${(ev.title || '').replace(/"/g, '""')}"`,
+      `"${(ev.gym_name || '').replace(/"/g, '""')}"`,
+      ev.date || '',
+      `"${(ev.time || '').replace(/"/g, '""')}"`,
+      ev.type || '',
+      ev.price || '',
+      ev.age_min && ev.age_max ? `${ev.age_min}-${ev.age_max}` : '',
+      '',
+      'New event - not in database'
+    ].join(','));
+  });
+  
+  // CHANGED events
+  comparison.changed.forEach(item => {
+    const ev = item.incoming || item;
+    const changes = item._changes || [];
+    const changedFieldsList = changes.map(c => `${c.field}: "${c.old}" → "${c.new}"`).join('; ');
+    
+    rows.push([
+      item._wasDeleted ? 'RESTORED' : 'CHANGED',
+      `"${(ev.title || '').replace(/"/g, '""')}"`,
+      `"${(ev.gym_name || '').replace(/"/g, '""')}"`,
+      ev.date || '',
+      `"${(ev.time || '').replace(/"/g, '""')}"`,
+      ev.type || '',
+      ev.price || '',
+      ev.age_min && ev.age_max ? `${ev.age_min}-${ev.age_max}` : '',
+      `"${changedFieldsList.replace(/"/g, '""')}"`,
+      item._wasDeleted ? 'Restored from deleted' : 'Data changed'
+    ].join(','));
+  });
+  
+  // DELETED events
+  comparison.deleted.forEach(ev => {
+    rows.push([
+      'DELETED',
+      `"${(ev.title || '').replace(/"/g, '""')}"`,
+      `"${(ev.gym_name || '').replace(/"/g, '""')}"`,
+      ev.date || '',
+      `"${(ev.time || '').replace(/"/g, '""')}"`,
+      ev.type || '',
+      ev.price || '',
+      ev.age_min && ev.age_max ? `${ev.age_min}-${ev.age_max}` : '',
+      '',
+      'No longer in source - will be soft-deleted'
+    ].join(','));
+  });
+  
+  // Create CSV content
+  const csvContent = rows.join('\n');
+  
+  // Create and trigger download
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  return {
+    filename,
+    rowCount: rows.length - 1, // Exclude header
+    summary: {
+      new: comparison.new.length,
+      changed: comparison.changed.length,
+      deleted: comparison.deleted.length
+    }
+  };
+}
+

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Loader, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { eventsApi, syncLogApi } from '../../lib/api';
-import { compareEvents, getComparisonSummary } from '../../lib/eventComparison';
+import { compareEvents, getComparisonSummary, exportComparisonReport } from '../../lib/eventComparison';
 
 export default function SyncModal({ theme, onClose, onBack, gyms }) {
   const [selectedGym, setSelectedGym] = useState('');
@@ -688,9 +688,23 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
         {/* Comparison Summary - PROMINENT DISPLAY */}
         {result && result.success && comparison && (
           <div className="mb-4 p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
-            <h3 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
-              📊 Comparison Summary
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-blue-900 flex items-center gap-2">
+                📊 Comparison Summary
+              </h3>
+              {/* Export Report Button */}
+              <button
+                onClick={() => {
+                  const gymName = gyms.find(g => g.id === parseInt(selectedGym))?.name || 'All Gyms';
+                  const result = exportComparisonReport(comparison, gymName, selectedEventType || 'All Types');
+                  alert(`✅ Exported ${result.rowCount} events to ${result.filename}`);
+                }}
+                className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+                title="Download comparison report as CSV"
+              >
+                📥 Export Report
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white p-3 rounded border border-green-200">
                 <div className="text-xs text-gray-600 mb-1">New Events</div>
