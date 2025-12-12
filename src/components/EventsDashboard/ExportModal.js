@@ -138,15 +138,22 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       const gym = gyms.find(g => g.id === event.gym_id);
       const issues = [];
       
-      // Categorize the issue
+      // Categorize the issue - handle validation_errors which may be objects or strings
       if (event.validation_errors && event.validation_errors.length > 0) {
-        issues.push('🚨 ' + event.validation_errors.join(', '));
+        // validation_errors might be objects with a message field, or just strings
+        const errorMessages = event.validation_errors.map(err => {
+          if (typeof err === 'string') return err;
+          if (err && err.message) return err.message;
+          if (err && err.error) return err.error;
+          return JSON.stringify(err);
+        });
+        issues.push('Wrong info: ' + errorMessages.join(', '));
       }
       if (event.description_status === 'flyer_only') {
-        issues.push('⚠️ Flyer only, no text description');
+        issues.push('Flyer only - no text description');
       }
       if (event.description_status === 'missing' || !event.description || event.description.trim() === '') {
-        issues.push('❌ No description');
+        issues.push('No description');
       }
       
       return {
@@ -277,7 +284,9 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   };
 
   const downloadFile = (content, filename, mimeType) => {
-    const blob = new Blob([content], { type: mimeType });
+    // Add UTF-8 BOM for CSV files to ensure proper encoding in Excel
+    const bom = mimeType.includes('csv') ? '\uFEFF' : '';
+    const blob = new Blob([bom + content], { type: `${mimeType};charset=utf-8` });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
