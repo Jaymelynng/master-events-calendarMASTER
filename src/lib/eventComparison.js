@@ -7,13 +7,14 @@
  * Compare new events with existing events to identify:
  * - NEW: event_url doesn't exist in database
  * - CHANGED: event_url exists but data is different
- * - DELETED: event_url exists in database but not in new sync (FUTURE EVENTS ONLY)
+ * - DELETED: event_url exists in database but not in new sync (TOMORROW+ ONLY)
  * - UNCHANGED: event_url exists and data is the same
  * 
- * IMPORTANT: We only consider FUTURE events as "deleted" because:
+ * IMPORTANT: We only consider STRICTLY FUTURE events (tomorrow+) as "deleted" because:
  * - iClassPro only shows upcoming events
+ * - TODAY's events disappear from iClassPro once they start - that's normal
  * - Past events naturally disappear from the portal after they occur
- * - We should NOT mark past events as deleted just because they're not in the sync
+ * - We should NOT mark today's or past events as deleted just because they're not in the sync
  */
 export function compareEvents(newEvents, existingEvents) {
   // DEBUG: Log what we're comparing
@@ -67,10 +68,11 @@ export function compareEvents(newEvents, existingEvents) {
       });
     } else if (existing && !incoming) {
       // POTENTIALLY DELETED: Exists in database but not in new sync
-      // ONLY mark as deleted if it's a FUTURE event
-      // Past events naturally disappear from iClassPro - that's expected behavior
+      // ONLY mark as deleted if it's a STRICTLY FUTURE event (tomorrow+)
+      // Today's events naturally disappear from iClassPro once they start - that's expected
+      // Past events also naturally disappear - that's expected behavior
       const eventDate = existing.end_date || existing.date;
-      const isFutureEvent = eventDate && eventDate >= todayStr;
+      const isFutureEvent = eventDate && eventDate > todayStr; // Changed from >= to > (tomorrow+, not today)
       
       if (isFutureEvent) {
         comparison.deleted.push({

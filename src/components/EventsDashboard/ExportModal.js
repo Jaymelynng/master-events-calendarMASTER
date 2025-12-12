@@ -347,10 +347,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 onChange={(e) => setIncludeEvents(e.target.checked)}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">
-                📋 Event Details 
-                {loadingEvents ? ' (loading...)' : ` (${filteredEvents.length} events)`}
-              </span>
+              <span className="text-gray-700">📋 Event Details</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input 
@@ -359,7 +356,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 onChange={(e) => setIncludeAnalytics(e.target.checked)}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">📊 Analytics Dashboard (counts per gym)</span>
+              <span className="text-gray-700">📊 Analytics Dashboard</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input 
@@ -368,10 +365,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 onChange={(e) => setIncludeMissing(e.target.checked)}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">
-                ⚠️ Missing Requirements 
-                {loadingEvents ? ' (loading...)' : ''}
-              </span>
+              <span className="text-gray-700">⚠️ Missing Requirements</span>
             </label>
             {/* Show which gyms are missing */}
             {includeMissing && !loadingEvents && (
@@ -405,10 +399,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 onChange={(e) => setIncludeAuditIssues(e.target.checked)}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">
-                🔍 Audit Issues Report
-                {loadingEvents ? ' (loading...)' : ` (${getAuditIssues().length} events with issues)`}
-              </span>
+              <span className="text-gray-700">🔍 Audit Issues Report</span>
             </label>
             {/* Show preview of audit issues */}
             {includeAuditIssues && !loadingEvents && (
