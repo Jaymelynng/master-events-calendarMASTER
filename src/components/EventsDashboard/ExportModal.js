@@ -8,7 +8,6 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const [includeEvents, setIncludeEvents] = useState(true);
   const [includeAnalytics, setIncludeAnalytics] = useState(false);
   const [includeMissing, setIncludeMissing] = useState(false);
-  const [includeAuditIssues, setIncludeAuditIssues] = useState(false);
   
   // Date range - default to current month
   const [startDate, setStartDate] = useState(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`);
@@ -122,48 +121,6 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     return getAnalytics().filter(a => !a.meets_requirements);
   };
 
-  // Get events with audit issues (validation errors, missing descriptions, etc.)
-  const getAuditIssues = () => {
-    return filteredEvents.filter(event => {
-      // Has validation errors
-      const hasValidationErrors = event.validation_errors && event.validation_errors.length > 0;
-      
-      // Missing or problematic description
-      const hasDescriptionIssue = event.description_status === 'flyer_only' || 
-                                   event.description_status === 'missing' ||
-                                   !event.description || event.description.trim() === '';
-      
-      return hasValidationErrors || hasDescriptionIssue;
-    }).map(event => {
-      const gym = gyms.find(g => g.id === event.gym_id);
-      const issues = [];
-      
-      // Categorize the issue - handle validation_errors which may be objects or strings
-      if (event.validation_errors && event.validation_errors.length > 0) {
-        // validation_errors might be objects with a message field, or just strings
-        const errorMessages = event.validation_errors.map(err => {
-          if (typeof err === 'string') return err;
-          if (err && err.message) return err.message;
-          if (err && err.error) return err.error;
-          return JSON.stringify(err);
-        });
-        issues.push('Wrong info: ' + errorMessages.join(', '));
-      }
-      if (event.description_status === 'flyer_only') {
-        issues.push('Flyer only - no text description');
-      }
-      if (event.description_status === 'missing' || !event.description || event.description.trim() === '') {
-        issues.push('No description');
-      }
-      
-      return {
-        ...event,
-        gym_name: gym?.name || event.gym_id,
-        issues: issues
-      };
-    });
-  };
-
   const handleExport = () => {
     const dateRangeLabel = `${startDate} to ${endDate}`;
     const timestamp = new Date().toISOString().split('T')[0];
@@ -228,24 +185,6 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       missing.forEach(stat => {
         csvContent += `${stat.gym_name},"${stat.missing.join(', ')}"\n`;
       });
-      csvContent += '\n';
-    }
-
-    // Audit Issues section
-    if (includeAuditIssues) {
-      const auditIssues = getAuditIssues();
-      csvContent += `AUDIT ISSUES REPORT - ${monthName}\n`;
-      csvContent += 'Gym,Event Title,Date,Type,Issue,Event URL\n';
-      auditIssues.forEach(event => {
-        csvContent += [
-          event.gym_name,
-          `"${(event.title || '').replace(/"/g, '""')}"`,
-          event.date || '',
-          event.type || '',
-          `"${event.issues.join(' | ').replace(/"/g, '""')}"`,
-          event.event_url || ''
-        ].join(',') + '\n';
-      });
     }
 
     downloadFile(csvContent, `export-${timestamp}.csv`, 'text/csv');
@@ -274,19 +213,12 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       exportData.missingRequirements = getMissingGyms();
     }
 
-    if (includeAuditIssues) {
-      exportData.auditIssues = getAuditIssues();
-      exportData.auditIssueCount = getAuditIssues().length;
-    }
-
     const json = JSON.stringify(exportData, null, 2);
     downloadFile(json, `export-${timestamp}.json`, 'application/json');
   };
 
   const downloadFile = (content, filename, mimeType) => {
-    // Add UTF-8 BOM for CSV files to ensure proper encoding in Excel
-    const bom = mimeType.includes('csv') ? '\uFEFF' : '';
-    const blob = new Blob([bom + content], { type: `${mimeType};charset=utf-8` });
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -297,8 +229,8 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     URL.revokeObjectURL(url);
   };
 
-  const canExport = (includeEvents || includeAnalytics || includeMissing || includeAuditIssues) && 
-                   (selectedGyms.length > 0 || includeMissing || includeAuditIssues);
+  const canExport = (includeEvents || includeAnalytics || includeMissing) && 
+                   (selectedGyms.length > 0 || includeMissing);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -356,7 +288,10 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 onChange={(e) => setIncludeEvents(e.target.checked)}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">📋 Event Details</span>
+              <span className="text-gray-700">
+                📋 Event Details 
+                {loadingEvents ? ' (loading...)' : ` (${filteredEvents.length} events)`}
+              </span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input 
@@ -365,7 +300,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 onChange={(e) => setIncludeAnalytics(e.target.checked)}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">📊 Analytics Dashboard</span>
+              <span className="text-gray-700">📊 Analytics Dashboard (counts per gym)</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input 
@@ -374,7 +309,10 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 onChange={(e) => setIncludeMissing(e.target.checked)}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">⚠️ Missing Requirements</span>
+              <span className="text-gray-700">
+                ⚠️ Missing Requirements 
+                {loadingEvents ? ' (loading...)' : ''}
+              </span>
             </label>
             {/* Show which gyms are missing */}
             {includeMissing && !loadingEvents && (
@@ -397,47 +335,6 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 )}
                 <div className="mt-2 text-gray-500 italic border-t border-red-200 pt-1">
                   Checks: 1 CLINIC, 2 KNO, 1 OPEN GYM per gym
-                </div>
-              </div>
-            )}
-            
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={includeAuditIssues} 
-                onChange={(e) => setIncludeAuditIssues(e.target.checked)}
-                className="w-4 h-4 text-amber-600"
-              />
-              <span className="text-gray-700">🔍 Audit Issues Report</span>
-            </label>
-            {/* Show preview of audit issues */}
-            {includeAuditIssues && !loadingEvents && (
-              <div className="ml-6 mt-2 p-2 bg-orange-50 rounded border border-orange-200 text-xs">
-                {getAuditIssues().length > 0 ? (
-                  <>
-                    <div className="font-semibold text-orange-700 mb-1">
-                      Events with data issues (wrong info, missing descriptions):
-                    </div>
-                    <div className="max-h-24 overflow-y-auto">
-                      {getAuditIssues().slice(0, 5).map((event, idx) => (
-                        <div key={event.id || idx} className="text-orange-600 py-0.5">
-                          • {event.title?.substring(0, 30)}... - {event.issues[0]}
-                        </div>
-                      ))}
-                      {getAuditIssues().length > 5 && (
-                        <div className="text-gray-500 italic mt-1">
-                          ...and {getAuditIssues().length - 5} more
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-green-700 font-semibold">
-                    ✅ No audit issues found in selected events!
-                  </div>
-                )}
-                <div className="mt-2 text-gray-500 italic border-t border-orange-200 pt-1">
-                  Checks: 🚨 Wrong info • ⚠️ Flyer only • ❌ No description
                 </div>
               </div>
             )}

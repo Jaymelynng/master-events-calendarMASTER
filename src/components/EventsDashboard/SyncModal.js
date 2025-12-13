@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Loader, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { eventsApi, syncLogApi } from '../../lib/api';
-import { compareEvents, getComparisonSummary, exportComparisonReport } from '../../lib/eventComparison';
+import { compareEvents, getComparisonSummary } from '../../lib/eventComparison';
 
 export default function SyncModal({ theme, onClose, onBack, gyms }) {
   const [selectedGym, setSelectedGym] = useState('');
@@ -247,8 +247,17 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
   };
 
   const handleImport = async () => {
-    if (!result || !result.success || editableEvents.length === 0) {
+    if (!result || !result.success) {
       return;
+    }
+    
+    // Check if there's actually anything to do (new, changed, or deleted)
+    const hasNewEvents = editableEvents.length > 0;
+    const hasChangedEvents = comparison && comparison.changed && comparison.changed.length > 0;
+    const hasDeletedEvents = comparison && comparison.deleted && comparison.deleted.length > 0;
+    
+    if (!hasNewEvents && !hasChangedEvents && !hasDeletedEvents) {
+      return; // Nothing to sync
     }
 
     setImporting(true);
@@ -258,8 +267,8 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
       // Remove the _index and _eventType fields before importing
       const eventsToImport = editableEvents.map(({ _index, _eventType, ...ev }) => ev);
       
-      // Import new events
-      const imported = await eventsApi.bulkImport(eventsToImport);
+      // Import new events (only if there are any)
+      const imported = hasNewEvents ? await eventsApi.bulkImport(eventsToImport) : [];
       
       // Update changed events
       let updatedCount = 0;
@@ -688,23 +697,9 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
         {/* Comparison Summary - PROMINENT DISPLAY */}
         {result && result.success && comparison && (
           <div className="mb-4 p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-blue-900 flex items-center gap-2">
-                📊 Comparison Summary
-              </h3>
-              {/* Export Report Button */}
-              <button
-                onClick={() => {
-                  const gymName = gyms.find(g => g.id === parseInt(selectedGym))?.name || 'All Gyms';
-                  const result = exportComparisonReport(comparison, gymName, selectedEventType || 'All Types');
-                  alert(`✅ Exported ${result.rowCount} events to ${result.filename}`);
-                }}
-                className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors flex items-center gap-1.5"
-                title="Download comparison report as CSV"
-              >
-                📥 Export Report
-              </button>
-            </div>
+            <h3 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
+              📊 Comparison Summary
+            </h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white p-3 rounded border border-green-200">
                 <div className="text-xs text-gray-600 mb-1">New Events</div>
@@ -740,37 +735,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
             {comparison.deleted.length === 0 && (
               <div className="mt-3 text-xs text-gray-500 text-center">
                 All events from source are accounted for
-              </div>
-            )}
-            
-            {/* Deleted Events List - Show which events will be removed */}
-            {comparison.deleted.length > 0 && (
-              <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                <h4 className="font-semibold text-orange-800 mb-2 text-sm">
-                  🗑️ Events To Be Removed ({comparison.deleted.length})
-                </h4>
-                <p className="text-xs text-orange-600 mb-2">
-                  These future events are in the database but no longer appear in iClassPro:
-                </p>
-                <div className="max-h-32 overflow-y-auto">
-                  {comparison.deleted.map((ev, idx) => (
-                    <div key={ev.id || idx} className="text-xs py-1 px-2 bg-white rounded mb-1 border border-orange-100 flex items-center gap-2">
-                      <span className="text-orange-600">🗑️</span>
-                      <span className="font-medium text-gray-800">{ev.title}</span>
-                      <span className="text-gray-500">|</span>
-                      <span className="text-gray-600">{ev.date}</span>
-                      {ev.time && (
-                        <>
-                          <span className="text-gray-500">|</span>
-                          <span className="text-gray-600">{ev.time}</span>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-orange-500 mt-2 italic">
-                  ⚠️ These will be soft-deleted when you click Import
-                </p>
               </div>
             )}
           </div>

@@ -7,14 +7,13 @@
  * Compare new events with existing events to identify:
  * - NEW: event_url doesn't exist in database
  * - CHANGED: event_url exists but data is different
- * - DELETED: event_url exists in database but not in new sync (TOMORROW+ ONLY)
+ * - DELETED: event_url exists in database but not in new sync (FUTURE EVENTS ONLY)
  * - UNCHANGED: event_url exists and data is the same
  * 
- * IMPORTANT: We only consider STRICTLY FUTURE events (tomorrow+) as "deleted" because:
+ * IMPORTANT: We only consider FUTURE events as "deleted" because:
  * - iClassPro only shows upcoming events
- * - TODAY's events disappear from iClassPro once they start - that's normal
  * - Past events naturally disappear from the portal after they occur
- * - We should NOT mark today's or past events as deleted just because they're not in the sync
+ * - We should NOT mark past events as deleted just because they're not in the sync
  */
 export function compareEvents(newEvents, existingEvents) {
   // DEBUG: Log what we're comparing
@@ -68,11 +67,10 @@ export function compareEvents(newEvents, existingEvents) {
       });
     } else if (existing && !incoming) {
       // POTENTIALLY DELETED: Exists in database but not in new sync
-      // ONLY mark as deleted if it's a STRICTLY FUTURE event (tomorrow+)
-      // Today's events naturally disappear from iClassPro once they start - that's expected
-      // Past events also naturally disappear - that's expected behavior
+      // ONLY mark as deleted if it's a FUTURE event
+      // Past events naturally disappear from iClassPro - that's expected behavior
       const eventDate = existing.end_date || existing.date;
-      const isFutureEvent = eventDate && eventDate > todayStr; // Changed from >= to > (tomorrow+, not today)
+      const isFutureEvent = eventDate && eventDate >= todayStr;
       
       if (isFutureEvent) {
         comparison.deleted.push({
@@ -115,8 +113,7 @@ export function compareEvents(newEvents, existingEvents) {
  * Check if an event has changed by comparing key fields
  */
 function hasEventChanged(existing, incoming) {
-  // Fields to compare - ONLY source data from iClassPro
-  // EXCLUDE computed/derived fields like validation_errors, description_status
+  // Fields to compare (excluding auto-generated fields)
   const fieldsToCompare = [
     'title',
     'date',
@@ -129,9 +126,9 @@ function hasEventChanged(existing, incoming) {
     'age_max',
     'description',
     'has_flyer',
-    'flyer_url'
-    // NOTE: Removed 'description_status' and 'validation_errors' 
-    // These are COMPUTED fields, not source data - shouldn't trigger "changed"
+    'flyer_url',
+    'description_status',
+    'validation_errors'
   ];
 
   const changes = [];
@@ -161,8 +158,6 @@ function hasEventChanged(existing, incoming) {
  * Get list of fields that changed
  */
 function getChangedFields(existing, incoming) {
-  // Fields to compare - ONLY source data from iClassPro
-  // EXCLUDE computed/derived fields like validation_errors, description_status
   const fieldsToCompare = [
     'title',
     'date',
@@ -175,9 +170,9 @@ function getChangedFields(existing, incoming) {
     'age_max',
     'description',
     'has_flyer',
-    'flyer_url'
-    // NOTE: Removed 'description_status' and 'validation_errors' 
-    // These are COMPUTED fields, not source data
+    'flyer_url',
+    'description_status',
+    'validation_errors'
   ];
 
   const changes = [];
@@ -205,16 +200,6 @@ function normalizeValue(value, fieldName = '') {
   // Treat null, undefined, empty string, and 0 as equivalent for optional fields
   if (value === null || value === undefined || value === '') {
     return null;
-  }
-  
-  // Special handling for arrays (like validation_errors) - convert to JSON string for comparison
-  if (Array.isArray(value)) {
-    // Empty arrays are treated as null
-    if (value.length === 0) {
-      return null;
-    }
-    // Sort and stringify for consistent comparison
-    return JSON.stringify([...value].sort());
   }
   
   // Special handling for price - convert to number for consistent comparison
@@ -256,22 +241,6 @@ function normalizeValue(value, fieldName = '') {
     }
   }
   
-  // Special handling for boolean fields (like has_flyer)
-  if (fieldName === 'has_flyer') {
-    // Normalize to boolean
-    if (value === true || value === 'true' || value === 1) return true;
-    if (value === false || value === 'false' || value === 0) return false;
-    return null;
-  }
-  
-  // Special handling for description_status - normalize case
-  if (fieldName === 'description_status') {
-    if (typeof value === 'string') {
-      return value.trim().toLowerCase();
-    }
-    return null;
-  }
-  
   if (typeof value === 'number') {
     return value;
   }
@@ -292,98 +261,6 @@ export function getComparisonSummary(comparison) {
     totalUnchanged: comparison.unchanged.length,
     totalIncoming: comparison.new.length + comparison.changed.length + comparison.unchanged.length,
     totalExisting: comparison.changed.length + comparison.deleted.length + comparison.unchanged.length
-  };
-}
-
-/**
- * Generate an exportable report from comparison results
- * Returns CSV string and triggers download
- */
-export function exportComparisonReport(comparison, gymName = 'All Gyms', eventType = 'All Types') {
-  const timestamp = new Date().toISOString().split('T')[0];
-  const filename = `sync-report-${gymName.replace(/\s+/g, '-')}-${timestamp}.csv`;
-  
-  // Build CSV rows
-  const rows = [];
-  
-  // Header
-  rows.push(['Status', 'Title', 'Gym', 'Date', 'Time', 'Type', 'Price', 'Ages', 'Changed Fields', 'Reason'].join(','));
-  
-  // NEW events
-  comparison.new.forEach(ev => {
-    rows.push([
-      'NEW',
-      `"${(ev.title || '').replace(/"/g, '""')}"`,
-      `"${(ev.gym_name || '').replace(/"/g, '""')}"`,
-      ev.date || '',
-      `"${(ev.time || '').replace(/"/g, '""')}"`,
-      ev.type || '',
-      ev.price || '',
-      ev.age_min && ev.age_max ? `${ev.age_min}-${ev.age_max}` : '',
-      '',
-      'New event - not in database'
-    ].join(','));
-  });
-  
-  // CHANGED events
-  comparison.changed.forEach(item => {
-    const ev = item.incoming || item;
-    const changes = item._changes || [];
-    const changedFieldsList = changes.map(c => `${c.field}: "${c.old}" → "${c.new}"`).join('; ');
-    
-    rows.push([
-      item._wasDeleted ? 'RESTORED' : 'CHANGED',
-      `"${(ev.title || '').replace(/"/g, '""')}"`,
-      `"${(ev.gym_name || '').replace(/"/g, '""')}"`,
-      ev.date || '',
-      `"${(ev.time || '').replace(/"/g, '""')}"`,
-      ev.type || '',
-      ev.price || '',
-      ev.age_min && ev.age_max ? `${ev.age_min}-${ev.age_max}` : '',
-      `"${changedFieldsList.replace(/"/g, '""')}"`,
-      item._wasDeleted ? 'Restored from deleted' : 'Data changed'
-    ].join(','));
-  });
-  
-  // DELETED events
-  comparison.deleted.forEach(ev => {
-    rows.push([
-      'DELETED',
-      `"${(ev.title || '').replace(/"/g, '""')}"`,
-      `"${(ev.gym_name || '').replace(/"/g, '""')}"`,
-      ev.date || '',
-      `"${(ev.time || '').replace(/"/g, '""')}"`,
-      ev.type || '',
-      ev.price || '',
-      ev.age_min && ev.age_max ? `${ev.age_min}-${ev.age_max}` : '',
-      '',
-      'No longer in source - will be soft-deleted'
-    ].join(','));
-  });
-  
-  // Create CSV content
-  const csvContent = rows.join('\n');
-  
-  // Create and trigger download
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  
-  return {
-    filename,
-    rowCount: rows.length - 1, // Exclude header
-    summary: {
-      new: comparison.new.length,
-      changed: comparison.changed.length,
-      deleted: comparison.deleted.length
-    }
   };
 }
 
