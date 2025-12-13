@@ -241,6 +241,34 @@ function normalizeValue(value, fieldName = '') {
     }
   }
   
+  // Special handling for validation_errors - compare as sorted JSON string
+  // Arrays can't be compared by reference, so we stringify them
+  if (fieldName === 'validation_errors') {
+    if (!value || (Array.isArray(value) && value.length === 0)) {
+      return null; // Empty array = null for comparison
+    }
+    if (Array.isArray(value)) {
+      // Sort by type and message for consistent comparison
+      const sorted = [...value].sort((a, b) => {
+        const typeCompare = (a.type || '').localeCompare(b.type || '');
+        if (typeCompare !== 0) return typeCompare;
+        return (a.message || '').localeCompare(b.message || '');
+      });
+      return JSON.stringify(sorted);
+    }
+    // Already a string (from database)
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed) && parsed.length === 0) return null;
+        return value;
+      } catch {
+        return value;
+      }
+    }
+    return null;
+  }
+  
   if (typeof value === 'number') {
     return value;
   }
