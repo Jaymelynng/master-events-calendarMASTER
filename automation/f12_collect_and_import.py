@@ -7,6 +7,7 @@ Uses Playwright to intercept /camps/{id} detail calls (like the working script)
 import asyncio
 import json
 import re
+import html
 from datetime import datetime, date
 from urllib.request import Request, urlopen
 from playwright.async_api import async_playwright
@@ -622,13 +623,31 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     print(f"    [DEBUG] Found URL with image extension in '{key}': {value[:100]}...")
         
         if description_raw:
-            # Remove HTML tags but keep text content
-            description = re.sub(r'<[^>]+>', '', description_raw)
-            # Clean up whitespace
-            description = " ".join(description.split())
+            # Step 1: Replace common block elements with newlines BEFORE stripping tags
+            # This preserves paragraph/line structure
+            desc_with_breaks = re.sub(r'<br\s*/?>', '\n', description_raw, flags=re.IGNORECASE)
+            desc_with_breaks = re.sub(r'</p>\s*<p[^>]*>', '\n\n', desc_with_breaks, flags=re.IGNORECASE)
+            desc_with_breaks = re.sub(r'</(p|div|li|h[1-6])>', '\n', desc_with_breaks, flags=re.IGNORECASE)
+            
+            # Step 2: Remove remaining HTML tags
+            description = re.sub(r'<[^>]+>', '', desc_with_breaks)
+            
+            # Step 3: Decode HTML entities (&ndash; -> –, &rsquo; -> ', etc.)
+            description = html.unescape(description)
+            
+            # Step 4: Clean up excessive whitespace while preserving single newlines
+            # Replace multiple spaces with single space
+            description = re.sub(r'[^\S\n]+', ' ', description)
+            # Replace 3+ newlines with 2 newlines
+            description = re.sub(r'\n{3,}', '\n\n', description)
+            # Trim each line
+            description = '\n'.join(line.strip() for line in description.split('\n'))
+            # Final trim
+            description = description.strip()
+            
             # Limit length to avoid huge descriptions
-            if len(description) > 1000:
-                description = description[:1000] + "..."
+            if len(description) > 1500:
+                description = description[:1500] + "..."
         else:
             description = None
         
