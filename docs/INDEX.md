@@ -194,6 +194,20 @@ This documentation is organized into three strategic categories based on your ro
 
 ---
 
+### **[MAINTENANCE_GUIDE.md](OPERATIONS/MAINTENANCE_GUIDE.md)** 🆕 **NEW DEC 2025**
+**What it contains:**
+- Weekly, monthly, quarterly maintenance tasks
+- Troubleshooting guide for common issues
+- Health check SQL queries
+- Database backup procedures
+- Checklists and templates
+
+**Why it's valuable:** Complete guide to keeping the system running smoothly.
+
+**Use it for:** Regular maintenance, troubleshooting, training
+
+---
+
 ### **[DEPLOYMENT_PLAN.md](OPERATIONS/DEPLOYMENT_PLAN.md)** ⭐ **UPDATED NOV 2025**
 **What it contains:**
 - Deployment architecture (Vercel + Railway + Supabase)
@@ -376,7 +390,8 @@ This documentation is organized into three strategic categories based on your ro
 7. **🔧 TECHNICAL-REFERENCE.md** - Complete system guide
 8. **🗄️ AUTO_ARCHIVE_SYSTEM.md** - Automatic cleanup
 9. **📤 EXPORT_DATA_GUIDE.md** - Export & compliance reports
-10. **🔍 DATA_QUALITY_VALIDATION.md** - Auto-detect copy/paste errors (NEW!)
+10. **🔍 DATA_QUALITY_VALIDATION.md** - Auto-detect copy/paste errors
+11. **🔧 MAINTENANCE_GUIDE.md** - Keep it running smoothly (NEW!)
 
 **Together, these documents elevate this from "personal project" to "valuable, transferable intellectual property."**
 
