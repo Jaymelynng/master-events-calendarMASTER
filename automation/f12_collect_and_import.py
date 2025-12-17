@@ -774,7 +774,11 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             
             if event_type == 'KIDS NIGHT OUT':
                 # KNO: Must contain "kids night out" or "kno", should NOT say "clinic"
-                has_kno = 'kids night out' in description_lower or 'kno' in description_lower or "kids' night out" in description_lower
+                # Check for both plural possessive (kids') and singular possessive (kid's)
+                has_kno = ('kids night out' in description_lower or 
+                          'kno' in description_lower or 
+                          "kids' night out" in description_lower or 
+                          "kid's night out" in description_lower)
                 has_clinic = 'clinic' in description_lower[:100]  # Check start only
                 
                 if not has_kno:
@@ -796,7 +800,10 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             elif event_type == 'CLINIC':
                 # CLINIC: Must contain "clinic", check for skill mismatch, should NOT say KNO/Open Gym
                 has_clinic = 'clinic' in description_lower
-                has_kno = 'kids night out' in description_lower[:100] or description_lower[:50].startswith('kno')
+                # Check for both plural (kids') and singular (kid's) possessive forms
+                has_kno = ('kids night out' in description_lower[:100] or 
+                          "kid's night out" in description_lower[:100] or 
+                          description_lower[:50].startswith('kno'))
                 has_open_gym = description_lower[:100].startswith('open gym')
                 
                 if not has_clinic:
@@ -868,7 +875,9 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     'open to all' in description_lower
                 )
                 has_clinic = description_lower[:100].startswith('clinic') or 'clinic' in description_lower[:50]
-                has_kno = 'kids night out' in description_lower[:100]
+                # Check for both plural (kids') and singular (kid's) possessive forms
+                has_kno = ('kids night out' in description_lower[:100] or 
+                          "kid's night out" in description_lower[:100])
                 
                 if not has_open_gym:
                     validation_errors.append({

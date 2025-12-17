@@ -48,3 +48,4 @@ CREATE INDEX IF NOT EXISTS idx_events_has_validation_errors
 ON events((validation_errors != '[]'::jsonb)) 
 WHERE validation_errors != '[]'::jsonb;
 
+
