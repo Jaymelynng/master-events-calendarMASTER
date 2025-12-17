@@ -879,6 +879,56 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
           </div>
         )}
 
+        {/* Deleted Events Preview - Show which events will be removed */}
+        {result && result.success && comparison && comparison.deleted && comparison.deleted.length > 0 && !importResult && (
+          <div className="mb-4 border-2 border-orange-300 rounded-lg overflow-hidden bg-white">
+            <div className="bg-orange-50 px-4 py-3 border-b-2 border-orange-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-orange-800 text-lg">🗑️ Events to be Removed</h3>
+                  <p className="text-xs text-orange-600 mt-1">
+                    These events are in your database but no longer on iClassPro
+                  </p>
+                </div>
+                <div className="text-xs text-orange-600 font-bold">
+                  {comparison.deleted.length} event{comparison.deleted.length > 1 ? 's' : ''}
+                </div>
+              </div>
+            </div>
+            <div className="max-h-48 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-orange-100 sticky top-0">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-orange-800">Event</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-orange-800">Date</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-orange-800">Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparison.deleted.map((event, idx) => (
+                    <tr key={idx} className="border-b border-orange-100 bg-orange-50">
+                      <td className="px-3 py-2 text-orange-900 font-medium">
+                        {event.title}
+                      </td>
+                      <td className="px-3 py-2 text-orange-700">
+                        {event.date}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="px-2 py-1 text-xs rounded bg-orange-200 text-orange-800">
+                          {event.type}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-4 py-2 bg-orange-100 text-xs text-orange-700">
+              ℹ️ These will be soft-deleted (marked as removed, not permanently deleted)
+            </div>
+          </div>
+        )}
+
         {/* Import Button (only show if sync was successful and there's something to import) */}
         {result && result.success && editableEvents.length > 0 && !importResult && (
           (() => {
@@ -935,7 +985,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                   </>
                 ) : (
                   <>
-                    🚀 Import {newCount > 0 ? `${newCount} new` : ''}{newCount > 0 && changedCount > 0 ? ' + ' : ''}{changedCount > 0 ? `${changedCount} changed` : ''} Events
+                    🚀 Import {newCount > 0 ? `${newCount} new` : ''}{newCount > 0 && changedCount > 0 ? ' + ' : ''}{changedCount > 0 ? `${changedCount} changed` : ''}{(comparison?.deleted?.length > 0) ? ` (+ ${comparison.deleted.length} removed)` : ''} Events
                   </>
                 )}
               </button>
