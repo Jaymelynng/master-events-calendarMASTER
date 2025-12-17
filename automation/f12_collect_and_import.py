@@ -773,12 +773,14 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             # --- PROGRAM TYPE VALIDATION ---
             
             if event_type == 'KIDS NIGHT OUT':
-                # KNO: Must contain "kids night out" or "kno", should NOT say "clinic"
-                # Check for both plural possessive (kids') and singular possessive (kid's)
-                has_kno = ('kids night out' in description_lower or 
-                          'kno' in description_lower or 
-                          "kids' night out" in description_lower or 
-                          "kid's night out" in description_lower)
+                # KNO: Must contain any variation of "kids night out" or "kno"
+                # Be flexible - strip apostrophes and check for core pattern
+                # This catches: kids night out, kid's night out, kids' night out, kidz night out, etc.
+                desc_no_apostrophes = description_lower.replace("'", "").replace("'", "").replace("`", "")
+                has_kno = ('kids night out' in desc_no_apostrophes or 
+                          'kid night out' in desc_no_apostrophes or
+                          'kno' in description_lower or
+                          'night out' in description_lower and 'kid' in description_lower)
                 has_clinic = 'clinic' in description_lower[:100]  # Check start only
                 
                 if not has_kno:
@@ -800,9 +802,10 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             elif event_type == 'CLINIC':
                 # CLINIC: Must contain "clinic", check for skill mismatch, should NOT say KNO/Open Gym
                 has_clinic = 'clinic' in description_lower
-                # Check for both plural (kids') and singular (kid's) possessive forms
-                has_kno = ('kids night out' in description_lower[:100] or 
-                          "kid's night out" in description_lower[:100] or 
+                # Check for any variation of kids night out
+                desc_start_no_apos = description_lower[:100].replace("'", "").replace("'", "")
+                has_kno = ('kids night out' in desc_start_no_apos or 
+                          'kid night out' in desc_start_no_apos or 
                           description_lower[:50].startswith('kno'))
                 has_open_gym = description_lower[:100].startswith('open gym')
                 
@@ -875,9 +878,10 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     'open to all' in description_lower
                 )
                 has_clinic = description_lower[:100].startswith('clinic') or 'clinic' in description_lower[:50]
-                # Check for both plural (kids') and singular (kid's) possessive forms
-                has_kno = ('kids night out' in description_lower[:100] or 
-                          "kid's night out" in description_lower[:100])
+                # Check for any variation of kids night out
+                desc_start_no_apos = description_lower[:100].replace("'", "").replace("'", "")
+                has_kno = ('kids night out' in desc_start_no_apos or 
+                          'kid night out' in desc_start_no_apos)
                 
                 if not has_open_gym:
                     validation_errors.append({
