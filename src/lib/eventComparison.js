@@ -113,7 +113,8 @@ export function compareEvents(newEvents, existingEvents) {
  * Check if an event has changed by comparing key fields
  */
 function hasEventChanged(existing, incoming) {
-  // Fields to compare (excluding auto-generated fields)
+  // Fields to compare (excluding auto-generated fields and user-managed fields)
+  // NOTE: acknowledged_errors is NOT included - user dismissals shouldn't trigger "changed"
   const fieldsToCompare = [
     'title',
     'date',
@@ -129,6 +130,7 @@ function hasEventChanged(existing, incoming) {
     'flyer_url',
     'description_status',
     'validation_errors'
+    // 'acknowledged_errors' - intentionally excluded, managed by user
   ];
 
   const changes = [];

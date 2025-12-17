@@ -435,6 +435,34 @@ const EventsDashboard = () => {
     }
   };
 
+  // Reset all acknowledged errors for an event (undo dismissals)
+  const resetAcknowledgedErrors = async (eventId) => {
+    try {
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ acknowledged_errors: [] })
+        .eq('id', eventId);
+      
+      if (updateError) throw updateError;
+      
+      // Update the selected event panel immediately
+      if (selectedEventForPanel && selectedEventForPanel.id === eventId) {
+        setSelectedEventForPanel({
+          ...selectedEventForPanel,
+          acknowledged_errors: []
+        });
+      }
+      
+      // Refresh events
+      refetchEvents();
+      
+      console.log(`🔄 Reset acknowledged errors for event ${eventId}`);
+    } catch (error) {
+      console.error('Error resetting acknowledged errors:', error);
+      alert('Failed to reset. Please try again.');
+    }
+  };
+
   
   // ✨ Toggle individual event expansion - Shows full detail popup
   // Removed toggleEventExpansion - now using side panel on click
@@ -3332,8 +3360,15 @@ The system will add new events and update any changed events automatically.`;
                               ))}
                             </ul>
                             {acknowledgedErrors.length > 0 && (
-                              <div className="mt-2 pt-2 border-t border-red-200 text-xs text-gray-500">
-                                ✓ {acknowledgedErrors.length} warning(s) verified & dismissed
+                              <div className="mt-2 pt-2 border-t border-red-200 text-xs text-gray-500 flex items-center justify-between">
+                                <span>✓ {acknowledgedErrors.length} warning(s) verified & dismissed</span>
+                                <button
+                                  onClick={() => resetAcknowledgedErrors(selectedEventForPanel.id)}
+                                  className="text-red-600 hover:text-red-800 underline"
+                                  title="Restore all dismissed warnings"
+                                >
+                                  Undo all
+                                </button>
                               </div>
                             )}
                           </div>
