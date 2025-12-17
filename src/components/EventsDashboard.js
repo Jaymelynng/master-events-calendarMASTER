@@ -391,6 +391,50 @@ const EventsDashboard = () => {
     return urls;
   };
 
+  // Acknowledge/dismiss a validation error - saves to database so it doesn't reappear
+  const acknowledgeValidationError = async (eventId, errorMessage) => {
+    try {
+      // Get current acknowledged errors for this event
+      const { data: currentEvent, error: fetchError } = await supabase
+        .from('events')
+        .select('acknowledged_errors')
+        .eq('id', eventId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      const currentAcknowledged = currentEvent?.acknowledged_errors || [];
+      
+      // Add the error message if not already acknowledged
+      if (!currentAcknowledged.includes(errorMessage)) {
+        const updatedAcknowledged = [...currentAcknowledged, errorMessage];
+        
+        const { error: updateError } = await supabase
+          .from('events')
+          .update({ acknowledged_errors: updatedAcknowledged })
+          .eq('id', eventId);
+        
+        if (updateError) throw updateError;
+        
+        // Update the selected event panel immediately
+        if (selectedEventForPanel && selectedEventForPanel.id === eventId) {
+          setSelectedEventForPanel({
+            ...selectedEventForPanel,
+            acknowledged_errors: updatedAcknowledged
+          });
+        }
+        
+        // Refresh events to update the UI
+        refetchEvents();
+        
+        console.log(`✅ Acknowledged error for event ${eventId}: "${errorMessage}"`);
+      }
+    } catch (error) {
+      console.error('Error acknowledging validation error:', error);
+      alert('Failed to dismiss error. Please try again.');
+    }
+  };
+
   
   // ✨ Toggle individual event expansion - Shows full detail popup
   // Removed toggleEventExpansion - now using side panel on click
@@ -3243,32 +3287,59 @@ The system will add new events and update any changed events automatically.`;
                     })()}
 
                     {/* Validation Issues Alert */}
-                    {(selectedEventForPanel.validation_errors?.length > 0 || 
-                      selectedEventForPanel.description_status === 'flyer_only' || 
-                      selectedEventForPanel.description_status === 'none') && (
-                      <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                          <div className="font-semibold text-red-800 mb-2 flex items-center gap-2">
-                            {selectedEventForPanel.validation_errors?.length > 0 ? '🚨' : 
-                             selectedEventForPanel.description_status === 'flyer_only' ? '⚠️' : '❌'}
-                            Data Issues Detected
+                    {(() => {
+                      // Filter out acknowledged errors
+                      const acknowledgedErrors = selectedEventForPanel.acknowledged_errors || [];
+                      const activeErrors = (selectedEventForPanel.validation_errors || []).filter(
+                        error => !acknowledgedErrors.includes(error.message)
+                      );
+                      const hasDescriptionIssue = selectedEventForPanel.description_status === 'flyer_only' || 
+                                                  selectedEventForPanel.description_status === 'none';
+                      
+                      if (activeErrors.length === 0 && !hasDescriptionIssue) return null;
+                      
+                      return (
+                        <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                            <div className="font-semibold text-red-800 mb-2 flex items-center gap-2">
+                              {activeErrors.length > 0 ? '🚨' : 
+                               selectedEventForPanel.description_status === 'flyer_only' ? '⚠️' : '❌'}
+                              Data Issues Detected
+                            </div>
+                            <ul className="text-sm text-red-700 space-y-2">
+                              {selectedEventForPanel.description_status === 'none' && (
+                                <li>❌ <strong>No description</strong> - Event has no description text</li>
+                              )}
+                              {selectedEventForPanel.description_status === 'flyer_only' && (
+                                <li>⚠️ <strong>Flyer only</strong> - Has image but no text description</li>
+                              )}
+                              {activeErrors.map((error, idx) => (
+                                <li key={idx} className="flex items-center justify-between gap-2">
+                                  <span>
+                                    {error.severity === 'error' ? '🚨' : '⚠️'} <strong>{error.type === 'mismatch' ? 'Mismatch' : 'Warning'}:</strong> {error.message}
+                                  </span>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      acknowledgeValidationError(selectedEventForPanel.id, error.message);
+                                    }}
+                                    className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
+                                    title="I verified this - dismiss the warning"
+                                  >
+                                    ✓ OK
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                            {acknowledgedErrors.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-red-200 text-xs text-gray-500">
+                                ✓ {acknowledgedErrors.length} warning(s) verified & dismissed
+                              </div>
+                            )}
                           </div>
-                          <ul className="text-sm text-red-700 space-y-1">
-                            {selectedEventForPanel.description_status === 'none' && (
-                              <li>❌ <strong>No description</strong> - Event has no description text</li>
-                            )}
-                            {selectedEventForPanel.description_status === 'flyer_only' && (
-                              <li>⚠️ <strong>Flyer only</strong> - Has image but no text description</li>
-                            )}
-                            {selectedEventForPanel.validation_errors?.map((error, idx) => (
-                              <li key={idx}>
-                                {error.severity === 'error' ? '🚨' : '⚠️'} <strong>{error.type === 'mismatch' ? 'Mismatch' : 'Warning'}:</strong> {error.message}
-                              </li>
-                            ))}
-                          </ul>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Description */}
                     {selectedEventForPanel.description && (
