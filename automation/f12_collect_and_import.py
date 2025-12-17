@@ -773,14 +773,12 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             # --- PROGRAM TYPE VALIDATION ---
             
             if event_type == 'KIDS NIGHT OUT':
-                # KNO: Must contain any variation of "kids night out" or "kno"
-                # Be flexible - strip apostrophes and check for core pattern
-                # This catches: kids night out, kid's night out, kids' night out, kidz night out, etc.
+                # KNO: Must contain "kids night out" (any apostrophe style) or "kno"
+                # Strip apostrophes to handle: Kids Night Out, Kid's Night Out, Kids' Night Out
                 desc_no_apostrophes = description_lower.replace("'", "").replace("'", "").replace("`", "")
                 has_kno = ('kids night out' in desc_no_apostrophes or 
                           'kid night out' in desc_no_apostrophes or
-                          'kno' in description_lower or
-                          'night out' in description_lower and 'kid' in description_lower)
+                          'kno' in description_lower)
                 has_clinic = 'clinic' in description_lower[:100]  # Check start only
                 
                 if not has_kno:
