@@ -161,8 +161,55 @@ Supabase (stores validation fields)
 Frontend (displays icons)
 ```
 
+## Dismissing Validation Warnings
+
+Sometimes a validation warning is a **false positive** - the data is actually correct but the system flagged it anyway. You can dismiss these warnings.
+
+### How to Dismiss a Warning
+
+1. Click on the event in the calendar
+2. In the Event Details panel, you'll see the warning with a **[✓ OK]** button
+3. Click **[✓ OK]** to dismiss that specific warning
+4. The warning won't reappear for that event
+
+### What Happens When You Dismiss
+
+- The error message is saved to `acknowledged_errors` in the database
+- The 🚨 icon disappears from the calendar
+- The stats no longer count it as an error
+- **Change detection still works** - if the event is modified in iClassPro, the sync will still detect it
+
+### If the Event is Updated Later
+
+| Scenario | What Happens |
+|----------|--------------|
+| Same issue exists | Warning stays dismissed (same message) |
+| Issue is fixed | No warning at all (great!) |
+| New/different issue | New warning appears (different message) |
+
+### Undoing a Dismissal
+
+If you dismissed something by mistake:
+1. Click on the event
+2. Look for "✓ X warning(s) verified & dismissed"
+3. Click **"Undo all"** to restore the warnings
+
+### Database Fields
+
+```sql
+-- In events table
+acknowledged_errors  JSONB DEFAULT '[]'::jsonb  -- Stores dismissed error messages
+```
+
+---
+
 ## Changelog
 
+- **2025-12-18**: Added validation warning dismiss feature
+  - Click [✓ OK] to dismiss false positive warnings
+  - Calendar icons and stats respect dismissed warnings
+  - Undo functionality to restore warnings
+  - Dismissing does NOT affect change detection during sync
 - **2025-12-09**: Initial implementation
   - Date, time, min-age validation
   - Program type validation for KNO, CLINIC, OPEN GYM

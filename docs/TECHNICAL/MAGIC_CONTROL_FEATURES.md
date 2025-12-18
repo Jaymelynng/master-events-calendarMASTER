@@ -1,8 +1,8 @@
 # 🪄 Magic Control Features Documentation
 ## Admin Power User Tools
 
-**Last Updated:** November 26, 2025  
-**Access:** Shift+Click the 🪄 Magic Control button  
+**Last Updated:** December 18, 2025  
+**Access:** Click the ✏️ Admin button  
 **Status:** ✅ Production Ready - FULLY DEPLOYED
 
 ---
@@ -15,12 +15,12 @@ Magic Control is your **hidden admin portal** with power-user tools for managing
 
 ---
 
-## 🔐 THREE-TIER ACCESS SYSTEM (NEW!)
+## 🔐 THREE-TIER ACCESS SYSTEM
 
 | Level | Who | Access | Features |
 |-------|-----|--------|----------|
-| **Level 1** | Everyone | Visit URL | Calendar, event details, stats |
-| **Level 2** | Admin (Jayme) | Shift + Click 🪄 | Quick Add, JSON Import, Automated Sync |
+| **Level 1** | Everyone | Visit URL | Calendar, event details, stats, export |
+| **Level 2** | Admin (Jayme) | Click ✏️ Admin button | JSON Import, Automated Sync |
 | **Level 3** | Super Admin (Jayme) | Inside Level 2, click 🔒 + PIN `1426` | Supabase link, Railway link, Audit History |
 
 **Full documentation:** See `docs/OPERATIONS/SECRET_ADMIN_MODE.md`
@@ -31,52 +31,25 @@ Magic Control is your **hidden admin portal** with power-user tools for managing
 
 | Icon | Name | Access Level | What It Does | How to Use |
 |------|------|--------------|--------------|------------|
-| 🪄 | **Magic Control** | **ADMIN ONLY** | Opens Magic Control Center (admin portal) | **Shift+Click** the small 🪄 button at top of dashboard |
+| ✏️ | **Admin Button** | **EVERYONE (visible)** | Opens Magic Control Center (admin portal) | **Click** the Admin button |
 | ✨ | **Quick Access** | **EVERYONE** | Opens all event pages for a specific gym | **Click** the ✨ sparkle next to gym names in the table |
-
-### **Why Two Different Icons?**
-
-- **🪄 Wand** = Secret admin feature (requires Shift+Click)
-- **✨ Sparkles** = Public quick-access tool (regular click)
-- **This prevents confusion** - different icons = different functions!
 
 ---
 
 ## 🔓 How to Access Magic Control (Level 2)
 
-**Keyboard Shortcut:**
+**How:**
 ```
-Shift + Click on "🪄" button
+Click the ✏️ Admin button
 ```
 
-**Location:** Top of the Events Dashboard
-
-**Why Hidden?**
-- Keeps main UI clean and simple
-- Prevents accidental admin actions
-- Professional presentation for demos
-- Power users can access instantly
+**Location:** In the button bar, next to the Export button
 
 ---
 
 ## 🎨 Level 2 Features (Admin)
 
-### **1. ➕ Quick Add Event**
-
-**What it does:**
-- Opens the Add Event modal
-- Single event creation
-- Full form validation
-- Instant database insert
-
-**Use when:**
-- Adding one-off events
-- Manual event entry
-- Quick corrections
-
----
-
-### **2. 🚀 JSON Import (F12 Method)**
+### **1. 🚀 JSON Import (F12 Method)**
 
 **What it does:**
 - Opens bulk import wizard
@@ -95,7 +68,7 @@ Shift + Click on "🪄" button
 
 ---
 
-### **3. ⚡ Automated Sync** ⭐ MAIN FEATURE!
+### **2. ⚡ Automated Sync** ⭐ MAIN FEATURE!
 
 **What it does:**
 - One-click event collection from iClassPro portals
@@ -107,16 +80,6 @@ Shift + Click on "🪄" button
 **This is the crown jewel feature!**
 
 **Documentation:** See `AUTO-SYNC-GUIDE.md`
-
----
-
-### **4. 🔮 Coming Soon**
-
-Planned features:
-- 🗄️ Export Data
-- 📊 Import Analytics
-- 🧹 Data Cleanup Tools
-- 💾 Backup & Restore
 
 ---
 
@@ -163,10 +126,6 @@ Planned features:
 │                                          │
 │  📥 Import & Data                       │
 │                                          │
-│  ➕ Quick Add Event                     │
-│  Add a single event manually            │
-│  [Add New Event]                        │
-│                                          │
 │  🚀 JSON Import (F12 Method)            │
 │  Import multiple events from F12        │
 │  [Open JSON Import]                     │
@@ -174,10 +133,6 @@ Planned features:
 │  ⚡ Automated Sync                      │
 │  Automatically collect from iClassPro   │
 │  [Open Automated Sync]                  │
-│                                          │
-│  🔮 Coming Soon                         │
-│  • Export Data                          │
-│  • Import Analytics                     │
 │                                          │
 │  🔒 [Click for Super Admin access]      │
 └─────────────────────────────────────────┘
@@ -200,7 +155,7 @@ Planned features:
 
 ### **Access Control:**
 - **Level 1:** No authentication needed (public calendar)
-- **Level 2:** Shift+Click required (obscurity)
+- **Level 2:** Admin button visible to all (but harmless without knowledge)
 - **Level 3:** PIN required (1426) or * key
 
 ### **Data Protection:**
@@ -251,11 +206,15 @@ if (e.key === '*') {
 
 | Date | Change |
 |------|--------|
-| Jan 2025 | Original Magic Control created |
+| Dec 18, 2025 | Removed Shift+Click - Admin is now regular button |
+| Dec 18, 2025 | Removed Quick Add Event |
+| Dec 18, 2025 | Removed Coming Soon section |
+| Dec 18, 2025 | Export moved to main UI (not in admin) |
 | Nov 26, 2025 | Added 3-tier access system |
 | Nov 26, 2025 | Added Automated Sync feature |
 | Nov 26, 2025 | Added Super Admin with PIN 1426 |
 | Nov 26, 2025 | Added Railway + Supabase links |
+| Jan 2025 | Original Magic Control created |
 
 ---
 

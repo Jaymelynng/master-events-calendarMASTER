@@ -1,7 +1,7 @@
-# 🔐 SECRET ADMIN MODE - Complete Guide
+# 🔐 ADMIN MODE - Complete Guide
 ## Three-Tier Access System
 
-**Last Updated:** November 26, 2025  
+**Last Updated:** December 18, 2025  
 **Status:** ✅ Fully Implemented
 
 ---
@@ -34,24 +34,16 @@ The Master Events Calendar has a **hidden admin system** with three levels of ac
 ### 🪄 **Level 2: Admin View (Jayme)**
 
 **Who:** You (Jayme)  
-**How to access:** `Shift + Click` the Magic Wand button (🪄)  
+**How to access:** Click the **Admin** button (next to Export button)  
 **What you see:**
 
 Everything from Level 1, PLUS:
-- ✅ **Quick Add Event** - Add a single event manually
 - ✅ **JSON Import (F12 Method)** - Bulk import via copy/paste
 - ✅ **Automated Sync** - One-click sync from iClassPro
-- ✅ **Coming Soon** section (Export Data, etc.)
 
-**Where is the Magic Wand?**
-- Look for the small 🪄 button at the top of the dashboard
-- It's intentionally subtle so regular users don't notice it
-- You MUST hold Shift while clicking - regular click does nothing
-
-**Why Shift+Click?**
-- Prevents accidental access
-- Keeps the feature hidden from curious clickers
-- Only people who KNOW the shortcut can access it
+**Where is the Admin button?**
+- Look for the ✏️ **Admin** button in the button bar (near Export)
+- It's visible to everyone but only useful if you know what it does
 
 ---
 
@@ -82,23 +74,17 @@ Everything from Level 1 and 2, PLUS:
 
 ```
 Step 1: Go to your calendar
-Step 2: Find the 🪄 button (top of dashboard, might be small/subtle)
-Step 3: Hold SHIFT on your keyboard
-Step 4: While holding SHIFT, click the 🪄 button
-Step 5: Admin Portal opens!
+Step 2: Find the ✏️ Admin button (in the button bar near Export)
+Step 3: Click the Admin button
+Step 4: Admin Portal opens!
 ```
-
-**If it doesn't work:**
-- Make sure you're holding Shift BEFORE clicking
-- Make sure you're clicking the wand, not something else
-- Try refreshing the page and trying again
 
 ---
 
 ### Accessing Level 3 (Super Admin)
 
 ```
-Step 1: Open Level 2 Admin Portal (Shift + Click 🪄)
+Step 1: Open Level 2 Admin Portal (Click Admin button)
 Step 2: Look for the 🔒 lock icon in the admin portal
 Step 3: Click the lock icon
 Step 4: Either:
@@ -133,17 +119,17 @@ Step 5: Super Admin features appear!
 ### Level 2 (Admin View)
 ```
 ┌─────────────────────────────────────────┐
-│  🪄 Magic Control Center                │
+│  🪄 Magic Control Center              × │
 ├─────────────────────────────────────────┤
 │  📥 Import & Data                       │
 │                                         │
-│  ➕ Quick Add Event                     │
 │  🚀 JSON Import (F12 Method)            │
-│  ⚡ Automated Sync                      │
+│  Import multiple events from F12        │
+│  [Open JSON Import]                     │
 │                                         │
-│  🔮 Coming Soon                         │
-│  • Export Data                          │
-│  • Import Analytics                     │
+│  ⚡ Automated Sync                      │
+│  Automatically collect from iClassPro   │
+│  [Open Automated Sync]                  │
 │                                         │
 │  🔒 [Lock icon - click for Super Admin] │
 └─────────────────────────────────────────┘
@@ -175,13 +161,9 @@ Step 5: Super Admin features appear!
 ```javascript
 // In EventsDashboard.js
 <button
-  onClick={(e) => {
-    if (e.shiftKey) {  // Only opens if Shift is held
-      setShowAdminPortal(true);
-    }
-  }}
+  onClick={() => setShowAdminPortal(true)}
 >
-  🪄
+  ✏️ Admin
 </button>
 ```
 
@@ -220,8 +202,8 @@ A: Yes! Edit `AdminPortalModal.js` and change `SUPER_ADMIN_PIN = '1426'` to what
 ### **Q: What if I forget the PIN?**
 A: It's `1426`. Also, you can press `*` instead. And it's in this document!
 
-### **Q: Can other people access Level 2 if they know Shift+Click?**
-A: Yes, but they'd have to know the trick. It's not publicly documented anywhere except your private docs.
+### **Q: Can other people access Level 2?**
+A: Yes, the Admin button is visible. But they won't know what to do with it unless they know about the import tools.
 
 ### **Q: Is the PIN stored securely?**
 A: It's in the JavaScript code, which technically anyone could find if they looked at the source. For a truly secure system, you'd use real authentication. But for your use case (hiding admin from casual users), this is fine.
@@ -233,10 +215,9 @@ A: Because this is faster and simpler for a single-user admin scenario. Real aut
 
 ## 🚨 SECURITY NOTES
 
-1. **Don't share the Shift+Click trick** with people who shouldn't have admin access
-2. **Don't share this document** publicly
-3. **The Super Admin links** give full database/server access - protect them
-4. **If you ever need to revoke access**, change the PIN in the code and redeploy
+1. **Super Admin links** give full database/server access - protect them
+2. **If you ever need to revoke Super Admin access**, change the PIN in the code and redeploy
+3. The Admin button is visible but harmless - only the Super Admin tools are sensitive
 
 ---
 
@@ -244,13 +225,17 @@ A: Because this is faster and simpler for a single-user admin scenario. Real aut
 
 | Date | Change |
 |------|--------|
+| Dec 18, 2025 | Removed Shift+Click - Admin button is now regular click |
+| Dec 18, 2025 | Removed Quick Add Event (use JSON Import instead) |
+| Dec 18, 2025 | Removed Export Data from Admin (available on main UI) |
+| Dec 18, 2025 | Removed Coming Soon section |
 | Nov 26, 2025 | Created 3-tier system with PIN 1426 |
 | Nov 26, 2025 | Added * key as alternate unlock |
 | Nov 26, 2025 | Added Supabase + Railway links to Super Admin |
 
 ---
 
-**This is YOUR secret admin system. Guard it well!** 🔐
+**Super Admin (Level 3) is still protected with PIN 1426!** 🔐
 
 
 
