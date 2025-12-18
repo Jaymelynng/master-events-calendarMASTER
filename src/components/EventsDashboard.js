@@ -2480,8 +2480,11 @@ The system will add new events and update any changed events automatically.`;
                                      eventDate.getFullYear() === currentYear;
                             });
                             
-                            // Count issues only (not informational stuff)
-                            const errors = gymEvents.filter(e => e.validation_errors?.length > 0).length;
+                            // Count issues only (not informational stuff) - respects dismissed warnings
+                            const errors = gymEvents.filter(e => {
+                              const acknowledged = e.acknowledged_errors || [];
+                              return (e.validation_errors || []).some(err => !acknowledged.includes(err.message));
+                            }).length;
                             const warnings = gymEvents.filter(e => e.description_status === 'flyer_only').length;
                             const missing = gymEvents.filter(e => e.description_status === 'none').length;
                             const totalIssues = errors + warnings + missing;
@@ -3090,14 +3093,21 @@ The system will add new events and update any changed events automatically.`;
                                             borderColor: 'rgba(0,0,0,0.1)'
                                           }}
                                         >
-                                          {/* Validation status indicator - only show problems */}
-                                          {event.validation_errors && event.validation_errors.length > 0 ? (
-                                            <span className="absolute -top-1 -right-1 text-sm" title="Wrong info - data doesn't match!">🚨</span>
-                                          ) : event.description_status === 'flyer_only' ? (
-                                            <span className="absolute -top-1 -right-1 text-xs" title="Has flyer but no text description">⚠️</span>
-                                          ) : event.description_status === 'none' ? (
-                                            <span className="absolute -top-1 -right-1 text-xs" title="No description at all">❌</span>
-                                          ) : null}
+                                          {/* Validation status indicator - only show problems (respects dismissed warnings) */}
+                                          {(() => {
+                                            const acknowledged = event.acknowledged_errors || [];
+                                            const hasUnacknowledgedErrors = (event.validation_errors || []).some(
+                                              err => !acknowledged.includes(err.message)
+                                            );
+                                            if (hasUnacknowledgedErrors) {
+                                              return <span className="absolute -top-1 -right-1 text-sm" title="Wrong info - data doesn't match!">🚨</span>;
+                                            } else if (event.description_status === 'flyer_only') {
+                                              return <span className="absolute -top-1 -right-1 text-xs" title="Has flyer but no text description">⚠️</span>;
+                                            } else if (event.description_status === 'none') {
+                                              return <span className="absolute -top-1 -right-1 text-xs" title="No description at all">❌</span>;
+                                            }
+                                            return null;
+                                          })()}
                                           {/* Compact Card View */}
                                           <div className="font-semibold leading-tight text-sm">
                                             {displayName}
