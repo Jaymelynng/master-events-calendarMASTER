@@ -2315,15 +2315,19 @@ The system will add new events and update any changed events automatically.`;
               </div>
             </div>
             
-            {/* Two column row: Monthly Goal left, Legend right */}
-            <div className="flex items-start justify-between mb-2 text-xs">
-              <div className="bg-gray-50 px-3 py-2 rounded border">
-                <span className="font-semibold text-gray-700">Monthly Goal: </span>
-                <span className="text-gray-600">
-                  {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
-                </span>
+            {/* Monthly Goal centered, Legend positioned top-right */}
+            <div className="relative mb-2 text-xs">
+              {/* Monthly Goal - Centered */}
+              <div className="flex justify-center">
+                <div className="bg-gray-50 px-3 py-2 rounded border">
+                  <span className="font-semibold text-gray-700">Monthly Goal: </span>
+                  <span className="text-gray-600">
+                    {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
+                  </span>
+                </div>
               </div>
-              <div className="bg-yellow-50 px-3 py-2 rounded border border-yellow-200">
+              {/* Legend - Positioned top-right */}
+              <div className="absolute top-0 right-0 bg-yellow-50 px-3 py-2 rounded border border-yellow-200">
                 <div className="font-semibold text-gray-700">Legend:</div>
                 <div title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</div>
                 <div title="Has flyer image but no text description">⚠️ Flyer, no text</div>
