@@ -2305,33 +2305,59 @@ The system will add new events and update any changed events automatically.`;
 
           {/* Special Event Statistics by Gym */}
           <div className="bg-white rounded shadow p-3 mb-2 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
-            {/* Header - Title and Date centered */}
-            <div className="text-center mb-3">
-              <h2 className="text-lg font-bold" style={{ color: theme.colors.textPrimary }}>
-                Special Event Statistics by Gym
-              </h2>
-              <div className="text-sm font-medium mt-1" style={{ color: theme.colors.textSecondary }}>
-                {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            {/* Month Navigation */}
+            <div className="flex justify-center items-center gap-4 mb-3">
+              <button
+                onClick={() => {
+                  if (currentMonth === 0) {
+                    setCurrentMonth(11);
+                    setCurrentYear(currentYear - 1);
+                  } else {
+                    setCurrentMonth(currentMonth - 1);
+                  }
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-sm font-medium transition-all duration-200 hover:bg-gray-200 hover:scale-105"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </button>
+              
+              <div className="text-center">
+                <h2 className="text-lg font-bold" style={{ color: theme.colors.textPrimary }}>
+                  {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </h2>
               </div>
+              
+              <button
+                onClick={() => {
+                  if (currentMonth === 11) {
+                    setCurrentMonth(0);
+                    setCurrentYear(currentYear + 1);
+                  } else {
+                    setCurrentMonth(currentMonth + 1);
+                  }
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-sm font-medium transition-all duration-200 hover:bg-gray-200 hover:scale-105"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
             
-            {/* Monthly Goal centered, Legend positioned top-right */}
-            <div className="relative mb-2 text-xs">
-              {/* Monthly Goal - Centered */}
-              <div className="flex justify-center">
-                <div className="bg-gray-50 px-3 py-2 rounded border">
-                  <span className="font-semibold text-gray-700">Monthly Goal: </span>
-                  <span className="text-gray-600">
-                    {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
-                  </span>
-                </div>
-              </div>
-              {/* Legend - Positioned top-right */}
-              <div className="absolute top-0 right-0 bg-yellow-50 px-3 py-2 rounded border border-yellow-200">
-                <div className="font-semibold text-gray-700">Legend:</div>
-                <div title="Data doesn't match (wrong date/time/age)">🚨 Wrong info</div>
-                <div title="Has flyer image but no text description">⚠️ Flyer, no text</div>
-                <div title="No description at all">❌ No description</div>
+            {/* Title */}
+            <div className="text-center mb-2">
+              <h3 className="text-sm font-semibold" style={{ color: theme.colors.textSecondary }}>
+                Special Event Statistics by Gym
+              </h3>
+            </div>
+            
+            {/* Monthly Goal centered under title */}
+            <div className="flex justify-center mb-2 text-xs">
+              <div className="bg-gray-50 px-3 py-2 rounded border">
+                <span className="font-semibold text-gray-700">Monthly Goal: </span>
+                <span className="text-gray-600">
+                  {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
+                </span>
               </div>
             </div>
             
