@@ -67,19 +67,23 @@ export function compareEvents(newEvents, existingEvents) {
       });
     } else if (existing && !incoming) {
       // POTENTIALLY DELETED: Exists in database but not in new sync
-      // ONLY mark as deleted if it's a FUTURE event
+      // ONLY mark as deleted if it's a FUTURE event that HASN'T STARTED YET
+      // Events that have already started (even if they extend into the future) won't appear in iClassPro sync
       // Past events naturally disappear from iClassPro - that's expected behavior
-      const eventDate = existing.end_date || existing.date;
-      const isFutureEvent = eventDate && eventDate >= todayStr;
+      const startDate = existing.start_date || existing.date;
+      const endDate = existing.end_date || existing.date;
+      const hasNotStarted = startDate && startDate > todayStr;
+      const isFutureEvent = endDate && endDate >= todayStr;
       
-      if (isFutureEvent) {
+      // Only mark as deleted if the event hasn't started yet AND is in the future
+      if (hasNotStarted && isFutureEvent) {
         comparison.deleted.push({
           ...existing,
           _status: 'deleted',
           _reason: 'Future event no longer available from source'
         });
       }
-      // Past events are silently ignored - they're not "deleted", just expired
+      // Events that have already started or are past are silently ignored - they're not "deleted", just expired or in-progress
     } else if (existing && incoming) {
       // Check if event was previously deleted (should be restored)
       const wasDeleted = existing.deleted_at !== null && existing.deleted_at !== undefined;
