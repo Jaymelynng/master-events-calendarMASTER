@@ -67,19 +67,35 @@ export function compareEvents(newEvents, existingEvents) {
       });
     } else if (existing && !incoming) {
       // POTENTIALLY DELETED: Exists in database but not in new sync
-      // ONLY mark as deleted if it's a FUTURE event
-      // Past events naturally disappear from iClassPro - that's expected behavior
-      const eventDate = existing.end_date || existing.date;
-      const isFutureEvent = eventDate && eventDate >= todayStr;
+      // ONLY mark as deleted if the event HASN'T STARTED YET
+      // 
+      // IMPORTANT: Use start_date (or date) NOT end_date!
+      // - Multi-day events (camps) may have end_date in the future but have already started
+      // - iClassPro removes events once they START (not when they end)
+      // - Once an event starts, it naturally disappears from iClassPro - that's expected
+      // - We should only flag as "deleted" events that haven't begun yet
+      const rawStartDate = existing.start_date || existing.date;
+      // Normalize date format: "2025-12-19T00:00:00.000Z" → "2025-12-19"
+      const eventStartDate = rawStartDate ? String(rawStartDate).split('T')[0] : null;
+      const hasNotStartedYet = eventStartDate && eventStartDate > todayStr;
       
-      if (isFutureEvent) {
+      // DEBUG: Log why events are/aren't being marked as deleted
+      console.log(`🔍 Deleted check for "${(existing.title || '').substring(0, 40)}...":`, {
+        rawStartDate,
+        eventStartDate,
+        todayStr,
+        hasNotStartedYet,
+        willMarkDeleted: hasNotStartedYet
+      });
+      
+      if (hasNotStartedYet) {
         comparison.deleted.push({
           ...existing,
           _status: 'deleted',
           _reason: 'Future event no longer available from source'
         });
       }
-      // Past events are silently ignored - they're not "deleted", just expired
+      // Events that have already started are silently ignored - they're not "deleted", just running/expired
     } else if (existing && incoming) {
       // Check if event was previously deleted (should be restored)
       const wasDeleted = existing.deleted_at !== null && existing.deleted_at !== undefined;

@@ -308,19 +308,28 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
       }
       
       // Mark deleted events (in DB but not in portal) as deleted
+      // NOTE: The compareEvents function already filters to only include events that
+      // haven't started yet, so everything in comparison.deleted is safe to mark
       let deletedCount = 0;
       if (comparison && comparison.deleted.length > 0) {
         for (const deletedEvent of comparison.deleted) {
           try {
-            // Only mark as deleted if it's a future event (past events we leave alone)
-            const eventDate = new Date(deletedEvent.date);
+            // Double-check: only mark as deleted if it HASN'T STARTED YET
+            // Use start_date (not end_date) - a camp that started shouldn't be deleted
+            const rawStartDate = deletedEvent.start_date || deletedEvent.date;
+            const eventStartDate = rawStartDate ? String(rawStartDate).split('T')[0] : null;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+            const todayStr = today.toISOString().split('T')[0];
             
-            if (eventDate >= today) {
+            // Only delete if event hasn't started (start date is AFTER today)
+            if (eventStartDate && eventStartDate > todayStr) {
               // Mark as deleted (soft delete)
               await eventsApi.markAsDeleted(deletedEvent.id);
               deletedCount++;
+              console.log(`🗑️ Marked as deleted: "${deletedEvent.title}" (starts ${eventStartDate})`);
+            } else {
+              console.log(`⏭️ Skipping delete for "${deletedEvent.title}" - already started on ${eventStartDate}`);
             }
           } catch (err) {
             console.error('Error marking event as deleted:', err);
