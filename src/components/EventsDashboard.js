@@ -2517,16 +2517,22 @@ The system will add new events and update any changed events automatically.`;
                             }).length;
                             const warnings = gymEvents.filter(e => e.description_status === 'flyer_only').length;
                             const missing = gymEvents.filter(e => e.description_status === 'none').length;
+                            const soldOut = gymEvents.filter(e => e.has_openings === false).length;
                             const totalIssues = errors + warnings + missing;
                             
+                            // Show sold out count even if otherwise clean (it's informational, not an error)
                             if (totalIssues === 0) {
                               return (
-                                <span className="text-green-600 text-xs font-medium">✓ Clean</span>
+                                <div className="flex items-center justify-center gap-1 text-xs">
+                                  {soldOut > 0 && <span title={`${soldOut} sold out`} className="text-purple-600 font-medium">🔴{soldOut}</span>}
+                                  <span className="text-green-600 font-medium">✓ Clean</span>
+                                </div>
                               );
                             }
                             
                             return (
                               <div className="flex items-center justify-center gap-1 text-xs flex-wrap">
+                                {soldOut > 0 && <span title={`${soldOut} sold out`} className="text-purple-600 font-medium">🔴{soldOut}</span>}
                                 {errors > 0 && <span title={`${errors} wrong info`} className="text-red-600 font-medium">🚨{errors}</span>}
                                 {warnings > 0 && <span title={`${warnings} flyer, no text`} className="text-yellow-600 font-medium">⚠️{warnings}</span>}
                                 {missing > 0 && <span title={`${missing} no description`} className="text-gray-500 font-medium">❌{missing}</span>}

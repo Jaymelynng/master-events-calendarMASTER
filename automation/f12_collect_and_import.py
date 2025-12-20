@@ -779,6 +779,45 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                             print(f"    ⚠️ AGE MISMATCH: Event min age is {age_min}, description says {desc_age_min}")
                             break
             
+            # --- MAX AGE VALIDATION: Compare structured MAX age to description ---
+            if age_max is not None:
+                # Look for age range patterns like "Ages 5-12" or "Ages 7 to 17"
+                age_range_patterns = re.findall(r'ages?\s*\d{1,2}\s*[-–to]+\s*(\d{1,2})', description_lower[:250])
+                
+                for desc_age_max_str in age_range_patterns:
+                    try:
+                        desc_age_max = int(desc_age_max_str)
+                        # Check for mismatch (2+ years off on max age)
+                        if abs(age_max - desc_age_max) >= 2:
+                            validation_errors.append({
+                                "type": "age_mismatch",
+                                "severity": "warning",
+                                "message": f"Event max age is {age_max} but description says {desc_age_max}"
+                            })
+                            print(f"    ⚠️ AGE MISMATCH: Event max age is {age_max}, description says {desc_age_max}")
+                            break
+                    except (ValueError, TypeError):
+                        pass
+            
+            # --- DAY OF WEEK VALIDATION: Compare calculated day to description ---
+            if day_of_week:
+                day_lower = day_of_week.lower()  # e.g., "friday"
+                # List of days to check
+                all_days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+                
+                # Check first 200 chars for day mentions
+                desc_snippet = description_lower[:200]
+                for check_day in all_days:
+                    if check_day in desc_snippet and check_day != day_lower:
+                        # Found a different day mentioned prominently
+                        validation_errors.append({
+                            "type": "day_mismatch",
+                            "severity": "warning",
+                            "message": f"Event is on {day_of_week} but description says '{check_day.title()}'"
+                        })
+                        print(f"    ⚠️ DAY MISMATCH: Event is {day_of_week}, description says {check_day.title()}")
+                        break
+            
             # --- PROGRAM TYPE VALIDATION ---
             
             if event_type == 'KIDS NIGHT OUT':
