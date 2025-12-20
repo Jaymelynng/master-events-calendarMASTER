@@ -297,6 +297,10 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                 flyer_url: changed.incoming.flyer_url || null,
                 description_status: changed.incoming.description_status || 'unknown',
                 validation_errors: changed.incoming.validation_errors || [],
+                // Availability tracking from iClassPro
+                has_openings: changed.incoming.has_openings !== undefined ? changed.incoming.has_openings : true,
+                registration_start_date: changed.incoming.registration_start_date || null,
+                registration_end_date: changed.incoming.registration_end_date || null,
                 deleted_at: null  // Ensure it's not marked as deleted
               });
               updatedCount++;

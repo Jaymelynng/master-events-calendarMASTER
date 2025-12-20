@@ -92,7 +92,11 @@ COMPARISON_FIELDS = [
     'has_flyer',
     'flyer_url',
     'description_status',
-    'validation_errors'
+    'validation_errors',
+    # Availability tracking from iClassPro
+    'has_openings',
+    'registration_start_date',
+    'registration_end_date'
 ]
 
 ALLOWED_EVENT_FIELDS = {
@@ -124,7 +128,11 @@ ALLOWED_EVENT_FIELDS = {
     'has_flyer',
     'flyer_url',
     'description_status',
-    'validation_errors'
+    'validation_errors',
+    # Availability tracking from iClassPro
+    'has_openings',
+    'registration_start_date',
+    'registration_end_date'
 }
 
 def sanitize_event_payload(event: dict, gym_id: str, event_type: str) -> dict:

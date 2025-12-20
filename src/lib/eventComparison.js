@@ -145,7 +145,11 @@ function hasEventChanged(existing, incoming) {
     'has_flyer',
     'flyer_url',
     'description_status',
-    'validation_errors'
+    'validation_errors',
+    // Availability tracking from iClassPro
+    'has_openings',
+    'registration_start_date',
+    'registration_end_date'
     // 'acknowledged_errors' - intentionally excluded, managed by user
   ];
 
@@ -190,7 +194,11 @@ function getChangedFields(existing, incoming) {
     'has_flyer',
     'flyer_url',
     'description_status',
-    'validation_errors'
+    'validation_errors',
+    // Availability tracking from iClassPro
+    'has_openings',
+    'registration_start_date',
+    'registration_end_date'
   ];
 
   const changes = [];

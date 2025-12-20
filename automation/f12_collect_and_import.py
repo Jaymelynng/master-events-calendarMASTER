@@ -586,6 +586,15 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         except (ValueError, AttributeError):
             day_of_week = None
         
+        # Extract availability info from iClassPro
+        has_openings = ev.get("hasOpenings", True)  # Default to true if not present
+        registration_start_date = ev.get("registrationStartDate")  # YYYY-MM-DD or None
+        registration_end_date = ev.get("registrationEndDate")  # YYYY-MM-DD or None
+        
+        # Log availability status
+        if has_openings == False:
+            print(f"    🔴 SOLD OUT / FULL - no openings available")
+        
         # Extract description and check for flyer images
         description_raw = ev.get("description", "")
         has_flyer = False
@@ -905,6 +914,49 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     })
                     print(f"    🚨 OPEN GYM: Description says 'Kids Night Out' - wrong program!")
         
+        # ========== AVAILABILITY VALIDATION ==========
+        # Check for sold out events
+        if has_openings == False:
+            validation_errors.append({
+                "type": "sold_out",
+                "severity": "info",
+                "message": "Event is SOLD OUT - no spots available"
+            })
+        
+        # Check if registration has closed but event is still in the future
+        if registration_end_date and start_date:
+            try:
+                reg_end = datetime.strptime(registration_end_date, "%Y-%m-%d").date()
+                event_start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                today = date.today()
+                
+                # Registration closed but event hasn't happened yet
+                if reg_end < today and event_start >= today:
+                    validation_errors.append({
+                        "type": "registration_closed",
+                        "severity": "warning",
+                        "message": f"Registration closed on {registration_end_date} but event is {start_date}"
+                    })
+                    print(f"    ⚠️ REGISTRATION CLOSED: Ended {registration_end_date}, event on {start_date}")
+            except (ValueError, TypeError):
+                pass  # Invalid date format, skip
+        
+        # Check if registration hasn't opened yet
+        if registration_start_date and start_date:
+            try:
+                reg_start = datetime.strptime(registration_start_date, "%Y-%m-%d").date()
+                today = date.today()
+                
+                if reg_start > today:
+                    validation_errors.append({
+                        "type": "registration_not_open",
+                        "severity": "info",
+                        "message": f"Registration opens {registration_start_date}"
+                    })
+                    print(f"    ℹ️ REGISTRATION NOT OPEN YET: Opens {registration_start_date}")
+            except (ValueError, TypeError):
+                pass  # Invalid date format, skip
+        
         # Log status
         if description_status == 'none':
             print(f"    ❌ NO DESCRIPTION")
@@ -929,6 +981,10 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "flyer_url": flyer_url,
             "description_status": description_status,
             "validation_errors": validation_errors,
+            # Availability tracking from iClassPro
+            "has_openings": has_openings,
+            "registration_start_date": registration_start_date,
+            "registration_end_date": registration_end_date,
         })
     
     return processed

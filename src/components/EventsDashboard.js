@@ -3123,6 +3123,12 @@ The system will add new events and update any changed events automatically.`;
                                             borderColor: 'rgba(0,0,0,0.1)'
                                           }}
                                         >
+                                          {/* SOLD OUT badge - top left */}
+                                          {event.has_openings === false && (
+                                            <span className="absolute -top-1 -left-1 bg-red-600 text-white text-[8px] font-bold px-1 rounded" title="SOLD OUT - no spots available">
+                                              FULL
+                                            </span>
+                                          )}
                                           {/* Validation status indicator - only show problems (respects dismissed warnings) */}
                                           {(() => {
                                             const acknowledged = event.acknowledged_errors || [];
@@ -3353,6 +3359,36 @@ The system will add new events and update any changed events automatically.`;
                         </div>
                       );
                     })()}
+
+                    {/* Availability Status - SOLD OUT or Registration Info */}
+                    {(selectedEventForPanel.has_openings === false || selectedEventForPanel.registration_end_date) && (
+                      <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
+                        {selectedEventForPanel.has_openings === false && (
+                          <div className="bg-red-100 border border-red-300 rounded-lg p-3 mb-2">
+                            <div className="font-bold text-red-800 flex items-center gap-2">
+                              🔴 SOLD OUT
+                            </div>
+                            <div className="text-sm text-red-700 mt-1">
+                              This event is full - no spots available
+                            </div>
+                          </div>
+                        )}
+                        {selectedEventForPanel.registration_end_date && (
+                          <div className="text-xs text-gray-600">
+                            <span className="font-semibold">Registration closes:</span> {selectedEventForPanel.registration_end_date}
+                            {(() => {
+                              const regEnd = new Date(selectedEventForPanel.registration_end_date);
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              if (regEnd < today) {
+                                return <span className="ml-2 text-red-600 font-medium">(Registration closed)</span>;
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Validation Issues Alert */}
                     {(() => {
