@@ -208,6 +208,20 @@ This documentation is organized into three strategic categories based on your ro
 
 ---
 
+### **[GYM_LINKS_MANAGEMENT_GUIDE.md](OPERATIONS/GYM_LINKS_MANAGEMENT_GUIDE.md)** 🆕 **NEW DEC 2025**
+**What it contains:**
+- How to update program page URLs that bulk openers and auto-sync use
+- Direct SQL update instructions
+- How to find correct program IDs in iClassPro
+- Link type ID reference table
+- Troubleshooting bulk opener and sync issues
+
+**Why it's valuable:** Both bulk openers and auto-sync use gym_links table - update once, fixes both!
+
+**Use it for:** Fixing incorrect program page links, updating URLs when gyms restructure programs
+
+---
+
 ### **[DEPLOYMENT_PLAN.md](OPERATIONS/DEPLOYMENT_PLAN.md)** ⭐ **UPDATED NOV 2025**
 **What it contains:**
 - Deployment architecture (Vercel + Railway + Supabase)
