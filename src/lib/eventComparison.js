@@ -129,8 +129,16 @@ export function compareEvents(newEvents, existingEvents) {
  * Check if an event has changed by comparing key fields
  */
 function hasEventChanged(existing, incoming) {
-  // Fields to compare (excluding auto-generated fields and user-managed fields)
-  // NOTE: acknowledged_errors is NOT included - user dismissals shouldn't trigger "changed"
+  // Fields to compare - ONLY core event content that represents real changes
+  // 
+  // EXCLUDED (these change frequently without representing actual event changes):
+  // - has_openings: Updates in real-time as people register
+  // - registration_start_date / registration_end_date: Can change, but not "content"
+  // - validation_errors: Recalculated every sync based on date-sensitive checks
+  // - description_status: Derived from description/flyer, not primary data
+  // - has_flyer / flyer_url: Can change but usually not critical
+  // - acknowledged_errors: User-managed, intentionally excluded
+  //
   const fieldsToCompare = [
     'title',
     'date',
@@ -141,16 +149,9 @@ function hasEventChanged(existing, incoming) {
     'type',
     'age_min',
     'age_max',
-    'description',
-    'has_flyer',
-    'flyer_url',
-    'description_status',
-    'validation_errors',
-    // Availability tracking from iClassPro
-    'has_openings',
-    'registration_start_date',
-    'registration_end_date'
-    // 'acknowledged_errors' - intentionally excluded, managed by user
+    'description'
+    // NOTE: Volatile fields excluded to prevent false "CHANGED" alerts
+    // The data is still saved/updated, just not used for change detection
   ];
 
   const changes = [];
@@ -180,6 +181,7 @@ function hasEventChanged(existing, incoming) {
  * Get list of fields that changed
  */
 function getChangedFields(existing, incoming) {
+  // Same fields as hasEventChanged - only core content
   const fieldsToCompare = [
     'title',
     'date',
@@ -190,15 +192,7 @@ function getChangedFields(existing, incoming) {
     'type',
     'age_min',
     'age_max',
-    'description',
-    'has_flyer',
-    'flyer_url',
-    'description_status',
-    'validation_errors',
-    // Availability tracking from iClassPro
-    'has_openings',
-    'registration_start_date',
-    'registration_end_date'
+    'description'
   ];
 
   const changes = [];
