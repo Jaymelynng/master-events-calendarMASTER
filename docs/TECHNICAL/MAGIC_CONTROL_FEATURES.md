@@ -1,7 +1,7 @@
 # 🪄 Magic Control Features Documentation
 ## Admin Power User Tools
 
-**Last Updated:** December 18, 2025  
+**Last Updated:** December 28, 2025  
 **Access:** Click the ✏️ Admin button  
 **Status:** ✅ Production Ready - FULLY DEPLOYED
 
@@ -9,9 +9,9 @@
 
 ## 🎯 Overview
 
-Magic Control is your **hidden admin portal** with power-user tools for managing events across all 10 gyms. It's accessed via a keyboard shortcut to keep the main UI clean for regular users.
+Magic Control is your **admin portal** with power-user tools for managing events across all 10 gyms. It's accessed via the Admin button in the main UI.
 
-**IMPORTANT:** This has been upgraded to a **3-tier access system** as of November 2025!
+**3-tier access system** as of November 2025!
 
 ---
 
@@ -19,7 +19,7 @@ Magic Control is your **hidden admin portal** with power-user tools for managing
 
 | Level | Who | Access | Features |
 |-------|-----|--------|----------|
-| **Level 1** | Everyone | Visit URL | Calendar, event details, stats, export |
+| **Level 1** | Everyone | Visit URL | Calendar, event details, stats, export, bulk actions |
 | **Level 2** | Admin (Jayme) | Click ✏️ Admin button | JSON Import, Automated Sync |
 | **Level 3** | Super Admin (Jayme) | Inside Level 2, click 🔒 + PIN `1426` | Supabase link, Railway link, Audit History |
 
@@ -73,7 +73,7 @@ Click the ✏️ Admin button
 **What it does:**
 - One-click event collection from iClassPro portals
 - Uses Playwright browser automation on Railway
-- Collects: title, date, time, price, age, description
+- Collects: title, date, time, age, description
 - Compares with database: NEW | CHANGED | DELETED | UNCHANGED
 - Import with one click
 
@@ -192,6 +192,18 @@ if (e.key === '*') {
 
 ---
 
+## ❌ Removed Features
+
+### **Skill Clinic Link Editor (Removed Dec 28, 2025)**
+- **What it was:** A UI to manually edit a gym's Skill Clinic URL
+- **Why removed:** Confusing placement in dashboard, not needed since links already configured in Supabase `gym_links` table
+- **Alternative:** Edit links directly in Supabase if needed
+
+### **Quick Add Event (Removed Dec 18, 2025)**
+- **Why removed:** Automated Sync is the preferred method
+
+---
+
 ## 📚 Related Documentation
 
 - **SECRET_ADMIN_MODE.md** - Complete 3-tier access guide
@@ -206,6 +218,7 @@ if (e.key === '*') {
 
 | Date | Change |
 |------|--------|
+| Dec 28, 2025 | Removed Skill Clinic Link Editor (not needed) |
 | Dec 18, 2025 | Removed Shift+Click - Admin is now regular button |
 | Dec 18, 2025 | Removed Quick Add Event |
 | Dec 18, 2025 | Removed Coming Soon section |

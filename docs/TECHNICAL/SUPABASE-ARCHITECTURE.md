@@ -1,7 +1,7 @@
 # 🧹 SUPABASE DATABASE ARCHITECTURE
 ## Master Events Calendar - Database Design
 
-**Last Updated:** December 9, 2025  
+**Last Updated:** December 28, 2025  
 **Database:** `https://xftiwouxpefchwoxxgpf.supabase.co`  
 **Status:** ✅ PRODUCTION READY
 
@@ -13,11 +13,11 @@
 
 | Table | Purpose | Rows |
 |-------|---------|------|
-| `events` | Active/future event data | Dynamic |
-| `events_archive` | Past events (auto-archived) | Dynamic |
+| `events` | Active/future event data | 401 |
+| `events_archive` | Past events (auto-archived) | 154 |
 | `gyms` | Gym information | 10 |
 | `event_types` | Event categories | 5 |
-| `gym_links` | Portal URLs | 54+ |
+| `gym_links` | Portal URLs | 76 |
 | `link_types` | Link categories | 8 |
 | `monthly_requirements` | Business rules | 3 |
 | `event_audit_log` | Change tracking | 300+ |
@@ -40,27 +40,52 @@
 
 ## 🗄️ TABLE SCHEMAS
 
-### **1. events**
+### **1. events** (30 columns)
 ```sql
 events (
-  id UUID PRIMARY KEY,
-  gym_id TEXT,                   -- FK to gyms.id (CCP, EST, etc.)
-  event_type_id UUID,            -- FK to event_types.id (nullable)
-  title TEXT,                    -- Event name
-  date DATE,                     -- Event date
-  start_date DATE,               -- Multi-day start
-  end_date DATE,                 -- Multi-day end
-  time TEXT,                     -- "6:30 PM - 9:30 PM"
-  price TEXT,                    -- Cost (nullable)
-  day_of_week TEXT,              -- Auto-calculated
-  type TEXT,                     -- CLINIC, KIDS NIGHT OUT, etc.
-  event_url TEXT,                -- Registration link (UNIQUE!)
-  description TEXT,              -- Full description (NEW Nov 2025)
-  age_min INTEGER,               -- Minimum age (NEW Nov 2025)
-  age_max INTEGER,               -- Maximum age (NEW Nov 2025)
-  deleted_at TIMESTAMPTZ,        -- Soft delete (NEW Nov 2025)
-  created_at TIMESTAMP,
-  updated_at TIMESTAMP
+  -- Core identification
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id VARCHAR NOT NULL,                    -- FK to gyms.id (CCP, EST, etc.)
+  event_type_id UUID,                         -- FK to event_types.id (nullable)
+  
+  -- Event details
+  title VARCHAR NOT NULL,                     -- Event name
+  date DATE NOT NULL,                         -- Event date
+  start_date DATE,                            -- Multi-day start
+  end_date DATE,                              -- Multi-day end
+  time VARCHAR,                               -- "6:30 PM - 9:30 PM"
+  price VARCHAR,                              -- Cost (parsed from title/description)
+  day_of_week VARCHAR,                        -- Auto-calculated
+  type VARCHAR NOT NULL,                      -- CLINIC, KIDS NIGHT OUT, etc.
+  event_url TEXT,                             -- Registration link (UNIQUE!)
+  
+  -- Content fields
+  description TEXT,                           -- Full description from iClassPro
+  age_min INTEGER,                            -- Minimum age from iClass settings
+  age_max INTEGER,                            -- Maximum age from iClass settings
+  
+  -- Data quality fields (Dec 2025)
+  has_flyer BOOLEAN DEFAULT FALSE,            -- Whether event has a flyer/image
+  flyer_url TEXT,                             -- URL to the flyer image
+  description_status TEXT DEFAULT 'unknown',  -- none, flyer_only, full, unknown
+  validation_errors JSONB DEFAULT '[]',       -- Array of validation issues
+  acknowledged_errors JSONB DEFAULT '[]',     -- Array of dismissed errors
+  
+  -- Availability tracking (Dec 2025)
+  has_openings BOOLEAN DEFAULT TRUE,          -- From iClassPro hasOpenings
+  registration_start_date DATE,               -- When registration opens
+  registration_end_date DATE,                 -- When registration closes
+  availability_status TEXT DEFAULT 'available',
+  
+  -- Legacy/internal fields
+  event_type VARCHAR,                         -- Legacy field
+  gym_code VARCHAR,                           -- Legacy field  
+  event_id BIGINT,                            -- iClassPro event ID
+  
+  -- Timestamps
+  deleted_at TIMESTAMPTZ,                     -- Soft delete timestamp
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 )
 ```
 
@@ -113,7 +138,9 @@ gym_links (
 )
 ```
 
-### **5. sync_log** (NEW November 2025)
+**Link Types:** skill_clinics, kids_night_out, open_gym, booking, camps, camps_half, summer_camps, summer_camps_half
+
+### **5. sync_log**
 ```sql
 sync_log (
   id UUID PRIMARY KEY,
@@ -126,9 +153,10 @@ sync_log (
 )
 ```
 
-### **6. events_archive** (NEW December 2025)
+### **6. events_archive**
 ```sql
 events_archive (
+  -- Same columns as events table, plus:
   id UUID PRIMARY KEY,
   gym_id TEXT,
   event_type_id UUID,
@@ -145,9 +173,19 @@ events_archive (
   age_min INTEGER,
   age_max INTEGER,
   deleted_at TIMESTAMPTZ,
-  created_at TIMESTAMP,
-  updated_at TIMESTAMP
-  -- Same schema as events table (minus archived_at if not needed)
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  archived_at TIMESTAMPTZ DEFAULT NOW(),     -- When moved to archive
+  event_type_id UUID,
+  event_type VARCHAR,
+  gym_code VARCHAR,
+  event_id BIGINT,
+  availability_status TEXT,
+  has_flyer BOOLEAN DEFAULT FALSE,
+  flyer_url TEXT,
+  description_status TEXT DEFAULT 'unknown',
+  validation_errors JSONB DEFAULT '[]',
+  acknowledged_errors JSONB DEFAULT '[]'
 )
 ```
 
@@ -165,58 +203,27 @@ events_archive (
 CREATE OR REPLACE VIEW events_with_gym AS
 -- Active events from main table
 SELECT 
-  e.id,
-  e.gym_id,
-  e.event_type_id,
-  e.title,
-  e.date,
-  e.time,
-  e.price,
-  e.day_of_week,
-  e.type,
-  e.event_url,
-  e.created_at,
-  e.updated_at,
-  e.event_type,
-  e.gym_code,
-  e.event_id,
-  e.start_date,
-  e.end_date,
-  e.availability_status,
-  e.age_min,
-  e.age_max,
-  e.description,
-  e.deleted_at,
+  e.id, e.gym_id, e.event_type_id, e.title, e.date, e.time,
+  e.price, e.day_of_week, e.type, e.event_url, e.created_at,
+  e.updated_at, e.event_type, e.gym_code, e.event_id, e.start_date,
+  e.end_date, e.availability_status, e.age_min, e.age_max,
+  e.description, e.deleted_at, e.has_flyer, e.flyer_url,
+  e.description_status, e.validation_errors, e.acknowledged_errors,
   g.name AS gym_name
 FROM events e
 LEFT JOIN gyms g ON e.gym_id = g.id
+WHERE e.deleted_at IS NULL
 
 UNION ALL
 
 -- Archived events from archive table
 SELECT 
-  a.id,
-  a.gym_id,
-  a.event_type_id,
-  a.title,
-  a.date,
-  a.time,
-  a.price,
-  a.day_of_week,
-  a.type,
-  a.event_url,
-  a.created_at,
-  a.updated_at,
-  a.event_type,
-  a.gym_code,
-  a.event_id,
-  a.start_date,
-  a.end_date,
-  a.availability_status,
-  a.age_min,
-  a.age_max,
-  a.description,
-  a.deleted_at,
+  a.id, a.gym_id, a.event_type_id, a.title, a.date, a.time,
+  a.price, a.day_of_week, a.type, a.event_url, a.created_at,
+  a.updated_at, a.event_type, a.gym_code, a.event_id, a.start_date,
+  a.end_date, a.availability_status, a.age_min, a.age_max,
+  a.description, a.deleted_at, a.has_flyer, a.flyer_url,
+  a.description_status, a.validation_errors, a.acknowledged_errors,
   g.name AS gym_name
 FROM events_archive a
 LEFT JOIN gyms g ON a.gym_id = g.id;
@@ -260,12 +267,28 @@ LEFT JOIN gyms g ON a.gym_id = g.id;
 - Upsert pattern (update if exists)
 - Powers the visual progress grid
 
-### **6. Auto-Archive System (NEW December 2025)**
+### **6. Auto-Archive System (December 2025)**
 - Events automatically move to `events_archive` at midnight
 - Runs via pg_cron scheduled job
 - `events_with_gym` view combines both tables
 - **Calendar/stats display unaffected** by archiving
 - Keeps `events` table clean for sync comparisons
+
+### **7. Data Quality Tracking (December 2025)**
+- `has_flyer` / `flyer_url` - Track which events have promotional images
+- `description_status` - Track description completeness (none, flyer_only, full)
+- `validation_errors` - Store data quality issues found during sync
+- `acknowledged_errors` - Allow users to dismiss false positives
+
+### **8. Availability Tracking (December 2025)**
+- `has_openings` - From iClassPro API (true = spots available)
+- `registration_start_date` / `registration_end_date` - When registration is open
+- **Note:** These fields are saved but excluded from comparison logic to prevent false "changed" alerts
+
+### **9. Price Extraction**
+- **Price is parsed from title/description**, NOT from iClassPro's pricing API
+- Format like `($25)` in event titles is extracted via regex
+- Stored as TEXT not DECIMAL (display purposes only)
 
 ---
 
@@ -274,13 +297,13 @@ LEFT JOIN gyms g ON a.gym_id = g.id;
 ```
 gyms (10 rows)
   │
-  ├──< events (active/future events)
+  ├──< events (401 active events)
   │     └── event_url is unique identifier
   │
-  ├──< events_archive (past events)
+  ├──< events_archive (154 past events)
   │     └── auto-archived at midnight daily
   │
-  ├──< gym_links (54+ rows)
+  ├──< gym_links (76 rows)
   │     └── portal URLs for each event type
   │
   └──< sync_log (50+ rows)
@@ -330,6 +353,10 @@ CREATE INDEX idx_events_url ON events(event_url);
 
 -- For sync log lookups
 CREATE INDEX idx_sync_log_gym_type ON sync_log(gym_id, event_type);
+
+-- For data quality queries
+CREATE INDEX idx_events_description_status ON events(description_status);
+CREATE INDEX idx_events_has_validation_errors ON events((validation_errors != '[]'::jsonb));
 ```
 
 ### **Caching Strategy:**
@@ -354,6 +381,10 @@ CREATE INDEX idx_sync_log_gym_type ON sync_log(gym_id, event_type);
 | Dec 2025 | Created events_archive table |
 | Dec 2025 | Set up pg_cron auto-archive job |
 | Dec 2025 | Updated events_with_gym to UNION both tables |
+| Dec 2025 | Added data quality columns (has_flyer, flyer_url, description_status, validation_errors) |
+| Dec 2025 | Added acknowledged_errors column |
+| Dec 2025 | Added availability columns (has_openings, registration_start_date, registration_end_date) |
+| Dec 28, 2025 | Full schema audit - documented all 30 columns |
 
 ---
 
@@ -363,7 +394,8 @@ CREATE INDEX idx_sync_log_gym_type ON sync_log(gym_id, event_type);
 ```sql
 SELECT column_name, data_type 
 FROM information_schema.columns 
-WHERE table_name = 'events';
+WHERE table_name = 'events'
+ORDER BY ordinal_position;
 ```
 
 ### **Check View Definition:**
@@ -383,8 +415,10 @@ WHERE schemaname = 'public';
 ### **Count Records:**
 ```sql
 SELECT 
-  (SELECT COUNT(*) FROM events) as events,
+  (SELECT COUNT(*) FROM events) as active_events,
+  (SELECT COUNT(*) FROM events_archive) as archived_events,
   (SELECT COUNT(*) FROM gyms) as gyms,
+  (SELECT COUNT(*) FROM gym_links WHERE is_active = true) as gym_links,
   (SELECT COUNT(*) FROM sync_log) as sync_log;
 ```
 
@@ -396,17 +430,20 @@ SELECT
 
 **All Systems Working:**
 - ✅ 10 gyms configured
-- ✅ Active events in `events` table
-- ✅ Past events in `events_archive` table
+- ✅ 401 active events in `events` table
+- ✅ 154 past events in `events_archive` table
+- ✅ 76 gym links configured
 - ✅ 5 event types
 - ✅ Sync progress tracking
 - ✅ Soft delete working
 - ✅ Descriptions pulling
 - ✅ Ages pulling
+- ✅ Data quality tracking
+- ✅ Availability tracking
 - ✅ Views updated (UNION ALL)
 - ✅ Auto-archive running at midnight
 
-**Last Verified:** December 9, 2025
+**Last Verified:** December 28, 2025
 
 ---
 

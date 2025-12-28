@@ -1,22 +1,25 @@
 # Master Events Scalability Improvement Plan
 
-**Last Updated:** November 26, 2025  
+**Last Updated:** December 28, 2025  
 **Current Status:** Phase 1 partially complete, system is production-ready  
 **Note:** This roadmap is for FUTURE scaling. Current system handles 10 gyms perfectly.
 
 ---
 
-## 🎯 CURRENT STATE (November 2025)
+## 🎯 CURRENT STATE (December 2025)
 
 ### **What's Already Built:**
 - ✅ React frontend on Vercel
 - ✅ Flask API backend on Railway
-- ✅ Supabase PostgreSQL database
+- ✅ Supabase PostgreSQL database (9 tables, 2 views)
 - ✅ Playwright automation for event collection
 - ✅ Real-time subscriptions
-- ✅ 10 gyms, 226+ events
+- ✅ 10 gyms, 555+ total events (401 active, 154 archived)
 - ✅ Automated sync system
 - ✅ Sync progress tracking
+- ✅ Auto-archive system (pg_cron moves past events at midnight)
+- ✅ Data quality tracking (flyers, descriptions, validation)
+- ✅ Availability tracking (has_openings, registration dates)
 
 ### **Current Performance:**
 - Load time: 2-3 seconds
@@ -31,7 +34,7 @@
 ## Phase 1: Component Architecture (FUTURE)
 
 ### Current State
-- Single EventsDashboard component (~2000+ lines)
+- Single EventsDashboard component (~3000+ lines)
 - Works fine for current scale
 - Could be refactored for team development
 
@@ -52,7 +55,8 @@ src/
 │   │   ├── AdminTools/
 │   │   │   ├── SyncModal.js ✅ (exists)
 │   │   │   ├── AdminPortalModal.js ✅ (exists)
-│   │   │   └── BulkImportModal.js ✅ (exists)
+│   │   │   ├── BulkImportModal.js ✅ (exists)
+│   │   │   └── ExportModal.js ✅ (exists)
 │   │   └── hooks/
 │   │       ├── useEventData.js
 │   │       └── useFilteredEvents.js
@@ -60,7 +64,7 @@ src/
 
 ### **When to Do This:**
 - When adding more developers
-- When component exceeds 3000 lines
+- When component exceeds 4000 lines
 - When performance becomes an issue
 
 ---
@@ -71,6 +75,7 @@ src/
 - ✅ Caching in frontend
 - ✅ Real-time subscriptions
 - ✅ Lazy loading of modals
+- ✅ Auto-archive keeps events table clean
 
 ### **Future Options:**
 
@@ -119,9 +124,12 @@ const VirtualEventList = ({ events }) => {
 ## Phase 3: Database Scaling (FUTURE)
 
 ### **Already Implemented:**
-- ✅ Proper table structure
-- ✅ Views for complex queries
-- ✅ Soft delete pattern
+- ✅ Proper table structure (9 tables)
+- ✅ Views for complex queries (events_with_gym, gym_links_detailed)
+- ✅ Soft delete pattern (deleted_at column)
+- ✅ Auto-archive system (events_archive table)
+- ✅ Data quality columns (has_flyer, flyer_url, description_status, validation_errors)
+- ✅ Availability columns (has_openings, registration_start_date, registration_end_date)
 
 ### **Future Options:**
 
@@ -207,13 +215,17 @@ Redis (caching)
 
 ## Scalability Metrics & Goals
 
-### **Current State (November 2025):**
+### **Current State (December 2025):**
 | Metric | Current | Status |
 |--------|---------|--------|
 | Load time | 2-3 sec | ✅ Good |
 | Concurrent users | ~100 | ✅ Good |
 | Events capacity | ~10,000 | ✅ Good |
+| Total events | 555 | ✅ Good |
+| Active events | 401 | ✅ Good |
+| Archived events | 154 | ✅ Good |
 | Gyms | 10 | ✅ Good |
+| Gym links | 76 | ✅ Good |
 
 ### **Target State (If Scaling Needed):**
 | Metric | Target |
@@ -242,9 +254,10 @@ Redis (caching)
 Your current system is:
 - ✅ Production-ready
 - ✅ Handling 10 gyms perfectly
-- ✅ 226+ events with no issues
+- ✅ 555+ events with no issues
 - ✅ Fast enough for current needs
 - ✅ Verified 100% accurate
+- ✅ Auto-archiving working
 
 ### **When to Revisit This:**
 - Adding more than 20 gyms
@@ -264,6 +277,10 @@ Your current system is:
 | Nov 2025 | Updated with current state |
 | Nov 2025 | Added "do nothing" recommendation |
 | Nov 2025 | Marked what's already implemented |
+| Dec 2025 | Added events_archive and auto-archive system |
+| Dec 2025 | Added data quality columns |
+| Dec 2025 | Added availability tracking columns |
+| Dec 28, 2025 | Updated event counts (555 total) |
 
 ---
 
