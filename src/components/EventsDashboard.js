@@ -308,10 +308,6 @@ const EventsDashboard = () => {
     type: '',
     event_url: ''
   });
-  const [linkUpdateGymId, setLinkUpdateGymId] = useState('');
-  const [linkUpdateUrl, setLinkUpdateUrl] = useState('');
-  const [linkUpdateSaving, setLinkUpdateSaving] = useState(false);
-  const [linkUpdateStatus, setLinkUpdateStatus] = useState('');
   
   // Lock body scroll when modals are open
   useEffect(() => {
@@ -347,18 +343,6 @@ const EventsDashboard = () => {
 
   const monthlyRequirements = useMonthlyRequirements();
 
-  // Prefill clinic link when gym selection changes
-  useEffect(() => {
-    if (!linkUpdateGymId) {
-      setLinkUpdateUrl('');
-      return;
-    }
-    const gymIdNum = Number(linkUpdateGymId);
-    const existingLink = gymLinks.find(
-      (gl) => gl.gym_id === gymIdNum && gl.link_type_id === 'skill_clinics'
-    );
-    setLinkUpdateUrl(existingLink?.url || '');
-  }, [linkUpdateGymId, gymLinks]);
 
   // Helper function to get URLs from main Supabase database
   const getGymLinkUrl = (gymName, eventType) => {
@@ -400,39 +384,6 @@ const EventsDashboard = () => {
     return urls;
   };
 
-  // Admin control: update the skill clinic link for a gym (stored in Supabase)
-  const handleSkillClinicLinkSave = async () => {
-    if (!linkUpdateGymId) {
-      setLinkUpdateStatus('Select a gym');
-      return;
-    }
-    if (!linkUpdateUrl.trim()) {
-      setLinkUpdateStatus('Enter a link');
-      return;
-    }
-
-    setLinkUpdateSaving(true);
-    setLinkUpdateStatus('');
-
-    try {
-      await gymLinksApi.upsertGymLink(
-        Number(linkUpdateGymId),
-        'skill_clinics',
-        linkUpdateUrl.trim()
-      );
-      cache.invalidate('gymLinks');
-      if (refreshGymLinks) {
-        await refreshGymLinks();
-      }
-      setLinkUpdateStatus('Saved ✓');
-      setTimeout(() => setLinkUpdateStatus(''), 3500);
-    } catch (err) {
-      console.error('Error saving skill clinic link:', err);
-      setLinkUpdateStatus('Save failed — try again');
-    } finally {
-      setLinkUpdateSaving(false);
-    }
-  };
 
   // Acknowledge/dismiss a validation error - saves to database so it doesn't reappear
   const acknowledgeValidationError = async (eventId, errorMessage) => {
@@ -2346,52 +2297,6 @@ The system will add new events and update any changed events automatically.`;
             </div>
         </div>
 
-        {/* Skill Clinic Link Editor */}
-        <div className="bg-white rounded shadow p-3 mb-3 mx-2 border border-purple-200">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span>🔗</span>
-              <div>
-                <div className="text-sm font-semibold text-purple-800">Skill Clinic link</div>
-                <div className="text-xs text-gray-500">Updates bulk openers, table links, and sync helpers</div>
-              </div>
-            </div>
-            {linkUpdateStatus && (
-              <span className="text-xs font-semibold text-green-700">{linkUpdateStatus}</span>
-            )}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center">
-            <select
-              value={linkUpdateGymId}
-              onChange={(e) => setLinkUpdateGymId(e.target.value)}
-              className="col-span-1 md:col-span-2 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-            >
-              <option value="">Select a gym</option>
-              {gymsList.map((gym) => (
-                <option key={gym.id} value={gym.id}>
-                  {gym.name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="url"
-              value={linkUpdateUrl}
-              onChange={(e) => setLinkUpdateUrl(e.target.value)}
-              placeholder="https://portal.iclasspro.com/capgymhp/camps/63?sortBy=time"
-              className="col-span-1 md:col-span-3 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-            />
-            <button
-              onClick={handleSkillClinicLinkSave}
-              disabled={linkUpdateSaving}
-              className="col-span-1 md:col-span-1 px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
-            >
-              {linkUpdateSaving ? 'Saving...' : 'Save clinic link'}
-            </button>
-          </div>
-          <div className="text-xs text-gray-500 mt-2">
-            Stored in Supabase gym_links.skill_clinics so Bulk Actions, stats buttons, and sync helpers pick up the latest URL immediately.
-          </div>
-        </div>
 
         {/* Special Event Statistics by Gym */}
         <div className="bg-white rounded shadow p-3 mb-2 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
