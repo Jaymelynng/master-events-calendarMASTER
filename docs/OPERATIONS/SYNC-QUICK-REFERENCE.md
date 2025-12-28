@@ -1,7 +1,7 @@
 # 📋 SYNC QUICK REFERENCE
 ## For Non-Technical Users
 
-**Last Updated:** November 30, 2025
+**Last Updated:** December 28, 2025
 
 ---
 
@@ -23,11 +23,11 @@ So our calendar always matches what's in iClassPro without manual data entry.
 
 ### Step-by-Step:
 
-1. **Open the Calendar** (your Vercel URL)
+1. **Open the Calendar** (teamcalendar.mygymtools.com)
 
-2. **Click the Magic Wand** 🪄 while holding **Shift**
+2. **Click the 🪄 Admin button** (top of page, next to Export)
 
-3. **Click "⚡ Automated Sync"**
+3. **Click "Open Automated Sync"**
 
 4. **Click a gym name** (like "Capital Gymnastics Cedar Park")
 
@@ -45,9 +45,9 @@ So our calendar always matches what's in iClassPro without manual data entry.
    - OPEN GYM: 2
    - etc.
 
-8. **Click "Import X Events to Database"**
+8. **Click "🚀 Import X Events"** (green button)
 
-9. **Done!** Click "Sync Another Gym" and repeat
+9. **Done!** Click "🏢 Sync Another Gym" and repeat
 
 ---
 
@@ -103,9 +103,13 @@ You can still click individual buttons (KNO, CLINIC, etc.) below the SYNC ALL bu
 - Normal: 30-60 seconds for SYNC ALL
 - Too long: Close and try again
 
+### "Invalid or missing API key"
+- Check Vercel environment variables
+- Make sure `REACT_APP_API_KEY` matches Railway's `API_KEY`
+
 ### "Import failed"
 - Wait a minute and try again
-- Check if Railway is running (ask developer)
+- Check if Railway is running (API health check)
 
 ### "Events not showing on calendar"
 - Hard refresh: Ctrl + Shift + R
@@ -128,17 +132,17 @@ You can still click individual buttons (KNO, CLINIC, etc.) below the SYNC ALL bu
 ## ✅ MONTHLY CHECKLIST
 
 ```
-□ Open Automated Sync
-□ Cedar Park - SYNC ALL - Import
-□ Pflugerville - SYNC ALL - Import
-□ Round Rock - SYNC ALL - Import
-□ Estrella - SYNC ALL - Import
-□ Houston - SYNC ALL - Import
-□ Oasis - SYNC ALL - Import
-□ RB Atascocita - SYNC ALL - Import
-□ RB Kingwood - SYNC ALL - Import
-□ Scottsdale - SYNC ALL - Import
-□ Tigar - SYNC ALL - Import
+□ Click 🪄 Admin → Open Automated Sync
+□ CCP (Cedar Park) - SYNC ALL - Import
+□ CPF (Pflugerville) - SYNC ALL - Import
+□ CRR (Round Rock) - SYNC ALL - Import
+□ EST (Estrella) - SYNC ALL - Import
+□ HGA (Houston) - SYNC ALL - Import
+□ OAS (Oasis) - SYNC ALL - Import
+□ RBA (RB Atascocita) - SYNC ALL - Import
+□ RBK (RB Kingwood) - SYNC ALL - Import
+□ SGT (Scottsdale) - SYNC ALL - Import
+□ TIG (Tigar) - SYNC ALL - Import
 □ All gyms showing green/yellow ✓
 □ Done! 🎉
 ```

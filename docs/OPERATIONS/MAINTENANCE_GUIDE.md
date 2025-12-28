@@ -1,6 +1,6 @@
 # 🔧 Master Events Calendar - Maintenance Guide
 
-> **Last Updated:** December 2025  
+> **Last Updated:** December 28, 2025  
 > **Purpose:** Keep your events calendar running smoothly with minimal effort
 
 ---
@@ -23,9 +23,10 @@
 
 **Steps:**
 1. Open the dashboard
-2. Click **Admin** → **Sync Events**
+2. Click **🪄 Admin** button → **Open Automated Sync**
 3. Select each gym → Click **🚀 SYNC ALL PROGRAMS**
 4. Wait for confirmation (green checkmarks)
+5. Click **Import** if there are new/changed events
 
 **Pro Tip:** The sync progress grid shows green = synced, red = needs sync
 
@@ -33,8 +34,8 @@
 **Why:** Catch content issues before they become problems
 
 **Steps:**
-1. Look at the **Audit** indicators in the dashboard header
-2. Check for:
+1. Look at the calendar view
+2. Check for events with data quality indicators:
    - 🔴 **Wrong** - Description doesn't match event details
    - 🟡 **Flyer only** - Has image but no text description
    - ❌ **Missing desc** - No description at all
@@ -57,11 +58,14 @@
 **Why:** Keep records and share with stakeholders
 
 **Steps:**
-1. Click **Export** button
-2. Set date range to the month
-3. Check: ☑️ Events, ☑️ Analytics, ☑️ Missing Requirements
-4. Choose CSV or JSON
-5. Download and archive
+1. Click **📤 Export** button (top of dashboard)
+2. Set date range to the month using the date pickers
+3. Check what to include:
+   - ☑️ **Events** - Full event list
+   - ☑️ **Analytics Summary** - Stats by gym/type
+   - ☑️ **Missing Requirements** - Gyms that are behind
+4. Choose **CSV** or **JSON** format
+5. Click **📤 Export** to download
 
 ### 3. Review Soft-Deleted Events
 **Why:** Sometimes events are temporarily removed from iClassPro
@@ -79,9 +83,11 @@
 **Why:** iClassPro URLs occasionally change
 
 **Steps:**
-1. Go to **Admin** → **Manage Gym Links**
-2. For each gym, click one link to verify it works
-3. If broken, update with the new URL from iClassPro
+1. Go to **Supabase Dashboard** → **Table Editor** → **gym_links**
+2. For each gym, click one `url` to verify it works
+3. If broken, update the URL directly in Supabase
+
+**Note:** There is no UI for managing gym links - it's done directly in Supabase. This is intentional to prevent accidental changes.
 
 ### 2. Review Monthly Requirements
 **Why:** Business needs evolve
@@ -115,15 +121,19 @@ SELECT COUNT(*) FROM events WHERE date < NOW() - INTERVAL '1 year';
    ```
 
 2. **Add gym_links for each program type:**
-   - kids_night_out
-   - skill_clinics
-   - open_gym
-   - camps (and camp subtypes)
-   - special_events
+   ```sql
+   INSERT INTO gym_links (gym_id, link_type_id, url, is_active)
+   VALUES 
+     ('NEW', 'kids_night_out', 'https://portal.iclasspro.com/newgym/camps/XX?sortBy=time', true),
+     ('NEW', 'skill_clinics', 'https://portal.iclasspro.com/newgym/camps/YY?sortBy=time', true),
+     ('NEW', 'open_gym', 'https://portal.iclasspro.com/newgym/camps/ZZ?sortBy=time', true),
+     ('NEW', 'camps', 'https://portal.iclasspro.com/newgym/camps/AA?sortBy=time', true),
+     ('NEW', 'special_events', 'https://portal.iclasspro.com/newgym/camps/BB?sortBy=time', true);
+   ```
 
 3. **Set monthly_requirements** (optional)
 
-4. **Sync the new gym**
+4. **Sync the new gym** via Admin → Automated Sync
 
 ### Removing a Gym
 
@@ -135,13 +145,16 @@ UPDATE gyms SET is_active = false WHERE id = 'GYM';
 ### Updating iClassPro URLs
 
 1. Get the new URL from iClassPro portal
-2. Update in **Admin** → **Manage Gym Links**
-3. Or directly in Supabase:
+2. Go to Supabase Dashboard → gym_links table
+3. Find the row for that gym/link_type
+4. Update the `url` field:
    ```sql
    UPDATE gym_links 
    SET url = 'https://new-url-here' 
    WHERE gym_id = 'GYM' AND link_type_id = 'kids_night_out';
    ```
+
+**Note:** URL changes take effect within 5 minutes (cached in the sync system).
 
 ---
 
@@ -178,6 +191,19 @@ Go to [vercel.com/dashboard](https://vercel.com/dashboard):
 - Check for any warning notifications
 - Review domain settings
 
+### 5. Verify Environment Variables
+
+**Vercel (Frontend):**
+- `REACT_APP_API_URL` - Railway API URL
+- `REACT_APP_API_KEY` - API key for Railway authentication
+- `REACT_APP_SUPABASE_URL` - Supabase project URL
+- `REACT_APP_SUPABASE_ANON_KEY` - Supabase anon key
+
+**Railway (Backend):**
+- `API_KEY` - Must match Vercel's `REACT_APP_API_KEY`
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_SERVICE_KEY` - Supabase service role key
+
 ---
 
 ## 🚨 Troubleshooting Guide
@@ -186,8 +212,9 @@ Go to [vercel.com/dashboard](https://vercel.com/dashboard):
 
 | Symptom | Solution |
 |---------|----------|
-| "Failed to connect to API" | Check if Railway/local server is running |
-| "No events found" | Verify gym links are correct |
+| "Failed to connect to API" | Check if Railway is running at `/health` endpoint |
+| "Invalid or missing API key" | Verify `REACT_APP_API_KEY` matches `API_KEY` in Railway |
+| "No events found" | Verify gym links are correct in Supabase |
 | Timeout errors | Try syncing one program type at a time |
 
 **Debug steps:**
@@ -195,20 +222,22 @@ Go to [vercel.com/dashboard](https://vercel.com/dashboard):
 2. Go to Network tab
 3. Try sync again
 4. Look for red failed requests
+5. Check Console tab for error messages
 
 ### Events Not Showing
 
 | Symptom | Solution |
 |---------|----------|
 | Empty calendar | Check date range filter |
-| Missing specific gym | Check if gym is active |
-| Deleted events showing | Refresh the page |
+| Missing specific gym | Check if gym is active in `gyms` table |
+| Deleted events showing | Hard refresh (Ctrl+Shift+R) |
 
 **Check database directly:**
 ```sql
 SELECT COUNT(*) FROM events 
 WHERE gym_id = 'CCP' 
-AND date >= '2025-01-01';
+AND date >= '2025-01-01'
+AND deleted_at IS NULL;
 ```
 
 ### Duplicate Events
@@ -255,6 +284,7 @@ SELECT gym_id, title, date, event_url
 FROM events
 WHERE description_status IN ('none', 'flyer_only')
 AND date >= CURRENT_DATE
+AND deleted_at IS NULL
 ORDER BY date;
 ```
 
@@ -277,6 +307,14 @@ WHERE schemaname = 'public'
 ORDER BY pg_total_relation_size(schemaname || '.' || tablename) DESC;
 ```
 
+### Check Gym Links Status
+```sql
+SELECT gym_id, link_type_id, is_active, 
+       CASE WHEN url LIKE 'http%' THEN '✅ Valid' ELSE '❌ Invalid' END as url_status
+FROM gym_links
+ORDER BY gym_id, link_type_id;
+```
+
 ---
 
 ## 📞 When to Escalate
@@ -287,6 +325,7 @@ Contact your developer if:
 - [ ] Vercel deployment fails
 - [ ] Security concerns arise
 - [ ] Major feature changes needed
+- [ ] API key needs to be rotated
 
 ---
 
@@ -337,6 +376,14 @@ _______________________
 
 ---
 
+## 📜 VERSION HISTORY
+
+| Date | Change |
+|------|--------|
+| Oct 2025 | Initial maintenance guide created |
+| Nov 2025 | Added sync progress tracker references |
+| Dec 2025 | Updated for API key authentication, clarified gym links management |
+
+---
+
 *For technical details, see other docs in `/docs/OPERATIONS/` and `/docs/TECHNICAL/`*
-
-

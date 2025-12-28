@@ -1,9 +1,9 @@
 # 🔍 Audit History System
 ## Complete Change Tracking for Events
 
-**Last Updated:** November 26, 2025  
+**Last Updated:** December 28, 2025  
 **Status:** ✅ Working  
-**Location:** Super Admin (Level 3) access
+**Location:** Super Admin (PIN required) access
 
 ---
 
@@ -20,15 +20,16 @@ This provides complete accountability and the ability to see what changed and wh
 
 ## 🔓 HOW TO ACCESS
 
-### **Method 1: Super Admin Portal**
-1. **Shift + Click** the 🪄 Magic Wand button
-2. Click the 🔒 **lock icon**
-3. Enter PIN: **1426** (or press `*`)
-4. Click **"📜 Audit History"**
+### **Method 1: Super Admin Portal (Primary)**
+1. Click the **"🪄 Admin"** button at the top of dashboard
+2. Click the **🔐 lock icon** (or press `*` key)
+3. Enter PIN: **1426**
+4. Click **"🔍 Audit History"** button in the Super Admin section
 
-### **Method 2: Ctrl+Click (Legacy)**
-1. **Ctrl+Click** (or Cmd+Click on Mac) on the date/time below the main title
-2. The audit history modal will open
+### **Method 2: Ctrl+Click (Legacy/Hidden)**
+1. Find the date/time text below "✨ Master Events Calendar ✨" header
+2. **Ctrl+Click** (or Cmd+Click on Mac) on it
+3. The audit history modal will open directly
 
 ---
 
@@ -37,7 +38,7 @@ This provides complete accountability and the ability to see what changed and wh
 ### **📝 CREATES (New Events)**
 - When new events are imported
 - Shows event title and date
-- Tracks source (Bulk Import, Automated Sync, Manual Add)
+- Tracks who made the change (e.g., "Bulk Import")
 
 ### **🔄 UPDATES (Changed Events)**
 - Price changes
@@ -46,40 +47,50 @@ This provides complete accountability and the ability to see what changed and wh
 - Title changes
 - Description changes
 - Age range changes
-- Shows: **old value → new value** for each change
+- Shows: **old value → new value** for each changed field
 
 ### **🗑️ DELETES (Removed Events)**
 - When events are soft-deleted
 - Preserves the event title and date for reference
-- Records why (manual delete, sync detected removal, etc.)
+- Shows "Event was deleted from the system"
 
 ---
 
 ## 📊 WHAT YOU SEE
 
 ### **Audit Log Display:**
+
+The modal shows a scrollable list of changes, limited to the **100 most recent entries**.
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 📜 Audit History                                        [×] │
+│ 🔍 Event Change History                                 [×] │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│ Nov 26, 2025 10:45 AM                                       │
-│ 🔄 UPDATE - Estrella Gymnastics                             │
-│ Event: Clinic | Backhandspring Saturday, December 13th      │
-│ Changed: price "20" → "25"                                  │
+│ December 28, 2025 10:45 AM                         [UPDATE] │
+│ Clinic | Backhandspring Saturday, December 13th             │
+│ EST • 2025-12-13                                            │
+│ price: $20 → $25                                            │
+│ Changed by: Bulk Import                                     │
 │                                                             │
-│ Nov 26, 2025 10:30 AM                                       │
-│ 📝 CREATE - Capital Cedar Park                              │
-│ Event: Kids Night Out | Ages 4-13 | December 5, 2025        │
-│ Source: Automated Sync                                      │
+│ December 28, 2025 10:30 AM                         [CREATE] │
+│ Kids Night Out | Ages 4-13 | December 5, 2025               │
+│ CCP • 2025-12-05                                            │
+│ Changed by: Bulk Import                                     │
 │                                                             │
-│ Nov 26, 2025 10:15 AM                                       │
-│ 🗑️ DELETE - Oasis Gymnastics                               │
-│ Event: Open Gym | November 20th (event passed)              │
-│ Reason: Soft delete - event no longer on portal             │
+│ December 28, 2025 10:15 AM                         [DELETE] │
+│ Open Gym | November 20th                                    │
+│ OAS • 2025-11-20                                            │
+│ Event was deleted from the system                           │
+│ Changed by: Bulk Import                                     │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### **Color Coding:**
+- 🟢 **CREATE** - Green badge
+- 🔵 **UPDATE** - Blue badge
+- 🔴 **DELETE** - Red badge
 
 ---
 
@@ -90,12 +101,15 @@ This provides complete accountability and the ability to see what changed and wh
 event_audit_log (
   id UUID PRIMARY KEY,
   event_id UUID,              -- Which event changed
+  gym_id TEXT,                -- Which gym (e.g., "EST", "CCP")
   action TEXT,                -- CREATE, UPDATE, DELETE
-  old_values JSONB,           -- Previous data (for updates)
-  new_values JSONB,           -- New data
-  changed_by TEXT,            -- Who made the change
-  changed_at TIMESTAMP,       -- When it happened
-  source TEXT                 -- Bulk Import, Automated Sync, Manual
+  field_changed TEXT,         -- Which field changed (e.g., "price", "time", "all")
+  old_value TEXT,             -- Previous value
+  new_value TEXT,             -- New value
+  changed_by TEXT,            -- Who made the change (e.g., "Bulk Import")
+  event_title TEXT,           -- Title of the event (for display)
+  event_date TEXT,            -- Date of the event (for display)
+  changed_at TIMESTAMP        -- When it happened (auto-set)
 )
 ```
 
@@ -129,7 +143,7 @@ IMPORT SUMMARY:
 
 ### **2. Track Price Changes**
 "When did this event's price change?"
-→ Filter audit log by event, see price history
+→ Look for UPDATE entries with field_changed = "price"
 
 ### **3. Investigate Issues**
 "Why is this event missing?"
@@ -141,31 +155,27 @@ IMPORT SUMMARY:
 
 ---
 
-## 📋 VIEWING OPTIONS
+## 📋 CURRENT LIMITATIONS
 
-### **Filter by Action:**
-- Show only CREATEs
-- Show only UPDATEs
-- Show only DELETEs
+The current audit modal is a **simple viewer** with these constraints:
 
-### **Filter by Gym:**
-- Show changes for specific gym only
+| Feature | Status |
+|---------|--------|
+| View recent changes | ✅ Works (last 100 entries) |
+| Filter by action type | ❌ Not implemented |
+| Filter by gym | ❌ Not implemented |
+| Filter by date range | ❌ Not implemented |
+| Export audit log | ❌ Not implemented |
+| Search by event title | ❌ Not implemented |
 
-### **Filter by Date:**
-- Show changes from last 24 hours
-- Show changes from last week
-- Show all history
-
-### **Sort Order:**
-- Most recent first (default)
-- Oldest first
+**Workaround:** For advanced filtering, use Supabase dashboard to query the `event_audit_log` table directly.
 
 ---
 
 ## 🛡️ DATA RETENTION
 
 - **How long is data kept?** Indefinitely (until manually cleared)
-- **How many records?** Currently 1,198+ audit entries
+- **How many records displayed?** 100 most recent (database may have more)
 - **Storage impact:** Minimal (~1KB per entry)
 
 ---
@@ -174,38 +184,38 @@ IMPORT SUMMARY:
 
 ### **How It Works:**
 
-1. **On Event Create:**
+The `logEventChange` function inserts audit records:
+
 ```javascript
-await supabase.from('event_audit_log').insert({
-  event_id: newEvent.id,
-  action: 'CREATE',
-  new_values: newEvent,
-  changed_by: 'Automated Sync',
-  source: 'sync'
-});
+const logEventChange = async (eventId, gymId, action, fieldChanged, oldValue, newValue, eventTitle, eventDate) => {
+  await supabase
+    .from('event_audit_log')
+    .insert([{
+      event_id: eventId,
+      gym_id: gymId,
+      action: action,           // 'CREATE', 'UPDATE', 'DELETE'
+      field_changed: fieldChanged,
+      old_value: oldValue,
+      new_value: newValue,
+      changed_by: 'Bulk Import',
+      event_title: eventTitle,
+      event_date: eventDate
+    }]);
+};
 ```
 
-2. **On Event Update:**
-```javascript
-await supabase.from('event_audit_log').insert({
-  event_id: existingEvent.id,
-  action: 'UPDATE',
-  old_values: existingEvent,
-  new_values: updatedEvent,
-  changed_by: 'Automated Sync',
-  source: 'sync'
-});
-```
+### **Loading Audit History:**
 
-3. **On Event Delete:**
 ```javascript
-await supabase.from('event_audit_log').insert({
-  event_id: deletedEvent.id,
-  action: 'DELETE',
-  old_values: deletedEvent,
-  changed_by: 'Automated Sync',
-  source: 'sync'
-});
+const loadAuditHistory = async () => {
+  const { data } = await supabase
+    .from('event_audit_log')
+    .select('*')
+    .order('changed_at', { ascending: false })
+    .limit(100);  // Only last 100 entries
+  
+  setAuditHistory(data || []);
+};
 ```
 
 ---
@@ -213,16 +223,54 @@ await supabase.from('event_audit_log').insert({
 ## ❓ FAQ
 
 ### **Q: Can I undo a change?**
-A: Not automatically, but you can see the old values in the audit log and manually restore them.
+A: Not automatically, but you can see the old values in the audit log and manually restore them via Supabase.
 
 ### **Q: Does this slow down imports?**
 A: No, audit logging is very fast (~1ms per entry).
 
 ### **Q: Can I clear the audit log?**
-A: Yes, via Supabase dashboard, but this is not recommended.
+A: Yes, via Supabase dashboard, but this is not recommended - you lose history.
 
 ### **Q: Who can see the audit log?**
-A: Only Super Admin (Level 3) access.
+A: Only Super Admin (PIN 1426 required).
+
+### **Q: Why only 100 entries?**
+A: Performance - the full log could have thousands of entries. Use Supabase for full history.
+
+---
+
+## 📜 VERSION HISTORY & LESSONS LEARNED
+
+### Phase 1: Ctrl+Click Access (Early Development)
+
+**What it was:**
+- Hidden feature - Ctrl+Click on date/time to open audit modal
+- No filtering, just a list of changes
+
+**Why it existed:**
+- Quick debugging tool during development
+- Didn't want it easily discoverable by casual users
+
+**Status:** Still works as a hidden shortcut
+
+### Phase 2: Super Admin Access (Current)
+
+**What changed:**
+- Added proper access through Admin Portal → Super Admin → Audit History button
+- More discoverable for authorized users
+- Still requires PIN for security
+
+**Status:** ✅ Primary access method
+
+### Potential Future Improvements
+
+| Feature | Priority | Notes |
+|---------|----------|-------|
+| Filter by gym | Medium | Would help focus on specific gym issues |
+| Filter by date range | Medium | "Show me last week's changes" |
+| Filter by action type | Low | Show only DELETEs for troubleshooting |
+| Export to CSV | Low | For compliance/reporting |
+| Pagination | Low | For viewing more than 100 entries |
 
 ---
 
@@ -234,8 +282,8 @@ A: Only Super Admin (Level 3) access.
 | Nov 2025 | Moved to Super Admin access |
 | Nov 2025 | Added source tracking |
 | Nov 2025 | Added soft delete logging |
+| Dec 2025 | Updated documentation to match actual code |
 
 ---
 
 **Complete visibility into what's happening with your events!** 🎯
-

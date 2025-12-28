@@ -1,113 +1,145 @@
-# 🔧 Troubleshooting Local API Server
+# 🔧 Automation Troubleshooting Guide
 
-## Error: "Failed to connect to local API"
+**Last Updated:** December 28, 2025
 
-### Step 1: Check if server is running
+---
 
-Open a terminal and run:
+## 🚨 Common Issues
+
+### "Invalid or missing API key"
+
+**Cause:** API key mismatch between Vercel and Railway
+
+**Fix:**
+1. Check Vercel has `REACT_APP_API_KEY` set
+2. Check Railway has `API_KEY` set
+3. Verify both values are **exactly the same**
+4. Redeploy both services after changing
+
+---
+
+### "Failed to connect to API"
+
+**Cause:** Railway service not running or wrong URL
+
+**Fix:**
+1. Check Railway dashboard - is service running?
+2. Check Railway logs for errors
+3. Test health endpoint: `https://[your-railway-url]/health`
+4. Verify `REACT_APP_API_URL` in Vercel matches Railway URL
+
+---
+
+### "No events collected"
+
+**Cause:** Playwright couldn't collect from iClassPro
+
+**Fix:**
+1. Check Railway logs for specific error
+2. Verify the gym has events of that type
+3. Try a different gym/event type combination
+4. Check if iClassPro portal is accessible
+
+---
+
+### "Sync takes forever / times out"
+
+**Cause:** Playwright is slow or stuck
+
+**Fix:**
+1. Railway has a 5-minute timeout - should be enough
+2. Check Railway logs for Playwright errors
+3. iClassPro portal might be slow - try again later
+4. Try syncing one event type instead of ALL
+
+---
+
+### "Events not importing to database"
+
+**Cause:** Supabase connection issue
+
+**Fix:**
+1. Check Railway has correct `SUPABASE_URL`
+2. Check Railway has correct `SUPABASE_SERVICE_KEY`
+3. Check Supabase dashboard for errors
+4. Verify the service key has write permissions
+
+---
+
+## 🖥️ Local Development Issues
+
+### "Connection refused" on localhost:5000
+
+**Cause:** Local server not running
+
+**Fix:**
 ```bash
 cd automation
 python local_api_server.py
 ```
 
-**You should see:**
-```
-============================================================
-🚀 LOCAL F12 API SERVER
-============================================================
-Starting server on http://localhost:5000
-...
- * Running on http://127.0.0.1:5000
-```
+---
 
-**If you see an error**, check:
+### "Playwright not found"
 
-1. **Python is installed:**
-   ```bash
-   python --version
-   ```
-   Should show Python 3.x
+**Cause:** Playwright not installed
 
-2. **Dependencies installed:**
-   ```bash
-   pip install flask flask-cors playwright
-   playwright install chromium
-   ```
-
-3. **Port 5000 is available:**
-   - Close any other apps using port 5000
-   - Or change the port in `local_api_server.py` (line 145)
-
-### Step 2: Test the API directly
-
-Open a NEW terminal and test:
+**Fix:**
 ```bash
-curl http://localhost:5000/health
+pip install playwright
+playwright install chromium
 ```
 
-**Should return:**
-```json
-{"status":"ok","message":"Local F12 API server is running"}
+---
+
+### "Port 5000 already in use"
+
+**Cause:** Another app using port 5000
+
+**Fix:**
+- Close the other app
+- Or change port in `local_api_server.py` (bottom of file)
+
+---
+
+## 🔍 Debugging Steps
+
+### 1. Check Railway Logs
+Railway Dashboard → Your Service → Logs
+
+Look for:
+- Python errors
+- Playwright errors
+- Connection timeouts
+- API key issues
+
+### 2. Check Browser Console
+In the React app, press F12 → Console
+
+Look for:
+- CORS errors
+- Network errors
+- API response errors
+
+### 3. Test API Directly
+```bash
+# Health check
+curl https://[your-railway-url]/health
+
+# Sync test (replace with your API key)
+curl -X POST https://[your-railway-url]/sync-events \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"gymId": "RBA", "eventType": "KIDS NIGHT OUT"}'
 ```
 
-If this works, the server is running correctly.
+---
 
-### Step 3: Check browser console
+## 📞 Still Stuck?
 
-1. Open your React app
-2. Press F12 → Console tab
-3. Look for CORS errors or connection errors
-4. Share what you see
-
-### Step 4: Common fixes
-
-**Fix 1: CORS issue**
-- The server should have `CORS(app)` - check line 21 of `local_api_server.py`
-
-**Fix 2: Wrong URL**
-- Make sure SyncModal.js is calling `http://localhost:5000`
-- Not `https://localhost:5000` (no https for local)
-
-**Fix 3: Firewall blocking**
-- Windows Firewall might block localhost connections
-- Try temporarily disabling firewall to test
-
-**Fix 4: React app on different port**
-- If React runs on port 3000, it should still be able to call localhost:5000
-- But check browser console for errors
-
-### Quick Test Script
-
-Save this as `test_server.py` in automation folder:
-```python
-import requests
-
-try:
-    response = requests.get('http://localhost:5000/health')
-    print(f"✅ Server is running! Status: {response.status_code}")
-    print(f"Response: {response.json()}")
-except requests.exceptions.ConnectionError:
-    print("❌ Server is NOT running. Start it with: python local_api_server.py")
-except Exception as e:
-    print(f"❌ Error: {e}")
-```
-
-Run: `python test_server.py`
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+1. **Check the logs** - Railway and browser console
+2. **Restart Railway** - Sometimes helps
+3. **Redeploy** - Deployments → Redeploy
+4. **Check environment variables** - All 4 must be set correctly:
+   - Vercel: `REACT_APP_API_URL`, `REACT_APP_API_KEY`
+   - Railway: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `API_KEY`

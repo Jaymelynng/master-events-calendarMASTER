@@ -1,78 +1,213 @@
 # 🚀 Master Events Calendar - Automation System
 
-## Overview
-
-This automation system replaces your manual F12 import process with fully automated event collection from all 10 gyms.
-
-## Files
-
-### Core Automation
-- **`auto_collect_events.py`** - Main automation script (local execution)
-- **`api/auto_collect_events.py`** - Vercel API endpoint (cloud execution)
-- **`vercel.json`** - Vercel Cron configuration (daily at 6 AM)
-
-### Documentation
-- **`F12-IMPORT-GUIDE.md`** - Your documented F12 process
-- **`SUPABASE_AUDIT_REPORT.md`** - Database structure
-- **`BUG_FIX_DUPLICATE_DETECTION_OCT_2025.md`** - Duplicate prevention logic
-
-## How It Works
-
-### 1. Event Collection
-- Fetches from all 10 gyms using documented API endpoints
-- Uses exact same JSON structure as your F12 process
-- Handles all program types (CLINIC, KIDS NIGHT OUT, OPEN GYM, CAMP)
-
-### 2. Data Conversion
-- Uses your exact `convertRawDataToJson()` logic
-- Maintains all your duplicate detection rules
-- Preserves audit logging functionality
-
-### 3. Database Integration
-- Upserts to your Supabase database
-- Handles duplicates using URL-based detection
-- Logs all changes to `event_audit_log`
-
-## Usage
-
-### Local Execution
-```bash
-cd automation
-python auto_collect_events.py
-```
-
-### Vercel Deployment
-1. Deploy to Vercel with environment variables:
-   - `SUPABASE_URL=https://xftiwouxpefchwoxxgpf.supabase.co`
-   - `SUPABASE_ANON_KEY=your_key_here`
-
-2. Cron job runs automatically daily at 6 AM
-
-## Benefits
-
-- ✅ **Fully automated** - No manual F12 work needed
-- ✅ **Same accuracy** - Uses your exact documented process
-- ✅ **Daily updates** - Events stay current automatically
-- ✅ **Duplicate safe** - Uses your existing prevention logic
-- ✅ **Audit trail** - All changes logged automatically
-
-## Safety Features
-
-- **Timeout protection** - 30s per request
-- **Error handling** - Graceful failure for broken endpoints
-- **Duplicate prevention** - Database unique index on event_url
-- **Audit logging** - All changes tracked automatically
+**Last Updated:** December 28, 2025  
+**Status:** ✅ Production (Deployed on Railway)
 
 ---
 
-**This automation system is production-ready and replaces your manual F12 process completely!** 🎉
+## 📋 OVERVIEW
 
+This folder contains the **Flask API server** and **Playwright script** that powers the automated event sync system. The API is deployed on Railway and called from the React frontend on Vercel.
 
+---
 
+## 🗂️ FILE STRUCTURE
 
+### Core Files (Required for Production):
 
+| File | Purpose |
+|------|---------|
+| `local_api_server.py` | **Flask API server** - handles /sync-events and /import-events |
+| `f12_collect_and_import.py` | **Playwright script** - collects events from iClassPro portals |
+| `requirements.txt` | Python dependencies |
+| `Procfile` | Railway deployment command |
+| `railway.json` | Railway build configuration |
 
+### Documentation:
 
+| File | Purpose |
+|------|---------|
+| `README.md` | This file |
+| `START_LOCAL_API.md` | How to run locally for development |
+| `TROUBLESHOOTING.md` | Common issues and fixes |
 
+---
 
+## 🌐 DEPLOYMENT ARCHITECTURE
 
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    VERCEL (Frontend)                         │
+│                                                              │
+│  React App → 🪄 Admin → Sync Modal → API Call               │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    RAILWAY (This Code)                       │
+│                                                              │
+│  local_api_server.py                                        │
+│  ├── /health - Health check                                 │
+│  ├── /sync-events - Collect events from iClassPro          │
+│  ├── /import-events - Write events to Supabase             │
+│  ├── /gyms - List available gyms                            │
+│  └── /event-types - List event types                        │
+│                                                              │
+│  f12_collect_and_import.py                                  │
+│  └── Uses Playwright to intercept iClassPro API calls       │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    SUPABASE (Database)                       │
+│                                                              │
+│  events, events_archive, gyms, gym_links, sync_log          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔧 LOCAL DEVELOPMENT
+
+### Prerequisites:
+- Python 3.8+
+- Playwright
+
+### Setup:
+```bash
+cd automation
+pip install -r requirements.txt
+playwright install chromium
+```
+
+### Run locally:
+```bash
+python local_api_server.py
+```
+
+Server starts at `http://localhost:5000`
+
+### Test the API:
+```bash
+curl http://localhost:5000/health
+```
+
+---
+
+## 🚀 RAILWAY DEPLOYMENT
+
+Railway auto-deploys when you push to GitHub.
+
+### Environment Variables (set in Railway):
+```
+PORT = (auto-assigned)
+SUPABASE_URL = https://xftiwouxpefchwoxxgpf.supabase.co
+SUPABASE_SERVICE_KEY = [your-service-key]
+API_KEY = [your-api-key]
+```
+
+### Manual Redeploy:
+Railway Dashboard → Deployments → Redeploy
+
+---
+
+## 📡 API ENDPOINTS
+
+### GET /health
+Health check endpoint.
+
+**Response:**
+```json
+{"status": "healthy", "message": "API is running"}
+```
+
+### POST /sync-events
+Collect events from iClassPro portal.
+
+**Request:**
+```json
+{
+  "gymId": "CCP",
+  "eventType": "KIDS NIGHT OUT"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "events": [...],
+  "eventsFound": 15
+}
+```
+
+### POST /import-events
+Write events to Supabase database.
+
+**Request:**
+```json
+{
+  "events": [...],
+  "gymId": "CCP"
+}
+```
+
+---
+
+## 🏢 SUPPORTED GYMS
+
+| Code | Name | Portal Slug |
+|------|------|-------------|
+| CCP | Capital Gymnastics Cedar Park | capgymavery |
+| CPF | Capital Gymnastics Pflugerville | capgymhp |
+| CRR | Capital Gymnastics Round Rock | capgymroundrock |
+| HGA | Houston Gymnastics Academy | houstongymnastics |
+| RBA | Rowland Ballard Atascocita | rbatascocita |
+| RBK | Rowland Ballard Kingwood | rbkingwood |
+| EST | Estrella Gymnastics | estrellagymnastics |
+| OAS | Oasis Gymnastics | oasisgymnastics |
+| SGT | Scottsdale Gymnastics | scottsdalegymnastics |
+| TIG | Tigar Gymnastics | tigar |
+
+---
+
+## 📝 SUPPORTED EVENT TYPES
+
+- KIDS NIGHT OUT
+- CLINIC
+- OPEN GYM
+- CAMP (includes all camp types)
+- SPECIAL EVENT
+- ALL (syncs all types at once)
+
+---
+
+## 🔐 AUTHENTICATION
+
+The API uses API key authentication:
+- Frontend sends `X-API-Key` header
+- Backend validates against `API_KEY` environment variable
+- Both Vercel and Railway must have matching keys
+
+---
+
+## 📜 CHANGELOG
+
+| Date | Change |
+|------|--------|
+| Nov 2025 | Initial Railway deployment |
+| Nov 2025 | Added Playwright event collection |
+| Dec 2025 | Added API key authentication |
+| Dec 2025 | Added SYNC ALL PROGRAMS feature |
+| Dec 28, 2025 | Cleaned up folder, removed 40+ unused files |
+
+---
+
+## 📞 TROUBLESHOOTING
+
+See `TROUBLESHOOTING.md` for common issues.
+
+**Quick checks:**
+1. Is Railway service running? Check dashboard.
+2. Is API key set in both Vercel and Railway?
+3. Check Railway logs for errors.

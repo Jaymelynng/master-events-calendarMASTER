@@ -18,24 +18,35 @@
 
 ---
 
-## 🗂️ How to Navigate This Documentation
+## 🗂️ Documentation Structure
 
-This documentation is organized into three strategic categories based on your role and needs.
+```
+docs/
+├── INDEX.md                    ← You are here
+├── BUSINESS/                   ← Executive presentations, ROI
+│   ├── BOSS-PRESENTATION.md
+│   └── GYM_DATA_IMPROVEMENTS.md
+├── OPERATIONS/                 ← How-to guides, daily use
+│   ├── AUTO-SYNC-GUIDE.md      ⭐ Main workflow
+│   ├── SYNC-QUICK-REFERENCE.md ⭐ Quick reference
+│   ├── SECRET_ADMIN_MODE.md    ⭐ Admin access
+│   └── ... (17 more guides)
+└── TECHNICAL/                  ← Architecture, code details
+    ├── TECHNICAL-REFERENCE.md  ⭐ Master overview
+    ├── DATABASE_COMPLETE_SCHEMA.md
+    ├── SCALABILITY-ROADMAP.md
+    └── SYNC_SYSTEM_TECHNICAL.md
+```
 
 ---
 
-## 🆕 START HERE - December 2025 Status
+## 🆕 START HERE
 
-### **[CURRENT_SYSTEM_STATUS.md](OPERATIONS/CURRENT_SYSTEM_STATUS.md)** ⭐ **CURRENT STATUS**
-**What it contains:**
+### **[CURRENT_SYSTEM_STATUS.md](OPERATIONS/CURRENT_SYSTEM_STATUS.md)** ⭐ **READ FIRST**
 - Complete system status (FULLY DEPLOYED & WORKING!)
-- All 10 gyms, 555+ events (401 active, 154 archived)
+- All 10 gyms, 500+ events
 - Verified 100% accuracy against live iClassPro data
-- Feature list with what's working NOW
-- Troubleshooting guide
-- December 2025 updates (volatile field fix, link editor removal)
-
-**Why it's valuable:** THE source of truth for what's working right now. Read this first!
+- What's working NOW
 
 ---
 
@@ -43,16 +54,10 @@ This documentation is organized into three strategic categories based on your ro
 
 **For:** Investors, stakeholders, executives, presentations
 
-### **[BOSS-PRESENTATION.md](BUSINESS/BOSS-PRESENTATION.md)** ⭐ CROWN JEWEL
-**What it contains:**
-- ROI analysis (94% time savings, $5K-10K revenue protection)
-- Before vs. After process comparison
-- Business value proposition
-- Success metrics and impact
-
-**Why it's valuable:** This is your pitch deck. It proves the business value and translates features into dollars and hours saved.
-
-**Use it for:** Selling the project, presenting to management, demonstrating ROI
+| Document | Purpose |
+|----------|---------|
+| **[BOSS-PRESENTATION.md](BUSINESS/BOSS-PRESENTATION.md)** ⭐ | ROI analysis, business value, pitch deck |
+| [GYM_DATA_IMPROVEMENTS.md](BUSINESS/GYM_DATA_IMPROVEMENTS.md) | Missing gym contact info, placeholder URLs |
 
 ---
 
@@ -60,366 +65,112 @@ This documentation is organized into three strategic categories based on your ro
 
 **For:** Developers, system architects, technical planning
 
-### **[TECHNICAL-REFERENCE.md](TECHNICAL/TECHNICAL-REFERENCE.md)** ⭐ **UPDATED NOV 2025**
-**What it contains:**
-- Complete system architecture (React + Flask + Supabase)
-- Database schema with NEW columns (description, age_min, age_max, deleted_at)
-- Automated Sync System documentation
-- Secret Admin Mode documentation
-- Deployment architecture (Vercel + Railway + Supabase)
-- API design and data flow
-
-**Why it's valuable:** The "Owner's Manual" - updated with all November 2025 features.
-
-**Use it for:** Developer onboarding, technical handoff, system understanding
-
----
-
-### **[SCALABILITY-ROADMAP.md](TECHNICAL/SCALABILITY-ROADMAP.md)**
-**What it contains:**
-- Phase-by-phase scaling plan (10 gyms → 10,000+ users)
-- Component refactoring strategy
-- Performance optimizations (5-10x faster)
-- Infrastructure scaling (microservices, caching, monitoring)
-- Implementation timeline
-
-**Why it's valuable:** Proves this isn't a dead end - it's a platform built for growth.
-
-**Use it for:** Planning future development, demonstrating scalability to investors
-
----
-
-### **[SUPABASE-ARCHITECTURE.md](TECHNICAL/SUPABASE-ARCHITECTURE.md)** ⭐ **UPDATED DEC 2025**
-**What it contains:**
-- Complete database schema (events, events_archive, gyms, etc.)
-- Auto-archive system (pg_cron job)
-- events_with_gym view (UNION ALL both tables)
-- Table design decisions
-- Data relationships
-
-**Why it's valuable:** Shows complete database architecture including auto-archiving.
-
-**Use it for:** Understanding database structure, auto-archive system
-
----
-
-### **[SUPABASE_AUDIT_REPORT.md](TECHNICAL/SUPABASE_AUDIT_REPORT.md)** ⭐ **UPDATED DEC 2025**
-**What it contains:**
-- Complete database structure analysis
-- Live data audit (555 events, 76 links)
-- Data flow architecture
-- Performance analysis
-
-**Why it's valuable:** Complete technical audit proving your database is production-ready.
-
-**Use it for:** Technical due diligence, developer onboarding
-
----
-
-### **[DATABASE_COMPLETE_SCHEMA.md](TECHNICAL/DATABASE_COMPLETE_SCHEMA.md)** 🆕 **NEW!**
-**What it contains:**
-- ALL 9 tables with exact column definitions
-- Both views with full SQL
-- Current data (link_types, event_types, monthly_requirements)
-- Row counts and relationships
-- pg_cron auto-archive job
-
-**Why it's valuable:** THE complete reference for every table and column in the database.
-
-**Use it for:** Database reference, schema changes, developer onboarding
-
----
-
-### **[MAGIC_CONTROL_FEATURES.md](TECHNICAL/MAGIC_CONTROL_FEATURES.md)**
-**What it contains:**
-- Secret keyboard shortcuts
-- Hidden admin features
-- Magic wand button functionality
-
-**Why it's valuable:** Documents the "hidden" features only you know about.
+| Document | Purpose |
+|----------|---------|
+| **[TECHNICAL-REFERENCE.md](TECHNICAL/TECHNICAL-REFERENCE.md)** ⭐ | Complete system overview - START HERE for technical |
+| [DATABASE_COMPLETE_SCHEMA.md](TECHNICAL/DATABASE_COMPLETE_SCHEMA.md) | All 9 tables, views, design decisions, SQL commands |
+| [SCALABILITY-ROADMAP.md](TECHNICAL/SCALABILITY-ROADMAP.md) | Future scaling plan (not needed yet) |
+| [SYNC_SYSTEM_TECHNICAL.md](TECHNICAL/SYNC_SYSTEM_TECHNICAL.md) | Deep technical details of sync system |
 
 ---
 
 ## 📋 OPERATIONS Documents
 
-**For:** Users, managers, daily operations, training
+**For:** Daily use, training, troubleshooting
 
-### **[CURRENT_SYSTEM_STATUS.md](OPERATIONS/CURRENT_SYSTEM_STATUS.md)** 🆕 **START HERE**
-**What it contains:**
-- Current system status (everything working!)
-- All features verified
-- Troubleshooting guide
-- What was verified December 28, 2025
+### Core Workflow Guides
 
-**Why it's valuable:** THE source of truth for what's working right now.
+| Document | Purpose |
+|----------|---------|
+| **[AUTO-SYNC-GUIDE.md](OPERATIONS/AUTO-SYNC-GUIDE.md)** ⭐ | Main sync workflow (SYNC ALL!) |
+| **[SYNC-QUICK-REFERENCE.md](OPERATIONS/SYNC-QUICK-REFERENCE.md)** ⭐ | Non-technical quick reference |
+| **[SECRET_ADMIN_MODE.md](OPERATIONS/SECRET_ADMIN_MODE.md)** ⭐ | 3-tier admin access (PIN: 1426) |
+| [F12-IMPORT-GUIDE.md](OPERATIONS/F12-IMPORT-GUIDE.md) | Backup manual import method |
 
----
+### System Features
 
-### **[SECRET_ADMIN_MODE.md](OPERATIONS/SECRET_ADMIN_MODE.md)** 🆕 **NEW!**
-**What it contains:**
-- Three-tier access system explained
-- Level 1 (Normal), Level 2 (Admin), Level 3 (Super Admin)
-- How to access each level
-- PIN code: 1426
-- What each level can see/do
+| Document | Purpose |
+|----------|---------|
+| [SYNC_PROGRESS_TRACKER.md](OPERATIONS/SYNC_PROGRESS_TRACKER.md) | Visual sync status grid |
+| [EXPORT_DATA_GUIDE.md](OPERATIONS/EXPORT_DATA_GUIDE.md) | Export events, analytics, reports |
+| [AUTO_ARCHIVE_SYSTEM.md](OPERATIONS/AUTO_ARCHIVE_SYSTEM.md) | Automatic event archiving |
+| [AUDIT-SYSTEM.md](OPERATIONS/AUDIT-SYSTEM.md) | Change tracking / audit history |
+| [DATA_QUALITY_VALIDATION.md](OPERATIONS/DATA_QUALITY_VALIDATION.md) | Automatic data validation |
 
-**Why it's valuable:** Complete guide to the hidden admin system only you know about.
+### Technical Operations
 
-**Use it for:** Remembering how to access admin features, training future admins
+| Document | Purpose |
+|----------|---------|
+| [DEPLOYMENT_PLAN.md](OPERATIONS/DEPLOYMENT_PLAN.md) | Deployment architecture & checklists |
+| [LOCAL_DEVELOPMENT_GUIDE.md](OPERATIONS/LOCAL_DEVELOPMENT_GUIDE.md) | Running app locally |
+| [MAINTENANCE_GUIDE.md](OPERATIONS/MAINTENANCE_GUIDE.md) | Weekly/monthly maintenance tasks |
+| [EVENT_COMPARISON_LOGIC.md](OPERATIONS/EVENT_COMPARISON_LOGIC.md) | How NEW/CHANGED/DELETED works |
 
----
+### Reference & History
 
-### **[SYNC_PROGRESS_TRACKER.md](OPERATIONS/SYNC_PROGRESS_TRACKER.md)** 🆕 **NEW!**
-**What it contains:**
-- Visual grid showing sync status
-- Color coding (green/yellow/red)
-- How to never lose track of what you've synced
-- sync_log table structure
-
-**Why it's valuable:** Solves "where did I leave off?" problem.
-
-**Use it for:** Understanding the progress tracker, debugging sync issues
-
----
-
-### **[AUTO-SYNC-GUIDE.md](OPERATIONS/AUTO-SYNC-GUIDE.md)** ⭐ **MAIN WORKFLOW**
-**What it contains:**
-- Complete automated sync workflow
-- 🚀 **NEW: SYNC ALL PROGRAMS** - One click syncs everything!
-- Step-by-step instructions
-- What gets collected (title, date, time, price, age, description)
-- Camp sync details (all types: school year + summer)
-
-**Why it's valuable:** THE guide for the main feature - automated sync.
-
-**Use it for:** Daily operations, training
-
----
-
-### **[SYNC-QUICK-REFERENCE.md](OPERATIONS/SYNC-QUICK-REFERENCE.md)** 🆕 **NEW! NON-TECHNICAL**
-**What it contains:**
-- Simple step-by-step sync instructions
-- Color guide for progress tracker
-- Common questions answered
-- Monthly checklist
-
-**Why it's valuable:** Quick reference for non-technical users who just need to sync.
-
-**Use it for:** Quick reminder of how to sync, training new users
-
----
-
-### **[MAINTENANCE_GUIDE.md](OPERATIONS/MAINTENANCE_GUIDE.md)** 🆕 **NEW DEC 2025**
-**What it contains:**
-- Weekly, monthly, quarterly maintenance tasks
-- Troubleshooting guide for common issues
-- Health check SQL queries
-- Database backup procedures
-- Checklists and templates
-
-**Why it's valuable:** Complete guide to keeping the system running smoothly.
-
-**Use it for:** Regular maintenance, troubleshooting, training
-
----
-
-### **[DEPLOYMENT_PLAN.md](OPERATIONS/DEPLOYMENT_PLAN.md)** ⭐ **UPDATED NOV 2025**
-**What it contains:**
-- Deployment architecture (Vercel + Railway + Supabase)
-- Environment variables
-- How to redeploy
-- Troubleshooting
-
-**Why it's valuable:** Updated from "plan" to "completed deployment guide."
-
-**Use it for:** Understanding deployment, redeploying, troubleshooting
-
----
-
-### **[AI_VERIFICATION_PROTOCOL.md](OPERATIONS/AI_VERIFICATION_PROTOCOL.md)** 🚨 **MANDATORY**
-**What it contains:**
-- AI testing requirements before confirming functionality
-- Why "reading code" ≠ "verifying it works"
-- Trust protocol for non-technical users
-
-**Why it's critical:** Prevents AI from wasting user's time by assuming code works without testing.
-
-**Use it for:** Before ANY technical verification or code review
-
----
-
-### **[F12-IMPORT-GUIDE.md](OPERATIONS/F12-IMPORT-GUIDE.md)**
-**What it contains:**
-- Complete F12 import workflow
-- Step-by-step instructions
-- The "manual" method (still works, but automated sync is easier!)
-
-**Why it's valuable:** Backup method if automated sync ever fails.
-
-**Use it for:** Backup import method, understanding how data is structured
-
----
-
-### **[AUTOMATED_SYNC_SYSTEM_DETAILED.md](OPERATIONS/AUTOMATED_SYNC_SYSTEM_DETAILED.md)**
-**What it contains:**
-- Detailed technical breakdown of sync system
-- Playwright automation details
-- API endpoints
-
-**Why it's valuable:** Deep technical details for debugging.
-
----
-
-### **[EVENT_COMPARISON_LOGIC.md](OPERATIONS/EVENT_COMPARISON_LOGIC.md)**
-**What it contains:**
-- How events are compared (by event_url)
-- NEW vs CHANGED vs DELETED logic
-- What fields are checked
-
-**Why it's valuable:** Understanding why events show as "changed."
-
----
-
-### **[DATA_QUALITY_VALIDATION.md](OPERATIONS/DATA_QUALITY_VALIDATION.md)** 🆕 **NEW DEC 2025**
-**What it contains:**
-- How validation detects copy/paste errors
-- Date, time, age comparison (structured vs description)
-- Program type validation (KNO, CLINIC, OPEN GYM)
-- Skill mismatch detection for CLINIC events
-- Flyer detection and display
-- Icons: 🚨 errors, ⚠️ warnings, ❌ missing, 🖼️ flyer
-
-**Why it's valuable:** Complete guide to the automatic data quality validation system.
-
-**Use it for:** Understanding validation icons, troubleshooting false positives
-
----
-
-### **[AUDIT-SYSTEM.md](OPERATIONS/AUDIT-SYSTEM.md)**
-**What it contains:**
-- How to access audit history
-- What gets tracked
-
-**Why it's valuable:** Accountability and tracking.
-
----
-
-### **[BULK-IMPORT-LEARNINGS.md](OPERATIONS/BULK-IMPORT-LEARNINGS.md)**
-**What it contains:**
-- Lessons learned from past imports
-- Common gotchas and solutions
-
-**Why it's valuable:** History of solved problems.
-
----
-
-### **[AUTO_ARCHIVE_SYSTEM.md](OPERATIONS/AUTO_ARCHIVE_SYSTEM.md)** 🆕 **NEW DEC 2025**
-**What it contains:**
-- How events auto-archive at midnight
-- events_archive table structure
-- pg_cron scheduled job details
-- Why calendar/stats are NOT affected
-- Manual operations (force archive, check history)
-- Troubleshooting guide
-
-**Why it's valuable:** Complete guide to the automatic event archiving system.
-
-**Use it for:** Understanding archiving, troubleshooting, manual operations
-
----
-
-### **[EXPORT_DATA_GUIDE.md](OPERATIONS/EXPORT_DATA_GUIDE.md)** 🆕 **NEW DEC 2025**
-**What it contains:**
-- How to export events, analytics, and compliance reports
-- Date range selection (custom ranges)
-- Filtering by gym and event type
-- CSV vs JSON format differences
-- Missing requirements detection
-- Example use cases
-
-**Why it's valuable:** Complete guide to exporting data for reports and backups.
-
-**Use it for:** Monthly compliance reports, data backups, sharing with management
+| Document | Purpose |
+|----------|---------|
+| [CURRENT_SYSTEM_STATUS.md](OPERATIONS/CURRENT_SYSTEM_STATUS.md) | Current verified status |
+| [BULK-IMPORT-LEARNINGS.md](OPERATIONS/BULK-IMPORT-LEARNINGS.md) | Historical lessons learned |
+| [CAMP_COMPLEXITY_MASTER_GUIDE.md](OPERATIONS/CAMP_COMPLEXITY_MASTER_GUIDE.md) | Camp data structure variations |
+| [AI_VERIFICATION_PROTOCOL.md](OPERATIONS/AI_VERIFICATION_PROTOCOL.md) | Rules for AI testing |
 
 ---
 
 ## 🎯 Quick Reference: Which Doc Should I Read?
 
-### **I need to:**
-
-**Understand what's working RIGHT NOW**
-→ Read: `OPERATIONS/CURRENT_SYSTEM_STATUS.md` ⭐
-
-**Sell or present the project**
-→ Read: `BUSINESS/BOSS-PRESENTATION.md`
-
-**Understand how it works technically**
-→ Read: `TECHNICAL/TECHNICAL-REFERENCE.md`
-
-**Learn how to use automated sync**
-→ Read: `OPERATIONS/AUTO-SYNC-GUIDE.md`
-
-**Understand the secret admin system**
-→ Read: `OPERATIONS/SECRET_ADMIN_MODE.md`
-
-**See sync progress / never lose track**
-→ Read: `OPERATIONS/SYNC_PROGRESS_TRACKER.md`
-
-**Troubleshoot deployment issues**
-→ Read: `OPERATIONS/DEPLOYMENT_PLAN.md`
-
-**Onboard a new developer**
-→ Read in order:
-1. `OPERATIONS/CURRENT_SYSTEM_STATUS.md`
-2. `TECHNICAL/TECHNICAL-REFERENCE.md`
-3. `OPERATIONS/AUTO-SYNC-GUIDE.md`
+| I need to... | Read this |
+|--------------|-----------|
+| **Understand what's working RIGHT NOW** | `OPERATIONS/CURRENT_SYSTEM_STATUS.md` |
+| **Sell or present the project** | `BUSINESS/BOSS-PRESENTATION.md` |
+| **Understand how it works technically** | `TECHNICAL/TECHNICAL-REFERENCE.md` |
+| **Learn how to use automated sync** | `OPERATIONS/AUTO-SYNC-GUIDE.md` |
+| **Quick sync reminder (non-technical)** | `OPERATIONS/SYNC-QUICK-REFERENCE.md` |
+| **Access admin/super admin features** | `OPERATIONS/SECRET_ADMIN_MODE.md` |
+| **Troubleshoot deployment issues** | `OPERATIONS/DEPLOYMENT_PLAN.md` |
+| **Understand the database** | `TECHNICAL/DATABASE_COMPLETE_SCHEMA.md` |
 
 ---
 
-## 💎 The Crown Jewels (Most Valuable Docs)
+## 💎 The Crown Jewels (Most Valuable)
 
 1. **🆕 CURRENT_SYSTEM_STATUS.md** - Current truth (START HERE!)
-2. **🏆 BOSS-PRESENTATION.md** - More valuable than any code
-3. **🚀 AUTO-SYNC-GUIDE.md** - Main workflow (includes SYNC ALL!)
-4. **📋 SYNC-QUICK-REFERENCE.md** - Non-technical quick guide
-5. **🔐 SECRET_ADMIN_MODE.md** - Your hidden power
-6. **📊 SYNC_PROGRESS_TRACKER.md** - Never lose track
-7. **🔧 TECHNICAL-REFERENCE.md** - Complete system guide
-8. **🗄️ AUTO_ARCHIVE_SYSTEM.md** - Automatic cleanup
-9. **📤 EXPORT_DATA_GUIDE.md** - Export & compliance reports
-10. **🔍 DATA_QUALITY_VALIDATION.md** - Auto-detect copy/paste errors
-11. **🔧 MAINTENANCE_GUIDE.md** - Keep it running smoothly (NEW!)
-
-**Together, these documents elevate this from "personal project" to "valuable, transferable intellectual property."**
+2. **🏆 BOSS-PRESENTATION.md** - Business value / ROI
+3. **🚀 AUTO-SYNC-GUIDE.md** - Main workflow
+4. **📋 SYNC-QUICK-REFERENCE.md** - Quick non-technical guide
+5. **🔐 SECRET_ADMIN_MODE.md** - Your hidden admin power
+6. **🔧 TECHNICAL-REFERENCE.md** - Complete system guide
 
 ---
 
 ## 📊 Documentation Stats
 
-- **Total Documents:** 17 major documents (consolidated Dec 28, 2025)
-- **Coverage:** Business value, technical architecture, operations
-- **Quality Level:** Enterprise-grade, investor-ready
-- **Last Major Update:** December 28, 2025 (Full documentation audit)
+- **Total Documents:** 22 (consolidated Dec 28, 2025)
+- **BUSINESS:** 2 documents
+- **TECHNICAL:** 4 documents  
+- **OPERATIONS:** 16 documents
+- **Last Major Update:** December 28, 2025 (Full audit & reorganization)
 
 ---
 
-## 🔄 Keeping Docs Up to Date
+## 🔄 Recent Changes (Dec 28, 2025)
 
-**When to update:**
-- Major feature additions → Update TECHNICAL-REFERENCE.md
-- System status changes → Update CURRENT_SYSTEM_STATUS.md
-- Process changes → Update relevant OPERATIONS doc
-- Business metrics change → Update BOSS-PRESENTATION.md
+### Merged/Consolidated:
+- `SUPABASE_AUDIT_REPORT.md` → merged into `DATABASE_COMPLETE_SCHEMA.md`
+- `MAGIC_CONTROL_FEATURES.md` → merged into `SECRET_ADMIN_MODE.md`
+- `SUPABASE-ARCHITECTURE.md` → merged into `DATABASE_COMPLETE_SCHEMA.md`
+- `DEPLOYMENT_CHECKLIST.md` → merged into `DEPLOYMENT_PLAN.md`
 
-**How to update:**
-- Edit markdown files directly
-- Maintain the same structure and format
-- Add dates to updates
-- Keep examples clear and practical
+### Moved:
+- `AUTOMATED_SYNC_SYSTEM_DETAILED.md` → `TECHNICAL/SYNC_SYSTEM_TECHNICAL.md`
+- `GYM_DATA_IMPROVEMENTS.md` → `BUSINESS/`
+
+### Deleted (outdated):
+- Various test files and one-time scripts
 
 ---
 
-**This documentation is your project's most valuable asset.** 
+**This documentation is your project's most valuable asset.**
 
 Code can be rewritten, but this knowledge is irreplaceable.
 
@@ -427,4 +178,3 @@ Code can be rewritten, but this knowledge is irreplaceable.
 
 **Last Updated:** December 28, 2025  
 **Maintained by:** Jayme
-

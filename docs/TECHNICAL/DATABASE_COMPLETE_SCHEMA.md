@@ -13,13 +13,15 @@
 |----------|-------|
 | **Tables** | 9 |
 | **Views** | 2 |
-| **Total Events** | 555 (401 active + 154 archived) |
+| **Total Events** | ~500+ (active + archived) |
 | **Gyms** | 10 |
-| **Gym Links** | 76 |
+| **Gym Links** | ~75+ |
 | **Link Types** | 10 |
 | **Event Types** | 3 (tracked) |
-| **Audit Log Entries** | 1,198 |
-| **Sync Log Entries** | 51 |
+| **Audit Log Entries** | ~1,000+ |
+| **Sync Log Entries** | ~50+ |
+
+> **Note:** Row counts are approximate and change frequently. Query the database for current counts.
 
 ---
 
@@ -41,7 +43,7 @@
 ## 1. EVENTS TABLE
 
 **Purpose:** Stores all active/future events  
-**Row Count:** 401  
+**Row Count:** Varies (changes with syncs)  
 **Column Count:** 30
 
 ```sql
@@ -99,8 +101,8 @@ events (
 ## 2. EVENTS_ARCHIVE TABLE
 
 **Purpose:** Stores past events (auto-archived at midnight)  
-**Row Count:** 154  
-**Column Count:** 29
+**Row Count:** Varies (auto-populated)  
+**Column Count:** 32
 
 ```sql
 events_archive (
@@ -126,12 +128,17 @@ events_archive (
   event_type VARCHAR,
   gym_code VARCHAR,
   event_id BIGINT,
-  availability_status TEXT,
+  -- Data Quality Fields
   has_flyer BOOLEAN DEFAULT FALSE,
   flyer_url TEXT,
   description_status TEXT DEFAULT 'unknown',
   validation_errors JSONB DEFAULT '[]',
-  acknowledged_errors JSONB DEFAULT '[]'
+  acknowledged_errors JSONB DEFAULT '[]',
+  -- Availability Tracking (must match events table for view to work)
+  has_openings BOOLEAN DEFAULT TRUE,
+  registration_start_date DATE,
+  registration_end_date DATE,
+  availability_status TEXT
 )
 ```
 
@@ -175,7 +182,7 @@ gyms (
 | RBA | Rowland Ballard Atascocita | TX |
 | RBK | Rowland Ballard Kingwood | TX |
 | SGT | Scottsdale Gymnastics | AZ |
-| TIG | TIGAR Gymnastics | CA |
+| TIG | Tigar Gymnastics | CA |
 
 ---
 
@@ -464,6 +471,174 @@ DELETE FROM events WHERE date < CURRENT_DATE;
 
 ---
 
+## 🔐 SECURITY & PERMISSIONS
+
+### Connection Methods:
+- ✅ **Frontend** uses ANON key (read access only)
+- ✅ **Railway backend** uses SERVICE key (write access)
+- ✅ Environment variables properly configured
+
+### Row Level Security:
+- Events table: Public read, restricted write
+- Sync log: Public read/write for app
+
+---
+
+## 🚀 PERFORMANCE
+
+### Recommended Indexes:
+```sql
+CREATE INDEX idx_events_date ON events(date);
+CREATE INDEX idx_events_gym_date ON events(gym_id, date);
+CREATE INDEX idx_events_url ON events(event_url);
+CREATE INDEX idx_sync_log_gym_type ON sync_log(gym_id, event_type);
+CREATE INDEX idx_events_description_status ON events(description_status);
+```
+
+### Caching:
+- Frontend caches event data (5-minute TTL)
+- Real-time subscriptions for live updates
+
+---
+
+## 📊 DATA FLOW
+
+```
+Automated Sync (Railway)
+    ↓
+Playwright collects from iClassPro
+    ↓
+Returns to React frontend
+    ↓
+Frontend compares with Supabase
+    ↓
+User clicks Import
+    ↓
+Railway writes to Supabase (service key)
+    ↓
+Real-time subscription updates calendar
+    ↓
+At midnight: pg_cron moves past events to events_archive
+```
+
+---
+
+## 🔧 SQL SCRIPTS FOR ADDING COLUMNS
+
+### Add Data Quality Columns:
+```sql
+ALTER TABLE events ADD COLUMN IF NOT EXISTS has_flyer BOOLEAN DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS flyer_url TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS description_status TEXT DEFAULT 'unknown';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS validation_errors JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS acknowledged_errors JSONB DEFAULT '[]'::jsonb;
+```
+
+### Add Availability Columns:
+```sql
+ALTER TABLE events ADD COLUMN IF NOT EXISTS has_openings BOOLEAN DEFAULT TRUE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS registration_start_date DATE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS registration_end_date DATE;
+```
+
+> **Remember:** When adding columns to `events`, also add them to `events_archive` and update the `events_with_gym` view!
+
+---
+
+## 🔑 KEY DESIGN DECISIONS
+
+### 1. Gym IDs as Short Codes
+- Using `CCP`, `EST`, `OAS` instead of UUIDs
+- Makes debugging easier
+- Human-readable in logs
+- Matches portal slugs
+
+### 2. event_url as Unique Identifier
+- Each event has a unique iClassPro URL
+- Used for comparison (NEW/CHANGED/DELETED)
+- More reliable than title matching
+
+### 3. Soft Delete Pattern
+- `deleted_at` timestamp instead of hard delete
+- Events removed from portal get soft-deleted
+- Can be restored if they come back
+- View filters out deleted events
+
+### 4. Type as TEXT (not FK)
+- Using `type TEXT` instead of `event_type_id UUID`
+- Simpler for queries
+- Direct string matching
+- Works well for filtering
+
+### 5. Price Extraction
+- **Price is parsed from title/description**, NOT from iClassPro's pricing API
+- Format like `($25)` in event titles is extracted via regex
+- Stored as TEXT not DECIMAL (display purposes only)
+
+### 6. Volatile Fields Excluded from Comparison
+- Fields like `has_openings`, `registration_start_date` are saved but don't trigger "CHANGED" alerts
+- Prevents false positives during sync
+
+---
+
+## 🛠️ USEFUL SQL COMMANDS
+
+### Check Table Structure:
+```sql
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'events'
+ORDER BY ordinal_position;
+```
+
+### Check View Definition:
+```sql
+SELECT definition 
+FROM pg_views 
+WHERE viewname = 'events_with_gym';
+```
+
+### Check Indexes:
+```sql
+SELECT indexname, tablename 
+FROM pg_indexes 
+WHERE schemaname = 'public';
+```
+
+### Count Records:
+```sql
+SELECT 
+  (SELECT COUNT(*) FROM events) as active_events,
+  (SELECT COUNT(*) FROM events_archive) as archived_events,
+  (SELECT COUNT(*) FROM gyms) as gyms,
+  (SELECT COUNT(*) FROM gym_links WHERE is_active = true) as gym_links,
+  (SELECT COUNT(*) FROM sync_log) as sync_log;
+```
+
+---
+
+## 📜 MIGRATION HISTORY
+
+| Date | Change |
+|------|--------|
+| Sept 2025 | Initial database setup |
+| Sept 2025 | Removed email template tables |
+| Oct 2025 | Added event_audit_log |
+| Nov 2025 | Added description column |
+| Nov 2025 | Added age_min, age_max columns |
+| Nov 2025 | Added deleted_at column |
+| Nov 2025 | Created sync_log table |
+| Nov 2025 | Recreated events_with_gym view |
+| Dec 2025 | Created events_archive table |
+| Dec 2025 | Set up pg_cron auto-archive job |
+| Dec 2025 | Updated events_with_gym to UNION both tables |
+| Dec 2025 | Added data quality columns |
+| Dec 2025 | Added acknowledged_errors column |
+| Dec 2025 | Added availability columns |
+| Dec 28, 2025 | Full schema audit - documented all 30 columns |
+
+---
+
 ## 📝 Change Log
 
 | Date | Change |
@@ -471,6 +646,9 @@ DELETE FROM events WHERE date < CURRENT_DATE;
 | Dec 28, 2025 | Created complete schema documentation |
 | Dec 28, 2025 | Documented all 9 tables with exact column counts |
 | Dec 28, 2025 | Added all current data (link_types, event_types, etc.) |
+| Dec 28, 2025 | Fixed: events_archive missing has_openings, registration dates |
+| Dec 28, 2025 | Changed row counts to approximate (they change frequently) |
+| Dec 28, 2025 | Merged SUPABASE_AUDIT_REPORT.md content (security, performance, data flow) |
 
 ---
 

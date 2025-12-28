@@ -31,10 +31,11 @@
 
 ### **What We Built:** ✅ IMPLEMENTED December 2025
 Display-only consolidation that:
-1. ✅ Groups related camp options into ONE calendar card
+1. ✅ Groups ALL camps on same date + same gym into ONE calendar card
 2. ✅ Preserves ALL unique registration URLs
-3. ✅ Shows options in click popup (with "Register for THIS Camp:" section)
-4. ✅ Reduces visual clutter - shows "CAMP - X options available"
+3. ✅ Shows options in details panel (with "📝 Register for THIS Camp:" section)
+4. ✅ Reduces visual clutter - shows "X options available" on calendar card
+5. ✅ Detects activity (🤸 Gymnastics, 🥷 Ninja) and duration from actual titles
 
 ### **What We Can't Change:**
 - Database structure (each option needs its own record)
@@ -374,12 +375,13 @@ Group events by:
 - **Display Challenge:** NONE - perfect structure, no consolidation needed
 - **Note:** Some special camps like "Unicorn Creative Dance Camp" are separate programs
 
-### **Rowland Ballard Kingwood (RBK)** ⚠️ NOT PROVIDED
-- **Method:** Unknown (likely same as RBA)
+### **Rowland Ballard Kingwood (RBK)** ⚠️ DATA PATTERNS UNVERIFIED
+- **Method:** Unknown (likely same as RBA - Method 1)
 - **Options:** Unknown (likely Gymnastics/Ninja combined like RBA)
 - **Duration Options:** Unknown
-- **Complexity Level:** ❓ UNKNOWN
-- **Need:** Real data from iClassPro listing page
+- **Complexity Level:** ❓ ASSUMED LOW (based on RBA similarity)
+- **Status:** Gym is active in codebase, syncing works
+- **Need:** Real iClassPro data to verify title patterns and options
 
 ### **Estrella Gymnastics (EST)** ✅ VERIFIED
 - **Method:** Single ID per camp (Method 1)
@@ -751,9 +753,10 @@ A proper camp consolidation solution MUST:
 
 ### **Version 2.0 - December 2025**
 - ✅ **CONSOLIDATION IMPLEMENTED** - Calendar now shows camps as single card with "X options available"
-- ✅ Details panel shows all registration links (Ninja, Gymnastics, etc.)
-- ✅ Summer camps added to sync system
-- ✅ All 10 gyms syncing correctly
+- ✅ Details panel shows all registration links with icons (🤸 Gymnastics, 🥷 Ninja)
+- ✅ Summer camps added to sync system (`camps_summer_full`, `camps_summer_half`)
+- ✅ All 10 gyms configured in codebase (RBK data patterns still unverified)
+- ✅ Grouping logic: Groups ALL camps by `gym_id + date` (not by parsing camp names)
 
 ### **When to Update This Document:**
 
@@ -778,9 +781,84 @@ A proper camp consolidation solution MUST:
 - Date ranges (these change every season)
 
 ### **Future Versions:**
-- **v1.1** - Add RBK verification when data available
-- **v2.0** - If any gym's structure changes significantly
-- **v3.0** - If consolidation feature is implemented (add "How It Works" section)
+- **v2.1** - Add RBK verification when data available
+- **v2.2** - If any gym's structure changes significantly
+- **v3.0** - If consolidation enhancements needed (filtering, mobile touch improvements)
+
+---
+
+## 🔧 HOW THE CONSOLIDATION WORKS (Technical)
+
+### Calendar Card Grouping Logic
+
+Located in `EventsDashboard.js` around line 3051:
+
+```javascript
+const groupCampEventsForDisplay = (events) => {
+  const campGroups = new Map();
+  const regularEvents = [];
+  
+  events.forEach(event => {
+    if (event.type === 'CAMP') {
+      // Group ALL camps by gym + date only
+      const groupKey = `${event.gym_id}-CAMP-${event.date}`;
+      
+      if (!campGroups.has(groupKey)) {
+        campGroups.set(groupKey, []);
+      }
+      campGroups.get(groupKey).push(event);
+    } else {
+      regularEvents.push(event);
+    }
+  });
+  
+  // Single option = show as-is
+  // Multiple options = consolidated with isGrouped: true
+  // ...
+};
+```
+
+**Key Points:**
+- Grouping happens at **display time only** - database unchanged
+- Groups by `gym_id + date`, NOT by parsing camp names
+- Consolidated events get `isGrouped: true` and `groupedEvents` array
+
+### Details Panel Registration Links
+
+When user clicks a grouped camp card:
+
+```javascript
+{selectedEventForPanel.isGrouped && selectedEventForPanel.groupedEvents ? (
+  <div className="space-y-3">
+    <p className="font-semibold">📝 Register for THIS Camp:</p>
+    {selectedEventForPanel.groupedEvents.map((option) => {
+      // Parse title to detect activity and duration
+      // 🤸 for Gymnastics, 🥷 for Ninja
+      // Adds "Full Day" or "Half Day" suffix if detected
+      return (
+        <button onClick={() => window.open(option.event_url, '_blank')}>
+          {icon} {label} • {time} • ${price}
+        </button>
+      );
+    })}
+  </div>
+) : (
+  // Single option - regular button
+)}
+```
+
+### What Gets Detected from Titles
+
+| Title Contains | Icon | Label |
+|---------------|------|-------|
+| "Girls Gymnastics" | 🤸 | Girls Gymnastics |
+| "Gymnastics" | 🤸 | Gymnastics |
+| "Co-ed Ninja" | 🥷 | Co-ed Ninja |
+| "Ninja Warrior" | 🥷 | Ninja Warrior |
+| "Parkour" | 🥷 | Parkour & Ninja |
+| "COED Ninja" | 🥷 | COED Ninja |
+| "Full Day" | - | adds "- Full Day" |
+| "Half Day" | - | adds "- Half Day" |
 
 ---
 

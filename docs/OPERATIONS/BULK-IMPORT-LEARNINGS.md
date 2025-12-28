@@ -1,8 +1,9 @@
 # 📋 BULK IMPORT LEARNINGS & FIXES
 ## Historical Record of Issues and Solutions
 
-**Last Updated:** November 26, 2025  
-**Status:** Most issues now resolved with Automated Sync system
+**Last Updated:** December 28, 2025  
+**Status:** Most issues now resolved with Automated Sync system  
+**Note:** This is a historical reference document
 
 ---
 
@@ -32,7 +33,7 @@
 - `RBA` = Rowland Ballard Atascocita
 - `RBK` = Rowland Ballard Kingwood
 - `SGT` = Scottsdale Gymnastics
-- `TIG` = TIGAR Gymnastics
+- `TIG` = Tigar Gymnastics
 
 **Impact:** This is why gym_id = 'CCP' is correct, not a UUID.
 
@@ -162,18 +163,24 @@ ORDER BY last_synced DESC;
 
 4. **Price as TEXT** - Price is stored as TEXT not DECIMAL. Some events have no price (null).
 
-5. **Description truncation** - Descriptions are truncated at ~500 characters from iClassPro.
+5. **Description truncation** - Descriptions are truncated at ~1500 characters from iClassPro.
 
 6. **Age from settings** - age_min and age_max come from iClass settings, NOT from parsing the title.
 
+7. **API Key required** - The sync system requires `REACT_APP_API_KEY` in Vercel to match `API_KEY` in Railway.
+
+8. **Volatile fields excluded** - Fields like `has_openings`, `registration_dates` are saved but don't trigger "CHANGED" status during comparison.
+
+9. **Future events only for "deleted"** - Only events with start_date > today are marked as deleted during sync. Past events are silently ignored.
+
 ---
 
-## 📊 CURRENT WORKFLOW (November 2025)
+## 📊 CURRENT WORKFLOW (December 2025)
 
 ### **Primary Method: Automated Sync**
-1. Shift + Click 🪄 → Automated Sync
-2. Select gym → Select event type → Click Sync
-3. Review results → Click Import
+1. Click **🪄 Admin** button → **Open Automated Sync**
+2. Select gym → Click **🚀 SYNC ALL PROGRAMS**
+3. Review results → Click **Import**
 4. Done!
 
 ### **Backup Method: F12 Import**
@@ -206,6 +213,8 @@ ORDER BY last_synced DESC;
 | Oct 2025 | Missing prices | Now pulls from iClass settings |
 | Nov 2025 | Missing descriptions | Added description column + sync |
 | Nov 2025 | Missing ages | Added age_min/age_max columns + sync |
+| Dec 2025 | False "CHANGED" alerts | Excluded volatile fields from comparison |
+| Dec 2025 | Past events marked deleted | Changed to only flag future events |
 
 ---
 

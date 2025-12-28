@@ -98,15 +98,13 @@ Your Master Events Calendar is a **production-deployed event management platform
 ### **Single Source of Truth:**
 **Database:** `https://xftiwouxpefchwoxxgpf.supabase.co`
 
-### **Current Stats (December 2025):**
+### **Current Stats:**
 - **9 Tables** + 2 Views
-- **401 Active Events** in `events` table
-- **154 Archived Events** in `events_archive` table
-- **76 Gym Links** configured
+- **500+ Events** (active + archived, counts change frequently)
+- **~75 Gym Links** configured
 - **10 Gyms** across TX, AZ, CA
 - **10 Link Types** (booking, camps, clinics, etc.)
 - **3 Tracked Event Types** (KNO, CLINIC, OPEN GYM)
-- **1,198 Audit Log Entries**
 
 **Full Schema:** See [DATABASE_COMPLETE_SCHEMA.md](DATABASE_COMPLETE_SCHEMA.md)
 
@@ -197,7 +195,7 @@ Calendar refreshes!
 - ✅ Event date (parsed correctly)
 - ✅ Event time (start and end)
 - ✅ Age min/max (from iClass settings)
-- ✅ Full description (truncated at ~500 chars)
+- ✅ Full description (truncated at ~1500 chars)
 - ✅ Registration URL (direct link to event)
 - ✅ Has openings (availability status)
 - ⚠️ Price (parsed from title/description, NOT from iClass pricing API)
@@ -284,7 +282,7 @@ open_gym_required: 1
 | Level | Who | Access Method | Features |
 |-------|-----|---------------|----------|
 | **1 - Normal** | Everyone | Just visit URL | Calendar, event details, stats, export |
-| **2 - Admin** | Jayme | Click ✏️ Admin button | JSON Import, Automated Sync |
+| **2 - Admin** | Jayme | Click 🪄 Admin button | JSON Import, Automated Sync |
 | **3 - Super Admin** | Jayme only | Inside Admin, click 🔒 + PIN `1426` | Supabase link, Railway link, Audit History |
 
 **Full documentation:** `docs/OPERATIONS/SECRET_ADMIN_MODE.md`
@@ -294,7 +292,7 @@ open_gym_required: 1
 ## 🚀 ADMIN BULK IMPORT
 
 ### **Access Method:**
-Click the ✏️ Admin button → "JSON Import (F12 Method)"
+Click the 🪄 Admin button → "JSON Import (F12 Method)"
 
 ### **F12 Method Workflow:**
 1. Open iClassPro portal in browser
@@ -306,11 +304,14 @@ Click the ✏️ Admin button → "JSON Import (F12 Method)"
 7. Click Import
 
 ### **Smart Conversion Features:**
-- ✅ **Auto-detects gym** from URLs
+- ✅ **Manual gym selection** via radio buttons
+- ✅ **Auto-detects event TYPE** from JSON (CLINIC, CAMP, etc.)
 - ✅ **Parses event data** from JSON
 - ✅ **Validates completeness**
 - ✅ **Deduplicates** events
 - ✅ **Error prevention** with warnings
+
+**Full Guide:** See `docs/OPERATIONS/F12-IMPORT-GUIDE.md`
 
 ---
 
@@ -366,6 +367,7 @@ User Action → React State → API Layer → Railway/Supabase → Real-time Upd
 REACT_APP_SUPABASE_URL=https://xftiwouxpefchwoxxgpf.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=your-anon-key
 REACT_APP_API_URL=https://master-events-calendarmaster-production.up.railway.app
+REACT_APP_API_KEY=your-shared-api-key
 ```
 
 **Railway (Backend):**
@@ -373,7 +375,10 @@ REACT_APP_API_URL=https://master-events-calendarmaster-production.up.railway.app
 PORT=auto-assigned
 SUPABASE_URL=https://xftiwouxpefchwoxxgpf.supabase.co
 SUPABASE_SERVICE_KEY=your-service-key
+API_KEY=your-shared-api-key
 ```
+
+> ⚠️ **CRITICAL:** `REACT_APP_API_KEY` and `API_KEY` must match!
 
 ### **Key Files:**
 
@@ -391,10 +396,11 @@ SUPABASE_SERVICE_KEY=your-service-key
 **Backend (Python):**
 | File | Purpose |
 |------|---------|
-| `automation/local_api_server.py` | Flask API server |
+| `automation/local_api_server.py` | Flask API server (main entry point) |
 | `automation/f12_collect_and_import.py` | Playwright event collection |
 | `automation/requirements.txt` | Python dependencies |
 | `automation/Procfile` | Railway start command |
+| `automation/railway.json` | Railway configuration |
 
 ---
 
@@ -464,17 +470,15 @@ SUPABASE_SERVICE_KEY=your-service-key
 **Verified December 28, 2025:**
 - ✅ All 10 gyms syncing correctly
 - ✅ All 5 event types working
-- ✅ 555 total events (401 active + 154 archived)
-- ✅ 76 gym links configured
+- ✅ 500+ total events (counts vary)
+- ✅ ~75 gym links configured
 - ✅ Descriptions pulling correctly
 - ✅ Ages pulling from iClass settings
 - ✅ Auto-archive working at midnight
 - ✅ 100% accuracy on cross-check vs live iClassPro data
 
 ### **Success Metrics:**
-- **📊 555 Total Events** across multiple months
 - **🏢 10 Gyms** fully integrated
-- **🔗 76 Gym Links** configured
 - **🔗 5 Event Types** supported
 - **⚡ <2 second** load times
 - **💯 100% Accuracy** verified

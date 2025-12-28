@@ -14,7 +14,7 @@
 - ✅ Supabase PostgreSQL database (9 tables, 2 views)
 - ✅ Playwright automation for event collection
 - ✅ Real-time subscriptions
-- ✅ 10 gyms, 555+ total events (401 active, 154 archived)
+- ✅ 10 gyms, 500+ events (counts vary with syncs)
 - ✅ Automated sync system
 - ✅ Sync progress tracking
 - ✅ Auto-archive system (pg_cron moves past events at midnight)
@@ -50,7 +50,7 @@ src/
 │   │   │   ├── EventCard.js
 │   │   │   └── DayCell.js
 │   │   ├── EventStats/
-│   │   │   ├── StatsTable.js
+│   │   │   ├── StatsTable.js ✅ (exists)
 │   │   │   └── GymStatsRow.js
 │   │   ├── AdminTools/
 │   │   │   ├── SyncModal.js ✅ (exists)
@@ -221,11 +221,11 @@ Redis (caching)
 | Load time | 2-3 sec | ✅ Good |
 | Concurrent users | ~100 | ✅ Good |
 | Events capacity | ~10,000 | ✅ Good |
-| Total events | 555 | ✅ Good |
-| Active events | 401 | ✅ Good |
-| Archived events | 154 | ✅ Good |
+| Total events | ~500+ | ✅ Good |
 | Gyms | 10 | ✅ Good |
-| Gym links | 76 | ✅ Good |
+| Gym links | ~75 | ✅ Good |
+
+> **Note:** Event counts change frequently with syncs and auto-archiving.
 
 ### **Target State (If Scaling Needed):**
 | Metric | Target |
@@ -254,7 +254,7 @@ Redis (caching)
 Your current system is:
 - ✅ Production-ready
 - ✅ Handling 10 gyms perfectly
-- ✅ 555+ events with no issues
+- ✅ 500+ events with no issues
 - ✅ Fast enough for current needs
 - ✅ Verified 100% accurate
 - ✅ Auto-archiving working
@@ -280,7 +280,8 @@ Your current system is:
 | Dec 2025 | Added events_archive and auto-archive system |
 | Dec 2025 | Added data quality columns |
 | Dec 2025 | Added availability tracking columns |
-| Dec 28, 2025 | Updated event counts (555 total) |
+| Dec 28, 2025 | Removed specific event counts (they change frequently) |
+| Dec 28, 2025 | Noted StatsTable.js already exists |
 
 ---
 

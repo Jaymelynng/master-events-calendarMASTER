@@ -1,6 +1,7 @@
 # 🔍 Event Comparison Logic - New vs Changed vs Deleted
 
-**Date:** November 14, 2025  
+**Last Updated:** December 28, 2025  
+**File:** `src/lib/eventComparison.js`  
 **Purpose:** How the system identifies new, changed, and deleted events using event_url as source of truth
 
 ---
@@ -41,7 +42,14 @@ For each event_url:
 #### **🗑️ DELETED Event**
 - `event_url` exists in database
 - `event_url` does NOT exist in new sync
-- **Action:** Mark as deleted or remove (your choice)
+- **⚠️ IMPORTANT:** Only **FUTURE events** (start_date > today) are marked as deleted
+- **Action:** Soft-delete (set `deleted_at` timestamp)
+
+**Why only future events?**
+- iClassPro only shows upcoming events
+- Past events naturally disappear from the portal after they occur
+- Once an event starts, it's expected to be removed from iClassPro
+- We should NOT mark past events as deleted just because they're not in the sync
 
 #### **✓ UNCHANGED Event**
 - `event_url` exists in BOTH
@@ -87,8 +95,26 @@ These fields are **saved to the database** but are excluded from comparison to p
 ### Fields Never Compared (Identifiers)
 - `event_url` - Used to MATCH events, not compare them
 - `gym_id` - Identifier, not content
+- `id` - Database primary key
 
 **See Also:** [DATA_QUALITY_VALIDATION.md](./DATA_QUALITY_VALIDATION.md) for full validation documentation
+
+---
+
+## 🔧 Value Normalization
+
+The `normalizeValue()` function ensures consistent comparison by handling edge cases:
+
+| Field Type | Normalization |
+|------------|---------------|
+| `price` | Convert to float; treat 0 as null |
+| `age_min`, `age_max` | Convert to integer; treat 0 as null |
+| `date`, `start_date`, `end_date` | Extract YYYY-MM-DD (strip time component) |
+| `time` | Trim and normalize whitespace |
+| `description` | Trim; treat empty/whitespace as null |
+| All fields | null, undefined, '' all treated as equivalent |
+
+This prevents false "CHANGED" alerts from formatting differences.
 
 ---
 
@@ -114,15 +140,18 @@ compareEvents(newEvents, existingEvents)
 **Changed Event Structure:**
 ```javascript
 {
-  existing: {...},   // Current database record
-  incoming: {...},   // New data from sync
+  existing: {...},      // Current database record
+  incoming: {...},      // New data from sync
   _status: 'changed',
-  _changes: [        // List of what changed
+  _wasDeleted: false,   // True if restoring a soft-deleted event
+  _changes: [           // List of what changed
     { field: 'title', old: 'Old Title', new: 'New Title' },
     { field: 'price', old: 25, new: 30 }
   ]
 }
 ```
+
+**Note:** If `_wasDeleted: true`, the event was previously soft-deleted and is being restored because it reappeared in the sync.
 
 ---
 
@@ -139,8 +168,10 @@ compareEvents(newEvents, existingEvents)
 🆕 3 new events
 🔄 2 changed events
 ⏭️ 5 unchanged
-🗑️ 1 deleted (in DB but not in source)
+🗑️ 1 deleted (future event no longer in source)
 ```
+
+**Note:** Past events that disappear from iClassPro are silently ignored (not counted as deleted).
 
 ---
 
@@ -185,12 +216,18 @@ compareEvents(newEvents, existingEvents)
 
 ---
 
-**Last Updated:** December 28, 2025  
-**Status:** Implemented and working (volatile fields excluded from comparison Dec 28, 2025)
+**Status:** ✅ Implemented and working
 
+---
 
+## 📜 VERSION HISTORY
 
-
+| Date | Change |
+|------|--------|
+| Nov 2025 | Initial implementation |
+| Dec 2025 | Added volatile field exclusion to prevent false "CHANGED" alerts |
+| Dec 2025 | Added "future events only" logic for deleted detection |
+| Dec 2025 | Added `_wasDeleted` flag for restored events |
 
 
 

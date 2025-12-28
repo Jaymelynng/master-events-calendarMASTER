@@ -1,8 +1,8 @@
 # 🚀 Deployment Architecture - COMPLETED
 ## Master Events Calendar Production Setup
 
-**Last Updated:** November 26, 2025  
-**Status:** ✅ FULLY DEPLOYED & WORKING
+**Last Updated:** December 28, 2025  
+**Status:** ✅ Fully Deployed & Working
 
 ---
 
@@ -43,10 +43,12 @@ This document was originally a plan. **The deployment is now complete and verifi
 │                       │   │                                    │
 │  Flask API with:      │   │  PostgreSQL with:                 │
 │  • /sync-events       │   │  • events table                   │
-│  • /import-events     │   │  • gyms table                     │
-│  • /health            │   │  • gym_links table                │
-│  • Playwright         │   │  • sync_log table                 │
-│                       │   │  • events_with_gym view           │
+│  • /import-events     │   │  • events_archive table           │
+│  • /health            │   │  • gyms table                     │
+│  • /gyms              │   │  • gym_links table                │
+│  • /event-types       │   │  • sync_log table                 │
+│  • Playwright         │   │  • event_audit_log table          │
+│  • API Key Auth       │   │  • events_with_gym view           │
 │  URL: Railway URL     │   │                                    │
 └───────────────────────┘   │  URL: Supabase URL                │
                             └───────────────────────────────────┘
@@ -77,6 +79,7 @@ Go to: Vercel Dashboard → Your Project → Settings → Environment Variables
 | `REACT_APP_SUPABASE_URL` | `https://xftiwouxpefchwoxxgpf.supabase.co` | Database connection |
 | `REACT_APP_SUPABASE_ANON_KEY` | Your anon key | Database auth (read) |
 | `REACT_APP_API_URL` | `https://master-events-calendarmaster-production.up.railway.app` | Backend API |
+| `REACT_APP_API_KEY` | Your API key | API authentication |
 
 ### **Railway (Backend)**
 
@@ -87,6 +90,9 @@ Go to: Railway Dashboard → Your Service → Variables
 | `PORT` | Auto-assigned by Railway | Server port |
 | `SUPABASE_URL` | `https://xftiwouxpefchwoxxgpf.supabase.co` | Database connection |
 | `SUPABASE_SERVICE_KEY` | Your service key | Database auth (write) |
+| `API_KEY` | Same as Vercel's `REACT_APP_API_KEY` | API authentication |
+
+**⚠️ IMPORTANT:** The `REACT_APP_API_KEY` in Vercel MUST match the `API_KEY` in Railway!
 
 ---
 
@@ -99,20 +105,26 @@ Go to: Railway Dashboard → Your Service → Variables
 web: python local_api_server.py
 ```
 
-**`automation/requirements.txt`**
+**`automation/requirements.txt`** (key packages)
 ```
 playwright>=1.40.0
 flask>=2.3.0
 flask-cors>=4.0.0
-supabase>=2.0.0
-python-dotenv>=1.0.0
+supabase>=1.0.0
+aiohttp>=3.8.0
+python-dateutil>=2.8.0
 ```
+
+*See the full file for all dependencies including dev/optional packages.*
 
 **`automation/local_api_server.py`** (relevant section)
 ```python
 if __name__ == '__main__':
+    # Railway provides PORT environment variable, default to 5000 for local
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    host = '0.0.0.0' if os.environ.get('PORT') else '127.0.0.1'
+    debug = not bool(os.environ.get('PORT'))  # Debug only in local development
+    app.run(host=host, port=port, debug=debug)
 ```
 
 ---
@@ -204,11 +216,11 @@ Expected: Calendar loads with events
 
 ### **Test 3: Sync Works**
 ```
-1. Shift+Click magic wand
-2. Click "Automated Sync"
+1. Click 🪄 Admin button
+2. Click "Open Automated Sync"
 3. Select a gym
-4. Select an event type
-5. Click "Sync"
+4. Click "🚀 SYNC ALL PROGRAMS"
+5. Wait for results
 Expected: Events appear in preview
 ```
 
@@ -229,6 +241,13 @@ Expected: Success message, calendar updates
 2. Check Railway logs for errors
 3. Test health endpoint directly
 4. Check if Railway credits are depleted
+
+### **"Invalid or missing API key"**
+
+1. Check that `REACT_APP_API_KEY` is set in Vercel
+2. Check that `API_KEY` is set in Railway
+3. Verify both values are **exactly the same**
+4. Redeploy both services after changing env vars
 
 ### **"Events not importing"**
 
@@ -278,10 +297,13 @@ Expected: Success message, calendar updates
 | Nov 2025 | Connected Vercel to Railway |
 | Nov 26, 2025 | Verified full system working |
 | Nov 26, 2025 | Added Vercel Analytics |
+| Dec 2025 | Added API key authentication |
+| Dec 2025 | Added /gyms and /event-types endpoints |
+| Dec 28, 2025 | Documentation updated with API key details |
 
 ---
 
-## ✅ DEPLOYMENT CHECKLIST
+## ✅ DEPLOYMENT CHECKLIST (Completed)
 
 - [x] Railway account created
 - [x] Railway service deployed
@@ -293,6 +315,66 @@ Expected: Success message, calendar updates
 - [x] Import feature working end-to-end
 - [x] Vercel Analytics enabled
 - [x] Full system verified with live data
+
+---
+
+## 📋 NEW DEPLOYMENT CHECKLIST
+
+Use this if setting up from scratch or after a major issue:
+
+### Environment Setup
+- [ ] Create `.env.local` file (copy from `.env.example`)
+- [ ] Add all required environment variables
+- [ ] Test local startup (`npm install` then `npm start`)
+
+### Database (Supabase)
+- [ ] Verify all tables exist (events, events_archive, gyms, gym_links, sync_log, event_audit_log)
+- [ ] Verify `events_with_gym` view exists
+- [ ] Verify pg_cron job is scheduled
+
+### Vercel (Frontend)
+- [ ] Set all 4 environment variables
+- [ ] Build Command: `npm run build`
+- [ ] Output Directory: `build`
+- [ ] Framework Preset: `Create React App`
+
+### Railway (Backend)
+- [ ] Set all 4 environment variables
+- [ ] Verify Procfile exists (`web: python local_api_server.py`)
+- [ ] Test health endpoint returns `{"status": "healthy"}`
+
+### Post-Deployment Testing
+- [ ] Calendar loads with events
+- [ ] Sync collects events
+- [ ] Import saves to database
+- [ ] No red errors in browser console
+
+---
+
+## 🚨 EMERGENCY ROLLBACK PROCEDURE
+
+### Frontend (Vercel)
+```
+Vercel Dashboard → Deployments → Find previous working deployment → Click "Promote to Production"
+```
+
+### Backend (Railway)
+```
+Railway Dashboard → Deployments → Select previous deployment → Redeploy
+```
+
+### Database (Supabase)
+```
+Supabase Dashboard → Database → Backups → Restore to previous backup
+```
+
+---
+
+## 📞 SUPPORT LINKS
+
+- **Vercel Support:** https://vercel.com/support
+- **Railway Support:** https://railway.app/help
+- **Supabase Support:** https://supabase.com/support
 
 ---
 

@@ -46,7 +46,7 @@ The crown jewel! One-click sync from iClassPro portals to your database.
 | RBA | Rowland Ballard Atascocita | rbatascocita |
 | RBK | Rowland Ballard Kingwood | rbkingwood |
 | SGT | Scottsdale Gymnastics | scottsdalegymnastics |
-| TIG | TIGAR Gymnastics | tigar |
+| TIG | Tigar Gymnastics | tigar |
 
 ---
 
@@ -58,7 +58,7 @@ The crown jewel! One-click sync from iClassPro portals to your database.
 | CLINIC | Skill-specific training sessions | ✅ Yes (1/month required) |
 | OPEN GYM | Open play time | ✅ Yes (1/month required) |
 | CAMP | Day camps (school breaks + summer) | ❌ No |
-| SPECIAL EVENTS | Competitions, parties, etc. | ❌ No |
+| SPECIAL EVENT | Competitions, parties, etc. | ❌ No |
 
 ---
 
@@ -124,14 +124,16 @@ Tracks visitors and page views on your calendar.
 
 ## 📊 CURRENT DATA STATS
 
-| Metric | Count |
-|--------|-------|
-| Total Events | 555 (401 active + 154 archived) |
+*Note: These counts are point-in-time snapshots. Query Supabase for current values.*
+
+| Metric | Count (as of Dec 2025) |
+|--------|------------------------|
+| Total Events | ~555 (active + archived) |
 | Gyms | 10 |
 | Event Types | 5 (3 tracked for requirements) |
-| Gym Links | 76 |
-| Sync Log Entries | 50+ |
-| Audit Log Entries | 1,198 |
+| Gym Links | ~76 |
+| Sync Log Entries | Growing |
+| Audit Log Entries | Growing |
 
 ---
 
@@ -238,6 +240,7 @@ Calendar Refreshes via Real-time Subscription
 ### Frontend (React)
 | File | Purpose |
 |------|---------|
+| `src/components/EventsDashboard.js` | Main dashboard with calendar & camp consolidation |
 | `src/components/EventsDashboard/SyncModal.js` | Automated sync UI |
 | `src/components/EventsDashboard/AdminPortalModal.js` | Admin portal with tiers |
 | `src/components/EventsDashboard/ExportModal.js` | Data export UI |
@@ -254,12 +257,12 @@ Calendar Refreshes via Real-time Subscription
 ### Database (Supabase)
 | Table | Purpose |
 |-------|---------|
-| `events` | Active/future events (401 rows) |
-| `events_archive` | Past events (154 rows) |
-| `gyms` | Gym information (10 rows) |
-| `gym_links` | Portal URLs (76 rows) |
+| `events` | Active/future events |
+| `events_archive` | Past events (auto-archived) |
+| `gyms` | Gym information (10 gyms) |
+| `gym_links` | Portal URLs for each gym/event type |
 | `sync_log` | Sync progress tracking |
-| `event_audit_log` | Change tracking (1,198 rows) |
+| `event_audit_log` | Change tracking |
 | `event_types` | Event categories |
 | `link_types` | Link categories |
 | `monthly_requirements` | Business rules |

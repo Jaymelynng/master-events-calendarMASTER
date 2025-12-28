@@ -1,29 +1,39 @@
 # 🚀 F12 DATA COLLECTION PROCESS - COMPLETE GUIDE
 ## Master Events Calendar - Manual Import System (Backup Method)
 
-**Last Updated:** November 26, 2025  
+**Last Updated:** December 28, 2025  
 **Original Date:** September 18, 2025  
-**Purpose:** Comprehensive guide for F12 import (backup to Automated Sync)
+**Purpose:** Comprehensive guide for F12 import (backup to Automated Sync)  
+**Location:** `docs/OPERATIONS/F12-IMPORT-GUIDE.md`
 
 ---
 
-## 🚨 IMPORTANT: USE AUTOMATED SYNC FIRST!
+## 📜 HISTORICAL CONTEXT
 
-**As of November 2025, the Automated Sync system is the PRIMARY method for importing events.**
+**This was the ORIGINAL method for collecting events before the Railway automation was built.**
 
-**Automated Sync advantages:**
-- ✅ One-click sync (no F12 needed)
-- ✅ Pulls descriptions automatically
-- ✅ Pulls ages from iClass settings
-- ✅ Progress tracker shows what's synced
-- ✅ Faster and more reliable
+### Evolution of Event Collection:
+| Phase | Method | Status |
+|-------|--------|--------|
+| **Phase 1 (Sep-Nov 2025)** | Manual F12 copy/paste | ⬛ Historical |
+| **Phase 2 (Nov 2025+)** | Automated Sync via Railway | ✅ Current Primary |
 
-**Use F12 method only when:**
-- Automated Sync is down
-- You need to debug data issues
-- You want to see raw iClassPro data
+**The F12 method is now a BACKUP** - use only when:
+- Automated Sync is down (Railway issues)
+- You need to debug/inspect raw iClassPro data
+- You want to understand how the data structure works
 
-**See:** `AUTO-SYNC-GUIDE.md` for the primary method.
+**For the primary method, see:** `AUTO-SYNC-GUIDE.md`
+
+---
+
+## 🎯 WHY THIS DOCUMENT MATTERS
+
+Even though we now use Automated Sync, this document is valuable because:
+1. **Backup method** - If Railway goes down, you can still collect events
+2. **Understanding the data** - Shows exactly what iClassPro API returns
+3. **Historical reference** - Documents how the app started
+4. **Debugging tool** - F12 lets you see raw data when troubleshooting
 
 ---
 
@@ -97,14 +107,14 @@ When you visit a gym's event page (like Capital Gymnastics), the page makes API 
 
 ## 👥 STEP-BY-STEP USER WORKFLOW
 
-### **Step 1: Access Magic Control**
-1. **Go to Master Events app** 
-2. **Shift+Click** the "🪄 Magic Control" button
-3. **Click "🚀 JSON Import (F12 Method)"**
+### **Step 1: Access the Admin Portal**
+1. **Go to Master Events app** (`teamcalendar.mygymtools.com`)
+2. **Click** the "🪄 Admin" button (top of page, next to Export)
+3. **Click "Open JSON Import"** in the secondary actions section
 
 ### **Step 2: Open All Gym Pages (Bulk Method)**
-1. **Click "🗄️ Open Supabase Dashboard"** (cross-check existing data)
-2. **Use Magic Bulk Action Buttons** to open all gym pages at once:
+1. **Supabase link available in Admin Portal** (for cross-checking existing data)
+2. **Use Bulk Action Buttons on the main calendar** to open all gym pages at once:
    - **Click "CLINIC"** → Opens ALL gyms' skill clinic pages in separate tabs
    - **Click "KIDS NIGHT OUT"** → Opens ALL gyms' KNO pages in separate tabs
    - **Click "🏕️ All Camps"** → Opens ALL gyms' camp pages in separate tabs
@@ -163,23 +173,18 @@ F5 Refresh → Page reloads → Makes API call to iClassPro → Network tab capt
 
 **Note:** The copied JSON contains each event's unique `id`. The app combines that `id` with the gym's **portal slug** to generate the individual registration URL as `https://portal.iclasspro.com/{slug}/camp-details/{id}`. You do not need to copy URLs manually.
 
-#### **3e. Paste and Process (with Auto-Detection!):**
+#### **3e. Paste and Process:**
 1. **Switch back to Master Events app**
-2. **Paste the JSON** into the text area
-3. **🤖 AUTO-DETECTION MAGIC:** The gym is automatically detected from the event URLs!
-   - ✅ System reads the portal subdomain from the JSON data
-   - ✅ Matches it to the correct gym automatically
-   - ✅ Shows green confirmation: "✅ Auto-Detected: [Gym Name]"
-   - ✅ No manual selection needed!
-4. **Manual override available:** If needed, you can still change the gym dropdown
-   - ⚠️ System will warn you if the pasted data doesn't match your selection
-5. **Convert and import**
+2. **Paste the JSON** into the text area (Step 1 in the modal)
+3. **Select the correct gym** using the radio buttons (Step 2 in the modal)
+   - ⚠️ Make sure to select the gym that matches your pasted data!
+4. **Click "⚡ Convert JSON to Import Format"**
+5. **Review validation results** and **Import**
 
-**🎯 Why Auto-Detection is Better:**
-- **100% accurate:** Computer reads exact subdomain from URLs
-- **No human error:** Can't accidentally paste Houston data while "Tigar" is selected
-- **Faster workflow:** Eliminates one manual step per gym
-- **Error prevention:** Warns if manual override detected
+**🎯 Accuracy Tip:**
+- **Double-check gym selection** before converting
+- The system will show "Gym Detected: [Your Selection]" to confirm
+- Event type is auto-detected from `campTypeName` in the JSON (AUTO_DETECT mode)
 
 #### **3f. Quick Date Capture (why this is so fast):**
 - **What you copy (Copy Response)** already includes structured date fields for every event:
@@ -191,21 +196,19 @@ F5 Refresh → Page reloads → Makes API call to iClassPro → Network tab capt
   - Detects multi-day camps via differing `startDate`/`endDate`
 - **Result:** No manual typing of dates/times. You bulk‑paste once and the app converts everything precisely for all events.
 
-### **Step 4: Process & Import (Streamlined!)**
-1. **✨ Gym is auto-selected** (no manual selection needed!)
+### **Step 4: Process & Import**
+1. **Select the gym** from the radio buttons
 2. **Click "⚡ Convert JSON to Import Format"**
 3. **Review validation results** (events found, duplicates, etc.)
 4. **Click "🚀 Import New Events Only"**
 
-**🎯 Auto-Detection in Action:**
+**🎯 Validation Display:**
 ```
-YOU PASTE:
-{"data": [{"id": 1161, "url": "portal.iclasspro.com/capgymavery/..."}]}
-
-APP DETECTS:
-✅ Auto-Detected: Capital Gymnastics Cedar Park (CCP)
-📊 Analyzed 15 events from portal subdomain: capgymavery
-🎯 Confidence: 100% - All events match this gym
+Events Found: 15
+URLs Found: 15  
+Already in DB: 2 (duplicates will be skipped)
+Gym Detected: Capital Gymnastics Cedar Park (the gym you selected)
+Event Type: 🤖 Auto-Detect (from campTypeName in JSON)
 ```
 
 ### **Step 5: Repeat for All Gym Tabs**
@@ -256,23 +259,27 @@ APP DETECTS:
 
 ### **File Structure:**
 ```
-src/components/EventsDashboard.js  (Lines 1488-1700)
-├── Bulk Import Modal
-├── F12 JSON Processing  
-├── Data Conversion Logic
-├── Validation System
-└── Database Import
+src/components/EventsDashboard.js
+├── convertRawDataToJson() - JSON parsing & conversion
+├── handleBulkImport() - Import to database
+├── Validation logic
+└── Duplicate detection
 
-src/lib/api.js (Lines 48-93)
+src/components/EventsDashboard/BulkImportModal.js
+├── UI for F12 paste & gym selection
+├── Validation results display
+└── Import button
+
+src/lib/api.js
 ├── eventsApi.bulkImport()
-├── Duplicate Detection
-├── Database Insertion
-└── Error Handling
+├── Database insertion
+└── Error handling
 ```
 
 ### **Key Functions:**
 
-#### **1. convertRawDataToJson()** (Lines 641-783)
+#### **1. convertRawDataToJson()**
+**Location:** `EventsDashboard.js`  
 **Purpose:** Converts raw iClassPro JSON into our database format
 
 **Input:** Raw JSON from F12 copy
@@ -298,7 +305,8 @@ src/lib/api.js (Lines 48-93)
 ]
 ```
 
-#### **2. handleBulkImport()** (Lines 898-1228)
+#### **2. handleBulkImport()**
+**Location:** `EventsDashboard.js`  
 **Purpose:** Processes converted data and imports to database
 
 **Key Features:**
@@ -395,8 +403,8 @@ Batch Unique Events → Insert New → Update Changed → Log Changes → Refres
 
 ### **Main Components:**
 
-#### **1. Bulk Import Modal (Lines 1488-1700)**
-**Location:** `EventsDashboard.js`
+#### **1. Bulk Import Modal**
+**Location:** `src/components/EventsDashboard/BulkImportModal.js`  
 **Purpose:** User interface for F12 import process
 
 **Key Elements:**
@@ -409,52 +417,47 @@ Batch Unique Events → Insert New → Update Changed → Log Changes → Refres
 
 #### **2. Data Processing Functions**
 
-**convertRawDataToJson()** - Lines 641-783
+**convertRawDataToJson()** in `EventsDashboard.js`:
 ```javascript
 // Converts raw iClassPro JSON to our format
-const processedEvents = jsonData.data.map(event => {
-  // Portal slug extraction
-  const portalSlug = extractPortalSlug(gymLink.url);
+const processedEvents = jsonData.data.flatMap(event => {
+  // Portal slug extraction from gym_links
+  const gymLink = gymLinks.find(gl => gl.gym_id === selectedGymId);
+  const urlMatch = gymLink.url.match(/portal\.iclasspro\.com\/([^\/]+)/);
+  const portalSlug = urlMatch ? urlMatch[1] : '';
   
   // URL construction  
   const eventUrl = `https://portal.iclasspro.com/${portalSlug}/camp-details/${event.id}`;
   
-  // Event type detection
-  const eventType = detectEventType(jsonData.campTypeName, event.name);
+  // Event type detection from campTypeName
+  const typeName = (jsonData.campTypeName || event.name || '').toUpperCase();
+  // ... detection logic ...
   
-  // Schedule parsing
-  const time = parseSchedule(event.schedule);
-  
-  return formatted_event;
+  return [{ gym_id, title, date, time, type, event_url, ... }];
 });
 ```
 
-**handleBulkImport()** - Lines 898-1228
+**handleBulkImport()** in `EventsDashboard.js`:
 ```javascript
 // Import processed events to database
 const handleBulkImport = async () => {
-  // Parse and validate
+  // Parse validated events
   const newEvents = JSON.parse(bulkImportData);
   
-  // Duplicate detection
-  const existingEventsMap = new Map();
-  events.forEach(ev => {
-    const urlKey = ev.event_url.split('?')[0];
-    existingEventsMap.set(urlKey, ev);
-  });
+  // Duplicate detection by URL + gym_id
+  const existingEventsCheck = existingEvents.map(ev => ({
+    url: ev.event_url.split('?')[0],
+    gym_id: ev.gym_id
+  }));
   
-  // Process new vs existing
-  const onlyNew = [];
-  const changedEvents = [];
-  
-  // Import to database
-  await eventsApi.bulkImport(onlyNew);
+  // Only import non-duplicates
+  await eventsApi.bulkImport(uniqueEvents);
 };
 ```
 
 #### **3. API Layer (src/lib/api.js)**
 
-**eventsApi.bulkImport()** - Lines 48-93
+**eventsApi.bulkImport()**
 ```javascript
 async bulkImport(events) {
   // Validate required fields
@@ -507,109 +510,39 @@ if (typeName.includes('KIDS NIGHT OUT') || typeName.includes('KNO')) {
 
 ---
 
-## 🤖 AUTO-DETECTION SYSTEM (NEW!)
+## 🤖 EVENT TYPE AUTO-DETECTION
 
 ### **Overview:**
-As of October 2025, the F12 import system now includes **intelligent gym auto-detection** that eliminates manual gym selection errors.
+The F12 import automatically detects the **event type** from the JSON data - you don't need to manually specify if it's a CLINIC, KIDS NIGHT OUT, etc.
 
 ### **How It Works:**
+The system reads `campTypeName` from the pasted JSON and maps it to our event types:
 
-#### **1. Subdomain Extraction:**
 ```javascript
-// User pastes JSON containing event data
-const jsonData = JSON.parse(rawEventListings);
+const typeName = (jsonData.campTypeName || event.name || '').toUpperCase();
 
-// System searches for iClassPro URLs in the data
-for (const event of jsonData.data) {
-  if (event.url) {
-    const match = event.url.match(/portal\.iclasspro\.com\/([^\/]+)/);
-    if (match) {
-      detectedSubdomain = match[1]; // e.g., "capgymavery"
-      break;
-    }
-  }
+if (typeName.includes('KIDS NIGHT OUT') || typeName.includes('KNO')) {
+    eventType = 'KIDS NIGHT OUT';
+} else if (typeName.includes('CLINIC')) {
+    eventType = 'CLINIC';
+} else if (typeName.includes('OPEN GYM')) {
+    eventType = 'OPEN GYM';
+} else if (typeName.includes('CAMP') || typeName.includes('SCHOOL YEAR')) {
+    eventType = 'CAMP';
+} else {
+    eventType = 'OPEN GYM'; // Default fallback
 }
 ```
 
-#### **2. Subdomain-to-Gym Mapping:**
-```javascript
-const subdomainToGymMap = {
-  'capgymavery': 'CCP',           // Capital Cedar Park
-  'capgymhp': 'CPF',              // Capital Pflugerville
-  'capgymroundrock': 'CRR',       // Capital Round Rock
-  'houstongymnastics': 'HGA',     // Houston Gymnastics Academy
-  'rbatascocita': 'RBA',          // Rowland Ballard Atascocita
-  'rbkingwood': 'RBK',            // Rowland Ballard Kingwood
-  'estrellagymnastics': 'EST',    // Estrella Gymnastics
-  'oasisgymnastics': 'OAS',       // Oasis Gymnastics
-  'scottsdalegymnastics': 'SGT',  // Scottsdale Gymnastics
-  'tigar': 'TIG'                  // Tigar Gymnastics
-};
+### **What You Still Select Manually:**
+- **Gym selection** - Use the radio buttons to pick the correct gym
+- ⚠️ **Important:** Make sure to select the gym that matches your pasted data!
+
+### **Validation Display Shows:**
 ```
-
-#### **3. Auto-Selection:**
-```javascript
-const gymAbbr = subdomainToGymMap[detectedSubdomain];
-const matchedGym = gymsList.find(gym => gym.name.includes(gymAbbr));
-
-if (matchedGym) {
-  setAutoDetectedGym(matchedGym);
-  setSelectedGymId(matchedGym.id); // Auto-select!
-}
+Event Type: 🤖 Auto-Detect
 ```
-
-### **User Experience:**
-
-#### **Success State:**
-```
-✅ Auto-Detected: Capital Gymnastics Cedar Park (CCP)
-📊 Analyzed 15 events from portal subdomain: capgymavery
-🎯 Confidence: 100% - All events match this gym
-```
-
-#### **Manual Required State:**
-```
-⚠️ Could not auto-detect gym from event data. Please select manually.
-Found 12 events - please select gym below
-```
-
-#### **Override Warning State:**
-```
-⚠️ Manual Override Detected
-Data appears to be from Capital Gymnastics Cedar Park but you selected a different gym.
-Please verify this is correct before importing.
-```
-
-### **Benefits:**
-
-#### **Error Prevention:**
-- **Before:** Easy to paste Houston data while "Tigar" is selected
-- **After:** System detects mismatch and warns user
-
-#### **Workflow Speed:**
-- **Before:** 5 clicks (select gym, scroll, click, paste, convert)
-- **After:** 2 clicks (paste, convert) - gym auto-selected!
-
-#### **Accuracy:**
-- **Manual selection:** ~95% accurate (human error possible)
-- **Auto-detection:** 100% accurate (reads exact subdomain)
-
-### **Technical Implementation:**
-
-**Location:** `src/components/EventsDashboard/BulkImportModal.js`
-
-**Key Features:**
-- **React useEffect hook** monitors pasted data in real-time
-- **JSON parsing** extracts URL fields from event data
-- **Regex matching** identifies iClassPro portal subdomains
-- **Database lookup** matches subdomains to gym records
-- **State management** auto-selects the correct gym
-- **Override detection** warns if user manually changes selection
-
-**Code References:**
-- BulkImportModal.js (Lines 24-148) - Auto-detection logic
-- BulkImportModal.js (Lines 190-220) - Detection confidence display
-- BulkImportModal.js (Lines 223-233) - Manual override warning
+This confirms the system is reading the event type from the JSON, not requiring manual selection.
 
 ---
 
@@ -735,48 +668,38 @@ const totalMs = performance.now() - t0;
 
 ## 🎨 USER INTERFACE COMPONENTS
 
-### **Magic Control Portal Access:**
-```javascript
-<button
-  onClick={(e) => {
-    if (e.shiftKey) {  // Hidden feature - only activates with Shift+Click
-      setShowAdminPortal(true);
-    }
-  }}
-  title="Shift+Click for Magic Control"
->
-  🪄 Magic Control
-</button>
-```
+### **Admin Portal Access:**
+The 🪄 Admin button is visible at the top of the calendar. Click it to open the Admin Control Center, then click "Open JSON Import" to access the F12 import modal.
 
 ### **F12 Import Modal Structure:**
 ```jsx
-{/* Cross-Check Link */}
-<div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-  <a href="https://supabase.com/dashboard/project/xftiwouxpefchwoxxgpf/editor">
-    🗄️ Open Supabase Dashboard
-  </a>
-</div>
-
 {/* Step 1: JSON Input */}
 <textarea
   value={rawEventListings}
   onChange={(e) => setRawEventListings(e.target.value)}
-  placeholder={`{"totalRecords":2,"campTypeName":"KIDS NIGHT OUT","data":[...]}`}
+  placeholder='{"totalRecords":2,"campTypeName":"KIDS NIGHT OUT","data":[...]}'
 />
 
-{/* Step 2: Gym Selection */}  
-<select value={selectedGymId} onChange={(e) => setSelectedGymId(e.target.value)}>
-  <option value="">-- Select Gym --</option>
-  {gymsList.map(gym => (
-    <option key={gym.id} value={gym.id}>{gym.name}</option>
-  ))}
-</select>
+{/* Step 2: Gym Selection (Radio Buttons) */}  
+{gymsList.map((gym) => (
+  <label key={gym.id}>
+    <input
+      type="radio"
+      name="selectedGym"
+      value={gym.id}
+      checked={selectedGymId === gym.id}
+      onChange={(e) => setSelectedGymId(e.target.value)}
+    />
+    {gym.name}
+  </label>
+))}
 
 {/* Step 3: Conversion & Import */}
-<button onClick={convertRawDataToJson}>⚡ Convert JSON to Import Format</button>
-<button onClick={handleBulkImport}>🚀 Import New Events Only</button>
+<button onClick={onConvert}>⚡ Convert JSON to Import Format ⚡</button>
+<button onClick={onImport}>🚀 Import New Events Only</button>
 ```
+
+**Note:** The Supabase dashboard link is available in the Admin Portal (not the import modal).
 
 ---
 
@@ -966,14 +889,26 @@ If something goes wrong, all imports are logged with timestamps and can be rever
 
 ---
 
-**This F12 method revolutionized our data collection from a 5-hour manual process to a 20-minute automated workflow.** 🚀
+**This F12 method was the foundation that made the Master Events Calendar possible.** 🚀
 
-The system is designed to be **robust, fast, and user-friendly** while maintaining **data accuracy and preventing duplicates**.
+Before Railway automation existed, this process reduced data collection from a 5-hour manual process to a 20-minute workflow. It's now preserved as a backup method and for understanding how iClassPro data works.
 
 ---
 
-*Document created September 18, 2025*  
-*Last Updated: November 26, 2025*  
-*For: Master Events Calendar - F12 Import System (Backup Method)*
+## 📜 VERSION HISTORY
 
-**Note:** This is now a backup method. Use Automated Sync (`AUTO-SYNC-GUIDE.md`) as the primary method.
+| Date | Change |
+|------|--------|
+| Sep 18, 2025 | Original document created - F12 was the ONLY method |
+| Oct 2025 | Added bulk action buttons for opening all gym pages |
+| Nov 2025 | Railway automation launched - F12 became backup method |
+| Nov 26, 2025 | Updated to clarify backup status |
+| Dec 28, 2025 | Corrected documentation - removed non-existent auto-detection claims, updated access instructions |
+
+---
+
+*Document created: September 18, 2025*  
+*Last Updated: December 28, 2025*  
+*Status: Historical Reference / Backup Method*
+
+**Primary method is now Automated Sync** - see `AUTO-SYNC-GUIDE.md`

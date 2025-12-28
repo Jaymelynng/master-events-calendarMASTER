@@ -3,8 +3,10 @@
 ## **CRITICAL RULE: NEVER ASSUME CODE WORKS**
 
 **Created:** October 7, 2025  
-**Last Updated:** November 26, 2025  
+**Last Updated:** December 28, 2025  
 **Reason:** AI told user "duplicate detection works" after code review. User imported 3 times. Created 12 duplicates. AI wasted user's time by assuming instead of testing.
+
+**This document is PERMANENT and applies to ALL future AI sessions.**
 
 ---
 
@@ -85,12 +87,21 @@ Before saying "sync is working":
 ## **BUG THAT TRIGGERED THIS PROTOCOL:**
 
 **File:** `src/components/EventsDashboard.js`  
-**Line:** 1122  
+**Location:** Around lines 1102-1108 and 1370-1377  
 **Issue:** Duplicate detection checked `events` state (client-side cache) instead of fresh database query  
 **Result:** Second/third imports didn't see events from first import  
-**Fix:** Now queries database directly before import
+**Fix:** Now fetches fresh events from database before import with wide date range (2024-2026)
 
 **Status:** ✅ FIXED (October 2025)
+
+**Current Code:**
+```javascript
+// CRITICAL FIX: Fetch fresh data from database instead of using stale client state
+console.log('🔍 Fetching fresh events from database for duplicate detection...');
+const allStartDate = '2024-01-01';
+const allEndDate = '2026-12-31';
+const freshEventsFromDB = await eventsApi.getAll(allStartDate, allEndDate);
+```
 
 ---
 
@@ -147,6 +158,18 @@ The November 26, 2025 session followed this protocol correctly:
 - ✅ Only confirmed after proof
 
 **This is how it should always be done.**
+
+---
+
+## **DECEMBER 2025 DOCUMENTATION AUDIT:**
+
+The December 28, 2025 session also followed good practices:
+- ✅ Cross-checked every documentation claim against actual code
+- ✅ Verified file paths, function names, and line numbers
+- ✅ Updated outdated references (not assumed they were correct)
+- ✅ Tested code patterns exist before documenting them
+
+**Documentation accuracy is as important as code accuracy.**
 
 ---
 

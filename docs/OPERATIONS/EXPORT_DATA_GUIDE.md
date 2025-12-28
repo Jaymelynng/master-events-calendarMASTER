@@ -1,8 +1,9 @@
 # 📤 EXPORT DATA GUIDE
 ## Exporting Events, Analytics, and Compliance Reports
 
-**Created:** December 9, 2025  
-**Status:** ✅ FULLY FUNCTIONAL
+**Last Updated:** December 28, 2025  
+**Status:** ✅ Fully Functional  
+**File:** `src/components/EventsDashboard/ExportModal.js`
 
 ---
 
@@ -19,7 +20,7 @@ The Export feature allows you to download event data, analytics, and compliance 
 
 ## 🚀 HOW TO ACCESS
 
-1. On the main calendar view, click the **📤 Export** button in the header
+1. On the main calendar view, click the **📤 Export** button (next to 🪄 Admin)
 2. The Export modal will open with all options
 
 ---
@@ -48,16 +49,18 @@ The export is **NOT** limited to the current calendar view. You can select any d
 Full list of all events in the selected date range.
 
 **Includes:**
-- Gym name
+- Gym name (and ID)
 - Event title
 - Event type (CLINIC, KNO, etc.)
 - Date
 - Time
 - Price
-- Age range
+- Age range (formatted as "5-12" or "6+")
 - Registration URL
 
 **Use case:** Full data backup, sharing event list, cross-checking with iClassPro
+
+**Note:** Only shows events matching your gym and event type filters.
 
 ---
 
@@ -173,9 +176,9 @@ Houston Gymnastics Academy,"1 CLINIC, 1 OPEN GYM"
 
 ### **Monthly Compliance Report**
 1. Set date range to the month you're reporting on
-2. Check ✅ Analytics Dashboard
-3. Check ✅ Missing Requirements
-4. Select all gyms
+2. Check ✅ **Analytics Dashboard**
+3. Check ✅ **Missing Requirements**
+4. Select all gyms (click "All" button)
 5. Export as CSV
 6. Share with management
 
@@ -252,6 +255,7 @@ A: Export as CSV and convert using Excel/Google Sheets, or export as JSON and pr
 
 | Date | Change |
 |------|--------|
+| Dec 28, 2025 | Documentation update - added file reference, clarified access path |
 | Dec 9, 2025 | Export feature created |
 | Dec 9, 2025 | Added date range picker |
 | Dec 9, 2025 | Added missing requirements preview in modal |

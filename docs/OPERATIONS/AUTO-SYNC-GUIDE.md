@@ -1,7 +1,7 @@
 # ⚡ AUTOMATED SYNC GUIDE
 ## One-Click Event Collection from iClassPro
 
-**Last Updated:** November 30, 2025  
+**Last Updated:** December 28, 2025  
 **Status:** ✅ FULLY WORKING - Verified against live data  
 **New Feature:** 🚀 SYNC ALL PROGRAMS - One click syncs everything!
 
@@ -21,16 +21,21 @@ Automated Sync is the **main feature** of the Master Events Calendar. It lets yo
 
 ## 🚀 HOW TO USE AUTOMATED SYNC
 
-### Step 1: Open the Sync Modal
+### Step 1: Open the Admin Portal
 
-1. Go to your calendar (Vercel URL)
-2. Find the 🪄 **Magic Wand** button (top of dashboard)
-3. Hold **Shift** and **click** the wand
-4. Click **"⚡ Automated Sync"**
+1. Go to your calendar
+2. Look for the **"🪄 Admin"** button at the top of the dashboard
+3. Click it to open Admin Control Center
 
-### Step 2: Select a Gym
+### Step 2: Open Automated Sync
 
-You'll see all 10 gyms:
+1. In the Admin Control Center, you'll see the **"⚡ Automated Sync"** section
+2. Click **"Open Automated Sync"**
+3. The Sync Modal opens
+
+### Step 3: Select a Gym
+
+You'll see all 10 gyms as radio buttons:
 - Capital Gymnastics Cedar Park (CCP)
 - Capital Gymnastics Pflugerville (CPF)
 - Capital Gymnastics Round Rock (CRR)
@@ -44,7 +49,7 @@ You'll see all 10 gyms:
 
 **Click the gym you want to sync.**
 
-### Step 3: Choose Sync Method
+### Step 4: Choose Sync Method
 
 After selecting a gym, you have TWO options:
 
@@ -52,7 +57,7 @@ After selecting a gym, you have TWO options:
 
 #### 🚀 OPTION A: SYNC ALL PROGRAMS (Recommended!)
 
-**NEW FEATURE!** One button syncs EVERYTHING for that gym:
+One button syncs EVERYTHING for that gym:
 
 1. Click the big purple **"🚀 SYNC ALL PROGRAMS"** button
 2. Wait 30-60 seconds (it's syncing 5 program types!)
@@ -83,10 +88,10 @@ Click individual buttons to sync one type at a time:
 
 ---
 
-### Step 4: Wait for Collection
+### Step 5: Wait for Collection
 
 The system will:
-1. Connect to Railway API server
+1. Connect to Railway API server (with API key authentication)
 2. Open iClassPro portal (via Playwright)
 3. Capture event data from JSON responses
 4. Return results to you
@@ -97,7 +102,7 @@ The system will:
 
 You'll see a loading indicator.
 
-### Step 5: Review Results
+### Step 6: Review Results
 
 After collection, you'll see:
 
@@ -105,19 +110,21 @@ After collection, you'll see:
 |----------|---------------|
 | **🆕 NEW** | Events not in your database - will be added |
 | **🔄 CHANGED** | Events that exist but data is different - will be updated |
-| **🗑️ DELETED** | Events in database but not on portal - will be soft-deleted |
+| **🗑️ DELETED** | Future events in database but not on portal - will be soft-deleted |
 | **✓ UNCHANGED** | Events that match exactly - will be skipped |
 
 **Review the list to make sure it looks right.**
 
-### Step 6: Import
+**Note about DELETED:** Only future events that haven't started yet can be marked as deleted. Events that have already started are silently ignored (they're not "deleted", just running/completed).
+
+### Step 7: Import
 
 If everything looks good:
 1. Click **"Import X Events to Database"**
 2. Wait for success message
 3. Done! Calendar will refresh automatically.
 
-### Step 7: Sync Another
+### Step 8: Sync Another
 
 After import, you'll see two buttons:
 - **"Sync Another Program"** - Keeps gym selected, choose new event type
@@ -215,11 +222,12 @@ For each event, the system collects:
 | **Title** | Event name | "Ninja Night Out \| Dec 5th" |
 | **Date** | Event date | 2025-12-05 |
 | **Time** | Start-End | "6:30 PM - 9:30 PM" |
-| **Price** | iClass settings | "35" |
+| **Price** | iClass settings or title | "35" |
 | **Age Min** | iClass settings | 4 |
 | **Age Max** | iClass settings | 12 |
-| **Description** | Event description | Full text (truncated at ~500 chars) |
+| **Description** | Event description | Full text (truncated at ~1500 chars) |
 | **Event URL** | Registration link | Direct link to event |
+| **Has Openings** | Availability status | true/false |
 
 ---
 
@@ -232,8 +240,8 @@ The system compares events by **event_url** (unique identifier).
 | Scenario | Logic | Action |
 |----------|-------|--------|
 | **NEW** | URL not in database | Insert new event |
-| **CHANGED** | URL exists, but title/date/time/price/age/description different | Update existing event |
-| **DELETED** | URL in database, not on portal | Soft-delete (set deleted_at timestamp) |
+| **CHANGED** | URL exists, but data is different | Update existing event |
+| **DELETED** | URL in database, not on portal, AND hasn't started yet | Soft-delete (set deleted_at timestamp) |
 | **UNCHANGED** | URL exists, all fields match | Skip (no action) |
 
 ### Fields Checked for Changes:
@@ -268,27 +276,29 @@ If a gym doesn't have any events of that type scheduled:
 
 ### Monthly Full Sync (Recommended - Using SYNC ALL)
 
-1. Open Automated Sync modal
-2. Look at progress tracker - see what needs syncing
-3. Select first gym
-4. Click **"🚀 SYNC ALL PROGRAMS"**
-5. Wait 30-60 seconds
-6. Review results and click **"Import"**
-7. Click **"Sync Another Gym"**
-8. Repeat for each gym
-9. Done for the month!
+1. Open Admin Portal (click 🪄 Admin button)
+2. Click "Open Automated Sync"
+3. Look at progress tracker - see what needs syncing
+4. Select first gym
+5. Click **"🚀 SYNC ALL PROGRAMS"**
+6. Wait 30-60 seconds
+7. Review results and click **"Import"**
+8. Click **"Sync Another Gym"**
+9. Repeat for each gym
+10. Done for the month!
 
 **Time:** ~10-15 minutes for all 10 gyms (vs 30+ minutes the old way!)
 
 ### Quick Update (Daily/Weekly)
 
-1. Open Automated Sync modal
-2. Look at progress tracker
-3. Select gym that needs update
-4. Either:
+1. Open Admin Portal
+2. Click "Open Automated Sync"
+3. Look at progress tracker
+4. Select gym that needs update
+5. Either:
    - **SYNC ALL** if you want everything refreshed
    - **Individual button** if you know only one thing changed
-5. Import and done!
+6. Import and done!
 
 **Time:** ~2-5 minutes
 
@@ -301,6 +311,12 @@ If a gym doesn't have any events of that type scheduled:
 1. Check if Railway is running: Visit `https://master-events-calendarmaster-production.up.railway.app/health`
 2. If not healthy, check Railway dashboard
 3. Wait a minute and try again
+
+### "Invalid or missing API key"
+
+1. Check that `REACT_APP_API_KEY` is set in Vercel environment variables
+2. Check that `API_KEY` is set in Railway environment variables
+3. Both values must match exactly
 
 ### "Sync takes forever"
 
@@ -326,6 +342,12 @@ If a gym doesn't have any events of that type scheduled:
 2. Verify Railway is running
 3. Check Supabase service key in Railway
 
+### "No events collected but portal shows events"
+
+1. Check `gym_links` table in Supabase
+2. Verify the URL is configured and `is_active = true`
+3. Make sure the URL is a valid iClassPro portal URL
+
 ---
 
 ## 🎯 TIPS FOR SUCCESS
@@ -335,6 +357,7 @@ If a gym doesn't have any events of that type scheduled:
 3. **Review before importing** - Make sure the NEW/CHANGED list looks right
 4. **Don't worry about "no events"** - Yellow is fine, it just means nothing scheduled
 5. **Use "Sync Another" buttons** - Faster than closing and reopening
+6. **Allow pop-ups** - The bulk action buttons open multiple tabs
 
 ---
 
@@ -356,7 +379,7 @@ By using Automated Sync, you're:
 ## 📞 IF ALL ELSE FAILS
 
 1. Check Railway dashboard - is service running?
-2. Check Vercel - is REACT_APP_API_URL correct?
+2. Check Vercel - is REACT_APP_API_URL and REACT_APP_API_KEY correct?
 3. Check Supabase - is data there?
 4. Try the F12 method as backup (see F12-IMPORT-GUIDE.md)
 5. Ask AI for help - share error messages and screenshots
@@ -365,5 +388,88 @@ By using Automated Sync, you're:
 
 **Happy Syncing!** ⚡
 
+---
 
+## 📜 VERSION HISTORY & LESSONS LEARNED
 
+This section documents the evolution of the sync system - what was tried, what changed, and why. Useful for understanding decisions and potentially restoring features.
+
+### Phase 1: Hidden Admin Access (Early Development)
+
+**What it was:**
+- A small 🪄 wand button in Calendar View
+- Required **Shift + Click** to open Admin Portal
+- Intentionally hidden so regular users wouldn't accidentally find it
+
+**Why it existed:**
+- Wanted admin features hidden from casual users
+- Added a layer of "secrecy" to admin tools
+
+**Status:** Still exists in code (lines ~2793-2803 in EventsDashboard.js) but rarely used
+
+**Code snippet (for restoration):**
+```javascript
+<button
+  onClick={(e) => {
+    if (e.shiftKey) {
+      setShowAdminPortal(true);
+    }
+  }}
+  title="🔐 Jayme's Command Center"
+>
+  <span>🪄</span>
+</button>
+```
+
+### Phase 2: Visible Admin Button (Current)
+
+**What changed:**
+- Added a visible **"🪄 Admin"** button at top of dashboard
+- No shift-click required - just click it
+
+**Why it changed:**
+- Once automation was working reliably, hiding it felt unnecessary
+- Faster access for daily use
+- Still requires clicking into Admin Portal, then Automated Sync (2 steps = some protection)
+
+**Status:** ✅ Current primary method
+
+### Phase 3: Super Admin PIN (Added Later)
+
+**What it is:**
+- Press `*` key or click 🔐 icon in Admin Portal
+- Enter PIN (1426) to unlock Super Admin mode
+- Reveals dangerous tools (direct Supabase/Railway links, Audit History)
+
+**Why it exists:**
+- Separates "safe" admin tasks from "dangerous" ones
+- Regular admin can sync events, but can't accidentally mess with database
+- PIN protects destructive operations
+
+**Status:** ✅ Active - provides security layer
+
+### Lessons Learned
+
+| Lesson | Context |
+|--------|---------|
+| **Hidden UI is annoying** | Shift+click was clever but slowed down daily use |
+| **Two-layer access works** | Visible button → Admin Portal → Sync Modal is good balance |
+| **PIN protection is worth it** | Super Admin features should stay behind PIN |
+| **Document everything** | This section exists so future-you remembers why things changed |
+
+### Features That Could Be Restored
+
+If you ever want to bring back hidden access:
+1. The shift+click wand code still exists in Calendar View
+2. Could add keyboard shortcut (e.g., Ctrl+Shift+A for admin)
+3. Could add URL parameter access (e.g., `?admin=true`)
+
+### Features That Were Removed (Don't Bring Back)
+
+| Feature | Why Removed |
+|---------|-------------|
+| *None documented yet* | Add here if you remove something for good reason |
+
+---
+
+**End of Document**

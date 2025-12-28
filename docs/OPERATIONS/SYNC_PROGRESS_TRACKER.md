@@ -1,8 +1,9 @@
 # 📊 SYNC PROGRESS TRACKER - Complete Guide
 ## Never Lose Track of What You've Synced
 
-**Last Updated:** November 26, 2025  
-**Status:** ✅ Fully Implemented
+**Last Updated:** December 28, 2025  
+**Status:** ✅ Fully Implemented  
+**Location:** `docs/OPERATIONS/SYNC_PROGRESS_TRACKER.md`
 
 ---
 
@@ -70,8 +71,8 @@ The tracker shows how long ago you synced:
 
 ## 📍 WHERE TO FIND IT
 
-1. Open the **Admin Portal** (Shift + Click 🪄)
-2. Click **"⚡ Automated Sync"**
+1. Click the **🪄 Admin** button (top of calendar, next to Export)
+2. Click **"Open Automated Sync"**
 3. The progress tracker is at the **TOP of the sync modal**
 4. Click **[Collapse]** to hide it, **[Expand]** to show it
 
@@ -152,29 +153,43 @@ GRANT ALL ON sync_log TO anon, authenticated;
 
 ```javascript
 export const syncLogApi = {
-  // Get all sync records
-  async getSyncLog() {
+  // Get all sync records (ordered by most recent)
+  async getAll() {
     const { data, error } = await supabase
       .from('sync_log')
-      .select('*');
-    return data;
+      .select('*')
+      .order('last_synced', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
   },
   
-  // Update or create sync record
-  async upsertSyncLog(gymId, eventType, eventsFound, eventsImported) {
+  // Update or create sync record (upsert)
+  async log(gymId, eventType, eventsFound, eventsImported = 0) {
     const { data, error } = await supabase
       .from('sync_log')
-      .upsert(
-        { 
-          gym_id: gymId, 
-          event_type: eventType, 
-          last_synced: new Date().toISOString(), 
-          events_found: eventsFound, 
-          events_imported: eventsImported 
-        },
-        { onConflict: 'gym_id,event_type' }  // Update if exists
-      );
+      .upsert({
+        gym_id: gymId,
+        event_type: eventType,
+        last_synced: new Date().toISOString(),
+        events_found: eventsFound,
+        events_imported: eventsImported
+      }, {
+        onConflict: 'gym_id,event_type'
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
     return data;
+  },
+
+  // Get sync log for specific gym
+  async getByGym(gymId) {
+    const { data, error } = await supabase
+      .from('sync_log')
+      .select('*')
+      .eq('gym_id', gymId);
+    if (error) throw new Error(error.message);
+    return data || [];
   }
 };
 ```
@@ -183,12 +198,33 @@ export const syncLogApi = {
 
 1. **After collecting events** (even if 0 found):
 ```javascript
-await syncLogApi.upsertSyncLog(gymId, eventType, eventsFound, 0);
+await syncLogApi.log(selectedGym, eventType, eventsFound, 0);
+const updatedLog = await syncLogApi.getAll();
+setSyncLog(updatedLog);
 ```
 
 2. **After importing events**:
 ```javascript
-await syncLogApi.upsertSyncLog(gymId, eventType, eventsFound, eventsImported);
+await syncLogApi.log(gymId, eventType, eventsFound, eventsImported);
+```
+
+### Time Display Helper (in SyncModal.js)
+```javascript
+const timeAgo = (dateStr) => {
+  if (!dateStr) return 'Never';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+};
 ```
 
 ---
@@ -237,7 +273,7 @@ A: Yes! The data is stored in Supabase. When you reopen the modal, it fetches th
 Possible enhancements for the future:
 
 1. **Stale indicator** - Turn yellow/red if sync is older than X days
-2. **One-click "Sync All"** - Sync every gym/type automatically
+2. ~~**One-click "Sync All"**~~ - ✅ **IMPLEMENTED** as "🚀 SYNC ALL PROGRAMS" button
 3. **Email notifications** - Alert when sync hasn't happened in a while
 4. **Historical tracking** - Keep history of all syncs, not just the latest
 
@@ -251,6 +287,8 @@ Possible enhancements for the future:
 | Nov 26, 2025 | Added progress tracker grid to SyncModal |
 | Nov 26, 2025 | Color coding: green/yellow/red |
 | Nov 26, 2025 | Time display: "Just now", "5m ago", etc. |
+| Dec 2025 | Added "🚀 SYNC ALL PROGRAMS" one-click feature |
+| Dec 28, 2025 | Documentation updated with correct API function names |
 
 ---
 

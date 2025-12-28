@@ -1,5 +1,11 @@
 # Data Quality Validation System
 
+**Last Updated:** December 28, 2025  
+**Status:** ✅ Working  
+**Files:** `automation/f12_collect_and_import.py`, `src/components/EventsDashboard.js`
+
+---
+
 ## Overview
 
 The Data Quality Validation system automatically detects errors and issues in event data by comparing structured API data against description text. This catches copy/paste errors, outdated descriptions, and missing content.
@@ -67,8 +73,10 @@ Compares structured `age_min` to age mentioned in description.
 - 🚨 Flag if: Different skill than title (see Skill Mismatch below)
 
 **OPEN GYM:**
-- ✅ Must contain: "Open Gym", "Fun Gym", "Gym Fun", "Preschool Fun", "play and explore the gym", or "open to all"
+- ✅ Must contain one of: "Open Gym", "Fun Gym", "Gym Fun", "Preschool Fun", "play and explore the gym", or "open to all"
 - 🚨 Flag if: Description says "Clinic" or "Kids Night Out"
+
+**Note:** Some gyms call Open Gym by different names (e.g., "Gym Fun Fridays", "Preschool Fun Gym"). The validation handles these variations.
 
 #### 5. Skill Mismatch (CLINIC Only)
 Compares skill word in title vs description.
@@ -90,14 +98,27 @@ Detects `<img>` tags in description HTML.
 - `flyer_url` - URL to the image (displayed in event details panel)
 - ⚠️ `description_status = 'flyer_only'` - Has image but NO text
 
+#### 7. Availability & Registration (All Programs)
+Tracks event availability from iClassPro:
+
+- ℹ️ `sold_out` - Event has no openings (displayed as "FULL" badge)
+- ⚠️ `registration_closed` - Registration ended but event hasn't happened yet
+- ℹ️ `registration_not_open` - Registration hasn't started yet
+
 ## Database Fields
 
 ```sql
 -- Validation columns in events table
-has_flyer           BOOLEAN DEFAULT false
-flyer_url           TEXT
-description_status  TEXT DEFAULT 'unknown'  -- 'full', 'flyer_only', 'none', 'unknown'
-validation_errors   JSONB DEFAULT '[]'::jsonb
+has_flyer               BOOLEAN DEFAULT false
+flyer_url               TEXT
+description_status      TEXT DEFAULT 'unknown'  -- 'full', 'flyer_only', 'none', 'unknown'
+validation_errors       JSONB DEFAULT '[]'::jsonb
+acknowledged_errors     JSONB DEFAULT '[]'::jsonb  -- Dismissed warnings
+
+-- Availability columns (from iClassPro)
+has_openings            BOOLEAN DEFAULT true
+registration_start_date TEXT
+registration_end_date   TEXT
 ```
 
 ## Real Errors Caught
@@ -125,7 +146,7 @@ SET
   flyer_url = NULL;
 ```
 
-Then re-sync gyms from Magic Control Center → Automated Sync.
+Then re-sync gyms: **🪄 Admin → Open Automated Sync**
 
 ## Why CAMP is Skipped
 
@@ -194,28 +215,18 @@ If you dismissed something by mistake:
 2. Look for "✓ X warning(s) verified & dismissed"
 3. Click **"Undo all"** to restore the warnings
 
-### Database Fields
-
-```sql
--- In events table
-acknowledged_errors  JSONB DEFAULT '[]'::jsonb  -- Stores dismissed error messages
-```
-
 ---
 
 ## Changelog
 
-- **2025-12-18**: Added validation warning dismiss feature
-  - Click [✓ OK] to dismiss false positive warnings
-  - Calendar icons and stats respect dismissed warnings
-  - Undo functionality to restore warnings
-  - Dismissing does NOT affect change detection during sync
-- **2025-12-09**: Initial implementation
-  - Date, time, min-age validation
-  - Program type validation for KNO, CLINIC, OPEN GYM
-  - Skill mismatch detection for CLINIC
-  - Flyer detection and display
-  - CAMP skipped to avoid false positives
-  - Open Gym variations added (Gym Fun Fridays, Preschool Fun Gym, etc.)
+| Date | Change |
+|------|--------|
+| Dec 28, 2025 | Documentation update - added availability fields, updated access paths |
+| Dec 18, 2025 | Added validation warning dismiss feature (✓ OK button, Undo all) |
+| Dec 9, 2025 | Initial implementation - date, time, age, program type validation |
+| Dec 9, 2025 | Added skill mismatch detection for CLINIC |
+| Dec 9, 2025 | Added flyer detection and display |
+| Dec 9, 2025 | CAMP validation skipped to avoid false positives |
+| Dec 9, 2025 | Added Open Gym variations (Gym Fun, Preschool Fun, etc.) |
 
 

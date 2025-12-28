@@ -1,8 +1,9 @@
 # 🗄️ AUTO-ARCHIVE SYSTEM
 ## Automatic Event Archiving for Master Events Calendar
 
-**Created:** December 9, 2025  
-**Status:** ✅ ACTIVE & RUNNING
+**Last Updated:** December 28, 2025  
+**Status:** ✅ Active & Running  
+**Location:** Supabase pg_cron (runs automatically at midnight)
 
 ---
 
@@ -43,13 +44,21 @@ BEGIN
     id, gym_id, title, date, start_date, end_date,
     time, price, day_of_week, type, event_url,
     age_min, age_max, description, deleted_at,
-    created_at, updated_at
+    created_at, updated_at,
+    -- Data quality columns
+    has_flyer, flyer_url, description_status,
+    validation_errors, acknowledged_errors,
+    -- Availability columns  
+    has_openings, registration_start_date, registration_end_date
   )
   SELECT 
     id, gym_id, title, date, start_date, end_date,
     time, price, day_of_week, type, event_url,
     age_min, age_max, description, deleted_at,
-    created_at, updated_at
+    created_at, updated_at,
+    has_flyer, flyer_url, description_status,
+    validation_errors, acknowledged_errors,
+    has_openings, registration_start_date, registration_end_date
   FROM events 
   WHERE date < CURRENT_DATE
   AND id NOT IN (SELECT id FROM events_archive);
@@ -60,6 +69,8 @@ BEGIN
 END;
 $$;
 ```
+
+**Note:** The actual function in Supabase should include ALL columns. If new columns are added to `events`, the function may need to be updated.
 
 ### **3. The Cron Job**
 
@@ -84,12 +95,29 @@ The frontend queries the `events_with_gym` VIEW, not the `events` table directly
 This view uses **UNION ALL** to combine both tables:
 
 ```sql
-SELECT ... FROM events e LEFT JOIN gyms g ...
+CREATE VIEW events_with_gym AS
+SELECT 
+  e.id, e.gym_id, e.title, e.date, e.time, e.price, e.type, e.event_url,
+  e.start_date, e.end_date, e.description, e.age_min, e.age_max,
+  e.has_flyer, e.flyer_url, e.description_status, e.validation_errors,
+  e.acknowledged_errors, e.deleted_at, e.created_at, e.updated_at,
+  g.name AS gym_name, g.id AS gym_code
+FROM events e
+LEFT JOIN gyms g ON e.gym_id = g.id
+WHERE e.deleted_at IS NULL
+
 UNION ALL
-SELECT ... FROM events_archive a LEFT JOIN gyms g ...
+
+SELECT 
+  a.id, a.gym_id, a.title, a.date, -- ... same columns ...
+  g.name AS gym_name, g.id AS gym_code
+FROM events_archive a
+LEFT JOIN gyms g ON a.gym_id = g.id;
 ```
 
 **Result:** Whether an event is in `events` or `events_archive`, it appears in the view and displays on the calendar!
+
+**Important:** The view filters out soft-deleted events (`WHERE e.deleted_at IS NULL`) from the active table.
 
 ---
 
@@ -224,18 +252,32 @@ UPDATE cron.job SET active = true WHERE jobname = 'daily-archive-old-events';
 ### **Want to Restore an Archived Event?**
 
 ```sql
--- Move event back to main table
-INSERT INTO events 
-SELECT id, gym_id, event_type_id, title, date, time, price, 
-       day_of_week, type, event_url, created_at, updated_at,
-       event_type, gym_code, event_id, start_date, end_date,
-       availability_status, age_min, age_max, description, deleted_at
+-- Step 1: Move event back to main table
+INSERT INTO events (
+  id, gym_id, title, date, start_date, end_date,
+  time, price, day_of_week, type, event_url,
+  age_min, age_max, description, deleted_at,
+  created_at, updated_at,
+  has_flyer, flyer_url, description_status,
+  validation_errors, acknowledged_errors,
+  has_openings, registration_start_date, registration_end_date
+)
+SELECT 
+  id, gym_id, title, date, start_date, end_date,
+  time, price, day_of_week, type, event_url,
+  age_min, age_max, description, deleted_at,
+  created_at, updated_at,
+  has_flyer, flyer_url, description_status,
+  validation_errors, acknowledged_errors,
+  has_openings, registration_start_date, registration_end_date
 FROM events_archive 
 WHERE id = 'your-event-id-here';
 
--- Delete from archive
+-- Step 2: Delete from archive
 DELETE FROM events_archive WHERE id = 'your-event-id-here';
 ```
+
+**Tip:** You can find the event ID by querying `events_archive` by title or date.
 
 ---
 
@@ -262,6 +304,8 @@ SELECT
 
 | Date | Change |
 |------|--------|
+| Dec 28, 2025 | Documentation update - added data quality columns to examples |
+| Dec 18, 2025 | Added acknowledged_errors column to archive table |
 | Dec 9, 2025 | Created events_archive table |
 | Dec 9, 2025 | Created auto_archive_old_events() function |
 | Dec 9, 2025 | Set up pg_cron job for midnight execution |
