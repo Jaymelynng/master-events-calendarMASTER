@@ -295,15 +295,6 @@ This documentation is organized into three strategic categories based on your ro
 
 ---
 
-### **[VERCEL_ENVIRONMENT_SETUP.md](OPERATIONS/VERCEL_ENVIRONMENT_SETUP.md)**
-**What it contains:**
-- Environment variables for Vercel
-- How to update them
-
-**Why it's valuable:** Quick reference for environment setup.
-
----
-
 ### **[AUDIT-SYSTEM.md](OPERATIONS/AUDIT-SYSTEM.md)**
 **What it contains:**
 - How to access audit history
@@ -349,15 +340,6 @@ This documentation is organized into three strategic categories based on your ro
 **Why it's valuable:** Complete guide to exporting data for reports and backups.
 
 **Use it for:** Monthly compliance reports, data backups, sharing with management
-
----
-
-### **[GYM_AUTO_DETECTION_FEATURE.md](OPERATIONS/GYM_AUTO_DETECTION_FEATURE.md)**
-**What it contains:**
-- Intelligent gym identification from F12 data
-- 100% accurate subdomain-to-gym matching
-
-**Why it's valuable:** Understanding auto-detection.
 
 ---
 
@@ -414,7 +396,7 @@ This documentation is organized into three strategic categories based on your ro
 
 ## 📊 Documentation Stats
 
-- **Total Documents:** 18+ major documents
+- **Total Documents:** 17 major documents (consolidated Dec 28, 2025)
 - **Coverage:** Business value, technical architecture, operations
 - **Quality Level:** Enterprise-grade, investor-ready
 - **Last Major Update:** December 28, 2025 (Full documentation audit)
