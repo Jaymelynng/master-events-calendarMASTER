@@ -238,14 +238,18 @@ The system compares events by **event_url** (unique identifier).
 
 ### Fields Checked for Changes:
 - title
-- date
+- date (and start_date, end_date)
 - time
 - price
+- type
 - age_min
 - age_max
 - description
 
 **If ANY of these change, the event shows as "CHANGED."**
+
+**NOT checked (to prevent false positives):**
+- has_openings, registration dates, flyer fields, validation_errors
 
 ---
 

@@ -165,7 +165,7 @@ IMPORT SUMMARY:
 ## 🛡️ DATA RETENTION
 
 - **How long is data kept?** Indefinitely (until manually cleared)
-- **How many records?** Currently 300+ audit entries
+- **How many records?** Currently 1,198+ audit entries
 - **Storage impact:** Minimal (~1KB per entry)
 
 ---

@@ -24,15 +24,16 @@ This documentation is organized into three strategic categories based on your ro
 
 ---
 
-## 🆕 START HERE - November 2025 Updates
+## 🆕 START HERE - December 2025 Status
 
-### **[SYSTEM_STATUS_NOVEMBER_2025.md](OPERATIONS/SYSTEM_STATUS_NOVEMBER_2025.md)** ⭐ **CURRENT STATUS**
+### **[CURRENT_SYSTEM_STATUS.md](OPERATIONS/CURRENT_SYSTEM_STATUS.md)** ⭐ **CURRENT STATUS**
 **What it contains:**
 - Complete system status (FULLY DEPLOYED & WORKING!)
 - All 10 gyms, 555+ events (401 active, 154 archived)
 - Verified 100% accuracy against live iClassPro data
 - Feature list with what's working NOW
 - Troubleshooting guide
+- December 2025 updates (volatile field fix, link editor removal)
 
 **Why it's valuable:** THE source of truth for what's working right now. Read this first!
 
@@ -143,12 +144,12 @@ This documentation is organized into three strategic categories based on your ro
 
 **For:** Users, managers, daily operations, training
 
-### **[SYSTEM_STATUS_NOVEMBER_2025.md](OPERATIONS/SYSTEM_STATUS_NOVEMBER_2025.md)** 🆕 **START HERE**
+### **[CURRENT_SYSTEM_STATUS.md](OPERATIONS/CURRENT_SYSTEM_STATUS.md)** 🆕 **START HERE**
 **What it contains:**
 - Current system status (everything working!)
 - All features verified
 - Troubleshooting guide
-- What was verified November 26, 2025
+- What was verified December 28, 2025
 
 **Why it's valuable:** THE source of truth for what's working right now.
 
@@ -365,7 +366,7 @@ This documentation is organized into three strategic categories based on your ro
 ### **I need to:**
 
 **Understand what's working RIGHT NOW**
-→ Read: `OPERATIONS/SYSTEM_STATUS_NOVEMBER_2025.md` ⭐
+→ Read: `OPERATIONS/CURRENT_SYSTEM_STATUS.md` ⭐
 
 **Sell or present the project**
 → Read: `BUSINESS/BOSS-PRESENTATION.md`
@@ -387,7 +388,7 @@ This documentation is organized into three strategic categories based on your ro
 
 **Onboard a new developer**
 → Read in order:
-1. `OPERATIONS/SYSTEM_STATUS_NOVEMBER_2025.md`
+1. `OPERATIONS/CURRENT_SYSTEM_STATUS.md`
 2. `TECHNICAL/TECHNICAL-REFERENCE.md`
 3. `OPERATIONS/AUTO-SYNC-GUIDE.md`
 
@@ -395,7 +396,7 @@ This documentation is organized into three strategic categories based on your ro
 
 ## 💎 The Crown Jewels (Most Valuable Docs)
 
-1. **🆕 SYSTEM_STATUS_NOVEMBER_2025.md** - Current truth (START HERE!)
+1. **🆕 CURRENT_SYSTEM_STATUS.md** - Current truth (START HERE!)
 2. **🏆 BOSS-PRESENTATION.md** - More valuable than any code
 3. **🚀 AUTO-SYNC-GUIDE.md** - Main workflow (includes SYNC ALL!)
 4. **📋 SYNC-QUICK-REFERENCE.md** - Non-technical quick guide
@@ -416,7 +417,7 @@ This documentation is organized into three strategic categories based on your ro
 - **Total Documents:** 18+ major documents
 - **Coverage:** Business value, technical architecture, operations
 - **Quality Level:** Enterprise-grade, investor-ready
-- **Last Major Update:** December 9, 2025 (DATA QUALITY VALIDATION)
+- **Last Major Update:** December 28, 2025 (Full documentation audit)
 
 ---
 
@@ -424,7 +425,7 @@ This documentation is organized into three strategic categories based on your ro
 
 **When to update:**
 - Major feature additions → Update TECHNICAL-REFERENCE.md
-- System status changes → Update SYSTEM_STATUS_NOVEMBER_2025.md
+- System status changes → Update CURRENT_SYSTEM_STATUS.md
 - Process changes → Update relevant OPERATIONS doc
 - Business metrics change → Update BOSS-PRESENTATION.md
 
@@ -442,6 +443,6 @@ Code can be rewritten, but this knowledge is irreplaceable.
 
 ---
 
-**Last Updated:** December 9, 2025  
+**Last Updated:** December 28, 2025  
 **Maintained by:** Jayme
 

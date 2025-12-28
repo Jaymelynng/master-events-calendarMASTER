@@ -1,8 +1,8 @@
-# 🎉 SYSTEM STATUS - DECEMBER 2025
+# 🎉 CURRENT SYSTEM STATUS
 ## Team Calendar - FULLY WORKING!
 
 **Live URL:** https://teamcalendar.mygymtools.com  
-**Last Updated:** December 9, 2025  
+**Last Updated:** December 28, 2025  
 **Status:** ✅ **PRODUCTION READY & DEPLOYED**  
 **Part of:** mygymtools.com suite  
 **Verified By:** Cross-checked against live iClassPro data - 100% accuracy
@@ -52,13 +52,21 @@ The crown jewel! One-click sync from iClassPro portals to your database.
 
 ### ✅ **5 Event Types Supported**
 
-| Type | What It Is |
-|------|------------|
-| KIDS NIGHT OUT (KNO) | Friday night drop-off events |
-| CLINIC | Skill-specific training sessions |
-| OPEN GYM | Open play time |
-| CAMP | Day camps (school breaks) |
-| SPECIAL EVENTS | Competitions, parties, etc. |
+| Type | What It Is | Tracked for Requirements? |
+|------|------------|---------------------------|
+| KIDS NIGHT OUT (KNO) | Friday night drop-off events | ✅ Yes (2/month required) |
+| CLINIC | Skill-specific training sessions | ✅ Yes (1/month required) |
+| OPEN GYM | Open play time | ✅ Yes (1/month required) |
+| CAMP | Day camps (school breaks + summer) | ❌ No |
+| SPECIAL EVENTS | Competitions, parties, etc. | ❌ No |
+
+---
+
+### ✅ **Camp Display with Options**
+Camps with multiple options (Gymnastics/Ninja, Full Day/Half Day) are now consolidated!
+
+**Calendar View:** Shows "CAMP - X options available"  
+**Details Panel:** Shows all registration links with pricing
 
 ---
 
@@ -74,12 +82,34 @@ Visual grid showing sync status for every gym + event type combo.
 
 ---
 
+### ✅ **Auto-Archive System**
+Past events automatically move from `events` → `events_archive` at midnight daily.
+
+**How it works:**
+- pg_cron job runs at midnight
+- Moves events where `date < CURRENT_DATE`
+- Calendar still displays archived events via `events_with_gym` view
+
+---
+
+### ✅ **Data Quality Validation**
+Automatically detects errors in event data:
+- 🚨 Date/time mismatches
+- 🚨 Wrong program type in description
+- 🚨 Skill mismatches (for clinics)
+- ⚠️ Flyer-only descriptions
+- ❌ Missing descriptions
+
+**Note:** CAMPs are skipped for validation to avoid false positives.
+
+---
+
 ### ✅ **Secret Admin Mode (3 Tiers)**
 
 | Level | Who | How to Access | What You See |
 |-------|-----|---------------|--------------|
-| 1 | Everyone | Just visit the site | Calendar, event details, stats |
-| 2 | Admin (Jayme) | Shift + Click Magic Wand | Quick Add, JSON Import, Automated Sync |
+| 1 | Everyone | Just visit the site | Calendar, event details, stats, export |
+| 2 | Admin (Jayme) | Click Admin button | JSON Import, Automated Sync |
 | 3 | Super Admin (Jayme only) | Inside Admin, click lock + enter PIN `1426` | Supabase link, Railway link, Audit History |
 
 ---
@@ -96,10 +126,12 @@ Tracks visitors and page views on your calendar.
 
 | Metric | Count |
 |--------|-------|
-| Total Events | 226+ |
+| Total Events | 555 (401 active + 154 archived) |
 | Gyms | 10 |
-| Event Types | 5 |
-| Sync Log Entries | 40+ |
+| Event Types | 5 (3 tracked for requirements) |
+| Gym Links | 76 |
+| Sync Log Entries | 50+ |
+| Audit Log Entries | 1,198 |
 
 ---
 
@@ -122,16 +154,17 @@ Tracks visitors and page views on your calendar.
 - ✅ Pulls event titles correctly
 - ✅ Pulls dates correctly
 - ✅ Pulls times correctly
-- ✅ Pulls prices (when available)
+- ✅ Pulls prices (parsed from title/description)
 - ✅ Pulls age_min and age_max from iClass settings
 - ✅ Pulls full descriptions
 - ✅ Generates correct registration URLs
 
-### Event Comparison
-- ✅ Detects NEW events (not in database)
-- ✅ Detects CHANGED events (data different)
-- ✅ Detects DELETED events (removed from portal)
-- ✅ Identifies UNCHANGED events (skip import)
+### Event Comparison (Change Detection)
+**Fields that WILL trigger "CHANGED" status:**
+- title, date, start_date, end_date, time, price, type, age_min, age_max, description
+
+**Fields that are saved but WON'T trigger "CHANGED":**
+- has_openings, registration_start_date, registration_end_date, has_flyer, flyer_url, description_status, validation_errors
 
 ### Import Process
 - ✅ Inserts new events
@@ -146,6 +179,9 @@ Tracks visitors and page views on your calendar.
 - ✅ Yellow notice for "no events" (not red error)
 - ✅ Large modal to reduce scrolling
 - ✅ Event details panel shows description
+- ✅ Camp consolidation with options display
+- ✅ Validation error icons on calendar
+- ✅ Dismiss validation warnings feature
 
 ---
 
@@ -163,6 +199,7 @@ You click "Sync"
     → You click "Import"
     → Data saved to Supabase
     → Calendar updates!
+    → At midnight: pg_cron archives past events
 ```
 
 ### The Flow (Technical Version)
@@ -203,6 +240,7 @@ Calendar Refreshes via Real-time Subscription
 |------|---------|
 | `src/components/EventsDashboard/SyncModal.js` | Automated sync UI |
 | `src/components/EventsDashboard/AdminPortalModal.js` | Admin portal with tiers |
+| `src/components/EventsDashboard/ExportModal.js` | Data export UI |
 | `src/lib/api.js` | Database API functions |
 | `src/lib/eventComparison.js` | New/changed/deleted logic |
 | `src/App.js` | Main app with Analytics |
@@ -211,28 +249,40 @@ Calendar Refreshes via Real-time Subscription
 | File | Purpose |
 |------|---------|
 | `automation/local_api_server.py` | Flask API server |
-| `automation/f12_collect_and_import.py` | Playwright event collection |
+| `automation/f12_collect_and_import.py` | Playwright event collection + validation |
 
 ### Database (Supabase)
 | Table | Purpose |
 |-------|---------|
-| `events` | All event data |
-| `gyms` | Gym information |
-| `gym_links` | Portal URLs |
+| `events` | Active/future events (401 rows) |
+| `events_archive` | Past events (154 rows) |
+| `gyms` | Gym information (10 rows) |
+| `gym_links` | Portal URLs (76 rows) |
 | `sync_log` | Sync progress tracking |
-| `events_with_gym` | View joining events + gyms |
+| `event_audit_log` | Change tracking (1,198 rows) |
+| `event_types` | Event categories |
+| `link_types` | Link categories |
+| `monthly_requirements` | Business rules |
+
+### Database Views
+| View | Purpose |
+|------|---------|
+| `events_with_gym` | UNION ALL of events + events_archive with gym names |
+| `gym_links_detailed` | Joins links + types |
 
 ---
 
 ## ⚠️ KNOWN LIMITATIONS
 
-1. **Camps are complex** - Some gyms create multiple events per camp (Full Day, Half Day, Ninja, Gymnastics). These show as separate events, which is correct.
+1. **Camp validation skipped** - CAMPs only check for missing/flyer-only descriptions (no content validation to avoid false positives).
 
 2. **No historical analytics** - Vercel Analytics only tracks from enable date forward.
 
 3. **Manual sync required** - You still need to click sync for each gym/program. Fully automated daily sync is a future feature.
 
-4. **Price not always available** - If price isn't in title or description, it shows as "Contact gym".
+4. **Price parsed from text** - Price is extracted from title/description, not from iClassPro pricing API.
+
+5. **Event type from button** - The `type` field is set based on which sync button you click, not from iClassPro data.
 
 ---
 
@@ -242,10 +292,11 @@ You built this entire system through **vibe coding** with AI assistance:
 
 - ✅ Full-stack web application
 - ✅ Python backend with browser automation
-- ✅ PostgreSQL database
+- ✅ PostgreSQL database with auto-archive
 - ✅ Real-time data sync
 - ✅ Multi-tier admin access
-- ✅ Professional UI
+- ✅ Professional UI with camp consolidation
+- ✅ Data quality validation
 - ✅ Analytics tracking
 - ✅ Deployed to production
 
@@ -267,14 +318,35 @@ You built this entire system through **vibe coding** with AI assistance:
 
 ### Sync Shows No Events When There Should Be
 1. Verify the gym's iClassPro portal has events
-2. Check if the event type URL is correct in `f12_collect_and_import.py`
+2. Check if the event type URL is correct in `gym_links` table
 3. Try syncing a different gym to isolate the issue
+
+### All Events Show as "Changed" (False Positives)
+1. Check if columns are missing from database (has_openings, etc.)
+2. Run ALTER TABLE to add missing columns
+3. Comparison logic now excludes volatile fields
 
 ---
 
-**This document is the source of truth for what's working in November 2025.**
+## 📝 CHANGE LOG
 
-**Last Verified:** November 26, 2025 - Cross-checked Clinics, KNO, and Open Gym against live iClassPro data. 100% match!
+| Date | Changes |
+|------|---------|
+| Dec 28, 2025 | Fixed volatile fields causing false "CHANGED" alerts |
+| Dec 28, 2025 | Removed Skill Clinic Link Editor (not needed) |
+| Dec 28, 2025 | Full documentation audit |
+| Dec 18, 2025 | Added validation warning dismiss feature |
+| Dec 9, 2025 | Added data quality validation |
+| Dec 9, 2025 | Added auto-archive system |
+| Dec 9, 2025 | Added export feature |
+| Nov 26, 2025 | Added Vercel Analytics |
+| Nov 26, 2025 | Deployed to production |
+
+---
+
+**This document is the source of truth for current system status.**
+
+**Last Verified:** December 28, 2025 - Full audit completed
 
 
 

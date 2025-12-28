@@ -1,6 +1,6 @@
 # 🔧 Master Events Calendar - Maintenance Guide
 
-> **Last Updated:** December 2024  
+> **Last Updated:** December 2025  
 > **Purpose:** Keep your events calendar running smoothly with minimal effort
 
 ---

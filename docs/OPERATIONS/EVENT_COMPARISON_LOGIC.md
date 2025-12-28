@@ -52,27 +52,41 @@ For each event_url:
 
 ## 📊 Fields Compared
 
-When checking if an event changed, we compare:
+When checking if an event changed, we compare **only core content fields**:
 
-### Core Fields
-- `title` - Event name
-- `date` - Event date
-- `start_date` - Multi-day start
-- `end_date` - Multi-day end
-- `time` - Time range
-- `price` - Cost
-- `type` - Event category
-- `age_min` - Minimum age
-- `age_max` - Maximum age
-- `description` - Event description
+### Fields That TRIGGER "Changed" Status
+| Field | Description | Example Change |
+|-------|-------------|----------------|
+| `title` | Event name | "Back Handspring Clinic" → "Cartwheel Clinic" |
+| `date` | Event date | 2025-12-15 → 2025-12-16 |
+| `start_date` | Multi-day start | 2025-06-01 → 2025-06-02 |
+| `end_date` | Multi-day end | 2025-06-05 → 2025-06-06 |
+| `time` | Time range | "6:30 PM - 9:30 PM" → "7:00 PM - 10:00 PM" |
+| `price` | Cost | $25 → $30 |
+| `type` | Event category | CLINIC → OPEN GYM |
+| `age_min` | Minimum age | 5 → 7 |
+| `age_max` | Maximum age | 12 → 15 |
+| `description` | Event description | Any text change |
 
-### Data Quality Fields (NEW Dec 2025)
-- `has_flyer` - Whether event has a flyer image
-- `flyer_url` - URL of the flyer image
-- `description_status` - 'full', 'flyer_only', 'none', or 'unknown'
-- `validation_errors` - JSON array of detected issues
+### Fields That DON'T Trigger "Changed" (Volatile Fields)
+These fields are **saved to the database** but are excluded from comparison to prevent false "CHANGED" alerts:
 
-**Note:** `event_url` and `gym_id` are NOT compared (they're identifiers, not data)
+| Field | Why Excluded |
+|-------|--------------|
+| `has_openings` | Updates in real-time as people register |
+| `registration_start_date` | Can change, but not core content |
+| `registration_end_date` | Can change, but not core content |
+| `has_flyer` | Can change but usually not critical |
+| `flyer_url` | Can change but usually not critical |
+| `description_status` | Derived from description/flyer |
+| `validation_errors` | Recalculated every sync |
+| `acknowledged_errors` | User-managed dismissals |
+
+**Why exclude these?** These fields were causing 39+ events to show as "CHANGED" every sync when nothing actually changed. The data still saves, it just doesn't trigger false alerts.
+
+### Fields Never Compared (Identifiers)
+- `event_url` - Used to MATCH events, not compare them
+- `gym_id` - Identifier, not content
 
 **See Also:** [DATA_QUALITY_VALIDATION.md](./DATA_QUALITY_VALIDATION.md) for full validation documentation
 
@@ -171,8 +185,8 @@ compareEvents(newEvents, existingEvents)
 
 ---
 
-**Last Updated:** December 9, 2025  
-**Status:** Implemented and working (with data quality validation)
+**Last Updated:** December 28, 2025  
+**Status:** Implemented and working (volatile fields excluded from comparison Dec 28, 2025)
 
 
 
