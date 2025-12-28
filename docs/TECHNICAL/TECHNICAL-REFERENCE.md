@@ -104,6 +104,11 @@ Your Master Events Calendar is a **production-deployed event management platform
 - **154 Archived Events** in `events_archive` table
 - **76 Gym Links** configured
 - **10 Gyms** across TX, AZ, CA
+- **10 Link Types** (booking, camps, clinics, etc.)
+- **3 Tracked Event Types** (KNO, CLINIC, OPEN GYM)
+- **1,198 Audit Log Entries**
+
+**Full Schema:** See [DATABASE_COMPLETE_SCHEMA.md](DATABASE_COMPLETE_SCHEMA.md)
 
 ### **Core Tables:**
 

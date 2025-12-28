@@ -16,11 +16,11 @@
 | `events` | Active/future event data | 401 |
 | `events_archive` | Past events (auto-archived) | 154 |
 | `gyms` | Gym information | 10 |
-| `event_types` | Event categories | 5 |
+| `event_types` | Event categories (tracked) | 3 |
 | `gym_links` | Portal URLs | 76 |
-| `link_types` | Link categories | 8 |
+| `link_types` | Link categories | 10 |
 | `monthly_requirements` | Business rules | 3 |
-| `event_audit_log` | Change tracking | 300+ |
+| `event_audit_log` | Change tracking | 1,198 |
 | `sync_log` | Sync progress | 50+ |
 
 ### **Views (2 total):**

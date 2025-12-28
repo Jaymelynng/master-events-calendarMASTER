@@ -27,11 +27,11 @@
 | **gyms** | 10 | ✅ | Gym master data |
 | **events** | 401 | ✅ | Active/future events |
 | **events_archive** | 154 | ✅ | Past events (auto-archived) |
-| **event_types** | 5 | ✅ | Event categories |
+| **event_types** | 3 | ✅ | Event categories (tracked) |
 | **gym_links** | 76 | ✅ | Portal URLs |
-| **link_types** | 8 | ✅ | Link categories |
+| **link_types** | 10 | ✅ | Link categories |
 | **monthly_requirements** | 3 | ✅ | Business rules |
-| **event_audit_log** | 300+ | ✅ | Change tracking |
+| **event_audit_log** | 1,198 | ✅ | Change tracking |
 | **sync_log** | 50+ | ✅ | Sync progress tracking |
 
 ### **Database Views:**
@@ -225,15 +225,15 @@ Tracks sync progress for the Sync Progress Tracker grid.
 
 ## 🏷️ EVENT_TYPES TABLE
 
-### **Current Data: 5 Event Types**
+### **Current Data: 3 Tracked Event Types**
 
-| Name | Display | Color | Tracked |
-|------|---------|-------|---------|
-| KIDS NIGHT OUT | KNO | #8B5CF6 (Purple) | ✅ |
-| CLINIC | CLINIC | #3B82F6 (Blue) | ✅ |
-| OPEN GYM | OPEN GYM | #10B981 (Green) | ✅ |
-| CAMP | CAMP | #F59E0B (Orange) | ✅ |
-| SPECIAL EVENTS | SE | #EC4899 (Pink) | ✅ |
+| Name | Display | Color | Min Required |
+|------|---------|-------|--------------|
+| KIDS NIGHT OUT | KNO | #8B5CF6 (Purple) | 2 |
+| CLINIC | CLINIC | #3B82F6 (Blue) | 1 |
+| OPEN GYM | OPEN GYM | #10B981 (Green) | 1 |
+
+**Note:** CAMP and SPECIAL EVENTS exist in the `events.type` field but are not tracked for monthly requirements.
 
 ---
 

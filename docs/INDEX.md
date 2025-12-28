@@ -1,7 +1,7 @@
 # 📚 Team Calendar - Documentation Index
 
 **Live URL:** https://teamcalendar.mygymtools.com  
-**Last Updated:** December 9, 2025  
+**Last Updated:** December 28, 2025  
 **Status:** ✅ FULLY DEPLOYED & VERIFIED  
 **Part of:** mygymtools.com suite  
 **Maintained by:** Jayme
@@ -29,7 +29,7 @@ This documentation is organized into three strategic categories based on your ro
 ### **[SYSTEM_STATUS_NOVEMBER_2025.md](OPERATIONS/SYSTEM_STATUS_NOVEMBER_2025.md)** ⭐ **CURRENT STATUS**
 **What it contains:**
 - Complete system status (FULLY DEPLOYED & WORKING!)
-- All 10 gyms, 5 event types, 226+ events
+- All 10 gyms, 555+ events (401 active, 154 archived)
 - Verified 100% accuracy against live iClassPro data
 - Feature list with what's working NOW
 - Troubleshooting guide
@@ -102,16 +102,30 @@ This documentation is organized into three strategic categories based on your ro
 
 ---
 
-### **[SUPABASE_AUDIT_REPORT.md](TECHNICAL/SUPABASE_AUDIT_REPORT.md)**
+### **[SUPABASE_AUDIT_REPORT.md](TECHNICAL/SUPABASE_AUDIT_REPORT.md)** ⭐ **UPDATED DEC 2025**
 **What it contains:**
 - Complete database structure analysis
-- Live data audit
+- Live data audit (555 events, 76 links)
 - Data flow architecture
 - Performance analysis
 
 **Why it's valuable:** Complete technical audit proving your database is production-ready.
 
 **Use it for:** Technical due diligence, developer onboarding
+
+---
+
+### **[DATABASE_COMPLETE_SCHEMA.md](TECHNICAL/DATABASE_COMPLETE_SCHEMA.md)** 🆕 **NEW!**
+**What it contains:**
+- ALL 9 tables with exact column definitions
+- Both views with full SQL
+- Current data (link_types, event_types, monthly_requirements)
+- Row counts and relationships
+- pg_cron auto-archive job
+
+**Why it's valuable:** THE complete reference for every table and column in the database.
+
+**Use it for:** Database reference, schema changes, developer onboarding
 
 ---
 
