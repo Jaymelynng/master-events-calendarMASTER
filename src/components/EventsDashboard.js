@@ -2123,18 +2123,19 @@ The system will add new events and update any changed events automatically.`;
               onClick={() => setShowAdminPortal(true)}
               style={{
                 background: 'linear-gradient(180deg, #d4a5a5 0%, #c3a5a5 100%)',
-                color: '#4a4a4a',
+                color: '#2a2a2a',
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.1)',
                 border: '2px solid #b38d8d',
                 borderTopColor: '#e6c5c5',
                 borderBottomColor: '#a87d7d',
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                textShadow: '0 1px 0 rgba(255, 255, 255, 0.3)'
               }}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 text-base font-semibold uppercase tracking-wide hover:scale-105 active:scale-95"
+              className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 text-base font-bold uppercase tracking-wide hover:scale-105 active:scale-95"
               title="Open Admin Control Center"
             >
-              <span className="text-white text-lg">🔄</span>
+              <span className="text-lg">🔄</span>
               <span>SYNC</span>
               {/* Sparkle overlay */}
               <div style={{
