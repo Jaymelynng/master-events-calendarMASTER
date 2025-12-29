@@ -200,6 +200,7 @@ The API uses API key authentication:
 | Dec 2025 | Added API key authentication |
 | Dec 2025 | Added SYNC ALL PROGRAMS feature |
 | Dec 28, 2025 | Cleaned up folder, removed 40+ unused files |
+| Dec 28, 2025 | **BUG FIX:** Fixed soft-deleted events not re-importing when gym adds them back |
 
 ---
 

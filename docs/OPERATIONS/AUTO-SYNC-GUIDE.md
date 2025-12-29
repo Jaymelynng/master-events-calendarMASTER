@@ -240,9 +240,22 @@ The system compares events by **event_url** (unique identifier).
 | Scenario | Logic | Action |
 |----------|-------|--------|
 | **NEW** | URL not in database | Insert new event |
+| **RESTORED** | URL exists but was soft-deleted, now back on portal | Restore event (clear deleted_at) and update data |
 | **CHANGED** | URL exists, but data is different | Update existing event |
 | **DELETED** | URL in database, not on portal, AND hasn't started yet | Soft-delete (set deleted_at timestamp) |
 | **UNCHANGED** | URL exists, all fields match | Skip (no action) |
+
+### Re-Adding Events (Restored Feature - Dec 28, 2025)
+
+**Scenario:** A gym owner removes an event from their portal, then adds it back later.
+
+**Old behavior (broken):** The event would show as "NEW" in the comparison, but importing did nothing because the URL already existed in the database (even though it was soft-deleted).
+
+**New behavior (fixed):** When importing:
+1. System checks if the URL exists as a soft-deleted event
+2. If found, it **restores** the event (clears `deleted_at`)
+3. It also **updates** the event with any new data from the portal
+4. Event immediately appears on calendar and counts toward monthly requirements
 
 ### Fields Checked for Changes:
 - title
@@ -347,6 +360,15 @@ If a gym doesn't have any events of that type scheduled:
 1. Check `gym_links` table in Supabase
 2. Verify the URL is configured and `is_active = true`
 3. Make sure the URL is a valid iClassPro portal URL
+
+### "Special Events won't sync"
+
+Special Events is only synced if the gym has a valid `special_events` URL configured in `gym_links`:
+1. Check if the gym offers Special Events (not all do)
+2. If they do, add the URL to `gym_links` table with `link_type_id = 'special_events'`
+3. Only a few gyms use this category sporadically
+
+**Note:** If a gym rarely uses Special Events, it's fine to skip syncing this category. The events can be added manually if needed.
 
 ---
 
@@ -469,6 +491,12 @@ If you ever want to bring back hidden access:
 | Feature | Why Removed |
 |---------|-------------|
 | *None documented yet* | Add here if you remove something for good reason |
+
+### Bug Fixes Log
+
+| Date | Bug | Fix |
+|------|-----|-----|
+| Dec 28, 2025 | Soft-deleted events couldn't be re-imported | Fixed `bulkImport` to detect soft-deleted events and restore them with updated data instead of skipping |
 
 ---
 
