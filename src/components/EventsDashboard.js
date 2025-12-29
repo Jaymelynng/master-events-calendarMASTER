@@ -2122,22 +2122,22 @@ The system will add new events and update any changed events automatically.`;
             <button
               onClick={() => setShowAdminPortal(true)}
               style={{
-                backgroundColor: '#f5f0ed',
+                backgroundColor: '#e6e6e6',
                 color: '#4a4a4a',
-                boxShadow: '0 2px 8px rgba(180, 143, 143, 0.15), 0 0 20px rgba(214, 197, 191, 0.3)',
-                border: 'none'
+                boxShadow: '0 2px 8px rgba(180, 143, 143, 0.2), 0 0 25px rgba(214, 197, 191, 0.4)',
+                border: '1px solid rgba(214, 197, 191, 0.5)'
               }}
               className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 text-base font-medium hover:opacity-90"
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(180, 143, 143, 0.2), 0 0 25px rgba(214, 197, 191, 0.4)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(180, 143, 143, 0.3), 0 0 30px rgba(214, 197, 191, 0.5)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(180, 143, 143, 0.15), 0 0 20px rgba(214, 197, 191, 0.3)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(180, 143, 143, 0.2), 0 0 25px rgba(214, 197, 191, 0.4)';
               }}
               title="Open Admin Control Center"
             >
               <span className="text-xl">🪄</span>
-              <span>Admin</span>
+              <span>Sync</span>
             </button>
 
             {/* Export Button */}
