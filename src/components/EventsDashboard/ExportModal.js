@@ -844,12 +844,7 @@ ${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality is
                 onChange={(e) => { setIncludeMissing(e.target.checked); setActivePreset(null); }}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">
-                ⚠️ Missing Requirements
-                {!loadingEvents && getMissingGyms().length > 0 && (
-                  <span className="text-xs text-red-600 ml-1">({getMissingGyms().length} gyms)</span>
-                )}
-              </span>
+              <span className="text-gray-700">⚠️ Missing Requirements</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
               <input 
@@ -858,12 +853,7 @@ ${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality is
                 onChange={(e) => { setIncludeDataQuality(e.target.checked); setActivePreset(null); }}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">
-                🔍 Data Quality Issues
-                {!loadingEvents && dataQualityCount > 0 && (
-                  <span className="text-xs text-orange-600 ml-1">({dataQualityCount} issues)</span>
-                )}
-              </span>
+              <span className="text-gray-700">🔍 Data Quality Issues</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
               <input 
@@ -882,28 +872,28 @@ ${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality is
             </label>
           </div>
 
-          {/* Preview of missing gyms */}
-          {includeMissing && !loadingEvents && getMissingGyms().length > 0 && (
-            <div className="mt-3 p-2 bg-red-50 rounded border border-red-200 text-xs">
-              <div className="font-semibold text-red-700 mb-1">
-                ⚠️ {getMissingGyms().length} gym{getMissingGyms().length !== 1 ? 's' : ''} missing requirements:
+          {/* Preview of missing gyms - ONLY shows when checkbox is checked */}
+          {includeMissing && !loadingEvents && (
+            <div className={`mt-3 p-2 rounded border text-xs ${getMissingGyms().length > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+              <div className="font-semibold text-gray-600 mb-1">
+                📅 Checking date range: {startDate} to {endDate}
               </div>
-              {getMissingGyms().slice(0, 3).map(gym => (
-                <div key={gym.gym_id} className="text-red-600">
-                  • {gym.gym_id}: needs {gym.missing.join(', ')}
+              {getMissingGyms().length > 0 ? (
+                <>
+                  <div className="font-semibold text-red-700 mb-1">
+                    ⚠️ {getMissingGyms().length} gym{getMissingGyms().length !== 1 ? 's' : ''} missing requirements:
+                  </div>
+                  {getMissingGyms().map(gym => (
+                    <div key={gym.gym_id} className="text-red-600">
+                      • {gym.gym_id}: needs {gym.missing.join(', ')}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div className="font-semibold text-green-700">
+                  ✅ All {selectedGyms.length} gyms meet requirements for this date range!
                 </div>
-              ))}
-              {getMissingGyms().length > 3 && (
-                <div className="text-red-500 italic">... and {getMissingGyms().length - 3} more</div>
               )}
-            </div>
-          )}
-
-          {includeMissing && !loadingEvents && getMissingGyms().length === 0 && (
-            <div className="mt-3 p-2 bg-green-50 rounded border border-green-200 text-xs">
-              <div className="font-semibold text-green-700">
-                ✅ All gyms meet requirements for selected dates!
-              </div>
             </div>
           )}
         </div>
