@@ -2122,44 +2122,60 @@ The system will add new events and update any changed events automatically.`;
             <button
               onClick={() => setShowAdminPortal(true)}
               style={{
-                backgroundColor: '#e6e6e6',
+                background: 'linear-gradient(180deg, #d4a5a5 0%, #c3a5a5 100%)',
                 color: '#4a4a4a',
-                boxShadow: '0 2px 8px rgba(180, 143, 143, 0.2), 0 0 25px rgba(214, 197, 191, 0.4)',
-                border: '1px solid rgba(214, 197, 191, 0.5)'
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.1)',
+                border: '2px solid #b38d8d',
+                borderTopColor: '#e6c5c5',
+                borderBottomColor: '#a87d7d',
+                position: 'relative',
+                overflow: 'hidden'
               }}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 text-base font-medium hover:opacity-90"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(180, 143, 143, 0.3), 0 0 30px rgba(214, 197, 191, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(180, 143, 143, 0.2), 0 0 25px rgba(214, 197, 191, 0.4)';
-              }}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 text-base font-semibold uppercase tracking-wide hover:scale-105 active:scale-95"
               title="Open Admin Control Center"
             >
-              <span className="text-xl">🪄</span>
-              <span>Sync</span>
+              <span className="text-white text-lg">🔄</span>
+              <span>SYNC</span>
+              {/* Sparkle overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.2) 0%, transparent 50%)',
+                pointerEvents: 'none'
+              }} />
             </button>
 
             {/* Export Button */}
             <button
               onClick={() => setShowExportModal(true)}
               style={{
-                backgroundColor: '#737373',
+                background: 'linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%)',
                 color: '#ffffff',
-                boxShadow: '0 2px 8px rgba(115, 115, 115, 0.2), 0 0 20px rgba(173, 178, 198, 0.25)',
-                border: 'none'
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.3)',
+                border: '2px solid #2a2a2a',
+                borderTopColor: '#6a6a6a',
+                borderBottomColor: '#1a1a1a',
+                position: 'relative',
+                overflow: 'hidden'
               }}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 text-base font-medium hover:opacity-90"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(115, 115, 115, 0.3), 0 0 25px rgba(173, 178, 198, 0.35)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(115, 115, 115, 0.2), 0 0 20px rgba(173, 178, 198, 0.25)';
-              }}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 text-base font-semibold uppercase tracking-wide hover:scale-105 active:scale-95"
               title="Export Events Data"
             >
-              <span className="text-xl">📤</span>
-              <span>Export</span>
+              <span className="text-white text-lg">⬇️</span>
+              <span>EXPORT</span>
+              {/* Sparkle overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 50%)',
+                pointerEvents: 'none'
+              }} />
             </button>
           </div>
 
