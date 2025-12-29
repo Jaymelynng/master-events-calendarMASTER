@@ -2182,13 +2182,15 @@ The system will add new events and update any changed events automatically.`;
 
           {/* 🚀 BULK ACTION BUTTONS - Open All Gyms for Each Event Type */}
           <div className="bg-white rounded shadow p-2 mb-3 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded p-2 mb-2 border border-blue-200">
-              <div className="flex items-center gap-2 mb-2 text-xs text-gray-700">
-                <span className="font-semibold text-gray-900">🚀 Bulk Actions</span>
-                <span className="text-gray-400">|</span>
-                <span className="text-blue-700">One-Click Access</span>
-                <span className="text-gray-400">|</span>
-                <span className="text-gray-500">💡 Each button opens multiple tabs - allow pop-ups!</span>
+            <div className="bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 rounded-lg p-4 mb-2 border-2 border-indigo-300 shadow-inner">
+              <div className="flex flex-col items-center justify-center text-center mb-4">
+                <div className="bg-white rounded-full px-6 py-2 shadow-md border border-indigo-200 mb-2">
+                  <span className="text-xl font-bold text-indigo-800">🚀 BULK PORTAL OPENER</span>
+                </div>
+                <p className="text-sm text-gray-600 mb-2">Click any button below to open ALL gym portals for that event type at once</p>
+                <div className="bg-amber-50 border-2 border-amber-400 rounded-lg px-4 py-2 shadow-sm">
+                  <span className="text-sm font-bold text-amber-800">⚠️ IMPORTANT: Allow pop-ups in your browser for this to work!</span>
+                </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 <button
