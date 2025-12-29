@@ -2121,21 +2121,44 @@ The system will add new events and update any changed events automatically.`;
           <div className="flex justify-center items-center gap-4 mb-3">
             <button
               onClick={() => setShowAdminPortal(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg border-2 border-purple-700 shadow-lg hover:shadow-xl transition-all duration-200 text-white text-base font-bold hover:scale-105 active:scale-95"
+              style={{
+                boxShadow: '0 8px 16px rgba(139, 92, 246, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+              }}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 rounded-lg border-3 border-purple-900 transition-all duration-200 text-white text-base font-bold hover:scale-105 active:scale-95 hover:shadow-2xl"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 12px 24px rgba(139, 92, 246, 0.5), 0 6px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 8px 16px rgba(139, 92, 246, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+              }}
               title="Open Admin Control Center"
             >
-              <span className="text-xl">🪄</span>
-              <span>Admin</span>
+              <span className="text-xl drop-shadow-md">🪄</span>
+              <span className="drop-shadow-md">Admin</span>
             </button>
 
             {/* Export Button */}
             <button
               onClick={() => setShowExportModal(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 rounded-lg border-2 border-orange-700 shadow-lg hover:shadow-xl transition-all duration-200 text-white text-base font-bold hover:scale-105 active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #b48f8f 0%, #adb2c6 100%)',
+                borderColor: '#737373',
+                borderWidth: '3px',
+                boxShadow: '0 8px 16px rgba(180, 143, 143, 0.4), 0 4px 8px rgba(115, 115, 115, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+              }}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 text-white text-base font-bold hover:scale-105 active:scale-95"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 12px 24px rgba(180, 143, 143, 0.5), 0 6px 12px rgba(115, 115, 115, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, #a87f7f 0%, #9da2b6 100%)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 8px 16px rgba(180, 143, 143, 0.4), 0 4px 8px rgba(115, 115, 115, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, #b48f8f 0%, #adb2c6 100%)';
+              }}
               title="Export Events Data"
             >
-              <span className="text-xl">📤</span>
-              <span>Export</span>
+              <span className="text-xl drop-shadow-md">📤</span>
+              <span className="drop-shadow-md">Export</span>
             </button>
           </div>
 
