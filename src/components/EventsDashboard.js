@@ -2122,43 +2122,44 @@ The system will add new events and update any changed events automatically.`;
             <button
               onClick={() => setShowAdminPortal(true)}
               style={{
-                boxShadow: '0 8px 16px rgba(139, 92, 246, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                backgroundColor: '#f5f0ed',
+                color: '#4a4a4a',
+                boxShadow: '0 2px 8px rgba(180, 143, 143, 0.15), 0 0 20px rgba(214, 197, 191, 0.3)',
+                border: 'none'
               }}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 rounded-lg border-3 border-purple-900 transition-all duration-200 text-white text-base font-bold hover:scale-105 active:scale-95 hover:shadow-2xl"
+              className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 text-base font-medium hover:opacity-90"
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 12px 24px rgba(139, 92, 246, 0.5), 0 6px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(180, 143, 143, 0.2), 0 0 25px rgba(214, 197, 191, 0.4)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 8px 16px rgba(139, 92, 246, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(180, 143, 143, 0.15), 0 0 20px rgba(214, 197, 191, 0.3)';
               }}
               title="Open Admin Control Center"
             >
-              <span className="text-xl drop-shadow-md">🪄</span>
-              <span className="drop-shadow-md">Admin</span>
+              <span className="text-xl">🪄</span>
+              <span>Admin</span>
             </button>
 
             {/* Export Button */}
             <button
               onClick={() => setShowExportModal(true)}
               style={{
-                background: 'linear-gradient(135deg, #b48f8f 0%, #adb2c6 100%)',
-                borderColor: '#737373',
-                borderWidth: '3px',
-                boxShadow: '0 8px 16px rgba(180, 143, 143, 0.4), 0 4px 8px rgba(115, 115, 115, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                backgroundColor: '#737373',
+                color: '#ffffff',
+                boxShadow: '0 2px 8px rgba(115, 115, 115, 0.2), 0 0 20px rgba(173, 178, 198, 0.25)',
+                border: 'none'
               }}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 text-white text-base font-bold hover:scale-105 active:scale-95"
+              className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 text-base font-medium hover:opacity-90"
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 12px 24px rgba(180, 143, 143, 0.5), 0 6px 12px rgba(115, 115, 115, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
-                e.currentTarget.style.background = 'linear-gradient(135deg, #a87f7f 0%, #9da2b6 100%)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(115, 115, 115, 0.3), 0 0 25px rgba(173, 178, 198, 0.35)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 8px 16px rgba(180, 143, 143, 0.4), 0 4px 8px rgba(115, 115, 115, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
-                e.currentTarget.style.background = 'linear-gradient(135deg, #b48f8f 0%, #adb2c6 100%)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(115, 115, 115, 0.2), 0 0 20px rgba(173, 178, 198, 0.25)';
               }}
               title="Export Events Data"
             >
-              <span className="text-xl drop-shadow-md">📤</span>
-              <span className="drop-shadow-md">Export</span>
+              <span className="text-xl">📤</span>
+              <span>Export</span>
             </button>
           </div>
 
