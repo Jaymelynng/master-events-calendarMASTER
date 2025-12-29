@@ -8,6 +8,8 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const [includeEvents, setIncludeEvents] = useState(true);
   const [includeAnalytics, setIncludeAnalytics] = useState(false);
   const [includeMissing, setIncludeMissing] = useState(false);
+  const [includeDataQuality, setIncludeDataQuality] = useState(false);
+  const [includeSyncHistory, setIncludeSyncHistory] = useState(false);
   
   // Date range - default to current month
   const [startDate, setStartDate] = useState(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`);
@@ -16,6 +18,11 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   // Events fetched from database based on date range
   const [fetchedEvents, setFetchedEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [syncLog, setSyncLog] = useState([]);
+  const [loadingSyncLog, setLoadingSyncLog] = useState(false);
+
+  // Quick preset selected
+  const [activePreset, setActivePreset] = useState(null);
 
   const eventTypes = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM', 'CAMP', 'SPECIAL EVENT'];
 
@@ -23,6 +30,13 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   useEffect(() => {
     fetchEventsForDateRange();
   }, [startDate, endDate]);
+
+  // Fetch sync log when needed
+  useEffect(() => {
+    if (includeSyncHistory && syncLog.length === 0) {
+      fetchSyncLog();
+    }
+  }, [includeSyncHistory]);
 
   const fetchEventsForDateRange = async () => {
     setLoadingEvents(true);
@@ -45,10 +59,29 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     setLoadingEvents(false);
   };
 
+  const fetchSyncLog = async () => {
+    setLoadingSyncLog(true);
+    try {
+      const { data, error } = await supabase
+        .from('sync_log')
+        .select('*')
+        .order('last_synced', { ascending: false })
+        .limit(100);
+      
+      if (error) throw error;
+      setSyncLog(data || []);
+    } catch (err) {
+      console.error('Error fetching sync log:', err);
+      setSyncLog([]);
+    }
+    setLoadingSyncLog(false);
+  };
+
   // Always use fetched events based on date picker values
   const activeEvents = fetchedEvents;
 
   const toggleGym = (gymId) => {
+    setActivePreset(null);
     setSelectedGyms(prev => 
       prev.includes(gymId) 
         ? prev.filter(id => id !== gymId)
@@ -57,6 +90,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   };
 
   const toggleType = (type) => {
+    setActivePreset(null);
     setSelectedTypes(prev => 
       prev.includes(type) 
         ? prev.filter(t => t !== type)
@@ -64,15 +98,103 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     );
   };
 
-  const selectAllGyms = () => setSelectedGyms(gyms.map(g => g.id));
-  const selectNoGyms = () => setSelectedGyms([]);
-  const selectAllTypes = () => setSelectedTypes([...eventTypes]);
-  const selectNoTypes = () => setSelectedTypes([]);
+  const selectAllGyms = () => { setActivePreset(null); setSelectedGyms(gyms.map(g => g.id)); };
+  const selectNoGyms = () => { setActivePreset(null); setSelectedGyms([]); };
+  const selectAllTypes = () => { setActivePreset(null); setSelectedTypes([...eventTypes]); };
+  const selectNoTypes = () => { setActivePreset(null); setSelectedTypes([]); };
+
+  // ===== QUICK PRESETS =====
+  const applyPreset = (presetName) => {
+    setActivePreset(presetName);
+    
+    switch (presetName) {
+      case 'monthly-compliance':
+        setIncludeEvents(false);
+        setIncludeAnalytics(true);
+        setIncludeMissing(true);
+        setIncludeDataQuality(false);
+        setIncludeSyncHistory(false);
+        setSelectedGyms(gyms.map(g => g.id));
+        setSelectedTypes(['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']);
+        setExportFormat('csv');
+        break;
+      case 'full-backup':
+        setIncludeEvents(true);
+        setIncludeAnalytics(true);
+        setIncludeMissing(true);
+        setIncludeDataQuality(true);
+        setIncludeSyncHistory(true);
+        setSelectedGyms(gyms.map(g => g.id));
+        setSelectedTypes([...eventTypes]);
+        setExportFormat('json');
+        break;
+      case 'boss-report':
+        setIncludeEvents(false);
+        setIncludeAnalytics(true);
+        setIncludeMissing(true);
+        setIncludeDataQuality(false);
+        setIncludeSyncHistory(false);
+        setSelectedGyms(gyms.map(g => g.id));
+        setSelectedTypes(['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']);
+        setExportFormat('html');
+        break;
+      case 'data-quality':
+        setIncludeEvents(false);
+        setIncludeAnalytics(false);
+        setIncludeMissing(false);
+        setIncludeDataQuality(true);
+        setIncludeSyncHistory(false);
+        setSelectedGyms(gyms.map(g => g.id));
+        setSelectedTypes([...eventTypes]);
+        setExportFormat('csv');
+        break;
+      case 'sync-status':
+        setIncludeEvents(false);
+        setIncludeAnalytics(false);
+        setIncludeMissing(false);
+        setIncludeDataQuality(false);
+        setIncludeSyncHistory(true);
+        setSelectedGyms(gyms.map(g => g.id));
+        setSelectedTypes([...eventTypes]);
+        setExportFormat('csv');
+        break;
+      default:
+        break;
+    }
+  };
 
   // Filter events based on selections
   const filteredEvents = activeEvents.filter(e => 
     selectedGyms.includes(e.gym_id) && selectedTypes.includes(e.type)
   );
+
+  // Get events with data quality issues
+  const getDataQualityIssues = () => {
+    return filteredEvents.filter(e => {
+      const errors = e.validation_errors || [];
+      const acknowledged = e.acknowledged_errors || [];
+      const unacknowledged = errors.filter(err => 
+        !acknowledged.includes(err.message)
+      );
+      return unacknowledged.length > 0 || 
+             e.description_status === 'none' || 
+             e.description_status === 'flyer_only' ||
+             e.has_openings === false;
+    }).map(e => ({
+      gym_id: e.gym_id,
+      gym_name: e.gym_name || e.gym_id,
+      title: e.title,
+      date: e.date,
+      type: e.type,
+      issues: [
+        ...(e.validation_errors || []).map(err => `${err.severity}: ${err.message}`),
+        e.description_status === 'none' ? 'Missing description' : null,
+        e.description_status === 'flyer_only' ? 'Flyer only (no text)' : null,
+        e.has_openings === false ? 'SOLD OUT' : null
+      ].filter(Boolean),
+      event_url: e.event_url
+    }));
+  };
 
   // Calculate analytics for selected gyms
   const getAnalytics = () => {
@@ -127,8 +249,10 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     
     if (exportFormat === 'csv') {
       exportCSV(dateRangeLabel, timestamp);
-    } else {
+    } else if (exportFormat === 'json') {
       exportJSON(dateRangeLabel, timestamp);
+    } else if (exportFormat === 'html') {
+      exportHTML(dateRangeLabel, timestamp);
     }
     onClose();
   };
@@ -139,17 +263,21 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     // Events section
     if (includeEvents && filteredEvents.length > 0) {
       csvContent += `EVENTS - ${monthName}\n`;
-      csvContent += 'Gym,Title,Type,Date,Time,Price,Ages,URL\n';
+      csvContent += 'Gym,Gym ID,Title,Type,Date,Day,Time,Price,Ages,Description Status,Has Openings,URL\n';
       filteredEvents.forEach(event => {
         const gym = gyms.find(g => g.id === event.gym_id);
         csvContent += [
-          gym?.name || event.gym_id,
+          `"${(gym?.name || event.gym_id).replace(/"/g, '""')}"`,
+          event.gym_id || '',
           `"${(event.title || '').replace(/"/g, '""')}"`,
           event.type || '',
           event.date || '',
+          event.day_of_week || '',
           event.time || '',
           event.price || '',
           event.age_min && event.age_max ? `${event.age_min}-${event.age_max}` : (event.age_min ? `${event.age_min}+` : ''),
+          event.description_status || 'unknown',
+          event.has_openings === false ? 'SOLD OUT' : 'Available',
           event.event_url || ''
         ].join(',') + '\n';
       });
@@ -160,13 +288,17 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     if (includeAnalytics) {
       const analytics = getAnalytics();
       csvContent += `ANALYTICS - ${monthName}\n`;
-      csvContent += 'Gym,Clinics,KNO,Open Gym,Camps,Special Events,Total,Meets Requirements,Missing\n';
+      csvContent += 'Gym,Gym ID,Clinics,Clinics Req,KNO,KNO Req,Open Gym,Open Gym Req,Camps,Special Events,Total,Meets Requirements,Missing\n';
       analytics.forEach(stat => {
         csvContent += [
-          stat.gym_name,
+          `"${stat.gym_name}"`,
+          stat.gym_id,
           stat.clinic_count,
+          stat.clinic_required,
           stat.kno_count,
+          stat.kno_required,
           stat.open_gym_count,
+          stat.open_gym_required,
           stat.camp_count,
           stat.special_event_count,
           stat.total_events,
@@ -181,10 +313,52 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     if (includeMissing) {
       const missing = getMissingGyms();
       csvContent += `GYMS WITH MISSING REQUIREMENTS - ${monthName}\n`;
-      csvContent += 'Gym,Missing Events\n';
+      csvContent += 'Gym,Gym ID,Missing Events,Clinics Have,KNO Have,Open Gym Have\n';
       missing.forEach(stat => {
-        csvContent += `${stat.gym_name},"${stat.missing.join(', ')}"\n`;
+        csvContent += [
+          `"${stat.gym_name}"`,
+          stat.gym_id,
+          `"${stat.missing.join(', ')}"`,
+          stat.clinic_count,
+          stat.kno_count,
+          stat.open_gym_count
+        ].join(',') + '\n';
       });
+      csvContent += '\n';
+    }
+
+    // Data Quality section
+    if (includeDataQuality) {
+      const issues = getDataQualityIssues();
+      csvContent += `DATA QUALITY ISSUES - ${monthName}\n`;
+      csvContent += 'Gym,Title,Date,Type,Issues,URL\n';
+      issues.forEach(issue => {
+        csvContent += [
+          `"${issue.gym_name}"`,
+          `"${(issue.title || '').replace(/"/g, '""')}"`,
+          issue.date,
+          issue.type,
+          `"${issue.issues.join('; ')}"`,
+          issue.event_url || ''
+        ].join(',') + '\n';
+      });
+      csvContent += '\n';
+    }
+
+    // Sync History section
+    if (includeSyncHistory && syncLog.length > 0) {
+      csvContent += `SYNC HISTORY - Last 100 Syncs\n`;
+      csvContent += 'Gym ID,Event Type,Last Synced,Events Found,Events Imported\n';
+      syncLog.forEach(log => {
+        csvContent += [
+          log.gym_id,
+          log.event_type,
+          new Date(log.last_synced).toLocaleString(),
+          log.events_found,
+          log.events_imported
+        ].join(',') + '\n';
+      });
+      csvContent += '\n';
     }
 
     downloadFile(csvContent, `export-${timestamp}.csv`, 'text/csv');
@@ -193,15 +367,25 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const exportJSON = (monthName, timestamp) => {
     const exportData = {
       exportDate: new Date().toISOString(),
-      month: monthName,
+      dateRange: monthName,
       filters: {
         gyms: selectedGyms,
         eventTypes: selectedTypes
+      },
+      summary: {
+        totalEvents: filteredEvents.length,
+        totalGyms: selectedGyms.length,
+        gymsMeetingRequirements: getAnalytics().filter(a => a.meets_requirements).length,
+        gymsWithIssues: getMissingGyms().length,
+        dataQualityIssues: getDataQualityIssues().length
       }
     };
 
     if (includeEvents) {
-      exportData.events = filteredEvents;
+      exportData.events = filteredEvents.map(e => ({
+        ...e,
+        gym_name: gyms.find(g => g.id === e.gym_id)?.name || e.gym_id
+      }));
       exportData.eventCount = filteredEvents.length;
     }
 
@@ -213,8 +397,284 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       exportData.missingRequirements = getMissingGyms();
     }
 
+    if (includeDataQuality) {
+      exportData.dataQualityIssues = getDataQualityIssues();
+    }
+
+    if (includeSyncHistory) {
+      exportData.syncHistory = syncLog;
+    }
+
     const json = JSON.stringify(exportData, null, 2);
     downloadFile(json, `export-${timestamp}.json`, 'application/json');
+  };
+
+  // NEW: HTML Report for Boss/Email
+  const exportHTML = (monthName, timestamp) => {
+    const analytics = getAnalytics();
+    const missing = getMissingGyms();
+    const dataQualityCount = getDataQualityIssues().length;
+    const gymsMet = analytics.filter(a => a.meets_requirements).length;
+    const totalGyms = analytics.length;
+    const compliancePercent = totalGyms > 0 ? Math.round((gymsMet / totalGyms) * 100) : 0;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Master Events Calendar Report - ${monthName}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f8f9fa; 
+      color: #333;
+      line-height: 1.6;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+    .header {
+      background: linear-gradient(135deg, #b48f8f 0%, #8f93a0 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .header h1 { font-size: 28px; margin-bottom: 8px; }
+    .header .date-range { font-size: 16px; opacity: 0.9; }
+    .header .generated { font-size: 12px; opacity: 0.7; margin-top: 8px; }
+    
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .summary-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    .summary-card .number { font-size: 36px; font-weight: bold; }
+    .summary-card .label { font-size: 14px; color: #666; margin-top: 4px; }
+    .summary-card.green .number { color: #22c55e; }
+    .summary-card.red .number { color: #ef4444; }
+    .summary-card.blue .number { color: #3b82f6; }
+    .summary-card.purple .number { color: #8b5cf6; }
+    
+    .section {
+      background: white;
+      border-radius: 10px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    .section h2 { 
+      font-size: 18px; 
+      margin-bottom: 16px; 
+      padding-bottom: 12px;
+      border-bottom: 2px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #f8f9fa; font-weight: 600; color: #555; }
+    tr:hover { background: #f8f9fa; }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge.success { background: #dcfce7; color: #166534; }
+    .badge.danger { background: #fee2e2; color: #991b1b; }
+    .badge.warning { background: #fef3c7; color: #92400e; }
+    
+    .progress-bar {
+      background: #e5e7eb;
+      border-radius: 10px;
+      height: 20px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+      transition: width 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: #888;
+      font-size: 12px;
+    }
+    
+    @media print {
+      body { background: white; }
+      .container { max-width: 100%; }
+      .section { box-shadow: none; border: 1px solid #ddd; }
+    }
+    
+    .email-copy {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .email-copy h3 { font-size: 14px; color: #92400e; margin-bottom: 8px; }
+    .email-copy pre {
+      background: white;
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      white-space: pre-wrap;
+      font-family: inherit;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✨ Master Events Calendar Report</h1>
+      <div class="date-range">📅 ${monthName}</div>
+      <div class="generated">Generated: ${new Date().toLocaleString()}</div>
+    </div>
+    
+    <!-- Email-Ready Summary -->
+    <div class="email-copy">
+      <h3>📧 Copy-Paste Email Summary:</h3>
+      <pre>Monthly Events Report (${monthName})
+
+✅ Compliance: ${gymsMet}/${totalGyms} gyms meeting requirements (${compliancePercent}%)
+📊 Total Events: ${filteredEvents.length}
+${missing.length > 0 ? `\n⚠️ Gyms Needing Attention:\n${missing.map(m => `   • ${m.gym_name}: needs ${m.missing.join(', ')}`).join('\n')}` : '✅ All gyms are compliant!'}
+${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality issues` : ''}</pre>
+    </div>
+    
+    <div class="summary-cards">
+      <div class="summary-card blue">
+        <div class="number">${filteredEvents.length}</div>
+        <div class="label">Total Events</div>
+      </div>
+      <div class="summary-card ${compliancePercent === 100 ? 'green' : compliancePercent >= 80 ? 'purple' : 'red'}">
+        <div class="number">${compliancePercent}%</div>
+        <div class="label">Compliance Rate</div>
+      </div>
+      <div class="summary-card green">
+        <div class="number">${gymsMet}</div>
+        <div class="label">Gyms Compliant</div>
+      </div>
+      <div class="summary-card ${missing.length > 0 ? 'red' : 'green'}">
+        <div class="number">${missing.length}</div>
+        <div class="label">Gyms Needing Action</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>📊 Compliance Progress</h2>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: ${compliancePercent}%">${compliancePercent}%</div>
+      </div>
+      <p style="margin-top: 8px; font-size: 14px; color: #666;">
+        ${gymsMet} of ${totalGyms} gyms have met their monthly event requirements
+      </p>
+    </div>
+    
+    <div class="section">
+      <h2>🏢 Gym Performance Summary</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Gym</th>
+            <th style="text-align:center">Clinics</th>
+            <th style="text-align:center">KNO</th>
+            <th style="text-align:center">Open Gym</th>
+            <th style="text-align:center">Total</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${analytics.map(stat => `
+          <tr>
+            <td><strong>${stat.gym_name}</strong><br><small style="color:#888">${stat.gym_id}</small></td>
+            <td style="text-align:center">${stat.clinic_count}/${stat.clinic_required}</td>
+            <td style="text-align:center">${stat.kno_count}/${stat.kno_required}</td>
+            <td style="text-align:center">${stat.open_gym_count}/${stat.open_gym_required}</td>
+            <td style="text-align:center">${stat.total_events}</td>
+            <td>
+              ${stat.meets_requirements 
+                ? '<span class="badge success">✅ Complete</span>' 
+                : `<span class="badge danger">❌ Missing: ${stat.missing.join(', ')}</span>`}
+            </td>
+          </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    
+    ${missing.length > 0 ? `
+    <div class="section" style="border-left: 4px solid #ef4444;">
+      <h2>⚠️ Action Required</h2>
+      <p style="margin-bottom: 16px; color: #666;">The following gyms need additional events to meet monthly requirements:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Gym</th>
+            <th>Missing</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${missing.map(m => `
+          <tr>
+            <td><strong>${m.gym_name}</strong></td>
+            <td><span class="badge warning">${m.missing.join(', ')}</span></td>
+          </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    ` : `
+    <div class="section" style="border-left: 4px solid #22c55e;">
+      <h2>🎉 All Gyms Compliant!</h2>
+      <p>Every gym has met their monthly event requirements. Great work!</p>
+    </div>
+    `}
+    
+    <div class="footer">
+      <p>Master Events Calendar • Report generated automatically</p>
+      <p style="margin-top: 4px;">
+        <button onclick="window.print()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+          🖨️ Print Report
+        </button>
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    // Open in new tab for viewing/printing
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
   };
 
   const downloadFile = (content, filename, mimeType) => {
@@ -229,29 +689,102 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     URL.revokeObjectURL(url);
   };
 
-  const canExport = (includeEvents || includeAnalytics || includeMissing) && 
-                   (selectedGyms.length > 0 || includeMissing);
+  const canExport = (includeEvents || includeAnalytics || includeMissing || includeDataQuality || includeSyncHistory) && 
+                   (selectedGyms.length > 0 || includeMissing || includeSyncHistory);
+
+  // Calculate data quality issues count for display
+  const dataQualityCount = getDataQualityIssues().length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div className="bg-white rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[95vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            📤 Export Data
+            📤 Export & Reports
           </h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
         </div>
 
-        {/* Date Range Selection - Simple date pickers */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        {/* Quick Presets - NEW */}
+        <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+          <h3 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
+            ⚡ Quick Presets
+            <span className="text-xs font-normal text-purple-600">(One-click export configurations)</span>
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+            <button
+              onClick={() => applyPreset('monthly-compliance')}
+              className={`p-3 rounded-lg border-2 transition-all text-center ${
+                activePreset === 'monthly-compliance' 
+                  ? 'border-purple-500 bg-purple-100' 
+                  : 'border-gray-200 bg-white hover:border-purple-300'
+              }`}
+            >
+              <div className="text-xl mb-1">📊</div>
+              <div className="text-xs font-semibold text-gray-800">Monthly Compliance</div>
+            </button>
+            <button
+              onClick={() => applyPreset('boss-report')}
+              className={`p-3 rounded-lg border-2 transition-all text-center ${
+                activePreset === 'boss-report' 
+                  ? 'border-purple-500 bg-purple-100' 
+                  : 'border-gray-200 bg-white hover:border-purple-300'
+              }`}
+            >
+              <div className="text-xl mb-1">👔</div>
+              <div className="text-xs font-semibold text-gray-800">Boss Report</div>
+              <div className="text-xs text-purple-600">Printable</div>
+            </button>
+            <button
+              onClick={() => applyPreset('full-backup')}
+              className={`p-3 rounded-lg border-2 transition-all text-center ${
+                activePreset === 'full-backup' 
+                  ? 'border-purple-500 bg-purple-100' 
+                  : 'border-gray-200 bg-white hover:border-purple-300'
+              }`}
+            >
+              <div className="text-xl mb-1">💾</div>
+              <div className="text-xs font-semibold text-gray-800">Full Backup</div>
+              <div className="text-xs text-blue-600">JSON</div>
+            </button>
+            <button
+              onClick={() => applyPreset('data-quality')}
+              className={`p-3 rounded-lg border-2 transition-all text-center ${
+                activePreset === 'data-quality' 
+                  ? 'border-purple-500 bg-purple-100' 
+                  : 'border-gray-200 bg-white hover:border-purple-300'
+              }`}
+            >
+              <div className="text-xl mb-1">🔍</div>
+              <div className="text-xs font-semibold text-gray-800">Data Quality</div>
+              {dataQualityCount > 0 && (
+                <div className="text-xs text-red-600">{dataQualityCount} issues</div>
+              )}
+            </button>
+            <button
+              onClick={() => applyPreset('sync-status')}
+              className={`p-3 rounded-lg border-2 transition-all text-center ${
+                activePreset === 'sync-status' 
+                  ? 'border-purple-500 bg-purple-100' 
+                  : 'border-gray-200 bg-white hover:border-purple-300'
+              }`}
+            >
+              <div className="text-xl mb-1">🔄</div>
+              <div className="text-xs font-semibold text-gray-800">Sync History</div>
+            </button>
+          </div>
+        </div>
+
+        {/* Date Range Selection */}
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <h3 className="font-semibold text-gray-800 mb-3">📅 Date Range:</h3>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <div>
               <label className="text-xs text-gray-500 block mb-1">From:</label>
               <input 
                 type="date" 
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => { setStartDate(e.target.value); setActivePreset(null); }}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
               />
             </div>
@@ -260,7 +793,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
               <input 
                 type="date" 
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => { setEndDate(e.target.value); setActivePreset(null); }}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
               />
             </div>
@@ -278,71 +811,105 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         </div>
 
         {/* What to Export */}
-        <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+        <div className="mb-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
           <h3 className="font-semibold text-amber-800 mb-3">What to export:</h3>
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 cursor-pointer">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
               <input 
                 type="checkbox" 
                 checked={includeEvents} 
-                onChange={(e) => setIncludeEvents(e.target.checked)}
+                onChange={(e) => { setIncludeEvents(e.target.checked); setActivePreset(null); }}
                 className="w-4 h-4 text-amber-600"
               />
               <span className="text-gray-700">
                 📋 Event Details 
-                {loadingEvents ? ' (loading...)' : ` (${filteredEvents.length} events)`}
+                <span className="text-xs text-gray-500 ml-1">
+                  {loadingEvents ? '(loading...)' : `(${filteredEvents.length} events)`}
+                </span>
               </span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
               <input 
                 type="checkbox" 
                 checked={includeAnalytics} 
-                onChange={(e) => setIncludeAnalytics(e.target.checked)}
+                onChange={(e) => { setIncludeAnalytics(e.target.checked); setActivePreset(null); }}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">📊 Analytics Dashboard (counts per gym)</span>
+              <span className="text-gray-700">📊 Analytics Dashboard</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
               <input 
                 type="checkbox" 
                 checked={includeMissing} 
-                onChange={(e) => setIncludeMissing(e.target.checked)}
+                onChange={(e) => { setIncludeMissing(e.target.checked); setActivePreset(null); }}
                 className="w-4 h-4 text-amber-600"
               />
               <span className="text-gray-700">
-                ⚠️ Missing Requirements 
-                {loadingEvents ? ' (loading...)' : ''}
+                ⚠️ Missing Requirements
+                {!loadingEvents && getMissingGyms().length > 0 && (
+                  <span className="text-xs text-red-600 ml-1">({getMissingGyms().length} gyms)</span>
+                )}
               </span>
             </label>
-            {/* Show which gyms are missing */}
-            {includeMissing && !loadingEvents && (
-              <div className="ml-6 mt-2 p-2 bg-red-50 rounded border border-red-200 text-xs">
-                {getMissingGyms().length > 0 ? (
-                  <>
-                    <div className="font-semibold text-red-700 mb-1">
-                      {getMissingGyms().length} gym{getMissingGyms().length !== 1 ? 's' : ''} missing requirements for selected dates:
-                    </div>
-                    {getMissingGyms().map(gym => (
-                      <div key={gym.gym_id} className="text-red-600">
-                        • {gym.gym_id}: needs {gym.missing.join(', ')}
-                      </div>
-                    ))}
-                  </>
-                ) : (
-                  <div className="text-green-700 font-semibold">
-                    ✅ All gyms meet requirements for selected dates!
-                  </div>
+            <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
+              <input 
+                type="checkbox" 
+                checked={includeDataQuality} 
+                onChange={(e) => { setIncludeDataQuality(e.target.checked); setActivePreset(null); }}
+                className="w-4 h-4 text-amber-600"
+              />
+              <span className="text-gray-700">
+                🔍 Data Quality Issues
+                {!loadingEvents && dataQualityCount > 0 && (
+                  <span className="text-xs text-orange-600 ml-1">({dataQualityCount} issues)</span>
                 )}
-                <div className="mt-2 text-gray-500 italic border-t border-red-200 pt-1">
-                  Checks: 1 CLINIC, 2 KNO, 1 OPEN GYM per gym
-                </div>
-              </div>
-            )}
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
+              <input 
+                type="checkbox" 
+                checked={includeSyncHistory} 
+                onChange={(e) => { setIncludeSyncHistory(e.target.checked); setActivePreset(null); }}
+                className="w-4 h-4 text-amber-600"
+              />
+              <span className="text-gray-700">
+                🔄 Sync History
+                {loadingSyncLog && <span className="text-xs text-blue-600 ml-1">(loading...)</span>}
+                {!loadingSyncLog && syncLog.length > 0 && (
+                  <span className="text-xs text-gray-500 ml-1">({syncLog.length} records)</span>
+                )}
+              </span>
+            </label>
           </div>
+
+          {/* Preview of missing gyms */}
+          {includeMissing && !loadingEvents && getMissingGyms().length > 0 && (
+            <div className="mt-3 p-2 bg-red-50 rounded border border-red-200 text-xs">
+              <div className="font-semibold text-red-700 mb-1">
+                ⚠️ {getMissingGyms().length} gym{getMissingGyms().length !== 1 ? 's' : ''} missing requirements:
+              </div>
+              {getMissingGyms().slice(0, 3).map(gym => (
+                <div key={gym.gym_id} className="text-red-600">
+                  • {gym.gym_id}: needs {gym.missing.join(', ')}
+                </div>
+              ))}
+              {getMissingGyms().length > 3 && (
+                <div className="text-red-500 italic">... and {getMissingGyms().length - 3} more</div>
+              )}
+            </div>
+          )}
+
+          {includeMissing && !loadingEvents && getMissingGyms().length === 0 && (
+            <div className="mt-3 p-2 bg-green-50 rounded border border-green-200 text-xs">
+              <div className="font-semibold text-green-700">
+                ✅ All gyms meet requirements for selected dates!
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Gyms Selection */}
-        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-semibold text-blue-800">Select Gyms:</h3>
             <div className="flex gap-2">
@@ -352,21 +919,21 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {gyms.map(gym => (
-              <label key={gym.id} className="flex items-center gap-2 cursor-pointer text-sm">
+              <label key={gym.id} className="flex items-center gap-2 cursor-pointer text-sm hover:bg-blue-100 p-1 rounded">
                 <input 
                   type="checkbox" 
                   checked={selectedGyms.includes(gym.id)} 
                   onChange={() => toggleGym(gym.id)}
                   className="w-4 h-4 text-blue-600"
                 />
-                <span className="text-gray-700">{gym.id} - {gym.name?.split(' ')[0]}</span>
+                <span className="text-gray-700 truncate">{gym.id} - {gym.name?.split(' ').slice(0, 2).join(' ')}</span>
               </label>
             ))}
           </div>
         </div>
 
         {/* Event Types Selection */}
-        <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+        <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-semibold text-purple-800">Select Event Types:</h3>
             <div className="flex gap-2">
@@ -378,7 +945,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
             {eventTypes.map(type => {
               const isRequired = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'].includes(type);
               return (
-                <label key={type} className={`flex items-center gap-2 cursor-pointer text-sm ${!isRequired ? 'opacity-60' : ''}`}>
+                <label key={type} className={`flex items-center gap-2 cursor-pointer text-sm hover:bg-purple-100 p-1 rounded ${!isRequired ? 'opacity-60' : ''}`}>
                   <input 
                     type="checkbox" 
                     checked={selectedTypes.includes(type)} 
@@ -401,17 +968,17 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         {/* Format Selection */}
         <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
           <h3 className="font-semibold text-green-800 mb-3">Export Format:</h3>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input 
                 type="radio" 
                 name="format" 
                 value="csv" 
                 checked={exportFormat === 'csv'} 
-                onChange={() => setExportFormat('csv')}
+                onChange={() => { setExportFormat('csv'); setActivePreset(null); }}
                 className="w-4 h-4 text-green-600"
               />
-              <span className="text-gray-700">📊 CSV (Excel, Google Sheets)</span>
+              <span className="text-gray-700">📊 CSV <span className="text-xs text-gray-500">(Excel, Sheets)</span></span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input 
@@ -419,12 +986,28 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 name="format" 
                 value="json" 
                 checked={exportFormat === 'json'} 
-                onChange={() => setExportFormat('json')}
+                onChange={() => { setExportFormat('json'); setActivePreset(null); }}
                 className="w-4 h-4 text-green-600"
               />
-              <span className="text-gray-700">📋 JSON</span>
+              <span className="text-gray-700">📋 JSON <span className="text-xs text-gray-500">(Data backup)</span></span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input 
+                type="radio" 
+                name="format" 
+                value="html" 
+                checked={exportFormat === 'html'} 
+                onChange={() => { setExportFormat('html'); setActivePreset(null); }}
+                className="w-4 h-4 text-green-600"
+              />
+              <span className="text-gray-700">🖨️ HTML Report <span className="text-xs text-purple-600">(Print/Email)</span></span>
             </label>
           </div>
+          {exportFormat === 'html' && (
+            <div className="mt-3 p-2 bg-green-100 rounded text-xs text-green-800">
+              📧 HTML report includes a copy-paste email summary and print button
+            </div>
+          )}
         </div>
 
         {/* Export Button */}
@@ -438,17 +1021,16 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
           <button
             onClick={handleExport}
             disabled={!canExport}
-            className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
+            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
               canExport 
-                ? 'bg-amber-500 hover:bg-amber-600 text-white' 
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl' 
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            📤 Export
+            📤 Export {exportFormat.toUpperCase()}
           </button>
         </div>
       </div>
     </div>
   );
 }
-

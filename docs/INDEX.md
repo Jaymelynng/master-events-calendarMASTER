@@ -92,7 +92,7 @@ docs/
 | Document | Purpose |
 |----------|---------|
 | [SYNC_PROGRESS_TRACKER.md](OPERATIONS/SYNC_PROGRESS_TRACKER.md) | Visual sync status grid |
-| [EXPORT_DATA_GUIDE.md](OPERATIONS/EXPORT_DATA_GUIDE.md) | Export events, analytics, reports |
+| **[EXPORT_DATA_GUIDE.md](OPERATIONS/EXPORT_DATA_GUIDE.md)** ⭐ | Export, reports, presets (CSV/JSON/HTML) |
 | [AUTO_ARCHIVE_SYSTEM.md](OPERATIONS/AUTO_ARCHIVE_SYSTEM.md) | Automatic event archiving |
 | [AUDIT-SYSTEM.md](OPERATIONS/AUDIT-SYSTEM.md) | Change tracking / audit history |
 | [DATA_QUALITY_VALIDATION.md](OPERATIONS/DATA_QUALITY_VALIDATION.md) | Automatic data validation |
@@ -127,6 +127,7 @@ docs/
 | **Learn how to use automated sync** | `OPERATIONS/AUTO-SYNC-GUIDE.md` |
 | **Quick sync reminder (non-technical)** | `OPERATIONS/SYNC-QUICK-REFERENCE.md` |
 | **Access admin/super admin features** | `OPERATIONS/SECRET_ADMIN_MODE.md` |
+| **Export data or generate reports** | `OPERATIONS/EXPORT_DATA_GUIDE.md` |
 | **Troubleshoot deployment issues** | `OPERATIONS/DEPLOYMENT_PLAN.md` |
 | **Understand the database** | `TECHNICAL/DATABASE_COMPLETE_SCHEMA.md` |
 
@@ -139,7 +140,8 @@ docs/
 3. **🚀 AUTO-SYNC-GUIDE.md** - Main workflow
 4. **📋 SYNC-QUICK-REFERENCE.md** - Quick non-technical guide
 5. **🔐 SECRET_ADMIN_MODE.md** - Your hidden admin power
-6. **🔧 TECHNICAL-REFERENCE.md** - Complete system guide
+6. **📤 EXPORT_DATA_GUIDE.md** - Reports, presets, email summaries
+7. **🔧 TECHNICAL-REFERENCE.md** - Complete system guide
 
 ---
 
@@ -154,6 +156,14 @@ docs/
 ---
 
 ## 🔄 Recent Changes (Dec 28, 2025)
+
+### Major Upgrades:
+- **EXPORT_DATA_GUIDE.md** - Complete 10/10 rewrite with:
+  - Quick Presets (Monthly Compliance, Boss Report, Full Backup, Data Quality, Sync History)
+  - HTML Report format with visual charts and email-ready summaries
+  - Data Quality Issues export
+  - Sync History export
+  - Enhanced CSV/JSON with more fields
 
 ### Merged/Consolidated:
 - `SUPABASE_AUDIT_REPORT.md` → merged into `DATABASE_COMPLETE_SCHEMA.md`
