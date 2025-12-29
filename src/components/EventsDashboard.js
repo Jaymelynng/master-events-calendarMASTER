@@ -2118,23 +2118,23 @@ The system will add new events and update any changed events automatically.`;
           </div>
 
           {/* ✨ Jayme's Command Center + Export - TOP SECTION */}
-          <div className="flex justify-center items-center gap-3 mb-2">
+          <div className="flex justify-center items-center gap-4 mb-3">
             <button
               onClick={() => setShowAdminPortal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 hover:bg-purple-200 rounded-lg border border-purple-300 hover:border-purple-500 transition-all duration-200 text-purple-800 text-sm font-medium hover:scale-105"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg border-2 border-purple-700 shadow-lg hover:shadow-xl transition-all duration-200 text-white text-base font-bold hover:scale-105 active:scale-95"
               title="Open Admin Control Center"
             >
-              <span>🪄</span>
+              <span className="text-xl">🪄</span>
               <span>Admin</span>
             </button>
 
             {/* Export Button */}
             <button
               onClick={() => setShowExportModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 rounded-lg border border-amber-300 hover:border-amber-500 transition-all duration-200 text-amber-800 text-sm font-medium hover:scale-105"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 rounded-lg border-2 border-orange-700 shadow-lg hover:shadow-xl transition-all duration-200 text-white text-base font-bold hover:scale-105 active:scale-95"
               title="Export Events Data"
             >
-              <span>📤</span>
+              <span className="text-xl">📤</span>
               <span>Export</span>
             </button>
           </div>
