@@ -2342,67 +2342,106 @@ The system will add new events and update any changed events automatically.`;
 
 
         {/* Special Event Statistics by Gym */}
-        <div className="bg-white rounded shadow p-3 mb-2 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
-            {/* Month Navigation */}
-            <div className="flex justify-center items-center gap-4 mb-3">
-              <button
-                onClick={() => {
-                  if (currentMonth === 0) {
-                    setCurrentMonth(11);
-                    setCurrentYear(currentYear - 1);
-                  } else {
-                    setCurrentMonth(currentMonth - 1);
-                  }
-                }}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-sm font-medium transition-all duration-200 hover:bg-gray-200 hover:scale-105"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Previous
-              </button>
-              
-              <div className="text-center">
-                <h2 className="text-lg font-bold" style={{ color: theme.colors.textPrimary }}>
-                  {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </h2>
+        <div className="rounded-lg shadow-lg mb-2 mx-2 overflow-hidden" style={{ border: '2px solid #8a9bb8' }}>
+            {/* Header Section with colored background */}
+            <div className="p-4" style={{ background: 'linear-gradient(135deg, #adb2c6 0%, #9ba3bd 100%)' }}>
+              {/* Month Navigation */}
+              <div className="flex justify-center items-center gap-4 mb-3">
+                <button
+                  onClick={() => {
+                    if (currentMonth === 0) {
+                      setCurrentMonth(11);
+                      setCurrentYear(currentYear - 1);
+                    } else {
+                      setCurrentMonth(currentMonth - 1);
+                    }
+                  }}
+                  className="flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 hover:scale-105"
+                  style={{ 
+                    background: 'white', 
+                    color: '#4a5568',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  }}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                
+                <div 
+                  className="text-center px-6 py-2 rounded-full"
+                  style={{ 
+                    background: 'white',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  }}
+                >
+                  <h2 className="text-xl font-bold" style={{ color: '#2d3748' }}>
+                    {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </h2>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    if (currentMonth === 11) {
+                      setCurrentMonth(0);
+                      setCurrentYear(currentYear + 1);
+                    } else {
+                      setCurrentMonth(currentMonth + 1);
+                    }
+                  }}
+                  className="flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 hover:scale-105"
+                  style={{ 
+                    background: 'white', 
+                    color: '#4a5568',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  }}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
               
-              <button
-                onClick={() => {
-                  if (currentMonth === 11) {
-                    setCurrentMonth(0);
-                    setCurrentYear(currentYear + 1);
-                  } else {
-                    setCurrentMonth(currentMonth + 1);
-                  }
-                }}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-sm font-medium transition-all duration-200 hover:bg-gray-200 hover:scale-105"
-              >
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-            
-            {/* Title */}
-            <div className="text-center mb-2">
-              <h3 className="text-sm font-semibold" style={{ color: theme.colors.textSecondary }}>
-                Special Event Statistics by Gym
-              </h3>
-            </div>
-            
-            {/* Monthly Goal centered under title */}
-            <div className="flex justify-center mb-2 text-xs">
-              <div className="bg-gray-50 px-3 py-2 rounded border">
-                <span className="font-semibold text-gray-700">Monthly Goal: </span>
-                <span className="text-gray-600">
-                  {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
-                </span>
+              {/* Title */}
+              <div className="text-center mb-3">
+                <h3 className="text-base font-bold" style={{ color: '#2d3748', textShadow: '0 1px 2px rgba(255,255,255,0.5)' }}>
+                  Special Event Statistics by Gym
+                </h3>
+              </div>
+              
+              {/* Monthly Goal - prominent white container */}
+              <div className="flex justify-center mb-3">
+                <div 
+                  className="px-5 py-3 rounded-lg text-sm"
+                  style={{ 
+                    background: 'white',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    border: '2px solid #667eea'
+                  }}
+                >
+                  <span className="font-bold text-indigo-700">Monthly Goal: </span>
+                  <span className="font-semibold text-gray-700">
+                    {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
+                  </span>
+                </div>
+              </div>
+              
+              {/* Instructions - prominent yellow box */}
+              <div className="flex justify-center">
+                <div 
+                  className="px-4 py-2 rounded-lg text-sm font-medium"
+                  style={{ 
+                    background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    border: '2px solid #f59e0b',
+                    color: '#92400e'
+                  }}
+                >
+                  📍 Gym → scroll | 🔢 Number → open page | ✨ Sparkle → open all
+                </div>
               </div>
             </div>
             
-            {/* Instructions - subtle, above table */}
-            <div className="text-xs text-gray-500 text-center mb-2">
-              📍 Gym → scroll | 🔢 Number → open page | ✨ Sparkle → open all
-            </div>
+            {/* Table section with white background */}
+            <div className="bg-white p-3">
 
             <div className="overflow-x-auto">
               <table className="min-w-full border border-gray-200">
