@@ -75,11 +75,11 @@ export const eventsApi = {
       console.log('🔍 Checking for existing events...');
       console.log('📊 Total events to import:', events.length);
       
-      // Get list of existing event URLs
+      // Get list of existing event URLs (including soft-deleted ones)
       const eventUrls = events.map(e => e.event_url);
       const { data: existingEvents, error: checkError } = await supabase
         .from('events')
-        .select('event_url')
+        .select('id, event_url, deleted_at')
         .in('event_url', eventUrls);
       
       if (checkError) {
@@ -87,36 +87,89 @@ export const eventsApi = {
         throw new Error(`Failed to check existing events: ${checkError.message}`);
       }
       
-      // Create a Set of existing URLs for fast lookup
-      const existingUrls = new Set(existingEvents?.map(e => e.event_url) || []);
+      // Separate existing events into active and soft-deleted
+      const activeUrls = new Set();
+      const softDeletedByUrl = new Map();
       
-      // Filter out events that already exist
-      const newEvents = events.filter(e => !existingUrls.has(e.event_url));
-      const duplicateCount = events.length - newEvents.length;
+      for (const event of (existingEvents || [])) {
+        if (event.deleted_at) {
+          softDeletedByUrl.set(event.event_url, event.id);
+        } else {
+          activeUrls.add(event.event_url);
+        }
+      }
       
-      console.log(`📋 Found ${duplicateCount} duplicates, ${newEvents.length} new events to import`);
+      // Separate events into: truly new, need restore (soft-deleted), and duplicates
+      const trulyNewEvents = [];
+      const eventsToRestore = [];
       
-      if (newEvents.length === 0) {
+      for (const event of events) {
+        if (activeUrls.has(event.event_url)) {
+          // Already exists and is active - skip
+          continue;
+        } else if (softDeletedByUrl.has(event.event_url)) {
+          // Was soft-deleted - needs to be restored with updated data
+          eventsToRestore.push({
+            id: softDeletedByUrl.get(event.event_url),
+            ...event,
+            deleted_at: null  // Clear the deletion
+          });
+        } else {
+          // Truly new event
+          trulyNewEvents.push(event);
+        }
+      }
+      
+      const duplicateCount = events.length - trulyNewEvents.length - eventsToRestore.length;
+      console.log(`📋 Found ${duplicateCount} active duplicates, ${eventsToRestore.length} to restore, ${trulyNewEvents.length} truly new`);
+      
+      let importedEvents = [];
+      
+      // Restore soft-deleted events (update them with new data and clear deleted_at)
+      if (eventsToRestore.length > 0) {
+        console.log(`🔄 Restoring ${eventsToRestore.length} previously deleted events...`);
+        for (const event of eventsToRestore) {
+          const { id, ...updateData } = event;
+          const { data: restored, error: restoreError } = await supabase
+            .from('events')
+            .update({ ...updateData, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .select();
+          
+          if (restoreError) {
+            console.error(`❌ Error restoring event ${id}:`, restoreError);
+          } else if (restored && restored.length > 0) {
+            importedEvents.push(restored[0]);
+            console.log(`✅ Restored event: ${restored[0].title}`);
+          }
+        }
+      }
+      
+      // Insert truly new events
+      if (trulyNewEvents.length > 0) {
+        console.log('🚀 Inserting new events to Supabase:', trulyNewEvents);
+        
+        const { data, error } = await supabase
+          .from('events')
+          .insert(trulyNewEvents)
+          .select();
+        
+        if (error) {
+          console.error('❌ Supabase bulk import error:', error);
+          throw new Error(`Database error: ${error.message}`);
+        }
+        
+        importedEvents = [...importedEvents, ...(data || [])];
+        console.log(`✅ Successfully imported ${data?.length || 0} new events`);
+      }
+      
+      if (importedEvents.length === 0 && trulyNewEvents.length === 0 && eventsToRestore.length === 0) {
         console.log('✅ All events already exist - no new events to import');
-        return [];
+      } else {
+        console.log(`✅ Total imported/restored: ${importedEvents.length} events`);
       }
       
-      console.log('🚀 Inserting new events to Supabase:', newEvents);
-      
-      // Insert only new events
-      const { data, error } = await supabase
-        .from('events')
-        .insert(newEvents)
-        .select();
-      
-      if (error) {
-        console.error('❌ Supabase bulk import error:', error);
-        throw new Error(`Database error: ${error.message}`);
-      }
-      
-      console.log(`✅ Successfully imported ${data?.length || 0} new events`);
-      
-      return data || [];
+      return importedEvents;
     } catch (networkError) {
       console.error('❌ Network error during bulk import:', networkError);
       throw new Error(`Failed to save events: ${networkError.message}`);
