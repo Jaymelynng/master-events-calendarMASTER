@@ -11,6 +11,13 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const [includeDataQuality, setIncludeDataQuality] = useState(false);
   const [includeSyncHistory, setIncludeSyncHistory] = useState(false);
   
+  // Admin check for Sync History (hidden feature)
+  const SUPER_ADMIN_PIN = '1426';
+  const [isAdmin, setIsAdmin] = useState(() => {
+    // Check if admin was unlocked in this session (stored in sessionStorage)
+    return sessionStorage.getItem('export_admin_unlocked') === 'true';
+  });
+  
   // Date range - default to current month
   const [startDate, setStartDate] = useState(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`);
   const [endDate, setEndDate] = useState(new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0]);
@@ -103,6 +110,36 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const selectAllTypes = () => { setActivePreset(null); setSelectedTypes([...eventTypes]); };
   const selectNoTypes = () => { setActivePreset(null); setSelectedTypes([]); };
 
+  // Admin unlock for Sync History (hidden feature)
+  const unlockAdmin = () => {
+    const pin = prompt('Enter PIN to unlock Sync History:');
+    if (pin === SUPER_ADMIN_PIN) {
+      setIsAdmin(true);
+      sessionStorage.setItem('export_admin_unlocked', 'true');
+    } else if (pin !== null) {
+      alert('Incorrect PIN');
+    }
+  };
+
+  // Listen for * key to unlock admin
+  useEffect(() => {
+    if (isAdmin) return; // Already unlocked, no need to listen
+    
+    const handleKeyDown = (e) => {
+      if (e.key === '*') {
+        const pin = prompt('Enter PIN to unlock Sync History:');
+        if (pin === SUPER_ADMIN_PIN) {
+          setIsAdmin(true);
+          sessionStorage.setItem('export_admin_unlocked', 'true');
+        } else if (pin !== null) {
+          alert('Incorrect PIN');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAdmin]);
+
   // ===== QUICK PRESETS =====
   const applyPreset = (presetName) => {
     setActivePreset(presetName);
@@ -123,12 +160,12 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         setIncludeAnalytics(true);
         setIncludeMissing(true);
         setIncludeDataQuality(true);
-        setIncludeSyncHistory(true);
+        setIncludeSyncHistory(isAdmin); // Only include if admin unlocked
         setSelectedGyms(gyms.map(g => g.id));
         setSelectedTypes([...eventTypes]);
         setExportFormat('json');
         break;
-      case 'boss-report':
+      case 'printable-report':
         setIncludeEvents(false);
         setIncludeAnalytics(true);
         setIncludeMissing(true);
@@ -149,6 +186,10 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         setExportFormat('csv');
         break;
       case 'sync-status':
+        if (!isAdmin) {
+          alert('Sync History requires admin access. Press * key to unlock.');
+          return;
+        }
         setIncludeEvents(false);
         setIncludeAnalytics(false);
         setIncludeMissing(false);
@@ -331,17 +372,22 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     if (includeDataQuality) {
       const issues = getDataQualityIssues();
       csvContent += `DATA QUALITY ISSUES - ${monthName}\n`;
-      csvContent += 'Gym,Title,Date,Type,Issues,URL\n';
-      issues.forEach(issue => {
-        csvContent += [
-          `"${issue.gym_name}"`,
-          `"${(issue.title || '').replace(/"/g, '""')}"`,
-          issue.date,
-          issue.type,
-          `"${issue.issues.join('; ')}"`,
-          issue.event_url || ''
-        ].join(',') + '\n';
-      });
+      if (issues.length > 0) {
+        csvContent += 'Gym,Title,Date,Type,Issues,URL\n';
+        issues.forEach(issue => {
+          csvContent += [
+            `"${issue.gym_name}"`,
+            `"${(issue.title || '').replace(/"/g, '""')}"`,
+            issue.date,
+            issue.type,
+            `"${issue.issues.join('; ')}"`,
+            issue.event_url || ''
+          ].join(',') + '\n';
+        });
+      } else {
+        csvContent += 'Status,Message\n';
+        csvContent += `"✅ No Issues Found","All ${filteredEvents.length} events in the selected date range have complete descriptions and no validation errors."\n`;
+      }
       csvContent += '\n';
     }
 
@@ -724,16 +770,16 @@ ${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality is
               <div className="text-xs font-semibold text-gray-800">Monthly Compliance</div>
             </button>
             <button
-              onClick={() => applyPreset('boss-report')}
+              onClick={() => applyPreset('printable-report')}
               className={`p-3 rounded-lg border-2 transition-all text-center ${
-                activePreset === 'boss-report' 
+                activePreset === 'printable-report' 
                   ? 'border-purple-500 bg-purple-100' 
                   : 'border-gray-200 bg-white hover:border-purple-300'
               }`}
             >
-              <div className="text-xl mb-1">👔</div>
-              <div className="text-xs font-semibold text-gray-800">Boss Report</div>
-              <div className="text-xs text-purple-600">Printable</div>
+              <div className="text-xl mb-1">🖨️</div>
+              <div className="text-xs font-semibold text-gray-800">Printable Report</div>
+              <div className="text-xs text-purple-600">HTML</div>
             </button>
             <button
               onClick={() => applyPreset('full-backup')}
@@ -761,17 +807,20 @@ ${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality is
                 <div className="text-xs text-red-600">{dataQualityCount} issues</div>
               )}
             </button>
-            <button
-              onClick={() => applyPreset('sync-status')}
-              className={`p-3 rounded-lg border-2 transition-all text-center ${
-                activePreset === 'sync-status' 
-                  ? 'border-purple-500 bg-purple-100' 
-                  : 'border-gray-200 bg-white hover:border-purple-300'
-              }`}
-            >
-              <div className="text-xl mb-1">🔄</div>
-              <div className="text-xs font-semibold text-gray-800">Sync History</div>
-            </button>
+            {/* Sync History Preset - Admin Only */}
+            {isAdmin && (
+              <button
+                onClick={() => applyPreset('sync-status')}
+                className={`p-3 rounded-lg border-2 transition-all text-center ${
+                  activePreset === 'sync-status' 
+                    ? 'border-purple-500 bg-purple-100' 
+                    : 'border-gray-200 bg-white hover:border-purple-300'
+                }`}
+              >
+                <div className="text-xl mb-1">🔄</div>
+                <div className="text-xs font-semibold text-gray-800">Sync History</div>
+              </button>
+            )}
           </div>
         </div>
 
@@ -855,21 +904,30 @@ ${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality is
               />
               <span className="text-gray-700">🔍 Data Quality Issues</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
-              <input 
-                type="checkbox" 
-                checked={includeSyncHistory} 
-                onChange={(e) => { setIncludeSyncHistory(e.target.checked); setActivePreset(null); }}
-                className="w-4 h-4 text-amber-600"
-              />
-              <span className="text-gray-700">
-                🔄 Sync History
-                {loadingSyncLog && <span className="text-xs text-blue-600 ml-1">(loading...)</span>}
-                {!loadingSyncLog && syncLog.length > 0 && (
-                  <span className="text-xs text-gray-500 ml-1">({syncLog.length} records)</span>
-                )}
-              </span>
-            </label>
+            {/* Sync History - Admin Only */}
+            {isAdmin ? (
+              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
+                <input 
+                  type="checkbox" 
+                  checked={includeSyncHistory} 
+                  onChange={(e) => { setIncludeSyncHistory(e.target.checked); setActivePreset(null); }}
+                  className="w-4 h-4 text-amber-600"
+                />
+                <span className="text-gray-700">
+                  🔄 Sync History
+                  {loadingSyncLog && <span className="text-xs text-blue-600 ml-1">(loading...)</span>}
+                  {!loadingSyncLog && syncLog.length > 0 && (
+                    <span className="text-xs text-gray-500 ml-1">({syncLog.length} records)</span>
+                  )}
+                </span>
+              </label>
+            ) : (
+              <div className="flex items-center gap-2 p-2 rounded opacity-50 cursor-not-allowed">
+                <span className="text-gray-400 text-sm">
+                  🔒 Sync History (Admin Only - Press * to unlock)
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Preview of missing gyms - ONLY shows when checkbox is checked */}
@@ -892,6 +950,32 @@ ${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality is
               ) : (
                 <div className="font-semibold text-green-700">
                   ✅ All {selectedGyms.length} gyms meet requirements for this date range!
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Preview of data quality issues - ONLY shows when checkbox is checked */}
+          {includeDataQuality && !loadingEvents && (
+            <div className={`mt-3 p-2 rounded border text-xs ${getDataQualityIssues().length > 0 ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}`}>
+              <div className="font-semibold text-gray-600 mb-1">
+                📅 Checking date range: {startDate} to {endDate}
+              </div>
+              <div className="text-gray-500 mb-2 text-xs italic">
+                Checks for: validation errors, missing descriptions, flyer-only descriptions, sold-out events
+              </div>
+              {getDataQualityIssues().length > 0 ? (
+                <>
+                  <div className="font-semibold text-orange-700 mb-1">
+                    ⚠️ Found {getDataQualityIssues().length} event{getDataQualityIssues().length !== 1 ? 's' : ''} with data quality issues
+                  </div>
+                  <div className="text-orange-600 text-xs">
+                    Export will include: event details + specific issues found
+                  </div>
+                </>
+              ) : (
+                <div className="font-semibold text-green-700">
+                  ✅ No data quality issues found! All {filteredEvents.length} events have complete descriptions and no validation errors.
                 </div>
               )}
             </div>
