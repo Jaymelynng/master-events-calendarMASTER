@@ -2053,6 +2053,29 @@ The system will add new events and update any changed events automatically.`;
                   This Month
               </div>
             </button>
+
+            {/* Sold Out Counter - Informational, not an error */}
+            {(() => {
+              const soldOutCount = events.filter(e => e.has_openings === false).length;
+              if (soldOutCount === 0) return null;
+              return (
+                <div 
+                  className="rounded-lg px-4 py-3 text-center flex-1 min-w-[110px]"
+                  style={{ backgroundColor: '#fef2f2', boxShadow: '0 4px 12px rgba(239,68,68,0.2)' }}
+                  title="Events that are full/sold out - informational only"
+                >
+                  <div className="text-xl font-bold text-red-700">
+                    🔴 {soldOutCount}
+                  </div>
+                  <div className="text-sm font-medium text-red-600">
+                    Sold Out
+                  </div>
+                  <div className="text-xs text-red-500">
+                    This Month
+                  </div>
+                </div>
+              );
+            })()}
             </div>
 
             {/* Dashboard Stats Cards - Row 2: Event Types */}
@@ -2588,9 +2611,12 @@ The system will add new events and update any changed events automatically.`;
                             });
                             
                             // Count issues only (not informational stuff) - respects dismissed warnings
+                            // NOTE: sold_out type is excluded - it's informational, not an audit error
                             const errors = gymEvents.filter(e => {
                               const acknowledged = e.acknowledged_errors || [];
-                              return (e.validation_errors || []).some(err => !acknowledged.includes(err.message));
+                              return (e.validation_errors || []).some(err => 
+                                err.type !== 'sold_out' && !acknowledged.includes(err.message)
+                              );
                             }).length;
                             const warnings = gymEvents.filter(e => e.description_status === 'flyer_only').length;
                             const missing = gymEvents.filter(e => e.description_status === 'none').length;
@@ -2869,6 +2895,7 @@ The system will add new events and update any changed events automatically.`;
 
         {/* Calendar View */}
         {viewMode === 'calendar' && (
+          <React.Fragment>
             <div className="space-y-2">
               {/* 🪄 Jayme's Command Center - BEFORE CALENDAR VIEW */}
               <div className="flex justify-center mb-2">
@@ -3213,10 +3240,11 @@ The system will add new events and update any changed events automatically.`;
                                             </span>
                                           )}
                                           {/* Validation status indicator - only show problems (respects dismissed warnings) */}
+                                          {/* NOTE: sold_out type is excluded - it's informational, not an audit error */}
                                           {(() => {
                                             const acknowledged = event.acknowledged_errors || [];
                                             const hasUnacknowledgedErrors = (event.validation_errors || []).some(
-                                              err => !acknowledged.includes(err.message)
+                                              err => err.type !== 'sold_out' && !acknowledged.includes(err.message)
                                             );
                                             if (hasUnacknowledgedErrors) {
                                               return <span className="absolute -top-1 -right-1 text-sm" title="Wrong info - data doesn't match!">🚨</span>;
@@ -3475,10 +3503,10 @@ The system will add new events and update any changed events automatically.`;
 
                     {/* Validation Issues Alert */}
                     {(() => {
-                      // Filter out acknowledged errors
+                      // Filter out acknowledged errors AND sold_out type (informational, not an error)
                       const acknowledgedErrors = selectedEventForPanel.acknowledged_errors || [];
                       const activeErrors = (selectedEventForPanel.validation_errors || []).filter(
-                        error => !acknowledgedErrors.includes(error.message)
+                        error => error.type !== 'sold_out' && !acknowledgedErrors.includes(error.message)
                       );
                       const hasDescriptionIssue = selectedEventForPanel.description_status === 'flyer_only' || 
                                                   selectedEventForPanel.description_status === 'none';
@@ -3574,7 +3602,6 @@ The system will add new events and update any changed events automatically.`;
                     {/* Registration Options - Detect from ACTUAL grouped event titles */}
                     <div className="border-t pt-4" style={{ borderColor: theme.colors.secondary }}>
                       {selectedEventForPanel.isGrouped && selectedEventForPanel.groupedEvents ? (
-                         // Multiple options - detect activity/duration from actual titles
                         <div className="space-y-3">
                           <p className="font-semibold text-gray-800 mb-3">📝 Register for THIS Camp:</p>
                           {selectedEventForPanel.groupedEvents.map((option) => {
@@ -3641,7 +3668,6 @@ The system will add new events and update any changed events automatically.`;
                            })}
                          </div>
                       ) : (
-                        // Single option - show regular buttons
                         <div className="space-y-3">
                           <button
                             onClick={() => {
@@ -3697,10 +3723,8 @@ The system will add new events and update any changed events automatically.`;
                   </div>
                 </div>
               )}
-            </div>
-          )}
-        </div>
-      </div>
+          </React.Fragment>
+        )}
 
       {/* Removed floating left calendar nav (redundant after relocating the panel above the grid) */}
 

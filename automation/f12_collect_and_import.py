@@ -953,14 +953,10 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     })
                     print(f"    🚨 OPEN GYM: Description says 'Kids Night Out' - wrong program!")
         
-        # ========== AVAILABILITY VALIDATION ==========
-        # Check for sold out events
-        if has_openings == False:
-            validation_errors.append({
-                "type": "sold_out",
-                "severity": "info",
-                "message": "Event is SOLD OUT - no spots available"
-            })
+        # ========== AVAILABILITY INFO ==========
+        # NOTE: Sold out is NOT a validation error - it's informational status
+        # The has_openings field is saved separately and displays "FULL" badge
+        # We do NOT add sold_out to validation_errors (it's not an audit issue)
         
         # Check if registration has closed but event is still in the future
         if registration_end_date and start_date:

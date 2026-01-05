@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 
 export default function ExportModal({ onClose, events, gyms, monthlyRequirements, currentMonth, currentYear }) {
+  // NOTE: The 'events' prop is received but not used - component fetches its own data from database
+  // based on the date range selector, which allows exporting any date range (not just current view)
   const [selectedGyms, setSelectedGyms] = useState(gyms.map(g => g.id)); // All selected by default
   const [selectedTypes, setSelectedTypes] = useState(['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM', 'CAMP', 'SPECIAL EVENT']);
   const [exportFormat, setExportFormat] = useState('csv');
   const [includeEvents, setIncludeEvents] = useState(true);
   const [includeAnalytics, setIncludeAnalytics] = useState(false);
   const [includeMissing, setIncludeMissing] = useState(false);
-  const [includeDataQuality, setIncludeDataQuality] = useState(false);
+  const [includeAuditCheck, setIncludeAuditCheck] = useState(false);
   const [includeSyncHistory, setIncludeSyncHistory] = useState(false);
   
   // Admin check for Sync History (hidden feature)
@@ -84,7 +86,10 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     setLoadingSyncLog(false);
   };
 
-  // Always use fetched events based on date picker values
+  // Data flow:
+  // - activeEvents: All events in selected date range (unfiltered by user selections)
+  // - filteredEvents: Events matching user's gym AND event type selections
+  // All export functions should use filteredEvents to respect user selections
   const activeEvents = fetchedEvents;
 
   const toggleGym = (gymId) => {
@@ -149,7 +154,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         setIncludeEvents(false);
         setIncludeAnalytics(true);
         setIncludeMissing(true);
-        setIncludeDataQuality(false);
+        setIncludeAuditCheck(false);
         setIncludeSyncHistory(false);
         setSelectedGyms(gyms.map(g => g.id));
         setSelectedTypes(['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']);
@@ -159,7 +164,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         setIncludeEvents(true);
         setIncludeAnalytics(true);
         setIncludeMissing(true);
-        setIncludeDataQuality(true);
+        setIncludeAuditCheck(true);
         setIncludeSyncHistory(isAdmin); // Only include if admin unlocked
         setSelectedGyms(gyms.map(g => g.id));
         setSelectedTypes([...eventTypes]);
@@ -169,17 +174,17 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         setIncludeEvents(false);
         setIncludeAnalytics(true);
         setIncludeMissing(true);
-        setIncludeDataQuality(false);
+        setIncludeAuditCheck(false);
         setIncludeSyncHistory(false);
         setSelectedGyms(gyms.map(g => g.id));
         setSelectedTypes(['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']);
         setExportFormat('html');
         break;
-      case 'data-quality':
+      case 'audit-check':
         setIncludeEvents(false);
         setIncludeAnalytics(false);
         setIncludeMissing(false);
-        setIncludeDataQuality(true);
+        setIncludeAuditCheck(true);
         setIncludeSyncHistory(false);
         setSelectedGyms(gyms.map(g => g.id));
         setSelectedTypes([...eventTypes]);
@@ -193,7 +198,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         setIncludeEvents(false);
         setIncludeAnalytics(false);
         setIncludeMissing(false);
-        setIncludeDataQuality(false);
+        setIncludeAuditCheck(false);
         setIncludeSyncHistory(true);
         setSelectedGyms(gyms.map(g => g.id));
         setSelectedTypes([...eventTypes]);
@@ -209,18 +214,20 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     selectedGyms.includes(e.gym_id) && selectedTypes.includes(e.type)
   );
 
-  // Get events with data quality issues
-  const getDataQualityIssues = () => {
+  // Get events with audit check failures (validation errors, missing descriptions, etc.)
+  // This matches the "Audit Check" column in the main dashboard table
+  // NOTE: Sold out (type: 'sold_out') is excluded - it's informational, not a data quality issue
+  const getAuditCheckIssues = () => {
     return filteredEvents.filter(e => {
       const errors = e.validation_errors || [];
       const acknowledged = e.acknowledged_errors || [];
+      // Filter out sold_out type AND acknowledged errors
       const unacknowledged = errors.filter(err => 
-        !acknowledged.includes(err.message)
+        err.type !== 'sold_out' && !acknowledged.includes(err.message)
       );
       return unacknowledged.length > 0 || 
              e.description_status === 'none' || 
-             e.description_status === 'flyer_only' ||
-             e.has_openings === false;
+             e.description_status === 'flyer_only';
     }).map(e => ({
       gym_id: e.gym_id,
       gym_name: e.gym_name || e.gym_id,
@@ -228,21 +235,26 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       date: e.date,
       type: e.type,
       issues: [
-        ...(e.validation_errors || []).map(err => `${err.severity}: ${err.message}`),
+        // Filter out sold_out type from displayed issues
+        ...(e.validation_errors || [])
+          .filter(err => err.type !== 'sold_out')
+          .map(err => `${err.severity}: ${err.message}`),
         e.description_status === 'none' ? 'Missing description' : null,
-        e.description_status === 'flyer_only' ? 'Flyer only (no text)' : null,
-        e.has_openings === false ? 'SOLD OUT' : null
+        e.description_status === 'flyer_only' ? 'Flyer only (no text)' : null
       ].filter(Boolean),
       event_url: e.event_url
     }));
   };
 
   // Calculate analytics for selected gyms
+  // NOTE: Uses filteredEvents to respect both gym AND event type selections
+  // Analytics shows ALL gyms with their counts and whether they meet requirements
   const getAnalytics = () => {
     const analytics = [];
     selectedGyms.forEach(gymId => {
       const gym = gyms.find(g => g.id === gymId);
-      const gymEvents = activeEvents.filter(e => e.gym_id === gymId);
+      // FIX: Use filteredEvents instead of activeEvents to respect event type selections
+      const gymEvents = filteredEvents.filter(e => e.gym_id === gymId);
       
       const stats = {
         gym_id: gymId,
@@ -280,6 +292,8 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   };
 
   // Get only gyms with missing requirements
+  // NOTE: This is a filtered subset of Analytics - only shows gyms that DON'T meet requirements
+  // Analytics = all gyms with counts, Missing Requirements = only failing gyms
   const getMissingGyms = () => {
     return getAnalytics().filter(a => !a.meets_requirements);
   };
@@ -368,10 +382,10 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       csvContent += '\n';
     }
 
-    // Data Quality section
-    if (includeDataQuality) {
-      const issues = getDataQualityIssues();
-      csvContent += `DATA QUALITY ISSUES - ${monthName}\n`;
+    // Audit Check section (matches "Audit Check" column in main dashboard)
+    if (includeAuditCheck) {
+      const issues = getAuditCheckIssues();
+      csvContent += `AUDIT CHECK ISSUES - ${monthName}\n`;
       if (issues.length > 0) {
         csvContent += 'Gym,Title,Date,Type,Issues,URL\n';
         issues.forEach(issue => {
@@ -423,7 +437,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         totalGyms: selectedGyms.length,
         gymsMeetingRequirements: getAnalytics().filter(a => a.meets_requirements).length,
         gymsWithIssues: getMissingGyms().length,
-        dataQualityIssues: getDataQualityIssues().length
+        auditCheckIssues: getAuditCheckIssues().length
       }
     };
 
@@ -443,8 +457,8 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       exportData.missingRequirements = getMissingGyms();
     }
 
-    if (includeDataQuality) {
-      exportData.dataQualityIssues = getDataQualityIssues();
+    if (includeAuditCheck) {
+      exportData.auditCheckIssues = getAuditCheckIssues();
     }
 
     if (includeSyncHistory) {
@@ -459,7 +473,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const exportHTML = (monthName, timestamp) => {
     const analytics = getAnalytics();
     const missing = getMissingGyms();
-    const dataQualityCount = getDataQualityIssues().length;
+    const auditCheckCount = getAuditCheckIssues().length;
     const gymsMet = analytics.filter(a => a.meets_requirements).length;
     const totalGyms = analytics.length;
     const compliancePercent = totalGyms > 0 ? Math.round((gymsMet / totalGyms) * 100) : 0;
@@ -612,7 +626,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
 ✅ Compliance: ${gymsMet}/${totalGyms} gyms meeting requirements (${compliancePercent}%)
 📊 Total Events: ${filteredEvents.length}
 ${missing.length > 0 ? `\n⚠️ Gyms Needing Attention:\n${missing.map(m => `   • ${m.gym_name}: needs ${m.missing.join(', ')}`).join('\n')}` : '✅ All gyms are compliant!'}
-${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality issues` : ''}</pre>
+${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issues` : ''}</pre>
     </div>
     
     <div class="summary-cards">
@@ -735,11 +749,11 @@ ${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality is
     URL.revokeObjectURL(url);
   };
 
-  const canExport = (includeEvents || includeAnalytics || includeMissing || includeDataQuality || includeSyncHistory) && 
+  const canExport = (includeEvents || includeAnalytics || includeMissing || includeAuditCheck || includeSyncHistory) && 
                    (selectedGyms.length > 0 || includeMissing || includeSyncHistory);
 
-  // Calculate data quality issues count for display
-  const dataQualityCount = getDataQualityIssues().length;
+  // Calculate audit check issues count for display (matches "Audit Check" column in main dashboard)
+  const auditCheckCount = getAuditCheckIssues().length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
@@ -794,17 +808,17 @@ ${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality is
               <div className="text-xs text-blue-600">JSON</div>
             </button>
             <button
-              onClick={() => applyPreset('data-quality')}
+              onClick={() => applyPreset('audit-check')}
               className={`p-3 rounded-lg border-2 transition-all text-center ${
-                activePreset === 'data-quality' 
+                activePreset === 'audit-check' 
                   ? 'border-purple-500 bg-purple-100' 
                   : 'border-gray-200 bg-white hover:border-purple-300'
               }`}
             >
               <div className="text-xl mb-1">🔍</div>
-              <div className="text-xs font-semibold text-gray-800">Data Quality</div>
-              {dataQualityCount > 0 && (
-                <div className="text-xs text-red-600">{dataQualityCount} issues</div>
+              <div className="text-xs font-semibold text-gray-800">Audit Check</div>
+              {auditCheckCount > 0 && (
+                <div className="text-xs text-red-600">{auditCheckCount} issues</div>
               )}
             </button>
             {/* Sync History Preset - Admin Only */}
@@ -898,11 +912,11 @@ ${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality is
             <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
               <input 
                 type="checkbox" 
-                checked={includeDataQuality} 
-                onChange={(e) => { setIncludeDataQuality(e.target.checked); setActivePreset(null); }}
+                checked={includeAuditCheck} 
+                onChange={(e) => { setIncludeAuditCheck(e.target.checked); setActivePreset(null); }}
                 className="w-4 h-4 text-amber-600"
               />
-              <span className="text-gray-700">🔍 Data Quality Issues</span>
+              <span className="text-gray-700">🔍 Audit Check (validation errors, missing descriptions)</span>
             </label>
             {/* Sync History - Admin Only */}
             {isAdmin ? (
@@ -955,19 +969,19 @@ ${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality is
             </div>
           )}
 
-          {/* Preview of data quality issues - ONLY shows when checkbox is checked */}
-          {includeDataQuality && !loadingEvents && (
-            <div className={`mt-3 p-2 rounded border text-xs ${getDataQualityIssues().length > 0 ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}`}>
+          {/* Preview of audit check issues - ONLY shows when checkbox is checked */}
+          {includeAuditCheck && !loadingEvents && (
+            <div className={`mt-3 p-2 rounded border text-xs ${getAuditCheckIssues().length > 0 ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}`}>
               <div className="font-semibold text-gray-600 mb-1">
                 📅 Checking date range: {startDate} to {endDate}
               </div>
               <div className="text-gray-500 mb-2 text-xs italic">
-                Checks for: validation errors, missing descriptions, flyer-only descriptions, sold-out events
+                Checks for: validation errors, missing descriptions, flyer-only descriptions
               </div>
-              {getDataQualityIssues().length > 0 ? (
+              {getAuditCheckIssues().length > 0 ? (
                 <>
                   <div className="font-semibold text-orange-700 mb-1">
-                    ⚠️ Found {getDataQualityIssues().length} event{getDataQualityIssues().length !== 1 ? 's' : ''} with data quality issues
+                    ⚠️ Found {getAuditCheckIssues().length} event{getAuditCheckIssues().length !== 1 ? 's' : ''} with audit check issues
                   </div>
                   <div className="text-orange-600 text-xs">
                     Export will include: event details + specific issues found
@@ -975,7 +989,7 @@ ${dataQualityCount > 0 ? `\n🔍 ${dataQualityCount} events have data quality is
                 </>
               ) : (
                 <div className="font-semibold text-green-700">
-                  ✅ No data quality issues found! All {filteredEvents.length} events have complete descriptions and no validation errors.
+                  ✅ No audit check issues found! All {filteredEvents.length} events have complete descriptions and no validation errors.
                 </div>
               )}
             </div>
