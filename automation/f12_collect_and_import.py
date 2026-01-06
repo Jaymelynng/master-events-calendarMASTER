@@ -952,6 +952,32 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         "message": "OPEN GYM event but description says 'Kids Night Out'"
                     })
                     print(f"    🚨 OPEN GYM: Description says 'Kids Night Out' - wrong program!")
+            
+            # --- PRICING VALIDATION ---
+            # Extract all prices from title and description
+            title_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', title)
+            desc_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', description)
+            
+            # Rule: Price MUST be in description
+            if not desc_prices:
+                validation_errors.append({
+                    "type": "missing_price_in_description",
+                    "severity": "error",
+                    "message": "Price not found in description"
+                })
+                print(f"    ❌ MISSING PRICE: No $ found in description")
+            
+            # Rule: If price in BOTH title and description, they must match
+            elif title_prices and desc_prices:
+                title_price = float(title_prices[0])
+                desc_price = float(desc_prices[0])
+                if title_price != desc_price:
+                    validation_errors.append({
+                        "type": "price_mismatch",
+                        "severity": "error",
+                        "message": f"Title says ${title_price:.0f} but description says ${desc_price:.0f}"
+                    })
+                    print(f"    ❌ PRICE MISMATCH: Title ${title_price:.0f} vs Desc ${desc_price:.0f}")
         
         # ========== AVAILABILITY INFO ==========
         # NOTE: Sold out is NOT a validation error - it's informational status

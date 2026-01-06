@@ -91,14 +91,49 @@ Compares skill word in title vs description.
 - bars, pullover, pullovers, front flip, roundoff, backbend
 - ninja, cheer, beam, vault, floor
 
-#### 6. Flyer Detection (All Programs)
+#### 6. Price Validation (All Programs except CAMP)
+Checks that price is present in description and matches title if present in both.
+
+**Validation Flow:**
+```mermaid
+flowchart TD
+    A[Check Event] --> B{Has Description Text?}
+    B -->|No| C["❌ No description"]
+    B -->|Yes| D{Has $ in Description?}
+    D -->|No| E["❌ No price in description"]
+    D -->|Yes| F{Has $ in Title?}
+    F -->|No| G["✅ OK - price in desc is enough"]
+    F -->|Yes| H{Title $XX = Description $XX?}
+    H -->|Yes| I["✅ OK - prices match"]
+    H -->|No| J["❌ Price mismatch"]
+```
+
+| Condition | Icon | Validation Error Type |
+|-----------|------|----------------------|
+| No description at all | ❌ | (existing - `description_status = 'none'`) |
+| No $ in description | ❌ | `missing_price_in_description` |
+| Price in title ≠ description | ❌ | `price_mismatch` |
+| Price in description only | ✅ | (no error) |
+| Price matches in both | ✅ | (no error) |
+
+**Price Pattern:** `$XX` or `$XX.XX` (e.g., $35, $69.00)
+
+**Example Errors:**
+- Description has text but no `$XX` anywhere
+  - ❌ Flag: "Price not found in description"
+- Title: "Kids Night Out | $35" / Description: "...$40 per child..."
+  - ❌ Flag: "Title says $35 but description says $40"
+
+**Why CAMP is skipped:** Camp pricing is complex (varies by day, week, half-day vs full-day). Price validation for camps will be added later with confirmed pricing data.
+
+#### 7. Flyer Detection (All Programs)
 Detects `<img>` tags in description HTML.
 
 - 🖼️ `has_flyer = true` - Event has a flyer image
 - `flyer_url` - URL to the image (displayed in event details panel)
 - ⚠️ `description_status = 'flyer_only'` - Has image but NO text
 
-#### 7. Availability & Registration (All Programs)
+#### 8. Availability & Registration (All Programs)
 Tracks event availability from iClassPro:
 
 - ℹ️ `sold_out` - Event has no openings (displayed as "FULL" badge)
@@ -221,6 +256,7 @@ If you dismissed something by mistake:
 
 | Date | Change |
 |------|--------|
+| Jan 5, 2026 | Added pricing validation - checks price in description & title/desc match |
 | Dec 28, 2025 | Documentation update - added availability fields, updated access paths |
 | Dec 18, 2025 | Added validation warning dismiss feature (✓ OK button, Undo all) |
 | Dec 9, 2025 | Initial implementation - date, time, age, program type validation |

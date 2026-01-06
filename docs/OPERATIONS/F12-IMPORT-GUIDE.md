@@ -3,7 +3,7 @@
 
 **Last Updated:** December 28, 2025  
 **Original Date:** September 18, 2025  
-**Purpose:** Comprehensive guide for F12 import (backup to Automated Sync)  
+**Purpose:** Comprehensive guide for F12 import (backup to Automated Sync)
 **Location:** `docs/OPERATIONS/F12-IMPORT-GUIDE.md`
 
 ---
@@ -692,7 +692,7 @@ The 🪄 Admin button is visible at the top of the calendar. Click it to open th
     />
     {gym.name}
   </label>
-))}
+  ))}
 
 {/* Step 3: Conversion & Import */}
 <button onClick={onConvert}>⚡ Convert JSON to Import Format ⚡</button>
