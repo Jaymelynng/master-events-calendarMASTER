@@ -3458,11 +3458,11 @@ The system will add new events and update any changed events automatically.`;
                           'missing_age_in_title': '📝 Title Missing Age',
                           'missing_date_in_title': '📝 Title Missing Date',
                           'missing_program_in_title': '📝 Title Missing Program Type',
-                          'missing_age_in_description': '📄 Desc Missing Age',
-                          'missing_datetime_in_description': '📄 Desc Missing Date/Time',
-                          'missing_time_in_description': '📄 Desc Missing Time',
-                          'missing_price_in_description': '💰 Desc Missing Price',
-                          'missing_program_in_description': '📄 Desc Missing Program Type',
+                          'missing_age_in_description': '📄 Description Missing Age',
+                          'missing_datetime_in_description': '📄 Description Missing Date/Time',
+                          'missing_time_in_description': '📄 Description Missing Time',
+                          'missing_price_in_description': '💰 Description Missing Price',
+                          'missing_program_in_description': '📄 Description Missing Program Type',
                           'clinic_missing_skill': '🏋️ Clinic Missing Skill',
                           // Accuracy errors (data mismatches)
                           'year_mismatch': '📅 Wrong Year in Title',
@@ -3473,7 +3473,10 @@ The system will add new events and update any changed events automatically.`;
                           'program_mismatch': '🏷️ Program Type Mismatch',
                           'skill_mismatch': '🎯 Skill Mismatch',
                           'price_mismatch': '💰 Price Mismatch',
-                          'title_desc_mismatch': '📋 Title vs Desc Conflict',
+                          'title_desc_mismatch': '📋 Title vs Description Conflict',
+                          // Camp pricing validation
+                          'camp_price_mismatch': '💰 Camp Price Mismatch',
+                          'camp_type_not_offered': '🏕️ Camp Type Not Offered',
                           // Registration/availability (info, not errors)
                           'registration_closed': '🔒 Registration Closed',
                           'registration_not_open': '🔓 Registration Not Open Yet',
@@ -3557,7 +3560,7 @@ The system will add new events and update any changed events automatically.`;
                               {/* Accuracy Errors */}
                               {accuracyErrors.length > 0 && (
                                 <li className="pt-1">
-                                  <div className="text-xs font-semibold text-red-600 uppercase mb-1">Data Mismatches (iClass vs Title/Desc):</div>
+                                  <div className="text-xs font-semibold text-red-600 uppercase mb-1">Data Mismatches (iClass vs Title/Description):</div>
                                   <ul className="space-y-1 ml-2">
                                     {accuracyErrors.map((error, idx) => (
                                       <li key={`acc-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-red-100 rounded">
@@ -3637,7 +3640,7 @@ The system will add new events and update any changed events automatically.`;
                                 rel="noopener noreferrer"
                                 className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors"
                               >
-                                🔗 Fix All Issues in iClassPro
+                                🔗 View Event in iClassPro
                               </a>
                             )}
                             
@@ -3699,7 +3702,7 @@ The system will add new events and update any changed events automatically.`;
                       {selectedEventForPanel.isGrouped && selectedEventForPanel.groupedEvents ? (
                          // Multiple options - detect activity/duration from actual titles
                         <div className="space-y-3">
-                          <p className="font-semibold text-gray-800 mb-3">📝 Register for THIS Camp:</p>
+                          <p className="font-semibold text-gray-800 mb-3">🔗 View This Event:</p>
                           {selectedEventForPanel.groupedEvents.map((option) => {
                              // Parse ACTUAL title to detect activity and duration
                              const title = option.title;
@@ -3776,7 +3779,7 @@ The system will add new events and update any changed events automatically.`;
                             className="w-full text-white font-semibold py-3 px-4 rounded-lg transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2"
                             style={{ backgroundColor: theme.colors.primary }}
                           >
-                            📝 Register Now
+                            🔗 View Event Page
                           </button>
                           <button
                             onClick={() => {
