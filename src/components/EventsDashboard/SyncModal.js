@@ -1060,23 +1060,50 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
               );
             }
             
+            const unchangedCount = comparison?.unchanged?.length || 0;
+            
             return (
-              <button
-                onClick={handleImport}
-                disabled={importing}
-                className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-4"
-              >
-                {importing ? (
-                  <>
-                    <Loader className="w-5 h-5 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    🚀 Import {newCount > 0 ? `${newCount} new` : ''}{newCount > 0 && changedCount > 0 ? ' + ' : ''}{changedCount > 0 ? `${changedCount} changed` : ''}{(comparison?.deleted?.length > 0) ? ` (+ ${comparison.deleted.length} removed)` : ''} Events
-                  </>
+              <div className="mb-4">
+                {/* Main Import Button */}
+                <button
+                  onClick={handleImport}
+                  disabled={importing}
+                  className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-3"
+                >
+                  {importing ? (
+                    <>
+                      <Loader className="w-5 h-5 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      🚀 Import {newCount > 0 ? `${newCount} new` : ''}{newCount > 0 && changedCount > 0 ? ' + ' : ''}{changedCount > 0 ? `${changedCount} changed` : ''}{(comparison?.deleted?.length > 0) ? ` (+ ${comparison.deleted.length} removed)` : ''} Events
+                    </>
+                  )}
+                </button>
+                
+                {/* Force Re-import option for unchanged events */}
+                {unchangedCount > 0 && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={forceUpdate}
+                        onChange={(e) => setForceUpdate(e.target.checked)}
+                        className="w-4 h-4 text-amber-600 rounded"
+                      />
+                      <span className="text-sm text-amber-800">
+                        <strong>Also re-validate {unchangedCount} unchanged events</strong> - Apply new validation rules
+                      </span>
+                    </label>
+                    {forceUpdate && (
+                      <p className="text-xs text-amber-600 mt-1 ml-6">
+                        ✓ Will import {newCount + changedCount} + force re-validate {unchangedCount} = {newCount + changedCount + unchangedCount} total events
+                      </p>
+                    )}
+                  </div>
                 )}
-              </button>
+              </div>
             );
           })()
         )}
