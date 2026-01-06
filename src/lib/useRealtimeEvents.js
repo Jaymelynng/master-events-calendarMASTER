@@ -6,9 +6,11 @@
  * 
  * When another user (or you in another tab) adds/edits/deletes an event,
  * this hook detects the change and updates your UI immediately.
+ * 
+ * FIXED: Uses useRef pattern to prevent subscription churn from inline callbacks
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from './supabase';
 
 /**
@@ -18,9 +20,16 @@ import { supabase } from './supabase';
  * @returns {Function} Cleanup function to unsubscribe
  */
 export const useRealtimeEvents = (onEventsChange) => {
-  useEffect(() => {
-    if (!onEventsChange) return;
+  // Use ref to store the latest callback without causing re-subscriptions
+  const handlerRef = useRef(onEventsChange);
 
+  // Update the ref when callback changes (doesn't trigger effect)
+  useEffect(() => {
+    handlerRef.current = onEventsChange;
+  }, [onEventsChange]);
+
+  // Set up subscription ONCE (empty dependency array)
+  useEffect(() => {
     console.log('🔴 Setting up real-time subscription for events...');
 
     // Create a channel for events table
@@ -36,8 +45,8 @@ export const useRealtimeEvents = (onEventsChange) => {
         (payload) => {
           console.log('🔴 Real-time event detected:', payload.eventType, payload.new || payload.old);
           
-          // Call the callback to refresh data
-          onEventsChange(payload);
+          // Call the latest callback via ref
+          handlerRef.current?.(payload);
         }
       )
       .subscribe((status) => {
@@ -53,7 +62,7 @@ export const useRealtimeEvents = (onEventsChange) => {
       console.log('🔴 Cleaning up real-time subscription...');
       supabase.removeChannel(eventsChannel);
     };
-  }, [onEventsChange]);
+  }, []); // Empty deps = subscribe once
 };
 
 /**
@@ -63,9 +72,13 @@ export const useRealtimeEvents = (onEventsChange) => {
  * @returns {Function} Cleanup function to unsubscribe
  */
 export const useRealtimeGymLinks = (onGymLinksChange) => {
-  useEffect(() => {
-    if (!onGymLinksChange) return;
+  const handlerRef = useRef(onGymLinksChange);
 
+  useEffect(() => {
+    handlerRef.current = onGymLinksChange;
+  }, [onGymLinksChange]);
+
+  useEffect(() => {
     console.log('🔴 Setting up real-time subscription for gym_links...');
 
     const gymLinksChannel = supabase
@@ -79,7 +92,7 @@ export const useRealtimeGymLinks = (onGymLinksChange) => {
         },
         (payload) => {
           console.log('🔴 Real-time gym_links change:', payload.eventType);
-          onGymLinksChange(payload);
+          handlerRef.current?.(payload);
         }
       )
       .subscribe((status) => {
@@ -91,7 +104,7 @@ export const useRealtimeGymLinks = (onGymLinksChange) => {
     return () => {
       supabase.removeChannel(gymLinksChannel);
     };
-  }, [onGymLinksChange]);
+  }, []);
 };
 
 /**
@@ -101,9 +114,13 @@ export const useRealtimeGymLinks = (onGymLinksChange) => {
  * @returns {Function} Cleanup function to unsubscribe
  */
 export const useRealtimeGyms = (onGymsChange) => {
-  useEffect(() => {
-    if (!onGymsChange) return;
+  const handlerRef = useRef(onGymsChange);
 
+  useEffect(() => {
+    handlerRef.current = onGymsChange;
+  }, [onGymsChange]);
+
+  useEffect(() => {
     console.log('🔴 Setting up real-time subscription for gyms...');
 
     const gymsChannel = supabase
@@ -117,7 +134,7 @@ export const useRealtimeGyms = (onGymsChange) => {
         },
         (payload) => {
           console.log('🔴 Real-time gyms change:', payload.eventType);
-          onGymsChange(payload);
+          handlerRef.current?.(payload);
         }
       )
       .subscribe((status) => {
@@ -129,6 +146,5 @@ export const useRealtimeGyms = (onGymsChange) => {
     return () => {
       supabase.removeChannel(gymsChannel);
     };
-  }, [onGymsChange]);
+  }, []);
 };
-

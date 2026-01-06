@@ -9,7 +9,9 @@ export default function AdminPortalModal({
   const [superAdminMode, setSuperAdminMode] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [showPinModal, setShowPinModal] = useState(false);
-  const SUPER_ADMIN_PIN = '1426';
+  
+  // PIN from environment variable (fallback for local dev)
+  const SUPER_ADMIN_PIN = process.env.REACT_APP_ADMIN_PIN || '1426';
 
   // Listen for * key to open PIN modal
   useEffect(() => {

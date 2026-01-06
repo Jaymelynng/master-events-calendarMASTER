@@ -1,8 +1,5 @@
 {
-  "crons": [
-    {
-      "path": "/api/auto_collect_events",
-      "schedule": "0 6 * * *"
-    }
-  ]
+  "framework": "create-react-app",
+  "buildCommand": "npm run build",
+  "outputDirectory": "build"
 }

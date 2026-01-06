@@ -14,7 +14,8 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const [includeSyncHistory, setIncludeSyncHistory] = useState(false);
   
   // Admin check for Sync History (hidden feature)
-  const SUPER_ADMIN_PIN = '1426';
+  // PIN from environment variable (fallback for local dev)
+  const SUPER_ADMIN_PIN = process.env.REACT_APP_ADMIN_PIN || '1426';
   const [isAdmin, setIsAdmin] = useState(() => {
     // Check if admin was unlocked in this session (stored in sessionStorage)
     return sessionStorage.getItem('export_admin_unlocked') === 'true';
