@@ -14,6 +14,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
   const [importResult, setImportResult] = useState(null);
   const [syncLog, setSyncLog] = useState([]);
   const [showProgress, setShowProgress] = useState(true); // Expanded by default
+  const [forceUpdate, setForceUpdate] = useState(false); // Force re-import even if "same"
 
   // Load sync log on mount
   useEffect(() => {
@@ -256,7 +257,8 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
     const hasChangedEvents = comparison && comparison.changed && comparison.changed.length > 0;
     const hasDeletedEvents = comparison && comparison.deleted && comparison.deleted.length > 0;
     
-    if (!hasNewEvents && !hasChangedEvents && !hasDeletedEvents) {
+    // If forceUpdate is enabled, we update all events regardless of change status
+    if (!forceUpdate && !hasNewEvents && !hasChangedEvents && !hasDeletedEvents) {
       return; // Nothing to sync
     }
 
@@ -311,6 +313,41 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
         }
       }
       
+      // Force update: Also update "unchanged" events to refresh validation_errors
+      let forceUpdatedCount = 0;
+      if (forceUpdate && comparison && comparison.unchanged.length > 0) {
+        console.log(`🔄 Force updating ${comparison.unchanged.length} unchanged events...`);
+        const allExistingEvents = await eventsApi.getAll(null, null, true);
+        
+        for (const unchangedEvent of comparison.unchanged) {
+          try {
+            // Find the matching incoming event (with fresh validation_errors)
+            const incomingEvent = editableEvents.find(e => e.event_url === unchangedEvent.event_url);
+            if (!incomingEvent) continue;
+            
+            const existingEvent = allExistingEvents.find(e => e.event_url === unchangedEvent.event_url);
+            if (!existingEvent) continue;
+            
+            // Update with fresh validation data
+            await eventsApi.update(existingEvent.id, {
+              // Data quality validation fields - these are what we're updating
+              has_flyer: incomingEvent.has_flyer || false,
+              flyer_url: incomingEvent.flyer_url || null,
+              description_status: incomingEvent.description_status || 'unknown',
+              validation_errors: incomingEvent.validation_errors || [],
+              // Availability tracking
+              has_openings: incomingEvent.has_openings !== undefined ? incomingEvent.has_openings : true,
+              registration_start_date: incomingEvent.registration_start_date || null,
+              registration_end_date: incomingEvent.registration_end_date || null
+            });
+            forceUpdatedCount++;
+          } catch (err) {
+            console.error('Error force-updating event:', err);
+          }
+        }
+        console.log(`✅ Force updated ${forceUpdatedCount} events with fresh validation data`);
+      }
+      
       // Mark deleted events (in DB but not in portal) as deleted
       // NOTE: The compareEvents function already filters to only include events that
       // haven't started yet, so everything in comparison.deleted is safe to mark
@@ -346,8 +383,12 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
         imported: imported.length,
         updated: updatedCount,
         deleted: deletedCount,
+        forceUpdated: forceUpdatedCount,
         total: editableEvents.length
       });
+      
+      // Reset force update checkbox after successful import
+      setForceUpdate(false);
 
       // Explicitly invalidate cache to ensure fresh data
       // Real-time subscription should also trigger, but this is a safety net
@@ -956,6 +997,38 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                   <div className="w-full px-4 py-3 bg-green-50 text-green-700 rounded-lg border-2 border-green-300 text-center mb-3">
                     ✅ All {editableEvents.length} events are already up-to-date in the database
                   </div>
+                  
+                  {/* Force Re-import option - useful for updating validation errors */}
+                  <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={forceUpdate}
+                        onChange={(e) => setForceUpdate(e.target.checked)}
+                        className="w-4 h-4 text-amber-600 rounded"
+                      />
+                      <span className="text-sm text-amber-800">
+                        <strong>Force Re-import All</strong> - Update validation & audit data even if events look the same
+                      </span>
+                    </label>
+                    {forceUpdate && (
+                      <button
+                        onClick={handleImport}
+                        disabled={importing}
+                        className="w-full mt-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-semibold disabled:bg-gray-400 flex items-center justify-center gap-2"
+                      >
+                        {importing ? (
+                          <>
+                            <Loader className="w-4 h-4 animate-spin" />
+                            Re-importing...
+                          </>
+                        ) : (
+                          <>🔄 Force Re-import {editableEvents.length} Events</>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  
                   <div className="flex gap-3">
                     <button
                       onClick={() => {
@@ -963,6 +1036,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                         setSelectedEventType('');
                         setEditableEvents([]);
                         setComparison(null);
+                        setForceUpdate(false);
                       }}
                       className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition-colors shadow-md"
                     >
@@ -975,6 +1049,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                         setSelectedGym('');
                         setEditableEvents([]);
                         setComparison(null);
+                        setForceUpdate(false);
                       }}
                       className="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-700 transition-colors shadow-md"
                     >
@@ -1029,11 +1104,14 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                     {importResult.updated > 0 && (
                       <span> • 🔄 Updated <strong>{importResult.updated}</strong> changed events</span>
                     )}
+                    {importResult.forceUpdated > 0 && (
+                      <span> • 🔄 Force-refreshed <strong>{importResult.forceUpdated}</strong> validation data</span>
+                    )}
                     {importResult.deleted > 0 && (
                       <span> • 🗑️ Marked <strong>{importResult.deleted}</strong> events as deleted</span>
                     )}
-                    {importResult.total > importResult.imported + (importResult.updated || 0) && (
-                      <span> • ⏭️ {importResult.total - importResult.imported - (importResult.updated || 0)} unchanged</span>
+                    {importResult.total > importResult.imported + (importResult.updated || 0) + (importResult.forceUpdated || 0) && (
+                      <span> • ⏭️ {importResult.total - importResult.imported - (importResult.updated || 0) - (importResult.forceUpdated || 0)} unchanged</span>
                     )}
                   </p>
                 ) : (

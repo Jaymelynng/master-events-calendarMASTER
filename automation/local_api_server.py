@@ -152,13 +152,26 @@ def sanitize_event_payload(event: dict, gym_id: str, event_type: str) -> dict:
     sanitized['deleted_at'] = None
     return sanitized
 
-def events_differ(existing: dict, incoming: dict) -> bool:
+def events_differ(existing: dict, incoming: dict, force_update: bool = False) -> bool:
     """Compare key fields to determine if an update is required."""
+    # Force update always returns True - useful for re-applying validation
+    if force_update:
+        return True
+    
     for field in COMPARISON_FIELDS:
         existing_val = normalize_value(existing.get(field))
         incoming_val = normalize_value(incoming.get(field))
-        if existing_val != incoming_val:
+        
+        # Special handling for validation_errors (JSON arrays)
+        if field == 'validation_errors':
+            import json
+            existing_json = json.dumps(existing_val, sort_keys=True) if existing_val else '[]'
+            incoming_json = json.dumps(incoming_val, sort_keys=True) if incoming_val else '[]'
+            if existing_json != incoming_json:
+                return True
+        elif existing_val != incoming_val:
             return True
+    
     # Restore if previously deleted
     if existing.get('deleted_at') is not None:
         return True
@@ -326,7 +339,8 @@ def import_events():
     Body: {
       "gymId": "EST",
       "eventType": "CLINIC",
-      "events": [...]
+      "events": [...],
+      "forceUpdate": false  // Optional: force update all events even if unchanged
     }
     """
     if not check_api_key():
@@ -348,6 +362,7 @@ def import_events():
         events = payload.get('events') or []
         gym_id = payload.get('gymId')
         event_type = payload.get('eventType')
+        force_update = payload.get('forceUpdate', False)  # Force re-import even if "same"
 
         if not gym_id or not event_type:
             return jsonify({
@@ -399,7 +414,7 @@ def import_events():
             if not existing_event:
                 new_records.append(sanitized)
             else:
-                if events_differ(existing_event, sanitized):
+                if events_differ(existing_event, sanitized, force_update=force_update):
                     update_payload = sanitized.copy()
                     update_payload.pop('event_url', None)
                     update_payload.pop('created_at', None)
