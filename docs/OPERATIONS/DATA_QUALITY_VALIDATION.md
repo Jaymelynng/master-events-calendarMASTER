@@ -1,7 +1,7 @@
 # Data Quality Validation System
 
 **Last Updated:** January 6, 2026  
-**Status:** ✅ Working  
+**Status:** ✅ Fully Deployed  
 **Files:** `automation/f12_collect_and_import.py`, `src/components/EventsDashboard.js`
 
 ---
@@ -9,6 +9,27 @@
 ## Overview
 
 The Data Quality Validation system automatically detects errors and issues in event data by comparing structured API data against description text. This catches copy/paste errors, outdated descriptions, and missing content.
+
+## Current Validation Stats (Full Year 2026)
+
+| Check | Count | Severity |
+|-------|-------|----------|
+| Missing time in description | 249 | Warning |
+| Missing age in description | 89 | Warning |
+| Missing price in description | 62 | Error |
+| Missing date/time in description | 55 | Warning |
+| Day mismatch | 50 | Warning |
+| Time mismatch | 47 | Warning |
+| Missing age in title | 24 | Warning |
+| Missing program in description | 21 | Warning |
+| Age mismatch | 13 | Warning |
+| Year mismatch (2025 vs 2026) | 13 | Error |
+| Date mismatch | 7 | Error |
+| Title/description program mismatch | 2 | Error |
+| Program type mismatch | 2 | Warning |
+| Missing program in title | 1 | Warning |
+| Skill mismatch | 1 | Error |
+| Missing date in title | 1 | Warning |
 
 ## How It Works
 
@@ -58,7 +79,7 @@ When events are synced from iClassPro, the system:
 - ✅ **KIDS NIGHT OUT (KNO)**
 - ✅ **CLINIC**
 - ✅ **OPEN GYM**
-- ⏸️ **CAMP** - Skipped (too complex, many false positives)
+- ✅ **CAMP** - Now validated (completeness and accuracy checks enabled Jan 6, 2026)
 
 ### Validation Checks
 
@@ -99,13 +120,37 @@ Checks if description contains date or time information.
 - ⚠️ Flag: "Description missing date/time"
 
 #### C5. Clinic Should Mention Skill (INFO level)
-For CLINIC events, checks if description mentions a specific gymnastics skill.
+For CLINIC events, checks if **title OR description** mentions a specific gymnastics skill.
 
-**Skills Recognized:** cartwheel, back handspring, handstand, tumbling, bars, pullover, beam, vault, floor, trampoline, bridge, kickover, walkover, ninja, cheer
+**Skills Recognized:** cartwheel, back handspring, backhandspring, handstand, tumbling, bars, pullover, pullovers, front flip, roundoff, backbend, ninja, cheer, beam, vault, floor, trampoline, tumbl, bridge, kickover, walkover, flip flop, flip-flop, back walkover, front walkover
 
 **Example Info:**
 - Description: "Our specialized skill clinics provide students with the opportunity..."
 - ℹ️ Info: "Clinic description doesn't mention specific skill"
+
+#### C6. Title Must Have Program Type Keyword
+Checks if title contains the expected program type keyword based on iClassPro category.
+
+**Program Keywords Recognized:**
+| iClass Type | Recognized in Title |
+|-------------|---------------------|
+| OPEN GYM | "open gym", "gym fun", "fun gym", "preschool fun" |
+| KIDS NIGHT OUT | "kids night out", "kid's night out", "kno", "night out" |
+| CLINIC | "clinic" |
+| CAMP | "camp", "day camp", "summer camp", "school year camp" |
+
+**Example Violation:**
+- iClass Type: CAMP
+- Title: "Spring Break | March 16th-March 20th | Full Day (9-3)"
+- ⚠️ Flag: "Title missing program type (e.g., 'Camp')"
+
+#### C7. Description Must Have Program Type Keyword
+Checks if description contains the expected program type keyword based on iClassPro category.
+
+**Example Violation:**
+- iClass Type: CLINIC
+- Description: "Ninja training with obstacle courses..."
+- ⚠️ Flag: "Description missing program type (should mention 'Clinic' or similar)"
 
 ---
 
@@ -129,10 +174,14 @@ Checks if the title contains a wrong year (catches copy/paste from previous year
 - Title says: "Clinic | Ages 5+ | 01/17/**2025**"
 - 🚨 Flag: "Title says 2025 but event is in 2026"
 
-#### 2. Time Validation (All 3 Programs)
-Compares structured `time` to times in **BOTH title AND description**. **Exact hour match required.**
+#### 2. Time Validation (All Programs)
+Compares structured `time` to times in **BOTH title AND description**. Uses **hour-level comparison with format tolerance**.
 
-**Formats Recognized:** `5:00pm`, `5:00 pm`, `5pm`, `5 pm`, `5:00 p.m.`, etc.
+**Formats Recognized (all treated equivalently):**
+- `5:00pm`, `5:00 pm`, `5pm`, `5 pm`, `5:00 p.m.`
+- `6:30p`, `6:30 PM`, `6:30pm` (TIGAR format)
+- `9-3`, `9:00 - 3:00` (time ranges)
+- `9:00 AM - 3:00 PM` (full format)
 
 **Checks Performed:**
 | Check | Source | Comparison |
@@ -141,13 +190,14 @@ Compares structured `time` to times in **BOTH title AND description**. **Exact h
 | 2 | iClass `time` | vs Description time |
 
 **Example Error:**
-- Event time: 2:00 PM - 3:00 PM
-- Description says: "2:30pm-3:30pm"
-- ⚠️ Flag: "iClass time is 2:00 PM - 3:00 PM but description says 2:30 pm"
+- Event time: 9:00 AM - 3:00 PM
+- Description says: "8:30 am"
+- ⚠️ Flag: "iClass time is 9:00 AM - 3:00 PM but description says 8:30 am"
 
-**What DOESN'T Flag:**
-- Event: 6:30 PM, Desc: "6pm" ✅ (same hour)
+**What DOESN'T Flag (format tolerance):**
+- Event: 6:30 PM, Title: "6:30p" ✅ (same time, different format)
 - Event: 6:30 PM, Desc: "6:30pm" ✅ (exact match)
+- Event: 9:00 AM - 3:00 PM, Title: "9:00a - 3:00p" ✅ (same times)
 
 #### 3. Age Validation - MIN Age Only (All 3 Programs)
 Compares MIN age across **three sources**: iClass system, Title, and Description. **All three must match.**
@@ -226,17 +276,19 @@ Catches copy/paste errors where title and description contradict each other. **A
 **Why This Matters:** Even if the event is on the correct iClassPro page, someone might have pasted the wrong description template.
 
 #### 6. Skill Mismatch (CLINIC Only)
-Compares skill word in title vs description.
+Compares skill word in **title vs description**. Checks if title mentions a skill and description mentions a DIFFERENT skill.
 
 **Example Error:**
-- Title: "Back Handspring Clinic"
-- Description: "Cartwheel Clinic at Rowland Ballard..."
-- 🚨 Flag: "Title says 'back handspring' but description says 'cartwheel'"
+- Title: "Flip-Flop Clinic: January 16th: 6:30-8:00pm ($25)"
+- Description: "Back Handspring Clinic at..."
+- 🚨 Flag: "Title says 'flip-flop' but description says 'back handspring'"
 
-**Skills Checked:**
+**Skills Checked (comprehensive list):**
 - cartwheel, back handspring, backhandspring, handstand, tumbling
 - bars, pullover, pullovers, front flip, roundoff, backbend
-- ninja, cheer, beam, vault, floor
+- ninja, cheer, beam, vault, floor, trampoline, tumbl
+- bridge, kickover, walkover, flip flop, flip-flop
+- back walkover, front walkover
 
 #### 7. Price Validation (All Programs except CAMP)
 Checks that price is present in description and matches title if present in both.
@@ -330,16 +382,30 @@ SET
 
 Then re-sync gyms: **🪄 Admin → Open Automated Sync**
 
-## Why CAMP is Skipped
+## CAMP Validation (Enabled Jan 6, 2026)
 
-Camp descriptions are complex:
-- Mention multiple activities ("open gym", "ninja", "gymnastics")
-- Describe schedules across multiple weeks
-- Use generic templates that apply to many camps
+Camp events now receive **full validation** including:
 
-This caused too many false positives, so CAMPs only get:
-- ❌ Flag if NO description at all
-- ⚠️ Flag if flyer only (no text)
+### Completeness Checks
+- ⚠️ Title must have year
+- ⚠️ Title must have age
+- ⚠️ Title must have date
+- ⚠️ Title must have program type ("Camp")
+- ⚠️ Description must have age
+- ⚠️ Description must have date/time
+- ⚠️ Description must have program type ("Camp")
+- ❌ Description must have price
+
+### Accuracy Checks
+- 🚨 Year mismatch (title says 2025 but event is in 2026)
+- 🚨 Date mismatch (wrong month in description)
+- ⚠️ Time mismatch (hours don't match)
+- ⚠️ Age mismatch (iClass vs title vs description)
+- 🚨 Title/Description program mismatch
+
+### What's Still Ignored for Camps
+- Day of week mismatch (multi-day camps span multiple days)
+- Program type conflicts with "open gym" or "ninja" mentions (camps often include these activities)
 
 ## Technical Implementation
 
@@ -403,6 +469,13 @@ If you dismissed something by mistake:
 
 | Date | Change |
 |------|--------|
+| Jan 6, 2026 | **DEPLOYED** Full validation system with all checks working |
+| Jan 6, 2026 | **ENABLED** CAMP validation - now receives full completeness and accuracy checks |
+| Jan 6, 2026 | **NEW** `missing_program_in_title` - flags titles missing program type keyword |
+| Jan 6, 2026 | **NEW** `missing_program_in_description` - flags descriptions missing program type keyword |
+| Jan 6, 2026 | **ENHANCED** Time format tolerance - handles `6:30p`, `9-3`, `9:00a - 3:00p` formats |
+| Jan 6, 2026 | **ENHANCED** Skills list expanded - added trampoline, kickover, walkover, flip-flop, etc. |
+| Jan 6, 2026 | **ENHANCED** Program synonyms - "Gym Fun Friday", "Fun Gym", "Preschool Fun" recognized as Open Gym |
 | Jan 6, 2026 | **NEW** COMPLETENESS CHECKS - Title must have age, Title must have date |
 | Jan 6, 2026 | **NEW** COMPLETENESS CHECKS - Description must have age, Description must have date/time |
 | Jan 6, 2026 | **NEW** COMPLETENESS CHECKS - Clinic should mention skill (INFO level) |
