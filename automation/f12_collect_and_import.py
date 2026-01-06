@@ -67,6 +67,21 @@ EVENT_TYPE_ALIASES = {
     "CAMP": "CAMP",
 }
 
+# Camp pricing by gym (verified January 2026)
+# Used for price validation during sync
+CAMP_PRICING = {
+    'CCP': {'full_day_weekly': 345, 'full_day_daily': 75, 'half_day_weekly': 270, 'half_day_daily': 65},
+    'CPF': {'full_day_weekly': 315, 'full_day_daily': 70, 'half_day_weekly': 240, 'half_day_daily': 60},
+    'CRR': {'full_day_weekly': 315, 'full_day_daily': 70, 'half_day_weekly': 240, 'half_day_daily': 60},
+    'RBA': {'full_day_weekly': 250, 'full_day_daily': 62, 'half_day_weekly': None, 'half_day_daily': None},
+    'RBK': {'full_day_weekly': 250, 'full_day_daily': 62, 'half_day_weekly': None, 'half_day_daily': None},
+    'HGA': {'full_day_weekly': 400, 'full_day_daily': 90, 'half_day_weekly': None, 'half_day_daily': None},
+    'EST': {'full_day_weekly': 270, 'full_day_daily': 65, 'half_day_weekly': 205, 'half_day_daily': 50},
+    'OAS': {'full_day_weekly': 315, 'full_day_daily': 70, 'half_day_weekly': 240, 'half_day_daily': 60},
+    'SGT': {'full_day_weekly': 390, 'full_day_daily': 90, 'half_day_weekly': 315, 'half_day_daily': 70},
+    'TIG': {'full_day_weekly': 335, 'full_day_daily': 80, 'half_day_weekly': None, 'half_day_daily': None},
+}
+
 def fetch_event_type_urls():
     """Fetch EVENT_TYPE_URLS from Supabase gym_links table"""
     try:
@@ -909,11 +924,20 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         """Check if times in text match event times. Format-tolerant."""
                         text_lower = text.lower()[:char_limit]
                         
+                        # PRE-CLEAN: Remove patterns that cause false positives
+                        # 1. Price patterns: "$62 a day" -> remove so "62 a" isn't matched as time
+                        text_cleaned = re.sub(r'\$\d+(?:\.\d{2})?\s*(?:a\s+day|a\s+week|/day|/week|per\s+day|per\s+week)', ' ', text_lower)
+                        # 2. Age patterns: "Ages 4-13" -> remove so "13 a" isn't matched as time
+                        text_cleaned = re.sub(r'ages?\s*\d{1,2}\s*[-–to]+\s*\d{1,2}', ' ', text_cleaned)
+                        text_cleaned = re.sub(r'\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:years?|yrs?)', ' ', text_cleaned)
+                        # 3. Standalone price amounts: "$XX" followed by space and "a" (but not "am")
+                        text_cleaned = re.sub(r'\$\d+(?:\.\d{2})?\s+a(?!\s*m)', ' ', text_cleaned)
+                        
                         # Match many time formats:
                         # "6:30pm", "6:30 pm", "6pm", "6 pm", "6:30p", "6:30 p.m."
                         # "6:30a", "6am", "9a - 3p" (TIGAR format)
                         # Captures: (hour, minutes_or_empty, am/pm indicator)
-                        found_times = re.findall(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.|a|p)(?:\b|(?=\s|-))', text_lower)
+                        found_times = re.findall(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.|a|p)(?:\b|(?=\s|-))', text_cleaned)
                         
                         for found_time in found_times:
                             found_hour = int(found_time[0])
@@ -1012,15 +1036,26 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             # NOTE: MAX age validation not checked - managers often omit max age or use "+" notation
             
             # --- DAY OF WEEK VALIDATION: Compare calculated day to description ---
-            if day_of_week:
+            # Skip for CAMP events - camps span multiple days so day mentions are expected
+            if day_of_week and event_type != 'CAMP':
                 day_lower = day_of_week.lower()  # e.g., "friday"
-                # List of days to check
+                # List of days to check (full names and abbreviations)
                 all_days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+                day_abbrevs = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
                 
                 # Check first 200 chars for day mentions
                 desc_snippet = description_lower[:200]
+                
+                # PRE-CLEAN: Remove day ranges like "Monday-Friday", "Mon-Fri" before checking
+                # These describe schedules, not the specific event day
+                day_range_pattern = r'(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\s*[-–to]+\s*(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)'
+                desc_snippet_cleaned = re.sub(day_range_pattern, '', desc_snippet)
+                
+                # Also remove parenthetical day ranges like "(Monday-Friday)"
+                desc_snippet_cleaned = re.sub(r'\([^)]*(?:monday|mon)[-–][^)]*(?:friday|fri)[^)]*\)', '', desc_snippet_cleaned)
+                
                 for check_day in all_days:
-                    if check_day in desc_snippet and check_day != day_lower:
+                    if check_day in desc_snippet_cleaned and check_day != day_lower:
                         # Found a different day mentioned prominently
                         validation_errors.append({
                             "type": "day_mismatch",
@@ -1371,6 +1406,60 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         "message": f"Title says ${title_price:.0f} but description says ${desc_price:.0f}"
                     })
                     print(f"    ❌ PRICE MISMATCH: Title ${title_price:.0f} vs Desc ${desc_price:.0f}")
+            
+            # --- CAMP PRICE VALIDATION ---
+            # For CAMP events, validate prices against known gym pricing
+            if event_type == 'CAMP' and gym_id in CAMP_PRICING and desc_prices:
+                gym_prices = CAMP_PRICING[gym_id]
+                combined_text = (title + ' ' + description).lower()
+                
+                # Detect if it's Full Day or Half Day
+                is_half_day = 'half day' in combined_text or 'half-day' in combined_text
+                is_full_day = 'full day' in combined_text or 'full-day' in combined_text or not is_half_day
+                
+                # Detect if it's Weekly or Daily pricing
+                # Weekly indicators: "monday-friday", "mon-fri", "5 day", "week", "weekly"
+                # Daily indicators: "/day", "a day", "per day", "daily"
+                is_daily = bool(re.search(r'/day|a\s+day|per\s+day|\bday\b(?!s)|daily', combined_text))
+                is_weekly = bool(re.search(r'monday\s*[-–]\s*friday|mon\s*[-–]\s*fri|5\s*day|week|weekly', combined_text)) or not is_daily
+                
+                # Determine expected price
+                if is_half_day:
+                    if is_daily:
+                        expected_price = gym_prices.get('half_day_daily')
+                        price_type = "Half Day Daily"
+                    else:
+                        expected_price = gym_prices.get('half_day_weekly')
+                        price_type = "Half Day Weekly"
+                else:  # Full day
+                    if is_daily:
+                        expected_price = gym_prices.get('full_day_daily')
+                        price_type = "Full Day Daily"
+                    else:
+                        expected_price = gym_prices.get('full_day_weekly')
+                        price_type = "Full Day Weekly"
+                
+                # Check if any price in description matches expected
+                if expected_price is not None:
+                    desc_price_values = [float(p) for p in desc_prices]
+                    if expected_price not in desc_price_values:
+                        # Check if it's close (within $5 for rounding)
+                        close_match = any(abs(expected_price - p) <= 5 for p in desc_price_values)
+                        if not close_match:
+                            validation_errors.append({
+                                "type": "camp_price_mismatch",
+                                "severity": "warning",
+                                "message": f"{price_type} should be ${expected_price} for {gym_id}, found ${desc_price_values[0]:.0f}"
+                            })
+                            print(f"    ⚠️ CAMP PRICE MISMATCH: {price_type} expected ${expected_price}, found ${desc_price_values[0]:.0f}")
+                elif is_half_day and gym_prices.get('half_day_weekly') is None:
+                    # This gym doesn't offer half day camps
+                    validation_errors.append({
+                        "type": "camp_type_not_offered",
+                        "severity": "warning",
+                        "message": f"{gym_id} doesn't offer Half Day camps"
+                    })
+                    print(f"    ⚠️ CAMP TYPE: {gym_id} doesn't offer Half Day camps")
         
         # ========== AVAILABILITY INFO ==========
         # NOTE: Sold out is NOT a validation error - it's informational status
