@@ -3454,7 +3454,7 @@ The system will add new events and update any changed events automatically.`;
                       // Helper to get friendly label for error type
                       const getErrorLabel = (type) => {
                         const labels = {
-                          // Completeness errors
+                          // Completeness errors (missing required fields)
                           'missing_age_in_title': '📝 Title Missing Age',
                           'missing_date_in_title': '📝 Title Missing Date',
                           'missing_age_in_description': '📄 Desc Missing Age',
@@ -3462,15 +3462,19 @@ The system will add new events and update any changed events automatically.`;
                           'missing_time_in_description': '📄 Desc Missing Time',
                           'missing_price_in_description': '💰 Desc Missing Price',
                           'clinic_missing_skill': '🏋️ Clinic Missing Skill',
-                          // Accuracy errors
-                          'year_mismatch': '📅 Wrong Year',
-                          'date_mismatch': '📅 Date Mismatch',
+                          // Accuracy errors (data mismatches)
+                          'year_mismatch': '📅 Wrong Year in Title',
+                          'date_mismatch': '📅 Date/Month Mismatch',
                           'time_mismatch': '🕐 Time Mismatch',
                           'age_mismatch': '👶 Age Mismatch',
-                          'day_mismatch': '📅 Day Mismatch',
+                          'day_mismatch': '📅 Day of Week Mismatch',
                           'program_mismatch': '🏷️ Program Type Mismatch',
                           'skill_mismatch': '🎯 Skill Mismatch',
                           'price_mismatch': '💰 Price Mismatch',
+                          'title_desc_mismatch': '📋 Title vs Desc Conflict',
+                          // Registration/availability (info, not errors)
+                          'registration_closed': '🔒 Registration Closed',
+                          'registration_not_open': '🔓 Registration Not Open Yet',
                         };
                         return labels[type] || type;
                       };
@@ -3483,10 +3487,17 @@ The system will add new events and update any changed events automatically.`;
                         e.type?.startsWith('missing_') || e.type === 'clinic_missing_skill'
                       );
                       const accuracyErrors = activeErrors.filter(e => 
-                        e.type?.includes('mismatch') || e.type === 'year_mismatch'
+                        e.type?.includes('mismatch')
+                      );
+                      const registrationErrors = activeErrors.filter(e =>
+                        e.type === 'registration_closed' || e.type === 'registration_not_open'
                       );
                       const otherErrors = activeErrors.filter(e => 
-                        !e.type?.startsWith('missing_') && !e.type?.includes('mismatch') && e.type !== 'clinic_missing_skill'
+                        !e.type?.startsWith('missing_') && 
+                        !e.type?.includes('mismatch') && 
+                        e.type !== 'clinic_missing_skill' &&
+                        e.type !== 'registration_closed' &&
+                        e.type !== 'registration_not_open'
                       );
                       
                       return (
@@ -3587,6 +3598,33 @@ The system will add new events and update any changed events automatically.`;
                                   </button>
                                 </li>
                               ))}
+                              
+                              {/* Registration Info */}
+                              {registrationErrors.length > 0 && (
+                                <li className="pt-1">
+                                  <div className="text-xs font-semibold text-blue-600 uppercase mb-1">Registration Status:</div>
+                                  <ul className="space-y-1 ml-2">
+                                    {registrationErrors.map((error, idx) => (
+                                      <li key={`reg-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-blue-50 rounded text-blue-800">
+                                        <span className="flex-1">
+                                          ℹ️ <strong>{getErrorLabel(error.type)}</strong>
+                                          <span className="text-xs block text-blue-600 mt-0.5">{error.message}</span>
+                                        </span>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            acknowledgeValidationError(selectedEventForPanel.id, error.message);
+                                          }}
+                                          className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
+                                          title="I verified this - dismiss the info"
+                                        >
+                                          ✓ OK
+                                        </button>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </li>
+                              )}
                             </ul>
                             
                             {/* Link to fix in iClassPro */}
