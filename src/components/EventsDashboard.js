@@ -3457,10 +3457,12 @@ The system will add new events and update any changed events automatically.`;
                           // Completeness errors (missing required fields)
                           'missing_age_in_title': '📝 Title Missing Age',
                           'missing_date_in_title': '📝 Title Missing Date',
+                          'missing_program_in_title': '📝 Title Missing Program Type',
                           'missing_age_in_description': '📄 Desc Missing Age',
                           'missing_datetime_in_description': '📄 Desc Missing Date/Time',
                           'missing_time_in_description': '📄 Desc Missing Time',
                           'missing_price_in_description': '💰 Desc Missing Price',
+                          'missing_program_in_description': '📄 Desc Missing Program Type',
                           'clinic_missing_skill': '🏋️ Clinic Missing Skill',
                           // Accuracy errors (data mismatches)
                           'year_mismatch': '📅 Wrong Year in Title',

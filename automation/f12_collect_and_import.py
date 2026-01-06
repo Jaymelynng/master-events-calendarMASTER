@@ -752,6 +752,34 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 })
                 print(f"    [!] COMPLETENESS: Title missing date")
             
+            # 3. TITLE: Must have PROGRAM TYPE keyword
+            # Per standardization: Theme | Program | Age | Date
+            # Program keywords by type
+            def has_program_type_in_text(text, etype):
+                txt = text.lower()
+                txt_no_apos = txt.replace("'", "").replace("'", "")
+                
+                if etype == 'KIDS NIGHT OUT':
+                    return ('kids night out' in txt_no_apos or 'kid night out' in txt_no_apos or 
+                            'kno' in txt or 'night out' in txt or 'parents night out' in txt_no_apos or
+                            'ninja night out' in txt)
+                elif etype == 'CLINIC':
+                    return 'clinic' in txt
+                elif etype == 'OPEN GYM':
+                    return ('open gym' in txt or 'fun gym' in txt or 'gym fun' in txt or 
+                            'preschool fun' in txt or 'bonus tumbling' in txt)
+                elif etype == 'CAMP':
+                    return 'camp' in txt
+                return True  # Unknown types pass
+            
+            if not has_program_type_in_text(title, event_type):
+                validation_errors.append({
+                    "type": "missing_program_in_title",
+                    "severity": "warning",
+                    "message": f"Title missing program type (should include '{event_type.title()}' or similar)"
+                })
+                print(f"    [!] COMPLETENESS: Title missing program type '{event_type}'")
+            
             # --- DESCRIPTION COMPLETENESS ---
             
             if description:
@@ -781,6 +809,15 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         "message": "Description missing specific time (e.g., '6:30pm')"
                     })
                     print(f"    [!] COMPLETENESS: Description missing time")
+                
+                # 6. DESCRIPTION: Must have PROGRAM TYPE keyword
+                if not has_program_type_in_text(description, event_type):
+                    validation_errors.append({
+                        "type": "missing_program_in_description",
+                        "severity": "warning",
+                        "message": f"Description missing program type (should mention '{event_type.title()}' or similar)"
+                    })
+                    print(f"    [!] COMPLETENESS: Description missing program type '{event_type}'")
             
             # --- PROGRAM-SPECIFIC COMPLETENESS ---
             
