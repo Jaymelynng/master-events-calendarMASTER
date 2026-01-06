@@ -3451,25 +3451,129 @@ The system will add new events and update any changed events automatically.`;
                       
                       if (activeErrors.length === 0 && !hasDescriptionIssue) return null;
                       
+                      // Helper to get friendly label for error type
+                      const getErrorLabel = (type) => {
+                        const labels = {
+                          // Completeness errors
+                          'missing_age_in_title': '📝 Title Missing Age',
+                          'missing_date_in_title': '📝 Title Missing Date',
+                          'missing_age_in_description': '📄 Desc Missing Age',
+                          'missing_datetime_in_description': '📄 Desc Missing Date/Time',
+                          'missing_time_in_description': '📄 Desc Missing Time',
+                          'missing_price_in_description': '💰 Desc Missing Price',
+                          'clinic_missing_skill': '🏋️ Clinic Missing Skill',
+                          // Accuracy errors
+                          'year_mismatch': '📅 Wrong Year',
+                          'date_mismatch': '📅 Date Mismatch',
+                          'time_mismatch': '🕐 Time Mismatch',
+                          'age_mismatch': '👶 Age Mismatch',
+                          'day_mismatch': '📅 Day Mismatch',
+                          'program_mismatch': '🏷️ Program Type Mismatch',
+                          'skill_mismatch': '🎯 Skill Mismatch',
+                          'price_mismatch': '💰 Price Mismatch',
+                        };
+                        return labels[type] || type;
+                      };
+                      
+                      // Count total issues including description status
+                      const totalIssues = activeErrors.length + (hasDescriptionIssue ? 1 : 0);
+                      
+                      // Separate by category
+                      const completenessErrors = activeErrors.filter(e => 
+                        e.type?.startsWith('missing_') || e.type === 'clinic_missing_skill'
+                      );
+                      const accuracyErrors = activeErrors.filter(e => 
+                        e.type?.includes('mismatch') || e.type === 'year_mismatch'
+                      );
+                      const otherErrors = activeErrors.filter(e => 
+                        !e.type?.startsWith('missing_') && !e.type?.includes('mismatch') && e.type !== 'clinic_missing_skill'
+                      );
+                      
                       return (
                         <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
                           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                            <div className="font-semibold text-red-800 mb-2 flex items-center gap-2">
-                              {activeErrors.length > 0 ? '🚨' : 
-                               selectedEventForPanel.description_status === 'flyer_only' ? '⚠️' : '❌'}
-                              Data Issues Detected
+                            <div className="font-semibold text-red-800 mb-2 flex items-center justify-between">
+                              <span className="flex items-center gap-2">
+                                🚨 Data Issues Detected
+                              </span>
+                              <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded-full font-bold">
+                                {totalIssues} issue{totalIssues !== 1 ? 's' : ''} to fix
+                              </span>
                             </div>
+                            
                             <ul className="text-sm text-red-700 space-y-2">
+                              {/* Description Status Issues */}
                               {selectedEventForPanel.description_status === 'none' && (
-                                <li>❌ <strong>No description</strong> - Event has no description text</li>
+                                <li className="flex items-center gap-2 p-2 bg-red-100 rounded">
+                                  <span>❌ <strong>No description</strong> - Event has no description text</span>
+                                </li>
                               )}
                               {selectedEventForPanel.description_status === 'flyer_only' && (
-                                <li>⚠️ <strong>Flyer only</strong> - Has image but no text description</li>
+                                <li className="flex items-center gap-2 p-2 bg-yellow-100 rounded">
+                                  <span>⚠️ <strong>Flyer only</strong> - Has image but no text description</span>
+                                </li>
                               )}
-                              {activeErrors.map((error, idx) => (
-                                <li key={idx} className="flex items-center justify-between gap-2">
-                                  <span>
-                                    {error.severity === 'error' ? '🚨' : '⚠️'} <strong>{error.type === 'mismatch' ? 'Mismatch' : 'Warning'}:</strong> {error.message}
+                              
+                              {/* Completeness Errors */}
+                              {completenessErrors.length > 0 && (
+                                <li className="pt-1">
+                                  <div className="text-xs font-semibold text-red-600 uppercase mb-1">Missing Required Fields:</div>
+                                  <ul className="space-y-1 ml-2">
+                                    {completenessErrors.map((error, idx) => (
+                                      <li key={`comp-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-orange-50 rounded text-orange-800">
+                                        <span className="flex-1">
+                                          {error.severity === 'info' ? 'ℹ️' : '⚠️'} <strong>{getErrorLabel(error.type)}</strong>
+                                          <span className="text-xs block text-orange-600 mt-0.5">{error.message}</span>
+                                        </span>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            acknowledgeValidationError(selectedEventForPanel.id, error.message);
+                                          }}
+                                          className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
+                                          title="I verified this - dismiss the warning"
+                                        >
+                                          ✓ OK
+                                        </button>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </li>
+                              )}
+                              
+                              {/* Accuracy Errors */}
+                              {accuracyErrors.length > 0 && (
+                                <li className="pt-1">
+                                  <div className="text-xs font-semibold text-red-600 uppercase mb-1">Data Mismatches (iClass vs Title/Desc):</div>
+                                  <ul className="space-y-1 ml-2">
+                                    {accuracyErrors.map((error, idx) => (
+                                      <li key={`acc-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-red-100 rounded">
+                                        <span className="flex-1">
+                                          {error.severity === 'error' ? '🚨' : '⚠️'} <strong>{getErrorLabel(error.type)}</strong>
+                                          <span className="text-xs block text-red-600 mt-0.5">{error.message}</span>
+                                        </span>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            acknowledgeValidationError(selectedEventForPanel.id, error.message);
+                                          }}
+                                          className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
+                                          title="I verified this - dismiss the warning"
+                                        >
+                                          ✓ OK
+                                        </button>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </li>
+                              )}
+                              
+                              {/* Other Errors */}
+                              {otherErrors.map((error, idx) => (
+                                <li key={`other-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-red-100 rounded">
+                                  <span className="flex-1">
+                                    {error.severity === 'error' ? '🚨' : '⚠️'} <strong>{getErrorLabel(error.type)}</strong>
+                                    <span className="text-xs block text-red-600 mt-0.5">{error.message}</span>
                                   </span>
                                   <button
                                     onClick={(e) => {
@@ -3484,6 +3588,19 @@ The system will add new events and update any changed events automatically.`;
                                 </li>
                               ))}
                             </ul>
+                            
+                            {/* Link to fix in iClassPro */}
+                            {selectedEventForPanel.event_url && (
+                              <a 
+                                href={selectedEventForPanel.event_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                              >
+                                🔗 Fix All Issues in iClassPro
+                              </a>
+                            )}
+                            
                             {acknowledgedErrors.length > 0 && (
                               <div className="mt-2 pt-2 border-t border-red-200 text-xs text-gray-500 flex items-center justify-between">
                                 <span>✓ {acknowledgedErrors.length} warning(s) verified & dismissed</span>
