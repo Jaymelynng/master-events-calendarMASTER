@@ -690,10 +690,10 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         title_lower = title.lower()
         description_lower = description.lower() if description else ''
         
-        # ========== COMPLETENESS CHECKS (All event types except CAMP) ==========
+        # ========== COMPLETENESS CHECKS (ALL event types including CAMP) ==========
         # These check if REQUIRED fields EXIST (not just if they're accurate)
         
-        if event_type != 'CAMP':
+        if True:  # Now includes ALL event types (CAMP, KNO, CLINIC, OPEN GYM)
             
             # --- TITLE COMPLETENESS ---
             
@@ -762,14 +762,14 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     })
                     print(f"    [!] COMPLETENESS: Description missing date/time")
                 
-                # 5. DESCRIPTION: Must have TIME (more specific check)
+                # 5. DESCRIPTION: Must have TIME (required per standardization doc)
                 if not has_time_in_text(description):
                     validation_errors.append({
                         "type": "missing_time_in_description",
-                        "severity": "info",
-                        "message": "Description missing specific time"
+                        "severity": "warning",
+                        "message": "Description missing specific time (e.g., '6:30pm')"
                     })
-                    print(f"    [i] COMPLETENESS: Description missing time")
+                    print(f"    [!] COMPLETENESS: Description missing time")
             
             # --- PROGRAM-SPECIFIC COMPLETENESS ---
             
@@ -790,8 +790,9 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         
         # ========== ACCURACY CHECKS (Compare values across sources) ==========
         # These check if values MATCH when they exist in multiple places
+        # Now includes ALL event types (CAMP, KNO, CLINIC, OPEN GYM)
         
-        if description and event_type != 'CAMP':
+        if description:
             
             # --- DATE/MONTH VALIDATION: Compare structured date to description ---
             # Extract month from structured start_date
@@ -1164,6 +1165,49 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         "message": "OPEN GYM event but description says 'Kids Night Out'"
                     })
                     print(f"    🚨 OPEN GYM: Description says 'Kids Night Out' - wrong program!")
+            
+            elif event_type == 'CAMP':
+                # CAMP: Check for major program type mismatches
+                # CAMPs might mention "open gym" or "ninja" as activities - that's OK
+                # But if description STARTS with "Clinic" or "Kids Night Out", that's wrong
+                has_clinic_start = description_lower[:50].startswith('clinic')
+                desc_start_no_apos = description_lower[:100].replace("'", "").replace("'", "")
+                has_kno_start = (desc_start_no_apos.startswith('kids night out') or 
+                                desc_start_no_apos.startswith('kid night out') or
+                                description_lower[:50].startswith('kno '))
+                
+                if has_clinic_start:
+                    validation_errors.append({
+                        "type": "program_mismatch",
+                        "severity": "error",
+                        "message": "CAMP event but description starts with 'Clinic'"
+                    })
+                    print(f"    🚨 CAMP: Description starts with 'Clinic' - wrong program!")
+                
+                if has_kno_start:
+                    validation_errors.append({
+                        "type": "program_mismatch",
+                        "severity": "error",
+                        "message": "CAMP event but description starts with 'Kids Night Out'"
+                    })
+                    print(f"    🚨 CAMP: Description starts with 'Kids Night Out' - wrong program!")
+                
+                # Check if title says Clinic or KNO but iClass says CAMP
+                if title_has_kno:
+                    validation_errors.append({
+                        "type": "program_mismatch",
+                        "severity": "error",
+                        "message": "iClass says CAMP but title says 'Kids Night Out'"
+                    })
+                    print(f"    [!] PROGRAM MISMATCH: iClass=CAMP, Title says KNO")
+                
+                if title_has_clinic:
+                    validation_errors.append({
+                        "type": "program_mismatch",
+                        "severity": "error",
+                        "message": "iClass says CAMP but title says 'Clinic'"
+                    })
+                    print(f"    [!] PROGRAM MISMATCH: iClass=CAMP, Title says Clinic")
             
             # --- TITLE vs DESCRIPTION CROSS-CHECK (applies to ALL events) ---
             # This catches copy/paste errors regardless of which iClassPro page the event is on
