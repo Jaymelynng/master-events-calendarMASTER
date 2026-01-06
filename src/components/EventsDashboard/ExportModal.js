@@ -243,6 +243,8 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         e.description_status === 'none' ? 'Missing description' : null,
         e.description_status === 'flyer_only' ? 'Flyer only (no text)' : null
       ].filter(Boolean),
+      has_flyer: e.has_flyer || false,
+      flyer_url: e.flyer_url || null,
       event_url: e.event_url
     }));
   };
@@ -388,7 +390,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       const issues = getAuditCheckIssues();
       csvContent += `AUDIT CHECK ISSUES - ${monthName}\n`;
       if (issues.length > 0) {
-        csvContent += 'Gym,Title,Date,Type,Issues,URL\n';
+        csvContent += 'Gym,Title,Date,Type,Issues,Has Flyer,Flyer URL,Event URL\n';
         issues.forEach(issue => {
           csvContent += [
             `"${issue.gym_name}"`,
@@ -396,6 +398,8 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
             issue.date,
             issue.type,
             `"${issue.issues.join('; ')}"`,
+            issue.has_flyer ? 'Yes' : 'No',
+            issue.flyer_url || '',
             issue.event_url || ''
           ].join(',') + '\n';
         });
