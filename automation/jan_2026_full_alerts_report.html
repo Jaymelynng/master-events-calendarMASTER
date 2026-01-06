@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>January 2026 Full Validation Report</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .validation-matrix {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .validation-matrix h2 {
+            color: #48dbfb;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .matrix-table th, .matrix-table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .matrix-table th {
+            background: rgba(72, 219, 251, 0.2);
+            color: #48dbfb;
+        }
+        .check-yes { color: #2ecc71; font-weight: bold; }
+        .check-no { color: #555; }
+        .check-new { color: #feca57; font-weight: bold; }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .stat-card.critical { border-color: #ff6b6b; background: rgba(255, 107, 107, 0.1); }
+        .stat-number { font-size: 2.5rem; font-weight: bold; color: #48dbfb; }
+        .stat-card.critical .stat-number { color: #ff6b6b; }
+        .stat-label { color: #888; font-size: 0.9rem; margin-top: 5px; }
+        
+        .event-full {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-left: 5px solid #48dbfb;
+        }
+        .event-full.critical { border-left-color: #ff6b6b; }
+        .event-full.warning { border-left-color: #feca57; }
+        
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .event-title-section h3 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+        .event-meta {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .event-meta span {
+            background: rgba(255,255,255,0.1);
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+        .event-link {
+            display: inline-block;
+            background: linear-gradient(90deg, #48dbfb, #0abde3);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+        .event-link:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(72, 219, 251, 0.4);
+        }
+        
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        @media (max-width: 1200px) {
+            .data-grid { grid-template-columns: 1fr; }
+        }
+        .data-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .data-box h4 {
+            color: #48dbfb;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .data-box.iclass h4 { color: #2ecc71; }
+        .data-box.title h4 { color: #feca57; }
+        .data-box.description h4 { color: #e056fd; }
+        
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.85rem;
+        }
+        .data-item:last-child { border-bottom: none; }
+        .data-label { color: #888; }
+        .data-value { color: #fff; font-weight: 500; }
+        .data-value.mismatch { color: #ff6b6b; }
+        .data-value.match { color: #2ecc71; }
+        
+        .description-text {
+            background: rgba(0,0,0,0.4);
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #ccc;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 15px;
+        }
+        .description-text.none {
+            color: #ff6b6b;
+            font-style: italic;
+        }
+        
+        .violations {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .violations h4 {
+            color: #ff6b6b;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        .violation-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.9rem;
+        }
+        .violation-item:last-child { border-bottom: none; }
+        .violation-icon { font-size: 1.1rem; }
+        .violation-text { color: #ff6b6b; }
+        .violation-text.warning { color: #feca57; }
+        
+        .section-divider {
+            text-align: center;
+            padding: 30px;
+            font-size: 1.5rem;
+            color: #48dbfb;
+            border-bottom: 2px solid rgba(72, 219, 251, 0.3);
+            margin: 30px 0;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #555;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 January 2026 Full Validation Report</h1>
+        <p class="subtitle">Generated: January 6, 2026 | Shows ALL data comparisons for each event</p>
+        
+        <!-- Validation Matrix -->
+        <div class="validation-matrix">
+            <h2>📊 What Gets Compared (All Sources)</h2>
+            <table class="matrix-table">
+                <tr>
+                    <th>Check</th>
+                    <th>iClass API (Source of Truth)</th>
+                    <th>vs Title</th>
+                    <th>vs Description</th>
+                    <th>Title vs Desc</th>
+                </tr>
+                <tr><td>Date/Month</td><td>startDate</td><td class="check-no">—</td><td class="check-yes">✓</td><td class="check-no">—</td></tr>
+                <tr><td>Year</td><td>startDate</td><td class="check-new">✓ NEW</td><td class="check-no">—</td><td class="check-no">—</td></tr>
+                <tr><td>Time</td><td>time</td><td class="check-new">✓ NEW</td><td class="check-yes">✓</td><td class="check-no">—</td></tr>
+                <tr><td>Min Age</td><td>age_min</td><td class="check-yes">✓</td><td class="check-yes">✓</td><td class="check-yes">✓</td></tr>
+                <tr><td>Program Type</td><td>type (campTypeName)</td><td class="check-new">✓ NEW</td><td class="check-yes">✓</td><td class="check-yes">✓</td></tr>
+                <tr><td>Skill (Clinics)</td><td>—</td><td class="check-no">—</td><td class="check-no">—</td><td class="check-yes">✓</td></tr>
+                <tr><td>Price</td><td>(not in API)</td><td class="check-no">—</td><td class="check-yes">Must exist</td><td class="check-yes">✓</td></tr>
+            </table>
+        </div>
+        
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card critical"><div class="stat-number">32</div><div class="stat-label">Events with Issues</div></div>
+            <div class="stat-card"><div class="stat-number">2</div><div class="stat-label">Wrong Year</div></div>
+            <div class="stat-card"><div class="stat-number">1</div><div class="stat-label">No Description</div></div>
+            <div class="stat-card"><div class="stat-number">4</div><div class="stat-label">Age Mismatch</div></div>
+            <div class="stat-card"><div class="stat-number">2</div><div class="stat-label">Program Mismatch</div></div>
+            <div class="stat-card"><div class="stat-number">23</div><div class="stat-label">Missing Price</div></div>
+        </div>
+
+        <div class="section-divider">🚨 CRITICAL ISSUES</div>
+
+        <!-- Event 1: Scottsdale Pullover Clinic -->
+        <div class="event-full critical">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Clinic |Pullovers| Ages 5+ | 01/17/2025</h3>
+                    <div class="event-meta">
+                        <span>📍 Scottsdale Gymnastics</span>
+                        <span>📅 2026-01-17</span>
+                        <span>🏷️ CLINIC</span>
+                    </div>
+                </div>
+                <a href="https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1951" target="_blank" class="event-link">🔗 Fix in iClassPro</a>
+            </div>
+            
+            <div class="data-grid">
+                <div class="data-box iclass">
+                    <h4>📥 iClass API Data</h4>
+                    <div class="data-item"><span class="data-label">Date:</span><span class="data-value">2026-01-17</span></div>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value">2:30 PM - 3:30 PM</span></div>
+                    <div class="data-item"><span class="data-label">Age Min:</span><span class="data-value">7</span></div>
+                    <div class="data-item"><span class="data-label">Age Max:</span><span class="data-value">16</span></div>
+                    <div class="data-item"><span class="data-label">Type:</span><span class="data-value">CLINIC</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value">$20</span></div>
+                </div>
+                <div class="data-box title">
+                    <h4>📝 Extracted from Title</h4>
+                    <div class="data-item"><span class="data-label">Year:</span><span class="data-value mismatch">2025 ❌</span></div>
+                    <div class="data-item"><span class="data-label">Age:</span><span class="data-value mismatch">5+ ❌</span></div>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value match">Clinic ✓</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value">—</span></div>
+                </div>
+                <div class="data-box description">
+                    <h4>📄 Extracted from Description</h4>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value match">2:30pm-3:30pm ✓</span></div>
+                    <div class="data-item"><span class="data-label">Age:</span><span class="data-value mismatch">5+ ❌</span></div>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value match">Clinic ✓</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value match">$20 ✓</span></div>
+                </div>
+            </div>
+            
+            <div class="description-text">Clinic
+
+2:30pm-3:30pm
+
+5+
+
+$20
+
+Our specialized skill clinics provide students with the opportunity to work with our experienced coaches on new drills and techniques to take their skills to the next level.
+
+Students will want to wear clothes that they are comfortable moving around in, so gym shorts and t-shirts or leotards are ideal.
+
+Students will also want to make sure they bring a water bottle with them to stay hydrated throughout the day. We have water bottle refill stations on-site.</div>
+            
+            <div class="violations">
+                <h4>⚠️ Violations Found (2)</h4>
+                <div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">Wrong year in title: says 2025 but event is 2026</span></div>
+                <div class="violation-item"><span class="violation-icon">⚠️</span><span class="violation-text warning">Age mismatch: iClass age_min=7, but Title says 5</span></div>
+            </div>
+        </div>
+
+        <!-- Event 2: Scottsdale Back Handspring Clinic -->
+        <div class="event-full critical">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Clinic |Backhandspring| Ages 5+ | 01/31/2025</h3>
+                    <div class="event-meta">
+                        <span>📍 Scottsdale Gymnastics</span>
+                        <span>📅 2026-01-31</span>
+                        <span>🏷️ CLINIC</span>
+                    </div>
+                </div>
+                <a href="https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1952" target="_blank" class="event-link">🔗 Fix in iClassPro</a>
+            </div>
+            
+            <div class="data-grid">
+                <div class="data-box iclass">
+                    <h4>📥 iClass API Data</h4>
+                    <div class="data-item"><span class="data-label">Date:</span><span class="data-value">2026-01-31</span></div>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value">2:00 PM - 3:00 PM</span></div>
+                    <div class="data-item"><span class="data-label">Age Min:</span><span class="data-value">7</span></div>
+                    <div class="data-item"><span class="data-label">Age Max:</span><span class="data-value">16</span></div>
+                    <div class="data-item"><span class="data-label">Type:</span><span class="data-value">CLINIC</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value">$20</span></div>
+                </div>
+                <div class="data-box title">
+                    <h4>📝 Extracted from Title</h4>
+                    <div class="data-item"><span class="data-label">Year:</span><span class="data-value mismatch">2025 ❌</span></div>
+                    <div class="data-item"><span class="data-label">Age:</span><span class="data-value mismatch">5+ ❌</span></div>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value match">Clinic ✓</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value">—</span></div>
+                </div>
+                <div class="data-box description">
+                    <h4>📄 Extracted from Description</h4>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value mismatch">2:30pm-3:30pm ❌</span></div>
+                    <div class="data-item"><span class="data-label">Age:</span><span class="data-value mismatch">5+ ❌</span></div>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value match">Clinic ✓</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value match">$20 ✓</span></div>
+                </div>
+            </div>
+            
+            <div class="description-text">Clinic
+
+2:30pm-3:30pm
+
+5+
+
+$20
+
+Our specialized skill clinics provide students with the opportunity to work with our experienced coaches on new drills and techniques to take their skills to the next level.
+
+Students will want to wear clothes that they are comfortable moving around in, so gym shorts and t-shirts or leotards are ideal.
+
+Students will also want to make sure they bring a water bottle with them to stay hydrated throughout the day. We have water bottle refill stations on-site.</div>
+            
+            <div class="violations">
+                <h4>⚠️ Violations Found (2)</h4>
+                <div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">Wrong year in title: says 2025 but event is 2026</span></div>
+                <div class="violation-item"><span class="violation-icon">⚠️</span><span class="violation-text warning">Age mismatch: iClass age_min=7, but Title says 5</span></div>
+            </div>
+        </div>
+
+        <!-- Event 3: No Description -->
+        <div class="event-full critical">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Pullover Clinic | Ages 6+ | Sunday, January 11, 2026 | 1:00pm-2:30pm | $35</h3>
+                    <div class="event-meta">
+                        <span>📍 Capital Gymnastics - Cedar Park</span>
+                        <span>📅 2026-01-11</span>
+                        <span>🏷️ CLINIC</span>
+                    </div>
+                </div>
+                <a href="https://portal.iclasspro.com/capgymavery/camp-details/1250" target="_blank" class="event-link">🔗 Fix in iClassPro</a>
+            </div>
+            
+            <div class="data-grid">
+                <div class="data-box iclass">
+                    <h4>📥 iClass API Data</h4>
+                    <div class="data-item"><span class="data-label">Date:</span><span class="data-value">2026-01-11</span></div>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value">1:00 PM - 2:30 PM</span></div>
+                    <div class="data-item"><span class="data-label">Age Min:</span><span class="data-value">5</span></div>
+                    <div class="data-item"><span class="data-label">Age Max:</span><span class="data-value">10</span></div>
+                    <div class="data-item"><span class="data-label">Type:</span><span class="data-value">CLINIC</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value">$35</span></div>
+                </div>
+                <div class="data-box title">
+                    <h4>📝 Extracted from Title</h4>
+                    <div class="data-item"><span class="data-label">Year:</span><span class="data-value match">2026 ✓</span></div>
+                    <div class="data-item"><span class="data-label">Age:</span><span class="data-value mismatch">6+ ❌</span></div>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value match">1:00pm-2:30pm ✓</span></div>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value match">Clinic ✓</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value">$35</span></div>
+                </div>
+                <div class="data-box description">
+                    <h4>📄 Extracted from Description</h4>
+                    <div class="data-item"><span class="data-label">Status:</span><span class="data-value mismatch">NO DESCRIPTION ❌</span></div>
+                </div>
+            </div>
+            
+            <div class="description-text none">❌ NO DESCRIPTION - This event has no description text at all!</div>
+            
+            <div class="violations">
+                <h4>⚠️ Violations Found (1)</h4>
+                <div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No description at all</span></div>
+            </div>
+        </div>
+
+        <div class="section-divider">⚠️ AGE MISMATCHES</div>
+
+        <!-- Event 4: Tumbling Open Gym -->
+        <div class="event-full warning">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Tumbling |Open Gym| Ages 6+| January 10</h3>
+                    <div class="event-meta">
+                        <span>📍 Rowland Ballard Atascocita</span>
+                        <span>📅 2026-01-10</span>
+                        <span>🏷️ OPEN GYM</span>
+                    </div>
+                </div>
+                <a href="https://portal.iclasspro.com/rbatascocita/camp-details/2130" target="_blank" class="event-link">🔗 Fix in iClassPro</a>
+            </div>
+            
+            <div class="data-grid">
+                <div class="data-box iclass">
+                    <h4>📥 iClass API Data</h4>
+                    <div class="data-item"><span class="data-label">Date:</span><span class="data-value">2026-01-10</span></div>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value">12:00 PM - 1:00 PM</span></div>
+                    <div class="data-item"><span class="data-label">Age Min:</span><span class="data-value">6</span></div>
+                    <div class="data-item"><span class="data-label">Age Max:</span><span class="data-value">18</span></div>
+                    <div class="data-item"><span class="data-label">Type:</span><span class="data-value">OPEN GYM</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value">$20</span></div>
+                </div>
+                <div class="data-box title">
+                    <h4>📝 Extracted from Title</h4>
+                    <div class="data-item"><span class="data-label">Age:</span><span class="data-value match">6+ ✓</span></div>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value match">Open Gym ✓</span></div>
+                </div>
+                <div class="data-box description">
+                    <h4>📄 Extracted from Description</h4>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value match">12:00pm - 1:00pm ✓</span></div>
+                    <div class="data-item"><span class="data-label">Age:</span><span class="data-value mismatch">5+ ❌</span></div>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value mismatch">says "Clinic" ❌</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value match">$20 ✓</span></div>
+                </div>
+            </div>
+            
+            <div class="description-text">Tumbling Open Gym
+
+January 10th from 12:00pm - 1:00pm
+
+Ages 5+
+
+Price $20
+
+Our specialized skill clinics provide students with the opportunity to work with our experienced coaches on new drills and techniques to take their skills to the next level.
+
+What to Wear: Students should wear a fitted leotard or athletic clothing that allows for easy movement, with hair securely tied back. All shoes are to be removed before entering the gym and stored in designated cubbies. For safety and to prevent lost items, please limit wearing jewelry during class.
+
+What to Bring: Students should bring a labeled water bottle to each class to stay hydrated. All other personal items, such as bags or extra clothing, should be kept in a designated cubby during class. Please leave toys, electronics, and valuables at home to avoid distractions and prevent lost or damaged items.</div>
+            
+            <div class="violations">
+                <h4>⚠️ Violations Found (3)</h4>
+                <div class="violation-item"><span class="violation-icon">⚠️</span><span class="violation-text warning">Age mismatch: iClass age_min=6, but Description says 5</span></div>
+                <div class="violation-item"><span class="violation-icon">⚠️</span><span class="violation-text warning">Age mismatch: Title says 6, but Description says 5</span></div>
+                <div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">OPEN GYM event but description says "clinics"</span></div>
+            </div>
+        </div>
+
+        <!-- Event 5: Bridge Kickover Clinic -->
+        <div class="event-full warning">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Bridge Kickover Clinic | Ages 6+ | Sunday, January 11, 2026 | 2:30pm-4:00pm | $35</h3>
+                    <div class="event-meta">
+                        <span>📍 Capital Gymnastics - Cedar Park</span>
+                        <span>📅 2026-01-11</span>
+                        <span>🏷️ CLINIC</span>
+                    </div>
+                </div>
+                <a href="https://portal.iclasspro.com/capgymavery/camp-details/1252" target="_blank" class="event-link">🔗 Fix in iClassPro</a>
+            </div>
+            
+            <div class="data-grid">
+                <div class="data-box iclass">
+                    <h4>📥 iClass API Data</h4>
+                    <div class="data-item"><span class="data-label">Date:</span><span class="data-value">2026-01-11</span></div>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value">2:30 PM - 4:00 PM</span></div>
+                    <div class="data-item"><span class="data-label">Age Min:</span><span class="data-value">5</span></div>
+                    <div class="data-item"><span class="data-label">Age Max:</span><span class="data-value">10</span></div>
+                    <div class="data-item"><span class="data-label">Type:</span><span class="data-value">CLINIC</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value">$35</span></div>
+                </div>
+                <div class="data-box title">
+                    <h4>📝 Extracted from Title</h4>
+                    <div class="data-item"><span class="data-label">Year:</span><span class="data-value match">2026 ✓</span></div>
+                    <div class="data-item"><span class="data-label">Age:</span><span class="data-value mismatch">6+ ❌</span></div>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value match">2:30pm-4:00pm ✓</span></div>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value match">Clinic ✓</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value">$35</span></div>
+                </div>
+                <div class="data-box description">
+                    <h4>📄 Extracted from Description</h4>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value match">Clinics ✓</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value mismatch">NOT FOUND ❌</span></div>
+                </div>
+            </div>
+            
+            <div class="description-text">Gymnastics Skills Clinics are designed to help gymnasts focus on specific skills and techniques in a structured, supportive environment. Athletes will work on strength, flexibility, drills, and progressions that build confidence and proper form. Clinics are led by experienced coaches and are ideal for gymnasts looking to refine existing skills, learn new ones, or get extra practice outside of regular classes. Open to various ages and skill levels, with groups organized appropriately to ensure safety and individualized attention.</div>
+            
+            <div class="violations">
+                <h4>⚠️ Violations Found (2)</h4>
+                <div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No price in description (title says $35)</span></div>
+                <div class="violation-item"><span class="violation-icon">⚠️</span><span class="violation-text warning">Age mismatch: iClass age_min=5, but Title says 6</span></div>
+            </div>
+        </div>
+
+        <!-- Event 6: Tumbling Clinic Jan 24 -->
+        <div class="event-full warning">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Tumbling |Clinic| Ages 6+| January 24</h3>
+                    <div class="event-meta">
+                        <span>📍 Rowland Ballard Atascocita</span>
+                        <span>📅 2026-01-24</span>
+                        <span>🏷️ CLINIC</span>
+                    </div>
+                </div>
+                <a href="https://portal.iclasspro.com/rbatascocita/camp-details/2134" target="_blank" class="event-link">🔗 Fix in iClassPro</a>
+            </div>
+            
+            <div class="data-grid">
+                <div class="data-box iclass">
+                    <h4>📥 iClass API Data</h4>
+                    <div class="data-item"><span class="data-label">Date:</span><span class="data-value">2026-01-24</span></div>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value">12:00 PM - 1:00 PM</span></div>
+                    <div class="data-item"><span class="data-label">Age Min:</span><span class="data-value">6</span></div>
+                    <div class="data-item"><span class="data-label">Age Max:</span><span class="data-value">18</span></div>
+                    <div class="data-item"><span class="data-label">Type:</span><span class="data-value">CLINIC</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value">$25</span></div>
+                </div>
+                <div class="data-box title">
+                    <h4>📝 Extracted from Title</h4>
+                    <div class="data-item"><span class="data-label">Age:</span><span class="data-value match">6+ ✓</span></div>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value match">Clinic ✓</span></div>
+                </div>
+                <div class="data-box description">
+                    <h4>📄 Extracted from Description</h4>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value match">12:00pm - 1:00pm ✓</span></div>
+                    <div class="data-item"><span class="data-label">Age:</span><span class="data-value mismatch">5+ ❌</span></div>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value match">Clinic ✓</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value match">$25 ✓</span></div>
+                </div>
+            </div>
+            
+            <div class="description-text">Tumbling Clinic
+
+January 24th at 12:00pm - 1:00pm
+
+Ages 5+
+
+Price $25
+
+Our specialized skill clinics provide students with the opportunity to work with our experienced coaches on new drills and techniques to take their skills to the next level.
+
+What to Wear: Students should wear a fitted leotard or athletic clothing that allows for easy movement, with hair securely tied back. All shoes are to be removed before entering the gym and stored in designated cubbies. For safety and to prevent lost items, please limit wearing jewelry during class.
+
+What to Bring: Students should bring a labeled water bottle to each class to stay hydrated. All other personal items, such as bags or extra clothing, should be kept in a designated cubby during class. Please leave toys, electronics, and valuables at home to avoid distractions and prevent lost or damaged items.</div>
+            
+            <div class="violations">
+                <h4>⚠️ Violations Found (2)</h4>
+                <div class="violation-item"><span class="violation-icon">⚠️</span><span class="violation-text warning">Age mismatch: iClass age_min=6, but Description says 5</span></div>
+                <div class="violation-item"><span class="violation-icon">⚠️</span><span class="violation-text warning">Age mismatch: Title says 6, but Description says 5</span></div>
+            </div>
+        </div>
+
+        <div class="section-divider">⚠️ PROGRAM TYPE ISSUES</div>
+
+        <!-- Event 7: Ninja Skill Clinic -->
+        <div class="event-full warning">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Ninja Skill Clinic | Friday, January 23rd | 6:30p-7:30p (Students 7+)</h3>
+                    <div class="event-meta">
+                        <span>📍 TIGAR Gymnastics</span>
+                        <span>📅 2026-01-23</span>
+                        <span>🏷️ CLINIC</span>
+                    </div>
+                </div>
+                <a href="https://portal.iclasspro.com/tigar/camp-details/569" target="_blank" class="event-link">🔗 Fix in iClassPro</a>
+            </div>
+            
+            <div class="data-grid">
+                <div class="data-box iclass">
+                    <h4>📥 iClass API Data</h4>
+                    <div class="data-item"><span class="data-label">Date:</span><span class="data-value">2026-01-23</span></div>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value">6:30 PM - 7:30 PM</span></div>
+                    <div class="data-item"><span class="data-label">Age Min:</span><span class="data-value">7</span></div>
+                    <div class="data-item"><span class="data-label">Age Max:</span><span class="data-value">17</span></div>
+                    <div class="data-item"><span class="data-label">Type:</span><span class="data-value">CLINIC</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value">$25</span></div>
+                </div>
+                <div class="data-box title">
+                    <h4>📝 Extracted from Title</h4>
+                    <div class="data-item"><span class="data-label">Age:</span><span class="data-value match">7+ ✓</span></div>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value match">6:30p-7:30p ✓</span></div>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value match">Clinic ✓</span></div>
+                </div>
+                <div class="data-box description">
+                    <h4>📄 Extracted from Description</h4>
+                    <div class="data-item"><span class="data-label">Time:</span><span class="data-value match">6:30p - 7:30p ✓</span></div>
+                    <div class="data-item"><span class="data-label">Age:</span><span class="data-value">7-14</span></div>
+                    <div class="data-item"><span class="data-label">Program:</span><span class="data-value mismatch">"Clinic" NOT FOUND ❌</span></div>
+                    <div class="data-item"><span class="data-label">Price:</span><span class="data-value match">$25 ✓</span></div>
+                </div>
+            </div>
+            
+            <div class="description-text">On Friday, January 23rd from 6:30p - 7:30p students ages 7-14 will be assisted by a certified coach while having access to state of the art equipment for additional support to reach their ninja skill goals - parkour vaults, front flip progressions, front flips, front 180s, aerials, back flips, and more! All skill levels are welcome!
+
+Sign up now for only $25!
+
+
+
+Registration for this event will close on Friday, January 23rd at 3p.</div>
+            
+            <div class="violations">
+                <h4>⚠️ Violations Found (1)</h4>
+                <div class="violation-item"><span class="violation-icon">⚠️</span><span class="violation-text warning">Clinic missing in description - iClass type is CLINIC but description doesn't mention "Clinic"</span></div>
+            </div>
+        </div>
+
+        <div class="section-divider">💰 MISSING PRICE IN DESCRIPTION (23 events)</div>
+
+        <!-- Missing Price Events - Condensed -->
+        <div class="event-full">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Popcorn & a movie KNO! | Jan 9| Friday | 7:00pm-10 pm</h3>
+                    <div class="event-meta"><span>📍 Rowland Ballard Kingwood</span><span>🏷️ KIDS NIGHT OUT</span></div>
+                </div>
+                <a href="https://portal.iclasspro.com/rbkingwood/camp-details/1605" target="_blank" class="event-link">🔗 Fix</a>
+            </div>
+            <div class="description-text">KIDS NIGHT OUT extended!!!
+
+7-10 PM
+
+Take the night off while we keep your kids entertained with nonstop fun! At Kids' Night Out, we'll have open play, games, gymnastics, crafts, and a pizza dinner! Each Kids' Night Out has an exciting theme, keeping the kids engaged while you enjoy a night out.
+
+What to wear: Come dressed in comfortable clothes. No shoes/socks in the gym
+
+What to bring: Water bottle</div>
+            <div class="violations"><h4>⚠️ Violation</h4><div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No $ price found in description</span></div></div>
+        </div>
+
+        <div class="event-full">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Kids Night Out Bring a Friend for $10 - Friends sign up here!</h3>
+                    <div class="event-meta"><span>📍 Capital Gymnastics Round Rock</span><span>🏷️ KIDS NIGHT OUT</span></div>
+                </div>
+                <a href="https://portal.iclasspro.com/capgymroundrock/camp-details/1680" target="_blank" class="event-link">🔗 Fix</a>
+            </div>
+            <div class="description-text">🎉 Kids Night Out at Capital Gymnastics! 🎉
+
+✨ Bring a friend for just TEN — fun with a buddy is a WIN-WIN! ✨
+
+Need a night off? We've got you covered! Drop the kids off for an evening packed with energy, laughter, and nonstop fun.
+
+🎈 What's Included:
+
+Open gym time to jump, flip, and play
+
+Games and group activities
+
+Pizza dinner and drinks
+
+Themed crafts or movies
+
+Supervised fun with our amazing coaches
+
+🕕 Time: 6:30 PM – 9:30 PM📍 Location: Capital Gymnastics Round Rock🎟️ Ages: 4 & up (must be potty trained)
+
+Whether your child is a gymnast or just loves to move, Kids Night Out is even better with a friend — and parents get a well-deserved break!</div>
+            <div class="violations"><h4>⚠️ Violation</h4><div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No $ price found in description (title says $10 but description says "TEN" as text)</span></div></div>
+        </div>
+
+        <div class="event-full">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Gym Fun Friday |Ages 0-6 | January 9th (+ Jan 16, 23, 30)</h3>
+                    <div class="event-meta"><span>📍 Capital Gymnastics Round Rock</span><span>🏷️ OPEN GYM</span></div>
+                </div>
+                <a href="https://portal.iclasspro.com/capgymroundrock/camp-details/1676" target="_blank" class="event-link">🔗 Fix Jan 9</a>
+                <a href="https://portal.iclasspro.com/capgymroundrock/camp-details/1677" target="_blank" class="event-link">🔗 Jan 16</a>
+                <a href="https://portal.iclasspro.com/capgymroundrock/camp-details/1678" target="_blank" class="event-link">🔗 Jan 23</a>
+                <a href="https://portal.iclasspro.com/capgymroundrock/camp-details/1679" target="_blank" class="event-link">🔗 Jan 30</a>
+            </div>
+            <div class="description-text">🎉 Gym Fun Friday (GFF)End the week with flips, fun, and friends! Gym Fun Friday is an exciting open-style event where kids can enjoy supervised play, obstacle courses, trampoline time, and games throughout the gym.
+
+Perfect for ages 0-5, this weekly event is designed to let kids burn energy, build skills, and have a blast in a safe, structured environment.
+
+🕒 Fridays | 10:00am - 11:30am📍 Members & non-members welcome🎯 No commitment—drop in and join the fun!</div>
+            <div class="violations"><h4>⚠️ Violations (4 events with same issue)</h4><div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No $ price found in description</span></div></div>
+        </div>
+
+        <div class="event-full">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>FROZEN Kid's Night Out | January 9th | 6:30-9:30 | $35</h3>
+                    <div class="event-meta"><span>📍 Capital Gymnastics Pflugerville</span><span>🏷️ KIDS NIGHT OUT</span></div>
+                </div>
+                <a href="https://portal.iclasspro.com/capgymhp/camp-details/2547" target="_blank" class="event-link">🔗 Fix</a>
+            </div>
+            <div class="description-text">Take the night off while we keep your kids entertained with nonstop fun! At Kids' Night Out, we'll have open play, games, gymnastics, crafts, and a pizza dinner! Each Kids' Night Out has an exciting theme, keeping the kids engaged while you enjoy a night out.</div>
+            <div class="violations"><h4>⚠️ Violation</h4><div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No $ price found in description (title says $35)</span></div></div>
+        </div>
+
+        <div class="event-full">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Gym Fun Fridays | January 9, 16, 23, 30 | 10:00-11:30am | $10</h3>
+                    <div class="event-meta"><span>📍 Capital Gymnastics Pflugerville</span><span>🏷️ OPEN GYM</span></div>
+                </div>
+                <a href="https://portal.iclasspro.com/capgymhp/camp-details/2543" target="_blank" class="event-link">🔗 Jan 9</a>
+                <a href="https://portal.iclasspro.com/capgymhp/camp-details/2544" target="_blank" class="event-link">🔗 Jan 16</a>
+                <a href="https://portal.iclasspro.com/capgymhp/camp-details/2545" target="_blank" class="event-link">🔗 Jan 23</a>
+                <a href="https://portal.iclasspro.com/capgymhp/camp-details/2546" target="_blank" class="event-link">🔗 Jan 30</a>
+            </div>
+            <div class="description-text">This hands-on open gym, invites toddlers to move, explore, jump, and play—right alongside you. Free play with your kiddos and make new friends!</div>
+            <div class="violations"><h4>⚠️ Violations (4 events with same issue)</h4><div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No $ price found in description (title says $10)</span></div></div>
+        </div>
+
+        <div class="event-full">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Gym Fun Fridays | Open Gym | Ages 1-5 | Cedar Park | $10</h3>
+                    <div class="event-meta"><span>📍 Capital Gymnastics Cedar Park</span><span>🏷️ OPEN GYM</span></div>
+                </div>
+                <a href="https://portal.iclasspro.com/capgymavery/camp-details/1241" target="_blank" class="event-link">🔗 Jan 9</a>
+                <a href="https://portal.iclasspro.com/capgymavery/camp-details/1242" target="_blank" class="event-link">🔗 Jan 16</a>
+                <a href="https://portal.iclasspro.com/capgymavery/camp-details/1243" target="_blank" class="event-link">🔗 Jan 23</a>
+                <a href="https://portal.iclasspro.com/capgymavery/camp-details/1244" target="_blank" class="event-link">🔗 Jan 30</a>
+            </div>
+            <div class="description-text">This hands-on open gym, invites toddlers to move, explore, jump, and play—right alongside you. Free play with your kiddos and make new friends!</div>
+            <div class="violations"><h4>⚠️ Violations (4 events with same issue)</h4><div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No $ price found in description (title says $10)</span></div></div>
+        </div>
+
+        <div class="event-full">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Kids Night Out | Ages 4-13 | Cedar Park | 6:30-9:30 pm</h3>
+                    <div class="event-meta"><span>📍 Capital Gymnastics Cedar Park</span><span>🏷️ KIDS NIGHT OUT</span></div>
+                </div>
+                <a href="https://portal.iclasspro.com/capgymavery/camp-details/1237" target="_blank" class="event-link">🔗 Jan 16</a>
+                <a href="https://portal.iclasspro.com/capgymavery/camp-details/1238" target="_blank" class="event-link">🔗 Jan 30</a>
+            </div>
+            <div class="description-text">Take the night off while we keep your kids entertained with nonstop fun! At Kids' Night Out, we'll have open play, games, gymnastics, crafts, and a pizza dinner! Each Kids' Night Out has an exciting theme, keeping the kids engaged while you enjoy a night out.</div>
+            <div class="violations"><h4>⚠️ Violations (2 events with same issue)</h4><div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No $ price found in description</span></div></div>
+        </div>
+
+        <div class="event-full">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Flip-Flop Clinic: January 16th: 6:30-8:00pm ($25)</h3>
+                    <div class="event-meta"><span>📍 Capital Gymnastics Pflugerville</span><span>🏷️ CLINIC</span></div>
+                </div>
+                <a href="https://portal.iclasspro.com/capgymhp/camp-details/2549" target="_blank" class="event-link">🔗 Fix</a>
+            </div>
+            <div class="description-text">The back handspring is a major milestone that requires equal parts physics and courage. Our clinic zooms in on this skill with specific drills and individualized coaching that build strength, improve timing, and help gymnasts feel confident and in control going backwards!</div>
+            <div class="violations"><h4>⚠️ Violation</h4><div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No $ price found in description (title says $25)</span></div></div>
+        </div>
+
+        <div class="event-full">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Trampoline & TumblTrak Clinic Ages 6+ | January 23 | $30</h3>
+                    <div class="event-meta"><span>📍 Capital Gymnastics Cedar Park</span><span>🏷️ CLINIC</span></div>
+                </div>
+                <a href="https://portal.iclasspro.com/capgymavery/camp-details/1240" target="_blank" class="event-link">🔗 Fix</a>
+            </div>
+            <div class="description-text">Gymnastics Skills Clinics are designed to help gymnasts focus on specific skills and techniques in a structured, supportive environment. Athletes will work on strength, flexibility, drills, and progressions that build confidence and proper form. Clinics are led by experienced coaches and are ideal for gymnasts looking to refine existing skills, learn new ones, or get extra practice outside of regular classes. Open to various ages and skill levels, with groups organized appropriately to ensure safety and individualized attention.</div>
+            <div class="violations"><h4>⚠️ Violation</h4><div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No $ price found in description (title says $30)</span></div></div>
+        </div>
+
+        <div class="event-full">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>SLIME KNO! | Jan 23| Friday | 7:00pm-9:30pm</h3>
+                    <div class="event-meta"><span>📍 Rowland Ballard Kingwood</span><span>🏷️ KIDS NIGHT OUT</span></div>
+                </div>
+                <a href="https://portal.iclasspro.com/rbkingwood/camp-details/1606" target="_blank" class="event-link">🔗 Fix</a>
+            </div>
+            <div class="description-text">KIDS NIGHT OUT
+
+7-9:30 PM
+
+Take the night off while we keep your kids entertained with nonstop fun! At Kids' Night Out, we'll have open play, games, gymnastics, crafts, and a pizza dinner! Each Kids' Night Out has an exciting theme, keeping the kids engaged while you enjoy a night out.
+
+What to wear: Come dressed in comfortable clothes. No shoes/socks in the gym
+
+What to bring: Water bottle</div>
+            <div class="violations"><h4>⚠️ Violation</h4><div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No $ price found in description</span></div></div>
+        </div>
+
+        <div class="event-full">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Kids Night Out | Ages 4+ | January 23rd - Space Invasion: DJ Glow Party</h3>
+                    <div class="event-meta"><span>📍 Capital Gymnastics Round Rock</span><span>🏷️ KIDS NIGHT OUT</span></div>
+                </div>
+                <a href="https://portal.iclasspro.com/capgymroundrock/camp-details/1673" target="_blank" class="event-link">🔗 Fix</a>
+            </div>
+            <div class="description-text">Kids Night Out at Capital Gymnastics!
+
+Need a night off? We've got you covered! Drop the kids off for an evening of non-stop fun at Kids Night Out!
+
+🎉 What's Included:
+
+Open gym time to jump, flip, and play
+
+Games and group activities
+
+Pizza dinner and drinks
+
+Themed crafts or movies
+
+Supervised fun with our amazing coaches!
+
+🕕 Time: 6:30 PM – 9:30 PM📍 Location: Capital Gymnastics Round Rock🎟️ Ages: 4 & up (must be potty trained)
+
+Whether your child is a gymnast or just loves to play, KNO is the perfect way to spend a Friday night — and gives parents a well-deserved break too!
+
+Spots fill quickly — sign up today!</div>
+            <div class="violations"><h4>⚠️ Violation</h4><div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No $ price found in description</span></div></div>
+        </div>
+
+        <div class="event-full">
+            <div class="event-header">
+                <div class="event-title-section">
+                    <h3>Kid's Night Out | January 23rd | 6:30-9:30 | $35</h3>
+                    <div class="event-meta"><span>📍 Capital Gymnastics Pflugerville</span><span>🏷️ KIDS NIGHT OUT</span></div>
+                </div>
+                <a href="https://portal.iclasspro.com/capgymhp/camp-details/2548" target="_blank" class="event-link">🔗 Fix</a>
+            </div>
+            <div class="description-text">Take the night off while we keep your kids entertained with nonstop fun! At Kids' Night Out, we'll have open play, games, gymnastics, crafts, and a pizza dinner! Each Kids' Night Out has an exciting theme, keeping the kids engaged while you enjoy a night out.</div>
+            <div class="violations"><h4>⚠️ Violation</h4><div class="violation-item"><span class="violation-icon">🚨</span><span class="violation-text">No $ price found in description (title says $35)</span></div></div>
+        </div>
+
+        <div class="footer">
+            <p>Master Events Calendar | Data Quality Validation System</p>
+            <p>All comparisons: iClass API ↔ Title ↔ Description</p>
+        </div>
+    </div>
+</body>
+</html>
+
