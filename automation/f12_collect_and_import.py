@@ -720,8 +720,19 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 if not text:
                     return False
                 txt = text.lower()
-                # Match: "6:30pm", "6:30 pm", "6pm", "6 pm", "6:30p", "6:30 p.m."
-                return bool(re.search(r'\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.)', txt))
+                # Match many time formats:
+                # - "6:30pm", "6:30 pm", "6pm", "6 pm", "6:30p", "6:30 p.m."
+                # - "6:30a", "6:30 a.m.", "6am", "6 am"  
+                # - "9:00 - 3:00" (colon times, even without am/pm)
+                # - "9-3" followed by context suggesting time (less reliable, so require am/pm nearby)
+                
+                # Pattern 1: Time with am/pm indicator (most reliable)
+                has_ampm_time = bool(re.search(r'\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.|a|p)\b', txt))
+                
+                # Pattern 2: Colon time like "9:00" or "9:00 - 3:00" (even without am/pm)
+                has_colon_time = bool(re.search(r'\d{1,2}:\d{2}', txt))
+                
+                return has_ampm_time or has_colon_time
             
             # 1. TITLE: Must have AGE
             if not has_age_in_text(title):
@@ -775,11 +786,15 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             
             # CLINIC: Should mention skill in description
             if event_type == 'CLINIC' and description:
+                # Comprehensive skills list - check in BOTH title and description
                 skills = ['cartwheel', 'back handspring', 'backhandspring', 'handstand', 'tumbling', 
                          'bars', 'pullover', 'pullovers', 'front flip', 'roundoff', 'backbend', 
-                         'ninja', 'cheer', 'beam', 'vault', 'floor', 'trampoline', 'bridge', 'kickover',
-                         'walkover', 'flip flop', 'flip-flop']
-                has_skill = any(skill in description_lower for skill in skills)
+                         'ninja', 'cheer', 'beam', 'vault', 'floor', 'trampoline', 'tumbl', 'bridge', 
+                         'kickover', 'walkover', 'flip flop', 'flip-flop', 'back walkover', 'front walkover']
+                # Check description OR title for skill (skill in title is sufficient context)
+                has_skill_in_desc = any(skill in description_lower for skill in skills)
+                has_skill_in_title = any(skill in title_lower for skill in skills)
+                has_skill = has_skill_in_desc or has_skill_in_title
                 if not has_skill:
                     validation_errors.append({
                         "type": "clinic_missing_skill",
@@ -854,13 +869,20 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 if event_hours:
                     # Helper to check times in text
                     def check_times_in_text(text, text_name, char_limit=300):
-                        """Check if times in text match event times"""
+                        """Check if times in text match event times. Format-tolerant."""
                         text_lower = text.lower()[:char_limit]
-                        found_times = re.findall(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)', text_lower)
+                        
+                        # Match many time formats:
+                        # "6:30pm", "6:30 pm", "6pm", "6 pm", "6:30p", "6:30 p.m."
+                        # "6:30a", "6am", "9a - 3p" (TIGAR format)
+                        # Captures: (hour, minutes_or_empty, am/pm indicator)
+                        found_times = re.findall(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.|a|p)(?:\b|(?=\s|-))', text_lower)
                         
                         for found_time in found_times:
                             found_hour = int(found_time[0])
-                            found_ampm = found_time[2].replace('.', '') if found_time[2] else ''
+                            raw_ampm = found_time[2].replace('.', '') if found_time[2] else ''
+                            # Normalize: "a" -> "am", "p" -> "pm"
+                            found_ampm = 'am' if raw_ampm in ['a', 'am'] else 'pm' if raw_ampm in ['p', 'pm'] else ''
                             
                             # Convert to 24hr
                             if found_ampm == 'pm' and found_hour != 12:
@@ -876,7 +898,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                                 time_str_formatted = f"{found_time[0]}"
                                 if found_time[1]:  # has minutes
                                     time_str_formatted += f":{found_time[1]}"
-                                time_str_formatted += f" {found_time[2]}"
+                                time_str_formatted += f" {raw_ampm}"
                                 return time_str_formatted
                         return None
                     
@@ -1093,9 +1115,11 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     print(f"    🚨 CLINIC: Description starts with 'Open Gym' - wrong program!")
                 
                 # Check for SKILL MISMATCH
+                # Use the same comprehensive skills list as the completeness check
                 skills = ['cartwheel', 'back handspring', 'backhandspring', 'handstand', 'tumbling', 
                          'bars', 'pullover', 'pullovers', 'front flip', 'roundoff', 'backbend', 
-                         'ninja', 'cheer', 'beam', 'vault', 'floor']
+                         'ninja', 'cheer', 'beam', 'vault', 'floor', 'trampoline', 'tumbl', 'bridge', 
+                         'kickover', 'walkover', 'flip flop', 'flip-flop', 'back walkover', 'front walkover']
                 
                 title_skill = None
                 desc_skill = None
