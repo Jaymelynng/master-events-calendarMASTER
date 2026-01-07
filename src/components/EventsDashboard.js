@@ -1834,12 +1834,48 @@ The system will add new events and update any changed events automatically.`;
               <h2 className="text-2xl font-bold text-gray-800">
                 🔍 Event Change History
               </h2>
-              <button
-                onClick={() => setShowAuditHistory(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    // Download audit history as CSV
+                    if (auditHistory.length === 0) return;
+                    const headers = ['Date/Time', 'Action', 'Event Title', 'Gym', 'Event Date', 'Field Changed', 'Old Value', 'New Value', 'Changed By'];
+                    const rows = auditHistory.map(audit => [
+                      new Date(audit.changed_at).toLocaleString(),
+                      audit.action,
+                      audit.event_title || '',
+                      audit.gym_id || '',
+                      audit.event_date || '',
+                      audit.field_changed || '',
+                      audit.old_value || '',
+                      audit.new_value || '',
+                      audit.changed_by || ''
+                    ]);
+                    const csvContent = [headers, ...rows]
+                      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+                      .join('\n');
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `event-change-history-${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-1"
+                  title="Download as CSV"
+                >
+                  📥 Download CSV
+                </button>
+                <button
+                  onClick={() => setShowAuditHistory(false)}
+                  className="text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
             
             {loadingAudit ? (

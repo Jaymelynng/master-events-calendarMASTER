@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Loader, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { eventsApi, syncLogApi } from '../../lib/api';
+import { eventsApi, syncLogApi, auditLogApi } from '../../lib/api';
 import { compareEvents, getComparisonSummary } from '../../lib/eventComparison';
 
 export default function SyncModal({ theme, onClose, onBack, gyms }) {
@@ -272,6 +272,25 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
       // Import new events (only if there are any)
       const imported = hasNewEvents ? await eventsApi.bulkImport(eventsToImport) : [];
       
+      // Log CREATE audit for new events
+      for (const newEvent of imported) {
+        try {
+          await auditLogApi.log(
+            newEvent.id,
+            newEvent.gym_id,
+            'CREATE',
+            'all',
+            null,
+            JSON.stringify({ title: newEvent.title, date: newEvent.date, price: newEvent.price }),
+            newEvent.title,
+            newEvent.date,
+            'Sync Import'
+          );
+        } catch (auditErr) {
+          console.error('Error logging CREATE audit:', auditErr);
+        }
+      }
+      
       // Update changed events
       let updatedCount = 0;
       if (comparison && comparison.changed.length > 0) {
@@ -305,6 +324,28 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                 registration_end_date: changed.incoming.registration_end_date || null,
                 deleted_at: null  // Ensure it's not marked as deleted
               });
+              
+              // Log UPDATE audit for each field that changed
+              if (changed._changes && changed._changes.length > 0) {
+                for (const fieldChange of changed._changes) {
+                  try {
+                    await auditLogApi.log(
+                      existingEvent.id,
+                      existingEvent.gym_id,
+                      'UPDATE',
+                      fieldChange.field,
+                      String(fieldChange.old),
+                      String(fieldChange.new),
+                      changed.incoming.title,
+                      changed.incoming.date,
+                      'Sync Import'
+                    );
+                  } catch (auditErr) {
+                    console.error('Error logging UPDATE audit:', auditErr);
+                  }
+                }
+              }
+              
               updatedCount++;
             }
           } catch (err) {
@@ -369,6 +410,23 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
               await eventsApi.markAsDeleted(deletedEvent.id);
               deletedCount++;
               console.log(`🗑️ Marked as deleted: "${deletedEvent.title}" (starts ${eventStartDate})`);
+              
+              // Log DELETE audit
+              try {
+                await auditLogApi.log(
+                  deletedEvent.id,
+                  deletedEvent.gym_id,
+                  'DELETE',
+                  'all',
+                  deletedEvent.title,
+                  null,
+                  deletedEvent.title,
+                  deletedEvent.date,
+                  'Sync Import'
+                );
+              } catch (auditErr) {
+                console.error('Error logging DELETE audit:', auditErr);
+              }
             } else {
               console.log(`⏭️ Skipping delete for "${deletedEvent.title}" - already started on ${eventStartDate}`);
             }

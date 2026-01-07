@@ -376,4 +376,61 @@ export const syncLogApi = {
     if (error) throw new Error(error.message);
     return data || [];
   }
+};
+
+// Audit Log API - tracks all event changes
+export const auditLogApi = {
+  async getAll(limit = 100) {
+    const { data, error } = await supabase
+      .from('event_audit_log')
+      .select('*')
+      .order('changed_at', { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async log(eventId, gymId, action, fieldChanged, oldValue, newValue, eventTitle, eventDate, changedBy = 'Sync Import') {
+    const { data, error } = await supabase
+      .from('event_audit_log')
+      .insert([{
+        event_id: eventId,
+        gym_id: gymId,
+        action: action,
+        field_changed: fieldChanged,
+        old_value: oldValue,
+        new_value: newValue,
+        changed_by: changedBy,
+        event_title: eventTitle,
+        event_date: eventDate
+      }])
+      .select()
+      .single();
+    if (error) {
+      console.error('Error logging audit:', error);
+      return null;
+    }
+    return data;
+  },
+
+  async getByEvent(eventId) {
+    const { data, error } = await supabase
+      .from('event_audit_log')
+      .select('*')
+      .eq('event_id', eventId)
+      .order('changed_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async getByGym(gymId, limit = 50) {
+    const { data, error } = await supabase
+      .from('event_audit_log')
+      .select('*')
+      .eq('gym_id', gymId)
+      .order('changed_at', { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
 }; 
