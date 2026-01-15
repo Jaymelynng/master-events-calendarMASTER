@@ -67,20 +67,44 @@ EVENT_TYPE_ALIASES = {
     "CAMP": "CAMP",
 }
 
-# Camp pricing by gym (verified January 2026)
-# Used for price validation during sync
-CAMP_PRICING = {
-    'CCP': {'full_day_weekly': 345, 'full_day_daily': 75, 'half_day_weekly': 270, 'half_day_daily': 65},
-    'CPF': {'full_day_weekly': 315, 'full_day_daily': 70, 'half_day_weekly': 240, 'half_day_daily': 60},
-    'CRR': {'full_day_weekly': 315, 'full_day_daily': 70, 'half_day_weekly': 240, 'half_day_daily': 60},
-    'RBA': {'full_day_weekly': 250, 'full_day_daily': 62, 'half_day_weekly': None, 'half_day_daily': None},
-    'RBK': {'full_day_weekly': 250, 'full_day_daily': 62, 'half_day_weekly': None, 'half_day_daily': None},
-    'HGA': {'full_day_weekly': 400, 'full_day_daily': 90, 'half_day_weekly': None, 'half_day_daily': None},
-    'EST': {'full_day_weekly': 270, 'full_day_daily': 65, 'half_day_weekly': 205, 'half_day_daily': 50},
-    'OAS': {'full_day_weekly': 315, 'full_day_daily': 70, 'half_day_weekly': 240, 'half_day_daily': 60},
-    'SGT': {'full_day_weekly': 390, 'full_day_daily': 90, 'half_day_weekly': 315, 'half_day_daily': 70},
-    'TIG': {'full_day_weekly': 335, 'full_day_daily': 80, 'half_day_weekly': None, 'half_day_daily': None},
-}
+# Camp pricing is now fetched from Supabase camp_pricing table
+# Validates Full Day Daily and Full Day Weekly prices only
+
+def fetch_camp_pricing():
+    """Fetch camp pricing from Supabase camp_pricing table"""
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/camp_pricing?select=*"
+        req = Request(url)
+        req.add_header("apikey", SUPABASE_KEY)
+        req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
+        
+        with urlopen(req) as response:
+            rows = json.loads(response.read().decode())
+        
+        pricing = {}
+        for row in rows:
+            gym_id = row.get('gym_id')
+            if gym_id:
+                pricing[gym_id] = {
+                    'full_day_daily': row.get('full_day_daily'),
+                    'full_day_weekly': row.get('full_day_weekly')
+                }
+        
+        print(f"[INFO] Loaded camp pricing for {len(pricing)} gyms from Supabase")
+        return pricing
+    except Exception as e:
+        print(f"[WARN] Could not fetch camp pricing: {e}")
+        return {}
+
+# Global cache for camp pricing
+CAMP_PRICING = None
+
+def get_camp_pricing():
+    """Get cached camp pricing or fetch from Supabase"""
+    global CAMP_PRICING
+    if CAMP_PRICING is None:
+        CAMP_PRICING = fetch_camp_pricing()
+    return CAMP_PRICING
 
 def fetch_event_type_urls():
     """Fetch EVENT_TYPE_URLS from Supabase gym_links table"""
@@ -1407,59 +1431,35 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     })
                     print(f"    ❌ PRICE MISMATCH: Title ${title_price:.0f} vs Desc ${desc_price:.0f}")
             
-            # --- CAMP PRICE VALIDATION ---
-            # For CAMP events, validate prices against known gym pricing
-            if event_type == 'CAMP' and gym_id in CAMP_PRICING and desc_prices:
-                gym_prices = CAMP_PRICING[gym_id]
-                combined_text = (title + ' ' + description).lower()
-                
-                # Detect if it's Full Day or Half Day
-                is_half_day = 'half day' in combined_text or 'half-day' in combined_text
-                is_full_day = 'full day' in combined_text or 'full-day' in combined_text or not is_half_day
-                
-                # Detect if it's Weekly or Daily pricing
-                # Weekly indicators: "monday-friday", "mon-fri", "5 day", "week", "weekly"
-                # Daily indicators: "/day", "a day", "per day", "daily"
-                is_daily = bool(re.search(r'/day|a\s+day|per\s+day|\bday\b(?!s)|daily', combined_text))
-                is_weekly = bool(re.search(r'monday\s*[-–]\s*friday|mon\s*[-–]\s*fri|5\s*day|week|weekly', combined_text)) or not is_daily
-                
-                # Determine expected price
-                if is_half_day:
-                    if is_daily:
-                        expected_price = gym_prices.get('half_day_daily')
-                        price_type = "Half Day Daily"
-                    else:
-                        expected_price = gym_prices.get('half_day_weekly')
-                        price_type = "Half Day Weekly"
-                else:  # Full day
-                    if is_daily:
-                        expected_price = gym_prices.get('full_day_daily')
-                        price_type = "Full Day Daily"
-                    else:
-                        expected_price = gym_prices.get('full_day_weekly')
-                        price_type = "Full Day Weekly"
-                
-                # Check if any price in description matches expected
-                if expected_price is not None:
-                    desc_price_values = [float(p) for p in desc_prices]
-                    if expected_price not in desc_price_values:
-                        # Check if it's close (within $5 for rounding)
-                        close_match = any(abs(expected_price - p) <= 5 for p in desc_price_values)
+            # --- CAMP PRICE VALIDATION (Full Day only) ---
+            # For CAMP events: check if price matches Full Day Daily OR Full Day Weekly from Supabase
+            if event_type == 'CAMP' and desc_prices:
+                camp_pricing = get_camp_pricing()
+                if gym_id in camp_pricing:
+                    gym_prices = camp_pricing[gym_id]
+                    full_day_daily = gym_prices.get('full_day_daily')
+                    full_day_weekly = gym_prices.get('full_day_weekly')
+                    
+                    # Get the first price from description
+                    desc_price = float(desc_prices[0])
+                    
+                    # Check if price matches either Full Day Daily or Full Day Weekly
+                    valid_prices = []
+                    if full_day_daily:
+                        valid_prices.append(float(full_day_daily))
+                    if full_day_weekly:
+                        valid_prices.append(float(full_day_weekly))
+                    
+                    if valid_prices and desc_price not in valid_prices:
+                        # Allow small tolerance ($2) for rounding
+                        close_match = any(abs(desc_price - vp) <= 2 for vp in valid_prices)
                         if not close_match:
                             validation_errors.append({
                                 "type": "camp_price_mismatch",
                                 "severity": "warning",
-                                "message": f"{price_type} should be ${expected_price} for {gym_id}, found ${desc_price_values[0]:.0f}"
+                                "message": f"Price ${desc_price:.0f} doesn't match Full Day Daily (${full_day_daily}) or Weekly (${full_day_weekly}) for {gym_id}"
                             })
-                            print(f"    ⚠️ CAMP PRICE MISMATCH: {price_type} expected ${expected_price}, found ${desc_price_values[0]:.0f}")
-                elif is_half_day and gym_prices.get('half_day_weekly') is None:
-                    # This gym doesn't offer half day camps
-                    validation_errors.append({
-                        "type": "camp_type_not_offered",
-                        "severity": "warning",
-                        "message": f"{gym_id} doesn't offer Half Day camps"
-                    })
-                    print(f"    ⚠️ CAMP TYPE: {gym_id} doesn't offer Half Day camps")
+                            print(f"    ⚠️ CAMP PRICE: ${desc_price:.0f} not in valid prices for {gym_id} (Daily: ${full_day_daily}, Weekly: ${full_day_weekly})")
         
         # ========== AVAILABILITY INFO ==========
         # NOTE: Sold out is NOT a validation error - it's informational status
