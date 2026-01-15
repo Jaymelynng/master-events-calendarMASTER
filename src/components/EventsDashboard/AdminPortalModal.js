@@ -59,7 +59,7 @@ export default function AdminPortalModal({
               placeholder="Enter PIN"
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-center text-2xl tracking-widest mb-4 focus:border-purple-500 focus:outline-none"
               autoFocus
-              maxLength={4}
+              maxLength={10}
             />
             <div className="flex gap-2">
               <button

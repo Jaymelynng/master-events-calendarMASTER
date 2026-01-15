@@ -47,6 +47,7 @@ Create `.env.local` with:
 REACT_APP_SUPABASE_URL=https://xftiwouxpefchwoxxgpf.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=[your-key-here]
 REACT_APP_API_URL=https://master-events-calendarmaster-production.up.railway.app
+REACT_APP_API_KEY=[your-api-key-here]
 ```
 
 ---
@@ -143,7 +144,7 @@ master-events-calendar/
 |-------|--------|----------|
 | **Everyone** | Visit URL | Calendar, event details, stats |
 | **Admin** | Click 🪄 Admin | Sync, Import, Export |
-| **Super Admin** | 🔐 + PIN 1426 | Supabase, Railway, Audit |
+| **Super Admin** | 🔐 + PIN (set in Vercel) | Supabase, Railway, Audit |
 
 ---
 
@@ -167,7 +168,7 @@ master-events-calendar/
 
 ---
 
-**Last Updated:** December 9, 2025  
+**Last Updated:** January 14, 2026  
 **Version:** 3.0 (Production)  
 **Live URL:** https://teamcalendar.mygymtools.com  
 **Owner:** Jayme - Powers Gym Management
