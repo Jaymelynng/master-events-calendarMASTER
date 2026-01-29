@@ -82,6 +82,149 @@ CAMP_PRICING = {
     'TIG': {'full_day_weekly': 335, 'full_day_daily': 80, 'half_day_weekly': None, 'half_day_daily': None},
 }
 
+# ============================================================================
+# ENHANCED PRICE EXTRACTION FUNCTIONS
+# ============================================================================
+
+def extract_price_from_text_enhanced(text):
+    """
+    Enhanced price extraction with multiple patterns to handle various formats.
+    
+    Handles:
+    - $45 or $45.00 (standard format)
+    - 45 dollars
+    - Cost: $45 or Price: 45
+    - $45/week or $45 per day
+    - (45) or ($45)
+    
+    Returns: float or None
+    """
+    if not text:
+        return None
+    
+    text_str = str(text)
+    
+    # Pattern 1: Standard $XX or $XX.XX format (most common)
+    match = re.search(r'\$\s*(\d+(?:\.\d{2})?)', text_str)
+    if match:
+        return float(match.group(1))
+    
+    # Pattern 2: Number followed by "dollars"
+    match = re.search(r'(\d+(?:\.\d{2})?)\s*dollars?', text_str, re.IGNORECASE)
+    if match:
+        return float(match.group(1))
+    
+    # Pattern 3: "Cost:" or "Price:" or "Fee:" followed by number
+    match = re.search(r'(?:cost|price|fee|tuition):\s*\$?\s*(\d+(?:\.\d{2})?)', text_str, re.IGNORECASE)
+    if match:
+        return float(match.group(1))
+    
+    # Pattern 4: Number with "/" (per week/day/session)
+    match = re.search(r'\$?\s*(\d+(?:\.\d{2})?)\s*/\s*(?:week|day|session|class|child)', text_str, re.IGNORECASE)
+    if match:
+        return float(match.group(1))
+    
+    # Pattern 5: Standalone number in parentheses (like "(45)" or "($45)")
+    match = re.search(r'\(\s*\$?\s*(\d+(?:\.\d{2})?)\s*\)', text_str)
+    if match:
+        value = float(match.group(1))
+        # Only accept if reasonable price range (5-1000)
+        if 5 <= value <= 1000:
+            return value
+    
+    return None
+
+
+def extract_price_from_api_fields(ev):
+    """
+    Try to extract price from dedicated API fields.
+    
+    Checks common field names that might contain pricing:
+    - price, priceAmount, cost, costAmount, fee, feeAmount
+    - tuition, tuitionAmount, amount, rate, charge
+    - And many other variations
+    
+    Returns: (float, str) or (None, None) - (price, field_name)
+    """
+    # Priority ordered list of potential price field names
+    price_field_candidates = [
+        # Most common
+        'price', 'priceAmount', 'cost', 'costAmount',
+        # Fees and charges
+        'fee', 'feeAmount', 'tuition', 'tuitionAmount',
+        'charge', 'chargeAmount', 'rate', 'rateAmount',
+        # Member vs non-member
+        'memberPrice', 'nonMemberPrice', 'regularPrice',
+        # Various descriptive names
+        'totalCost', 'totalPrice', 'sessionPrice', 'classPrice',
+        'eventPrice', 'campPrice', 'programPrice',
+        'registrationFee', 'enrollmentFee', 'basePrice',
+        'unitPrice', 'itemPrice', 'amount',
+        # With underscores
+        'price_amount', 'cost_amount', 'fee_amount',
+        'member_price', 'non_member_price', 'base_price'
+    ]
+    
+    for field_name in price_field_candidates:
+        if field_name not in ev:
+            continue
+        
+        value = ev[field_name]
+        
+        # Handle numeric values
+        if isinstance(value, (int, float)) and value > 0:
+            return float(value), field_name
+        
+        # Handle string values (like "$45" or "45.00")
+        if isinstance(value, str):
+            # Remove currency symbols and whitespace, keep numbers and decimals
+            clean_value = re.sub(r'[^\d.]', '', value)
+            if clean_value:
+                try:
+                    price = float(clean_value)
+                    if price > 0:
+                        return price, field_name
+                except ValueError:
+                    pass
+    
+    return None, None
+
+
+def extract_price_enhanced(ev, title, description, gym_id=None, event_type=None):
+    """
+    Enhanced comprehensive price extraction using multiple methods.
+    
+    Priority:
+    1. API dedicated fields (most reliable if present)
+    2. Title text extraction (often has price)
+    3. Description text extraction (fallback)
+    4. Known pricing database (for validation)
+    
+    Returns: (price, source_description)
+        price: float or None
+        source_description: string indicating where price came from
+    """
+    # Method 1: Check API fields first (NEW - most reliable if available)
+    api_price, api_field = extract_price_from_api_fields(ev)
+    if api_price:
+        return api_price, f"API_FIELD:{api_field}"
+    
+    # Method 2: Enhanced regex from title (IMPROVED)
+    title_price = extract_price_from_text_enhanced(title)
+    if title_price:
+        return title_price, "TITLE"
+    
+    # Method 3: Enhanced regex from description (IMPROVED)
+    desc_price = extract_price_from_text_enhanced(description)
+    if desc_price:
+        return desc_price, "DESCRIPTION"
+    
+    # Method 4: Use known pricing as fallback (for camps)
+    # This is validation only - we don't auto-fill prices without seeing them
+    # (keeping existing camp price validation logic separate)
+    
+    return None, "NOT_FOUND"
+
 def fetch_event_type_urls():
     """Fetch EVENT_TYPE_URLS from Supabase gym_links table"""
     try:
@@ -581,18 +724,30 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         title = (ev.get("name") or "Untitled Event").strip()
         title = " ".join(title.split())
         
-        # Extract price from title or description
-        price = None
-        price_match = re.search(r'\$(\d+(?:\.\d{2})?)', title)
-        if price_match:
-            price = float(price_match.group(1))
+        # Get description early (needed for price extraction)
+        description_html = ev.get('description', '')
+        
+        # ENHANCED: Use comprehensive price extraction
+        price, price_source = extract_price_enhanced(
+            ev, 
+            title, 
+            description_html,
+            gym_id=gym_id,
+            event_type=camp_type_label
+        )
+        
+        # Log price extraction results
+        if price:
+            print(f"    💰 Price: ${price:.2f} (source: {price_source})")
         else:
-            # Try description if available
-            description_html = ev.get('description', '')
-            if description_html:
-                price_match = re.search(r'\$(\d+(?:\.\d{2})?)', description_html)
-                if price_match:
-                    price = float(price_match.group(1))
+            print(f"    ⚠️  NO PRICE FOUND - will need manual entry")
+            # Also log which methods were tried by checking the raw event
+            if not extract_price_from_api_fields(ev)[0]:
+                print(f"        - No dedicated price field in API")
+            if not extract_price_from_text_enhanced(title):
+                print(f"        - No price pattern in title")
+            if not extract_price_from_text_enhanced(description_html):
+                print(f"        - No price pattern in description")
         
         # Calculate day_of_week from start_date
         try:
