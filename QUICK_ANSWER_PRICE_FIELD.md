@@ -1,13 +1,15 @@
-# 🎯 Quick Answer: Is There a Price Field in the API?
+# 🎯 Quick Answer: Is There a Price Field in the Network Response?
 
 **Your Question:**
 > "I'm already pulling the price from the text. I'm asking if we can find it inside the developer tab anywhere. I haven't been able to find it."
+
+**Important Clarification:** iClassPro does NOT have a public API. What you see in the Developer Tools are **internal network requests** that their website makes to their backend. Playwright intercepts these internal requests.
 
 ---
 
 ## ⚡ Quick Answer
 
-**NO** - Based on your existing code analysis, there is **NO dedicated price field** in the iClassPro API response.
+**NO** - Based on your existing code analysis, there is **NO dedicated price field** in the iClassPro internal network responses.
 
 ### Why We Know This:
 
@@ -57,17 +59,18 @@ Click the **Network** tab at the top
 ### Step 5: Click on an Event
 Click any event on the calendar to load its details
 
-### Step 6: Find the API Call
-Look for a call like:
+### Step 6: Find the Network Request
+Look for a network request like:
 - `/camps/2106` (the number is the event ID)
 - It should show as type: `xhr` or `fetch`
+- **Note:** This is an internal endpoint, NOT a public API
 
 ### Step 7: Check the Response
-Click on that API call, then click the **"Response"** or **"Preview"** tab
+Click on that network request, then click the **"Response"** or **"Preview"** tab
 
 ### What You'll See:
 
-**Example API Response:**
+**Example Internal Network Response:**
 ```json
 {
   "data": {
@@ -116,7 +119,7 @@ In the JSON response, search for these field names:
 
 ## 📊 All Known Fields (From Your Code)
 
-Your code successfully extracts these fields from iClassPro API:
+Your code successfully extracts these fields from iClassPro's internal network responses (NOT a public API):
 
 | Field | What It Contains | Used For |
 |-------|------------------|----------|
@@ -158,18 +161,18 @@ Your code successfully extracts these fields from iClassPro API:
 
 1. Take a screenshot showing:
    - The Network tab
-   - The API call selected
+   - The network request selected
    - The Response showing the price field
 
 2. Share it here so I can update the code to use that field instead
 
-But based on your existing code that's been working for months, there's no price field in the API.
+But based on your existing code that's been working for months, there's no price field in the internal network responses.
 
 ---
 
 ## 💡 Why iClassPro Does This
 
-Many gym management systems don't have a structured price field because:
+iClassPro doesn't have a public API, and their internal network responses don't include structured pricing because:
 
 1. **Complex Pricing:** Different formats
    - "$45 per child"
@@ -179,7 +182,10 @@ Many gym management systems don't have a structured price field because:
 
 2. **Flexibility:** Text allows any pricing description
 
-3. **Legacy System:** Adding structured fields requires database migration
+3. **No Public API:** iClassPro doesn't provide developer APIs
+   - Only internal endpoints for their own website
+   - Not designed for third-party access
+   - Data optimized for their UI
 
 This is normal and not a limitation of your system!
 
@@ -201,4 +207,6 @@ This is normal and not a limitation of your system!
 
 **Need More Help?**
 
-Share a screenshot of the actual API response from Developer Tools and I can confirm definitively whether there's a price field or not.
+Share a screenshot of the actual network response from Developer Tools and I can confirm definitively whether there's a price field or not.
+
+Remember: iClassPro doesn't have a public API - what you're seeing in F12 are internal network requests used by their website.

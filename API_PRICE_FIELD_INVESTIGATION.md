@@ -1,14 +1,16 @@
-# 🔍 API Price Field Investigation Results
+# 🔍 Price Field Investigation Results
 
 **Date:** January 29, 2026  
-**Question:** Is there a dedicated price field in the iClassPro API response?  
+**Question:** Is there a dedicated price field in the iClassPro data?  
 **Answer:** Based on code analysis: **NO** ❌
+
+**Important Note:** iClassPro does NOT have a public API. What we're analyzing are the **internal network requests** that their website makes to their backend servers. These are intercepted by Playwright when the browser loads event data.
 
 ---
 
 ## 📊 Summary
 
-After analyzing your codebase and the fields you're extracting from iClassPro's API, **there is NO dedicated price field** in the API responses. This is why you're currently extracting prices from text in the title and description.
+After analyzing your codebase and the fields you're extracting from iClassPro's **internal network responses**, **there is NO dedicated price field** in the data returned. This is why you're currently extracting prices from text in the title and description.
 
 ---
 
@@ -16,7 +18,7 @@ After analyzing your codebase and the fields you're extracting from iClassPro's 
 
 ### Fields Your Code Currently Extracts
 
-Based on `automation/f12_collect_and_import.py`, here are ALL the fields you extract from the iClassPro API:
+Based on `automation/f12_collect_and_import.py`, here are ALL the fields you extract from iClassPro's **internal network responses** (NOT a public API - these are intercepted browser requests):
 
 ```python
 # From ev.get() calls in your code:
@@ -64,7 +66,9 @@ else:
 
 ## 🎯 What This Means
 
-### iClassPro API Structure
+### iClassPro Internal Network Response Structure
+
+**Important:** This is NOT a public API. This is the JSON data that iClassPro's website receives when you click on an event. Playwright intercepts these internal network requests.
 
 ```json
 {
@@ -110,10 +114,10 @@ To confirm there's no price field in the actual API:
 1. Navigate to your calendar/events page
 2. Click on an event that has a price
 
-### Step 3: Find the API Call
+### Step 3: Find the Network Request
 1. In the Network tab, filter by **XHR** or **Fetch**
-2. Look for calls to: `/camps/{id}` or similar
-3. Click on the API call
+2. Look for calls to: `/camps/{id}` or similar (these are internal endpoints, NOT a public API)
+3. Click on that network request
 
 ### Step 4: Check the Response
 1. Click the **Response** or **Preview** tab
@@ -126,6 +130,8 @@ To confirm there's no price field in the actual API:
    - `tuition`
 
 ### What to Look For:
+
+**Note:** These are internal network responses, not public API responses.
 
 **If there IS a price field (unlikely):**
 ```json
@@ -158,14 +164,14 @@ To confirm there's no price field in the actual API:
 To give you a definitive answer, please:
 
 1. **Take a screenshot** of the Developer Tools showing:
-   - The Network tab with the API call selected
+   - The Network tab with the network request selected
    - The Response/Preview showing the JSON structure
    - Make sure we can see all the fields
 
-2. **Or paste the JSON** from an actual API response here
+2. **Or paste the JSON** from an actual network response here
 
 This will confirm whether:
-- ✅ There IS a price field we're missing (unlikely)
+- ✅ There IS a price field in the internal response we're missing (unlikely)
 - ✅ There is NO price field (confirmed)
 
 ---
@@ -192,9 +198,9 @@ else:
 > "Can we find the price in the developer tab anywhere?"
 
 ### Answer:
-Based on your code, **the price is NOT in a dedicated API field**. It's embedded in the text of `name` and `description` fields, which is why you're extracting it with regex.
+Based on your code, **the price is NOT in a dedicated field in the internal network response**. It's embedded in the text of `name` and `description` fields, which is why you're extracting it with regex.
 
-**BUT** to be 100% certain, check the actual API response in F12 as described above.
+**BUT** to be 100% certain, check the actual network response in F12 as described above.
 
 ---
 
@@ -211,6 +217,11 @@ Based on your code, **the price is NOT in a dedicated API field**. It's embedded
 2. **Legacy System:** iClassPro may not have standardized pricing
    - Older platforms often store everything as text
    - Adding structured fields requires database migration
+
+3. **No Public API:** iClassPro doesn't provide a public API for developers
+   - They only have internal endpoints for their own website
+   - These aren't designed for third-party access
+   - Data structure is optimized for their UI, not external use
 
 3. **Custom Pricing:** Events have complex pricing
    - Early bird discounts
@@ -249,7 +260,7 @@ Many event management systems do this:
 1. Open iClassPro in browser
 2. Open F12 Developer Tools
 3. Navigate to events page
-4. Find API call to `/camps/{id}`
+4. Find network request to `/camps/{id}` (internal endpoint)
 5. Look at the JSON response
 6. **Take a screenshot or paste the JSON here**
 
@@ -263,9 +274,9 @@ Many event management systems do this:
 
 **Question:** "Can we find the price in the developer tab anywhere?"
 
-**Current Answer (based on code):** NO - there's no dedicated price field in the API
+**Current Answer (based on code):** NO - there's no dedicated price field in the internal network response
 
-**To Confirm:** Check the actual API response in F12 and share what you see
+**To Confirm:** Check the actual network response in F12 and share what you see
 
 **Current Solution:** Text extraction from title/description (already working)
 
@@ -275,7 +286,7 @@ Many event management systems do this:
 
 **Bottom Line:** 
 
-Based on your existing code that successfully collects events, **iClassPro does NOT provide a price field in their API**. The price is only available in text format within the `name` (title) and `description` fields.
+Based on your existing code that successfully collects events, **iClassPro does NOT provide a price field in their internal network responses** (and they don't have a public API at all). The price is only available in text format within the `name` (title) and `description` fields.
 
 However, **please verify this by checking the actual API response in your browser's Developer Tools** and share what you find. If there IS a price field, we can update the code to use it!
 
