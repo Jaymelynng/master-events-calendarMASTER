@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Loader, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import { eventsApi, syncLogApi, auditLogApi } from '../../lib/api';
-import { compareEvents, getComparisonSummary } from '../../lib/eventComparison';
+import { compareEvents } from '../../lib/eventComparison';
 import { supabase } from '../../lib/supabase';
 
 export default function SyncModal({ theme, onClose, onBack, gyms }) {
