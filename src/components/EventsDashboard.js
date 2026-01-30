@@ -2955,6 +2955,24 @@ The system will add new events and update any changed events automatically.`;
 
               <div className="mt-4 text-xs text-center" style={{ color: theme.colors.textSecondary }}>
                   <p>• Click any event card to open the side panel with full details and registration links</p>
+                  <div className="mt-2 flex items-center justify-center gap-4 text-[10px]">
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 bg-red-500 rounded-full border border-red-700 inline-block"></span>
+                      Data Error
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 bg-orange-400 rounded-full border border-orange-600 inline-block"></span>
+                      Formatting
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 bg-red-500 rounded-full border-2 border-orange-400 inline-block"></span>
+                      Both
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 bg-gray-400 rounded-full inline-block"></span>
+                      Flyer Only
+                    </span>
+                  </div>
               </div>
 
 
@@ -3203,21 +3221,54 @@ The system will add new events and update any changed events automatically.`;
                                           )}
                                           {/* Validation status indicator - only show problems (respects dismissed warnings) */}
                                           {/* NOTE: sold_out type is excluded - it's informational, not an audit error */}
+                                          {/* Color coding: RED dot = data error, ORANGE dot = formatting, BOTH = red+orange */}
                                           {(() => {
                                             const acknowledged = event.acknowledged_errors || [];
                                             const activeErrors = (event.validation_errors || []).filter(
                                               err => err.type !== 'sold_out' && !isErrorAcknowledged(acknowledged, err.message)
                                             );
-                                            // Check if any are data errors (high priority)
-                                            const hasDataErrors = activeErrors.some(err => err.category === 'data_error');
-                                            if (hasDataErrors) {
-                                              return <span className="absolute -top-1 -right-1 text-sm" title="DATA ERROR - wrong info that affects customers!">🚨</span>;
-                                            } else if (activeErrors.length > 0) {
-                                              return <span className="absolute -top-1 -right-1 text-xs" title="Formatting issue - incomplete info">⚠️</span>;
+                                            // Separate by category
+                                            const dataErrors = activeErrors.filter(err => err.category === 'data_error');
+                                            const formattingErrors = activeErrors.filter(err => err.category === 'formatting' || !err.category);
+                                            const hasDataErrors = dataErrors.length > 0;
+                                            const hasFormattingErrors = formattingErrors.length > 0;
+                                            
+                                            // Show colored dots based on error types
+                                            if (hasDataErrors && hasFormattingErrors) {
+                                              // Both types - show red dot with orange ring
+                                              return (
+                                                <span className="absolute -top-1 -right-1 flex items-center gap-0.5" title={`DATA: ${dataErrors.length} | FORMAT: ${formattingErrors.length}`}>
+                                                  <span className="w-3 h-3 bg-red-500 rounded-full border-2 border-orange-400 shadow-sm"></span>
+                                                </span>
+                                              );
+                                            } else if (hasDataErrors) {
+                                              // Data errors only - red dot
+                                              return (
+                                                <span className="absolute -top-1 -right-1" title={`${dataErrors.length} DATA ERROR(S) - wrong info!`}>
+                                                  <span className="w-3 h-3 bg-red-500 rounded-full shadow-sm inline-block border border-red-700"></span>
+                                                </span>
+                                              );
+                                            } else if (hasFormattingErrors) {
+                                              // Formatting only - orange dot
+                                              return (
+                                                <span className="absolute -top-1 -right-1" title={`${formattingErrors.length} formatting issue(s) - incomplete info`}>
+                                                  <span className="w-2.5 h-2.5 bg-orange-400 rounded-full shadow-sm inline-block border border-orange-600"></span>
+                                                </span>
+                                              );
                                             } else if (event.description_status === 'flyer_only') {
-                                              return <span className="absolute -top-1 -right-1 text-xs" title="Has flyer but no text description">📋</span>;
+                                              // Flyer only - small gray dot
+                                              return (
+                                                <span className="absolute -top-1 -right-1" title="Has flyer but no text description">
+                                                  <span className="w-2 h-2 bg-gray-400 rounded-full shadow-sm inline-block"></span>
+                                                </span>
+                                              );
                                             } else if (event.description_status === 'none') {
-                                              return <span className="absolute -top-1 -right-1 text-xs" title="No description at all">❌</span>;
+                                              // No description - hollow red circle
+                                              return (
+                                                <span className="absolute -top-1 -right-1" title="No description at all">
+                                                  <span className="w-2.5 h-2.5 border-2 border-red-500 rounded-full inline-block bg-white"></span>
+                                                </span>
+                                              );
                                             }
                                             return null;
                                           })()}
