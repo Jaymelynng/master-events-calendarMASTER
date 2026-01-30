@@ -915,6 +915,57 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         {/* Date Range Selection */}
         <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <h3 className="font-semibold text-gray-800 mb-3">📅 Date Range:</h3>
+          
+          {/* Quick date range buttons */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            <button
+              onClick={() => {
+                const today = new Date();
+                const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                const lastOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                setStartDate(firstOfMonth.toISOString().split('T')[0]);
+                setEndDate(lastOfMonth.toISOString().split('T')[0]);
+              }}
+              className="px-3 py-1.5 text-xs bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+            >
+              📆 This Month
+            </button>
+            <button
+              onClick={() => {
+                const today = new Date();
+                setStartDate(today.toISOString().split('T')[0]);
+                // Set end date to Dec 31 of next year (covers all future events)
+                const endOfNextYear = new Date(today.getFullYear() + 1, 11, 31);
+                setEndDate(endOfNextYear.toISOString().split('T')[0]);
+              }}
+              className="px-3 py-1.5 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors font-medium"
+            >
+              🚀 All Future (from today)
+            </button>
+            <button
+              onClick={() => {
+                const today = new Date();
+                const startOfYear = new Date(today.getFullYear(), 0, 1);
+                const endOfYear = new Date(today.getFullYear(), 11, 31);
+                setStartDate(startOfYear.toISOString().split('T')[0]);
+                setEndDate(endOfYear.toISOString().split('T')[0]);
+              }}
+              className="px-3 py-1.5 text-xs bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+            >
+              📅 Full Year {new Date().getFullYear()}
+            </button>
+            <button
+              onClick={() => {
+                // Everything in database - Jan 2024 to Dec 2027
+                setStartDate('2024-01-01');
+                setEndDate('2027-12-31');
+              }}
+              className="px-3 py-1.5 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition-colors"
+            >
+              💾 Entire Database
+            </button>
+          </div>
+          
           <div className="flex flex-wrap items-center gap-4">
             <div>
               <label className="text-xs text-gray-500 block mb-1">From:</label>
