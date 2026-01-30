@@ -830,27 +830,29 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
     <div class="section" style="border-left: 4px solid #f59e0b;">
       <h2>🔍 Audit Check Issues (${getAuditCheckIssues().length} events)</h2>
       ${getAuditCheckIssues().length > 0 ? `
-      <p style="margin-bottom: 16px; color: #666;">Events with data errors, formatting issues, or missing descriptions:</p>
+      <p style="margin-bottom: 16px; color: #666;">Events with data errors, formatting issues, or missing descriptions. Click 🔗 to open event in iClassPro.</p>
       <table>
         <thead>
           <tr>
             <th>Gym</th>
             <th>Event</th>
             <th>Date</th>
-            <th style="text-align:center">Data Errors</th>
-            <th style="text-align:center">Formatting</th>
+            <th style="text-align:center">Data</th>
+            <th style="text-align:center">Format</th>
             <th>Issues</th>
+            <th style="text-align:center">Link</th>
           </tr>
         </thead>
         <tbody>
           ${getAuditCheckIssues().slice(0, 100).map(issue => `
           <tr>
             <td><small style="color:#888">${issue.gym_id}</small></td>
-            <td><strong>${issue.title?.substring(0, 40)}${issue.title?.length > 40 ? '...' : ''}</strong></td>
+            <td><strong>${issue.title?.substring(0, 35)}${issue.title?.length > 35 ? '...' : ''}</strong></td>
             <td>${issue.date}</td>
             <td style="text-align:center">${issue.data_error_count > 0 ? `<span class="badge danger">${issue.data_error_count}</span>` : '-'}</td>
             <td style="text-align:center">${issue.formatting_error_count > 0 ? `<span class="badge warning">${issue.formatting_error_count}</span>` : '-'}</td>
             <td><small>${issue.issues.slice(0, 2).join('; ')}${issue.issues.length > 2 ? '...' : ''}</small></td>
+            <td style="text-align:center">${issue.event_url ? `<a href="${issue.event_url}" target="_blank" style="text-decoration:none; font-size:16px;" title="Open in iClassPro">🔗</a>` : '-'}</td>
           </tr>
           `).join('')}
         </tbody>
@@ -864,12 +866,30 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
     
     <div class="footer">
       <p>Master Events Calendar • Report generated automatically</p>
-      <p style="margin-top: 4px;">
+      <p style="margin-top: 8px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
         <button onclick="window.print()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
           🖨️ Print Report
         </button>
+        <button onclick="downloadHTML()" style="padding: 8px 16px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer;">
+          💾 Download HTML
+        </button>
       </p>
     </div>
+    
+    <script>
+      function downloadHTML() {
+        const html = document.documentElement.outerHTML;
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'master-events-report-${timestamp}.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    </script>
   </div>
 </body>
 </html>
