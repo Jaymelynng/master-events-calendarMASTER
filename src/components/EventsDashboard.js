@@ -392,6 +392,27 @@ const EventsDashboard = () => {
     );
   };
 
+  // Helper: Infer category from error type (for legacy data that doesn't have category field)
+  // DATA ERRORS = wrong information that affects customers
+  // FORMATTING = missing/incomplete information
+  const inferErrorCategory = (error) => {
+    if (error.category) return error.category; // Use existing category if present
+    
+    // Data errors - these are WRONG information (mismatches)
+    const dataErrorTypes = [
+      'year_mismatch', 'date_mismatch', 'time_mismatch', 'age_mismatch',
+      'day_mismatch', 'program_mismatch', 'skill_mismatch', 'price_mismatch',
+      'title_desc_mismatch', 'camp_price_mismatch'
+    ];
+    
+    // Status errors - informational
+    const statusErrorTypes = ['registration_closed', 'registration_not_open', 'sold_out'];
+    
+    if (dataErrorTypes.includes(error.type)) return 'data_error';
+    if (statusErrorTypes.includes(error.type)) return 'status';
+    return 'formatting'; // Default to formatting for missing_* types
+  };
+
   // Helper: Get the acknowledgment details for an error (note, timestamp)
   const getAcknowledgmentDetails = (acknowledgedErrors, errorMessage) => {
     if (!acknowledgedErrors || !Array.isArray(acknowledgedErrors)) return null;
@@ -3227,9 +3248,9 @@ The system will add new events and update any changed events automatically.`;
                                             const activeErrors = (event.validation_errors || []).filter(
                                               err => err.type !== 'sold_out' && !isErrorAcknowledged(acknowledged, err.message)
                                             );
-                                            // Separate by category
-                                            const dataErrors = activeErrors.filter(err => err.category === 'data_error');
-                                            const formattingErrors = activeErrors.filter(err => err.category === 'formatting' || !err.category);
+                                            // Separate by category (using inferErrorCategory for legacy data without category field)
+                                            const dataErrors = activeErrors.filter(err => inferErrorCategory(err) === 'data_error');
+                                            const formattingErrors = activeErrors.filter(err => inferErrorCategory(err) === 'formatting');
                                             const hasDataErrors = dataErrors.length > 0;
                                             const hasFormattingErrors = formattingErrors.length > 0;
                                             
@@ -3584,12 +3605,12 @@ The system will add new events and update any changed events automatically.`;
                       // Count total issues including description status
                       const totalIssues = activeErrors.length + (hasDescriptionIssue ? 1 : 0);
                       
-                      // Separate by NEW category field (data_error, formatting, status)
-                      const dataErrors = activeErrors.filter(e => e.category === 'data_error');
-                      const formattingErrors = activeErrors.filter(e => e.category === 'formatting');
-                      const statusErrors = activeErrors.filter(e => e.category === 'status');
-                      // Fallback for errors without category (legacy data)
-                      const uncategorizedErrors = activeErrors.filter(e => !e.category);
+                      // Separate by category (using inferErrorCategory for legacy data without category field)
+                      const dataErrors = activeErrors.filter(e => inferErrorCategory(e) === 'data_error');
+                      const formattingErrors = activeErrors.filter(e => inferErrorCategory(e) === 'formatting');
+                      const statusErrors = activeErrors.filter(e => inferErrorCategory(e) === 'status');
+                      // No more uncategorized - inferErrorCategory handles all cases
+                      const uncategorizedErrors = []; // Keep for backwards compatibility but will always be empty
                       
                       return (
                         <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
