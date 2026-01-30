@@ -12,6 +12,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const [includeMissing, setIncludeMissing] = useState(false);
   const [includeAuditCheck, setIncludeAuditCheck] = useState(false);
   const [includeSyncHistory, setIncludeSyncHistory] = useState(false);
+  const [includeDismissedWarnings, setIncludeDismissedWarnings] = useState(false);
   
   // Admin check for Sync History (hidden feature)
   // PIN from environment variable (fallback for local dev)
@@ -215,6 +216,14 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     selectedGyms.includes(e.gym_id) && selectedTypes.includes(e.type)
   );
 
+  // Helper: Check if an error message is acknowledged (supports both old string format and new object format)
+  const isErrorAcknowledged = (acknowledgedErrors, errorMessage) => {
+    if (!acknowledgedErrors || !Array.isArray(acknowledgedErrors)) return false;
+    return acknowledgedErrors.some(ack => 
+      typeof ack === 'string' ? ack === errorMessage : ack.message === errorMessage
+    );
+  };
+
   // Get events with audit check failures (validation errors, missing descriptions, etc.)
   // This matches the "Audit Check" column in the main dashboard table
   // NOTE: Sold out (type: 'sold_out') is excluded - it's informational, not a data quality issue
@@ -222,9 +231,9 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     return filteredEvents.filter(e => {
       const errors = e.validation_errors || [];
       const acknowledged = e.acknowledged_errors || [];
-      // Filter out sold_out type AND acknowledged errors
+      // Filter out sold_out type AND acknowledged errors (supports both formats)
       const unacknowledged = errors.filter(err => 
-        err.type !== 'sold_out' && !acknowledged.includes(err.message)
+        err.type !== 'sold_out' && !isErrorAcknowledged(acknowledged, err.message)
       );
       return unacknowledged.length > 0 || 
              e.description_status === 'none' || 
@@ -239,7 +248,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         // Filter out sold_out type from displayed issues
         ...(e.validation_errors || [])
           .filter(err => err.type !== 'sold_out')
-          .map(err => `${err.severity}: ${err.message}`),
+          .map(err => `${err.category ? `[${err.category.toUpperCase()}] ` : ''}${err.severity}: ${err.message}`),
         e.description_status === 'none' ? 'Missing description' : null,
         e.description_status === 'flyer_only' ? 'Flyer only (no text)' : null
       ].filter(Boolean),
@@ -247,6 +256,35 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       flyer_url: e.flyer_url || null,
       event_url: e.event_url
     }));
+  };
+
+  // Get events with dismissed warnings (for "View All Exceptions" feature)
+  const getDismissedWarnings = () => {
+    return filteredEvents.filter(e => {
+      const acknowledged = e.acknowledged_errors || [];
+      return acknowledged.length > 0;
+    }).map(e => {
+      const acknowledged = e.acknowledged_errors || [];
+      return {
+        gym_id: e.gym_id,
+        gym_name: e.gym_name || e.gym_id,
+        title: e.title,
+        date: e.date,
+        type: e.type,
+        event_url: e.event_url,
+        dismissed_count: acknowledged.length,
+        dismissed_warnings: acknowledged.map(ack => {
+          if (typeof ack === 'string') {
+            return { message: ack, note: null, dismissed_at: null };
+          }
+          return {
+            message: ack.message,
+            note: ack.note || null,
+            dismissed_at: ack.dismissed_at || null
+          };
+        })
+      };
+    });
   };
 
   // Calculate analytics for selected gyms
@@ -426,6 +464,33 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       csvContent += '\n';
     }
 
+    // Dismissed Warnings section (View All Exceptions)
+    if (includeDismissedWarnings) {
+      const dismissed = getDismissedWarnings();
+      csvContent += `DISMISSED WARNINGS (EXCEPTIONS) - ${monthName}\n`;
+      if (dismissed.length > 0) {
+        csvContent += 'Gym,Title,Date,Type,Dismissed Warning,Note,Dismissed Date,Event URL\n';
+        dismissed.forEach(event => {
+          event.dismissed_warnings.forEach(warning => {
+            csvContent += [
+              `"${event.gym_name}"`,
+              `"${(event.title || '').replace(/"/g, '""')}"`,
+              event.date,
+              event.type,
+              `"${(warning.message || '').replace(/"/g, '""')}"`,
+              `"${(warning.note || '').replace(/"/g, '""')}"`,
+              warning.dismissed_at ? new Date(warning.dismissed_at).toLocaleDateString() : '',
+              event.event_url || ''
+            ].join(',') + '\n';
+          });
+        });
+      } else {
+        csvContent += 'Status,Message\n';
+        csvContent += `"✅ No Exceptions","No dismissed warnings found in the selected date range."\n`;
+      }
+      csvContent += '\n';
+    }
+
     downloadFile(csvContent, `export-${timestamp}.csv`, 'text/csv');
   };
 
@@ -468,6 +533,10 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
 
     if (includeSyncHistory) {
       exportData.syncHistory = syncLog;
+    }
+
+    if (includeDismissedWarnings) {
+      exportData.dismissedWarnings = getDismissedWarnings();
     }
 
     const json = JSON.stringify(exportData, null, 2);
@@ -754,8 +823,8 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
     URL.revokeObjectURL(url);
   };
 
-  const canExport = (includeEvents || includeAnalytics || includeMissing || includeAuditCheck || includeSyncHistory) && 
-                   (selectedGyms.length > 0 || includeMissing || includeSyncHistory);
+  const canExport = (includeEvents || includeAnalytics || includeMissing || includeAuditCheck || includeSyncHistory || includeDismissedWarnings) && 
+                   (selectedGyms.length > 0 || includeMissing || includeSyncHistory || includeDismissedWarnings);
 
   // Calculate audit check issues count for display (matches "Audit Check" column in main dashboard)
   const auditCheckCount = getAuditCheckIssues().length;
@@ -923,6 +992,20 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
               />
               <span className="text-gray-700">🔍 Audit Check (validation errors, missing descriptions)</span>
             </label>
+            <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
+              <input 
+                type="checkbox" 
+                checked={includeDismissedWarnings} 
+                onChange={(e) => { setIncludeDismissedWarnings(e.target.checked); setActivePreset(null); }}
+                className="w-4 h-4 text-amber-600"
+              />
+              <span className="text-gray-700">
+                ✓ Dismissed Warnings (exceptions with notes)
+                {!loadingEvents && getDismissedWarnings().length > 0 && (
+                  <span className="text-xs text-green-600 ml-1">({getDismissedWarnings().length} events)</span>
+                )}
+              </span>
+            </label>
             {/* Sync History - Admin Only */}
             {isAdmin ? (
               <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
@@ -995,6 +1078,41 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
               ) : (
                 <div className="font-semibold text-green-700">
                   ✅ No audit check issues found! All {filteredEvents.length} events have complete descriptions and no validation errors.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Preview of dismissed warnings - ONLY shows when checkbox is checked */}
+          {includeDismissedWarnings && !loadingEvents && (
+            <div className={`mt-3 p-2 rounded border text-xs ${getDismissedWarnings().length > 0 ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+              <div className="font-semibold text-gray-600 mb-1">
+                📅 Checking date range: {startDate} to {endDate}
+              </div>
+              {getDismissedWarnings().length > 0 ? (
+                <>
+                  <div className="font-semibold text-green-700 mb-1">
+                    ✓ Found {getDismissedWarnings().length} event{getDismissedWarnings().length !== 1 ? 's' : ''} with dismissed warnings
+                  </div>
+                  <div className="text-green-600 text-xs mb-2">
+                    Export will include: event details + dismissed warnings + notes
+                  </div>
+                  <div className="max-h-32 overflow-y-auto">
+                    {getDismissedWarnings().slice(0, 5).map((event, idx) => (
+                      <div key={idx} className="text-green-700 text-xs mb-1">
+                        • {event.gym_name}: {event.title?.substring(0, 40)}... ({event.dismissed_count} dismissed)
+                      </div>
+                    ))}
+                    {getDismissedWarnings().length > 5 && (
+                      <div className="text-green-500 text-xs italic">
+                        ... and {getDismissedWarnings().length - 5} more
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="font-semibold text-gray-500">
+                  No dismissed warnings found in the selected date range.
                 </div>
               )}
             </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { eventsApi, syncLogApi, auditLogApi } from '../../lib/api';
 import { compareEvents, getComparisonSummary } from '../../lib/eventComparison';
+import { supabase } from '../../lib/supabase';
 
 export default function SyncModal({ theme, onClose, onBack, gyms }) {
   const [selectedGym, setSelectedGym] = useState('');
@@ -15,6 +16,8 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
   const [syncLog, setSyncLog] = useState([]);
   const [showProgress, setShowProgress] = useState(true); // Expanded by default
   const [forceUpdate, setForceUpdate] = useState(false); // Force re-import even if "same"
+  const [showAuditPanel, setShowAuditPanel] = useState(false); // Show validation errors panel
+  const [dismissingError, setDismissingError] = useState(null); // Track which error is being dismissed
 
   // Load sync log on mount
   useEffect(() => {
@@ -62,6 +65,106 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
     'CAMP',
     'SPECIAL EVENT'
   ];
+
+  // Helper: Check if an error message is acknowledged (supports both old string format and new object format)
+  const isErrorAcknowledged = (acknowledgedErrors, errorMessage) => {
+    if (!acknowledgedErrors || !Array.isArray(acknowledgedErrors)) return false;
+    return acknowledgedErrors.some(ack => 
+      typeof ack === 'string' ? ack === errorMessage : ack.message === errorMessage
+    );
+  };
+
+  // Get events with validation issues from the sync results
+  const getEventsWithValidationIssues = () => {
+    if (!editableEvents || editableEvents.length === 0) return [];
+    
+    return editableEvents.filter(event => {
+      const errors = event.validation_errors || [];
+      // Filter out sold_out type (it's informational)
+      const realErrors = errors.filter(err => err.type !== 'sold_out');
+      return realErrors.length > 0 || 
+             event.description_status === 'none' || 
+             event.description_status === 'flyer_only';
+    }).map(event => {
+      const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
+      // Separate by category
+      const dataErrors = errors.filter(e => e.category === 'data_error');
+      const formattingErrors = errors.filter(e => e.category === 'formatting');
+      const statusErrors = errors.filter(e => e.category === 'status');
+      const otherErrors = errors.filter(e => !e.category);
+      
+      return {
+        ...event,
+        dataErrors,
+        formattingErrors,
+        statusErrors,
+        otherErrors,
+        totalErrors: errors.length,
+        hasDescriptionIssue: event.description_status === 'none' || event.description_status === 'flyer_only'
+      };
+    });
+  };
+
+  // Dismiss a validation error for an event (saves to database)
+  const handleDismissError = async (event, errorMessage) => {
+    // First, find the event in the database by event_url
+    try {
+      setDismissingError(`${event.event_url}-${errorMessage}`);
+      
+      const { data: existingEvent, error: fetchError } = await supabase
+        .from('events')
+        .select('id, acknowledged_errors')
+        .eq('event_url', event.event_url)
+        .single();
+      
+      if (fetchError || !existingEvent) {
+        // Event not in database yet - can't dismiss until imported
+        alert('This event needs to be imported first before you can dismiss warnings.');
+        setDismissingError(null);
+        return;
+      }
+      
+      // Prompt for optional note
+      const note = window.prompt(
+        'Optional: Add a note explaining why this is OK (or leave blank):',
+        ''
+      );
+      
+      if (note === null) {
+        // User clicked Cancel
+        setDismissingError(null);
+        return;
+      }
+      
+      const currentAcknowledged = existingEvent.acknowledged_errors || [];
+      
+      // Check if already acknowledged
+      if (!isErrorAcknowledged(currentAcknowledged, errorMessage)) {
+        const acknowledgment = {
+          message: errorMessage,
+          note: note || null,
+          dismissed_at: new Date().toISOString()
+        };
+        
+        const updatedAcknowledged = [...currentAcknowledged, acknowledgment];
+        
+        const { error: updateError } = await supabase
+          .from('events')
+          .update({ acknowledged_errors: updatedAcknowledged })
+          .eq('id', existingEvent.id);
+        
+        if (updateError) throw updateError;
+        
+        console.log(`✅ Dismissed error for "${event.title}": "${errorMessage}"`);
+      }
+      
+      setDismissingError(null);
+    } catch (error) {
+      console.error('Error dismissing validation error:', error);
+      alert('Failed to dismiss error. Please try again.');
+      setDismissingError(null);
+    }
+  };
 
   // All sync option (includes ALL event types at once)
   const ALL_PROGRAMS = 'ALL';
@@ -851,6 +954,185 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
             )}
           </div>
         )}
+
+        {/* AUDIT ISSUES PANEL - Show validation errors from synced events */}
+        {result && result.success && editableEvents.length > 0 && !importResult && (() => {
+          const eventsWithIssues = getEventsWithValidationIssues();
+          const totalDataErrors = eventsWithIssues.reduce((sum, e) => sum + e.dataErrors.length, 0);
+          const totalFormattingErrors = eventsWithIssues.reduce((sum, e) => sum + e.formattingErrors.length, 0);
+          const totalDescriptionIssues = eventsWithIssues.filter(e => e.hasDescriptionIssue).length;
+          const totalIssues = totalDataErrors + totalFormattingErrors + totalDescriptionIssues;
+          
+          if (totalIssues === 0) return null;
+          
+          return (
+            <div className="mb-4 border-2 border-red-300 rounded-lg overflow-hidden bg-white">
+              <div 
+                className="bg-red-50 px-4 py-3 border-b-2 border-red-200 cursor-pointer hover:bg-red-100 transition-colors"
+                onClick={() => setShowAuditPanel(!showAuditPanel)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🚨</span>
+                    <div>
+                      <h3 className="font-bold text-red-800 text-lg">Audit Issues Found</h3>
+                      <p className="text-xs text-red-600 mt-0.5">
+                        {eventsWithIssues.length} event{eventsWithIssues.length !== 1 ? 's' : ''} with validation issues
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-2">
+                      {totalDataErrors > 0 && (
+                        <span className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">
+                          {totalDataErrors} DATA
+                        </span>
+                      )}
+                      {totalFormattingErrors > 0 && (
+                        <span className="px-2 py-1 bg-orange-500 text-white text-xs font-bold rounded">
+                          {totalFormattingErrors} FORMAT
+                        </span>
+                      )}
+                      {totalDescriptionIssues > 0 && (
+                        <span className="px-2 py-1 bg-gray-500 text-white text-xs font-bold rounded">
+                          {totalDescriptionIssues} DESC
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-red-600 text-lg">{showAuditPanel ? '▼' : '▶'}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {showAuditPanel && (
+                <div className="max-h-96 overflow-y-auto">
+                  {eventsWithIssues.map((event, eventIdx) => (
+                    <div key={eventIdx} className="border-b border-red-100 last:border-b-0">
+                      <div className="px-4 py-3 bg-red-50/50">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-gray-800 text-sm truncate" title={event.title}>
+                              {event.title}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {event.date} • {event.type || 'Unknown Type'}
+                            </div>
+                          </div>
+                          {event.event_url && (
+                            <a 
+                              href={event.event_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex-shrink-0 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
+                            >
+                              🔗 iClass
+                            </a>
+                          )}
+                        </div>
+                        
+                        {/* Description Issues */}
+                        {event.hasDescriptionIssue && (
+                          <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
+                            {event.description_status === 'none' ? (
+                              <span className="text-red-600">❌ <strong>No description</strong> - Event has no description text</span>
+                            ) : (
+                              <span className="text-yellow-700">⚠️ <strong>Flyer only</strong> - Has image but no text description</span>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Data Errors (High Priority) */}
+                        {event.dataErrors.length > 0 && (
+                          <div className="mt-2">
+                            <div className="text-xs font-semibold text-red-700 mb-1 flex items-center gap-1">
+                              <span className="bg-red-600 text-white px-1.5 py-0.5 rounded text-[10px]">HIGH</span>
+                              Data Errors:
+                            </div>
+                            <div className="space-y-1">
+                              {event.dataErrors.map((error, errIdx) => (
+                                <div key={errIdx} className="flex items-center justify-between gap-2 p-1.5 bg-red-100 rounded border-l-4 border-red-500 text-xs">
+                                  <span className="flex-1 text-red-800">
+                                    🚨 {error.message}
+                                  </span>
+                                  <button
+                                    onClick={() => handleDismissError(event, error.message)}
+                                    disabled={dismissingError === `${event.event_url}-${error.message}`}
+                                    className="flex-shrink-0 px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors font-medium disabled:opacity-50"
+                                    title="Dismiss with optional note"
+                                  >
+                                    {dismissingError === `${event.event_url}-${error.message}` ? '...' : '✓ OK'}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Formatting Errors (Lower Priority) */}
+                        {event.formattingErrors.length > 0 && (
+                          <div className="mt-2">
+                            <div className="text-xs font-semibold text-orange-700 mb-1 flex items-center gap-1">
+                              <span className="bg-orange-500 text-white px-1.5 py-0.5 rounded text-[10px]">FORMAT</span>
+                              Missing Info:
+                            </div>
+                            <div className="space-y-1">
+                              {event.formattingErrors.map((error, errIdx) => (
+                                <div key={errIdx} className="flex items-center justify-between gap-2 p-1.5 bg-orange-50 rounded border-l-4 border-orange-400 text-xs">
+                                  <span className="flex-1 text-orange-800">
+                                    ⚠️ {error.message}
+                                  </span>
+                                  <button
+                                    onClick={() => handleDismissError(event, error.message)}
+                                    disabled={dismissingError === `${event.event_url}-${error.message}`}
+                                    className="flex-shrink-0 px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors font-medium disabled:opacity-50"
+                                    title="Dismiss with optional note"
+                                  >
+                                    {dismissingError === `${event.event_url}-${error.message}` ? '...' : '✓ OK'}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Status/Other Errors */}
+                        {(event.statusErrors.length > 0 || event.otherErrors.length > 0) && (
+                          <div className="mt-2">
+                            <div className="text-xs font-semibold text-blue-700 mb-1">Other:</div>
+                            <div className="space-y-1">
+                              {[...event.statusErrors, ...event.otherErrors].map((error, errIdx) => (
+                                <div key={errIdx} className="flex items-center justify-between gap-2 p-1.5 bg-blue-50 rounded border-l-4 border-blue-400 text-xs">
+                                  <span className="flex-1 text-blue-800">
+                                    ℹ️ {error.message}
+                                  </span>
+                                  <button
+                                    onClick={() => handleDismissError(event, error.message)}
+                                    disabled={dismissingError === `${event.event_url}-${error.message}`}
+                                    className="flex-shrink-0 px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors font-medium disabled:opacity-50"
+                                    title="Dismiss with optional note"
+                                  >
+                                    {dismissingError === `${event.event_url}-${error.message}` ? '...' : '✓ OK'}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="px-4 py-2 bg-red-100 text-xs text-red-700 flex items-center justify-between">
+                <span>💡 Click "✓ OK" to dismiss warnings with an optional note</span>
+                <span className="text-red-600 font-medium">
+                  {showAuditPanel ? 'Click header to collapse' : 'Click header to expand'}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Events Preview Table with Editable Prices */}
         {result && result.success && editableEvents.length > 0 && !importResult && (

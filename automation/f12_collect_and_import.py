@@ -409,6 +409,8 @@ async def _collect_events_from_url(gym_id, url):
             seen_ids.add(event_id)
             captured_events.append(data)
             print(f"    [CAPTURED] Event {event_id}: {data.get('name', 'Unknown')[:50]}...")
+            # DEBUG: Log age fields immediately when captured
+            print(f"      [RAW API] minAge={data.get('minAge')}, maxAge={data.get('maxAge')}")
     
     print(f"  [BROWSER] Opening: {url}")
     async with async_playwright() as p:
@@ -700,8 +702,25 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             description = None
         
         # Get age values and convert to integers (database expects integers)
-        age_min = ev.get("minAge")
-        age_max = ev.get("maxAge")
+        # DEBUG: Log ALL age-related fields from iClassPro to catch any discrepancies
+        raw_min_age = ev.get("minAge")
+        raw_max_age = ev.get("maxAge")
+        # Check for alternative field names that iClassPro might use
+        alt_min_age = ev.get("min_age") or ev.get("minimumAge") or ev.get("ageMin") or ev.get("age_min")
+        alt_max_age = ev.get("max_age") or ev.get("maximumAge") or ev.get("ageMax") or ev.get("age_max")
+        
+        print(f"    [DEBUG AGE] Event {event_id}:")
+        print(f"      - Raw minAge from API: {raw_min_age} (type: {type(raw_min_age).__name__})")
+        print(f"      - Raw maxAge from API: {raw_max_age} (type: {type(raw_max_age).__name__})")
+        if alt_min_age or alt_max_age:
+            print(f"      - Alternative age fields found: min={alt_min_age}, max={alt_max_age}")
+        # Also log ALL keys in the event to see what fields exist
+        age_related_keys = [k for k in ev.keys() if 'age' in k.lower()]
+        if age_related_keys:
+            print(f"      - All age-related keys in API response: {age_related_keys}")
+        
+        age_min = raw_min_age
+        age_max = raw_max_age
         if age_min is not None:
             try:
                 age_min = int(float(age_min))
@@ -712,6 +731,9 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 age_max = int(float(age_max))
             except (ValueError, TypeError):
                 age_max = None
+        
+        print(f"      - Final age_min saved to DB: {age_min}")
+        print(f"      - Final age_max saved to DB: {age_max}")
         
         # Determine description status and validation errors
         description_status = 'unknown'
@@ -778,6 +800,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "missing_age_in_title",
                     "severity": "warning",
+                    "category": "formatting",
                     "message": "Title missing age (e.g., 'Ages 5+')"
                 })
                 print(f"    [!] COMPLETENESS: Title missing age")
@@ -787,6 +810,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "missing_date_in_title",
                     "severity": "warning",
+                    "category": "formatting",
                     "message": "Title missing date (e.g., 'January 9th')"
                 })
                 print(f"    [!] COMPLETENESS: Title missing date")
@@ -815,6 +839,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "missing_program_in_title",
                     "severity": "warning",
+                    "category": "formatting",
                     "message": f"Title missing program type (should include '{event_type.title()}' or similar)"
                 })
                 print(f"    [!] COMPLETENESS: Title missing program type '{event_type}'")
@@ -827,6 +852,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "missing_age_in_description",
                         "severity": "warning",
+                        "category": "formatting",
                         "message": "Description missing age"
                     })
                     print(f"    [!] COMPLETENESS: Description missing age")
@@ -836,6 +862,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "missing_datetime_in_description",
                         "severity": "warning",
+                        "category": "formatting",
                         "message": "Description missing date/time"
                     })
                     print(f"    [!] COMPLETENESS: Description missing date/time")
@@ -845,6 +872,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "missing_time_in_description",
                         "severity": "warning",
+                        "category": "formatting",
                         "message": "Description missing specific time (e.g., '6:30pm')"
                     })
                     print(f"    [!] COMPLETENESS: Description missing time")
@@ -854,6 +882,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "missing_program_in_description",
                         "severity": "warning",
+                        "category": "formatting",
                         "message": f"Description missing program type (should mention '{event_type.title()}' or similar)"
                     })
                     print(f"    [!] COMPLETENESS: Description missing program type '{event_type}'")
@@ -875,6 +904,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "clinic_missing_skill",
                         "severity": "info",
+                        "category": "formatting",
                         "message": "Clinic description doesn't mention specific skill"
                     })
                     print(f"    [i] COMPLETENESS: Clinic missing skill mention")
@@ -904,6 +934,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                             validation_errors.append({
                                 "type": "date_mismatch",
                                 "severity": "error",
+                                "category": "data_error",
                                 "message": f"Event is {event_month.title()} {event_day} but description says '{month_name.title()}'"
                             })
                             print(f"    [!] DATE MISMATCH: Event is {event_month.title()}, description says {month_name.title()}")
@@ -920,6 +951,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "year_mismatch",
                         "severity": "error",
+                        "category": "data_error",
                         "message": f"Title says {title_year} but event is in {event_year}"
                     })
                     print(f"    [!] YEAR MISMATCH: Title says {title_year}, event is {event_year}")
@@ -993,6 +1025,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         validation_errors.append({
                             "type": "time_mismatch",
                             "severity": "warning",
+                            "category": "data_error",
                             "message": f"iClass time is {time_str} but title says {title_time_mismatch}"
                         })
                         print(f"    [!] TIME MISMATCH: iClass={time_str}, Title says {title_time_mismatch}")
@@ -1003,6 +1036,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         validation_errors.append({
                             "type": "time_mismatch",
                             "severity": "warning",
+                            "category": "data_error",
                             "message": f"iClass time is {time_str} but description says {desc_time_mismatch}"
                         })
                         print(f"    [!] TIME MISMATCH: iClass={time_str}, Description says {desc_time_mismatch}")
@@ -1033,6 +1067,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "age_mismatch",
                         "severity": "warning",
+                        "category": "data_error",
                         "message": f"iClass min age is {age_min} but title says {title_age}"
                     })
                     print(f"    [!] AGE MISMATCH: iClass age_min={age_min}, Title says {title_age}")
@@ -1043,6 +1078,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "age_mismatch",
                         "severity": "warning",
+                        "category": "data_error",
                         "message": f"iClass min age is {age_min} but description says {desc_age}"
                     })
                     print(f"    [!] AGE MISMATCH: iClass age_min={age_min}, Description says {desc_age}")
@@ -1053,6 +1089,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "age_mismatch",
                         "severity": "warning",
+                        "category": "data_error",
                         "message": f"Title says age {title_age} but description says {desc_age}"
                     })
                     print(f"    [!] AGE MISMATCH: Title says {title_age}, Description says {desc_age}")
@@ -1084,6 +1121,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         validation_errors.append({
                             "type": "day_mismatch",
                             "severity": "warning",
+                            "category": "data_error",
                             "message": f"Event is on {day_of_week} but description says '{check_day.title()}'"
                         })
                         print(f"    ⚠️ DAY MISMATCH: Event is {day_of_week}, description says {check_day.title()}")
@@ -1106,6 +1144,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "program_mismatch",
                     "severity": "error",
+                    "category": "data_error",
                     "message": "iClass says KNO but title says 'Clinic'"
                 })
                 print(f"    [!] PROGRAM MISMATCH: iClass=KNO, Title says Clinic")
@@ -1114,6 +1153,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "program_mismatch",
                     "severity": "error",
+                    "category": "data_error",
                     "message": "iClass says KNO but title says 'Open Gym'"
                 })
                 print(f"    [!] PROGRAM MISMATCH: iClass=KNO, Title says Open Gym")
@@ -1122,6 +1162,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "program_mismatch",
                     "severity": "error",
+                    "category": "data_error",
                     "message": "iClass says CLINIC but title says 'Kids Night Out'"
                 })
                 print(f"    [!] PROGRAM MISMATCH: iClass=CLINIC, Title says KNO")
@@ -1130,6 +1171,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "program_mismatch",
                     "severity": "error",
+                    "category": "data_error",
                     "message": "iClass says CLINIC but title says 'Open Gym'"
                 })
                 print(f"    [!] PROGRAM MISMATCH: iClass=CLINIC, Title says Open Gym")
@@ -1138,6 +1180,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "program_mismatch",
                     "severity": "error",
+                    "category": "data_error",
                     "message": "iClass says OPEN GYM but title says 'Kids Night Out'"
                 })
                 print(f"    [!] PROGRAM MISMATCH: iClass=OPEN GYM, Title says KNO")
@@ -1146,6 +1189,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "program_mismatch",
                     "severity": "error",
+                    "category": "data_error",
                     "message": "iClass says OPEN GYM but title says 'Clinic'"
                 })
                 print(f"    [!] PROGRAM MISMATCH: iClass=OPEN GYM, Title says Clinic")
@@ -1164,6 +1208,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "warning",
+                        "category": "formatting",
                         "message": "KNO event but description doesn't mention 'Kids Night Out' or 'KNO'"
                     })
                     print(f"    ⚠️ KNO: Description missing 'Kids Night Out' or 'KNO'")
@@ -1172,6 +1217,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "error",
+                        "category": "data_error",
                         "message": "KNO event but description says 'Clinic'"
                     })
                     print(f"    🚨 KNO: Description says 'Clinic' - wrong program!")
@@ -1190,6 +1236,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "warning",
+                        "category": "formatting",
                         "message": "CLINIC event but description doesn't mention 'Clinic'"
                     })
                     print(f"    ⚠️ CLINIC: Description missing 'Clinic'")
@@ -1198,6 +1245,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "error",
+                        "category": "data_error",
                         "message": "CLINIC event but description says 'Kids Night Out'"
                     })
                     print(f"    🚨 CLINIC: Description says 'Kids Night Out' - wrong program!")
@@ -1206,6 +1254,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "error",
+                        "category": "data_error",
                         "message": "CLINIC event but description starts with 'Open Gym'"
                     })
                     print(f"    🚨 CLINIC: Description starts with 'Open Gym' - wrong program!")
@@ -1241,6 +1290,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         validation_errors.append({
                             "type": "skill_mismatch",
                             "severity": "error",
+                            "category": "data_error",
                             "message": f"Title says '{title_skill}' but description says '{desc_skill}'"
                         })
                         print(f"    🚨 SKILL MISMATCH: Title '{title_skill}' vs Description '{desc_skill}'")
@@ -1266,6 +1316,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "warning",
+                        "category": "formatting",
                         "message": "OPEN GYM event but description doesn't mention 'Open Gym' or similar"
                     })
                     print(f"    ⚠️ OPEN GYM: Description missing 'Open Gym' or similar")
@@ -1274,6 +1325,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "error",
+                        "category": "data_error",
                         "message": "OPEN GYM event but description says 'Clinic'"
                     })
                     print(f"    🚨 OPEN GYM: Description says 'Clinic' - wrong program!")
@@ -1282,6 +1334,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "error",
+                        "category": "data_error",
                         "message": "OPEN GYM event but description says 'Kids Night Out'"
                     })
                     print(f"    🚨 OPEN GYM: Description says 'Kids Night Out' - wrong program!")
@@ -1300,6 +1353,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "error",
+                        "category": "data_error",
                         "message": "CAMP event but description starts with 'Clinic'"
                     })
                     print(f"    🚨 CAMP: Description starts with 'Clinic' - wrong program!")
@@ -1308,6 +1362,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "error",
+                        "category": "data_error",
                         "message": "CAMP event but description starts with 'Kids Night Out'"
                     })
                     print(f"    🚨 CAMP: Description starts with 'Kids Night Out' - wrong program!")
@@ -1317,6 +1372,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "error",
+                        "category": "data_error",
                         "message": "iClass says CAMP but title says 'Kids Night Out'"
                     })
                     print(f"    [!] PROGRAM MISMATCH: iClass=CAMP, Title says KNO")
@@ -1325,6 +1381,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "program_mismatch",
                         "severity": "error",
+                        "category": "data_error",
                         "message": "iClass says CAMP but title says 'Clinic'"
                     })
                     print(f"    [!] PROGRAM MISMATCH: iClass=CAMP, Title says Clinic")
@@ -1356,6 +1413,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "title_desc_mismatch",
                     "severity": "error",
+                    "category": "data_error",
                     "message": "Title says 'Clinic' but description says 'Kids Night Out'"
                 })
                 print(f"    🚨 TITLE/DESC MISMATCH: Title has 'Clinic' but description says 'Kids Night Out'")
@@ -1365,6 +1423,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "title_desc_mismatch",
                     "severity": "error",
+                    "category": "data_error",
                     "message": "Title says 'Kids Night Out' but description says 'Clinic'"
                 })
                 print(f"    🚨 TITLE/DESC MISMATCH: Title has 'KNO' but description says 'Clinic'")
@@ -1374,6 +1433,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "title_desc_mismatch",
                     "severity": "error",
+                    "category": "data_error",
                     "message": "Title says 'Open Gym' but description says 'Kids Night Out'"
                 })
                 print(f"    🚨 TITLE/DESC MISMATCH: Title has 'Open Gym' but description says 'Kids Night Out'")
@@ -1383,6 +1443,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "title_desc_mismatch",
                     "severity": "error",
+                    "category": "data_error",
                     "message": "Title says 'Kids Night Out' but description starts with 'Open Gym'"
                 })
                 print(f"    🚨 TITLE/DESC MISMATCH: Title has 'KNO' but description starts with 'Open Gym'")
@@ -1392,6 +1453,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "title_desc_mismatch",
                     "severity": "error",
+                    "category": "data_error",
                     "message": "Title says 'Clinic' but description starts with 'Open Gym'"
                 })
                 print(f"    🚨 TITLE/DESC MISMATCH: Title has 'Clinic' but description starts with 'Open Gym'")
@@ -1401,6 +1463,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "title_desc_mismatch",
                     "severity": "error",
+                    "category": "data_error",
                     "message": "Title says 'Open Gym' but description says 'Clinic'"
                 })
                 print(f"    🚨 TITLE/DESC MISMATCH: Title has 'Open Gym' but description says 'Clinic'")
@@ -1415,6 +1478,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 validation_errors.append({
                     "type": "missing_price_in_description",
                     "severity": "error",
+                    "category": "formatting",
                     "message": "Price not found in description"
                 })
                 print(f"    ❌ MISSING PRICE: No $ found in description")
@@ -1427,6 +1491,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "price_mismatch",
                         "severity": "error",
+                        "category": "data_error",
                         "message": f"Title says ${title_price:.0f} but description says ${desc_price:.0f}"
                     })
                     print(f"    ❌ PRICE MISMATCH: Title ${title_price:.0f} vs Desc ${desc_price:.0f}")
@@ -1457,6 +1522,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                             validation_errors.append({
                                 "type": "camp_price_mismatch",
                                 "severity": "warning",
+                                "category": "data_error",
                                 "message": f"Price ${desc_price:.0f} doesn't match Full Day Daily (${full_day_daily}) or Weekly (${full_day_weekly}) for {gym_id}"
                             })
                             print(f"    ⚠️ CAMP PRICE: ${desc_price:.0f} not in valid prices for {gym_id} (Daily: ${full_day_daily}, Weekly: ${full_day_weekly})")
@@ -1478,6 +1544,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "registration_closed",
                         "severity": "warning",
+                        "category": "status",
                         "message": f"Registration closed on {registration_end_date} but event is {start_date}"
                     })
                     print(f"    ⚠️ REGISTRATION CLOSED: Ended {registration_end_date}, event on {start_date}")
@@ -1494,6 +1561,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     validation_errors.append({
                         "type": "registration_not_open",
                         "severity": "info",
+                        "category": "status",
                         "message": f"Registration opens {registration_start_date}"
                     })
                     print(f"    ℹ️ REGISTRATION NOT OPEN YET: Opens {registration_start_date}")

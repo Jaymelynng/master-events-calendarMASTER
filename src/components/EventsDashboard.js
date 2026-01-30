@@ -384,9 +384,26 @@ const EventsDashboard = () => {
     return urls;
   };
 
+  // Helper: Check if an error message is acknowledged (supports both old string format and new object format)
+  const isErrorAcknowledged = (acknowledgedErrors, errorMessage) => {
+    if (!acknowledgedErrors || !Array.isArray(acknowledgedErrors)) return false;
+    return acknowledgedErrors.some(ack => 
+      typeof ack === 'string' ? ack === errorMessage : ack.message === errorMessage
+    );
+  };
+
+  // Helper: Get the acknowledgment details for an error (note, timestamp)
+  const getAcknowledgmentDetails = (acknowledgedErrors, errorMessage) => {
+    if (!acknowledgedErrors || !Array.isArray(acknowledgedErrors)) return null;
+    const found = acknowledgedErrors.find(ack => 
+      typeof ack === 'object' && ack.message === errorMessage
+    );
+    return found || null;
+  };
 
   // Acknowledge/dismiss a validation error - saves to database so it doesn't reappear
-  const acknowledgeValidationError = async (eventId, errorMessage) => {
+  // Now supports optional note and stores timestamp
+  const acknowledgeValidationError = async (eventId, errorMessage, note = null) => {
     try {
       // Get current acknowledged errors for this event
       const { data: currentEvent, error: fetchError } = await supabase
@@ -399,9 +416,20 @@ const EventsDashboard = () => {
       
       const currentAcknowledged = currentEvent?.acknowledged_errors || [];
       
-      // Add the error message if not already acknowledged
-      if (!currentAcknowledged.includes(errorMessage)) {
-        const updatedAcknowledged = [...currentAcknowledged, errorMessage];
+      // Check if already acknowledged (support both old string format and new object format)
+      const alreadyAcknowledged = currentAcknowledged.some(ack => 
+        typeof ack === 'string' ? ack === errorMessage : ack.message === errorMessage
+      );
+      
+      if (!alreadyAcknowledged) {
+        // New format: store as object with message, note, and timestamp
+        const acknowledgment = {
+          message: errorMessage,
+          note: note || null,
+          dismissed_at: new Date().toISOString()
+        };
+        
+        const updatedAcknowledged = [...currentAcknowledged, acknowledgment];
         
         const { error: updateError } = await supabase
           .from('events')
@@ -421,7 +449,7 @@ const EventsDashboard = () => {
         // Refresh events to update the UI
         refetchEvents();
         
-        console.log(`✅ Acknowledged error for event ${eventId}: "${errorMessage}"`);
+        console.log(`✅ Acknowledged error for event ${eventId}: "${errorMessage}"${note ? ` (Note: ${note})` : ''}`);
       }
     } catch (error) {
       console.error('Error acknowledging validation error:', error);
@@ -2217,168 +2245,126 @@ The system will add new events and update any changed events automatically.`;
           </div>
 
           {/* 🚀 BULK ACTION BUTTONS - Open All Gyms for Each Event Type */}
-          <div className="bg-white rounded shadow p-2 mb-3 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
-            <div className="bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 rounded-lg p-4 mb-2 border-2 border-indigo-300 shadow-inner">
+          <div className="rounded-lg shadow-lg p-4 mb-3 mx-2" style={{ backgroundColor: '#e6e6e6', border: '1px solid #adb2c6' }}>
               <div className="flex flex-col items-center justify-center text-center mb-4">
-                <div className="bg-white rounded-full px-6 py-2 shadow-md border border-indigo-200 mb-2">
-                  <span className="text-xl font-bold text-indigo-800">🚀 BULK PORTAL OPENER</span>
+                <div className="rounded-full px-6 py-2 shadow-md mb-2" style={{ backgroundColor: '#b48f8f' }}>
+                  <span className="text-xl font-bold text-white">🚀 BULK PORTAL OPENER</span>
                 </div>
-                <p className="text-sm text-gray-600 mb-2">Click any button below to open ALL gym portals for that event type at once</p>
-                <div className="bg-amber-50 border-2 border-amber-400 rounded-lg px-4 py-2 shadow-sm">
-                  <span className="text-sm font-bold text-amber-800">⚠️ IMPORTANT: Allow pop-ups in your browser for this to work!</span>
+                <p className="text-sm mb-2" style={{ color: '#737373' }}>Click any button below to open ALL gym portals for that event type at once</p>
+                <div className="rounded-lg px-4 py-2" style={{ backgroundColor: '#f5ebe0', border: '1px solid #c3a5a5' }}>
+                  <span className="text-sm font-bold" style={{ color: '#8b6f6f' }}>⚠️ IMPORTANT: Allow pop-ups in your browser for this to work!</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+              <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+                {/* All Clinics - Dusty Rose */}
                 <button
                   onClick={() => {
                     const clinicUrls = getAllUrlsForEventType('CLINIC');
-                    openMultipleTabs(
-                      clinicUrls,
-                      `🚀 Opening ${clinicUrls.length} clinic pages... (allow pop-ups!)`,
-                      `✨ Successfully opened all ${clinicUrls.length} clinic pages!`
-                    );
+                    openMultipleTabs(clinicUrls, `Opening ${clinicUrls.length} clinic pages...`, `Opened ${clinicUrls.length} clinic pages!`);
                   }}
-                  className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 bg-white rounded border border-purple-200 hover:border-purple-400 hover:bg-purple-50 transition-all duration-200 group text-center"
+                  className="flex flex-col items-center justify-center gap-1 p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  style={{ backgroundColor: '#b48f8f', border: '2px solid #9a7a7a' }}
                 >
-                  <span className="text-base group-hover:scale-110 transition-transform">⭐</span>
-                  <div>
-                    <div className="text-xs font-semibold text-purple-800">All Clinics</div>
-                    <div className="text-xs text-purple-600">Open all skill clinic pages</div>
-                  </div>
+                  <span className="text-2xl">⭐</span>
+                  <span className="text-xs font-bold text-white">All Clinics</span>
                 </button>
 
+                {/* All KNO - Warm Amber */}
                 <button
                   onClick={() => {
                     const knoUrls = getAllUrlsForEventType('KIDS NIGHT OUT');
-                    openMultipleTabs(
-                      knoUrls,
-                      `🌙 Opening ${knoUrls.length} Kids Night Out pages... (allow pop-ups!)`,
-                      `✨ Successfully opened all ${knoUrls.length} Kids Night Out pages!`
-                    );
+                    openMultipleTabs(knoUrls, `Opening ${knoUrls.length} KNO pages...`, `Opened ${knoUrls.length} KNO pages!`);
                   }}
-                  className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 bg-white rounded border border-pink-200 hover:border-pink-400 hover:bg-pink-50 transition-all duration-200 group text-center"
+                  className="flex flex-col items-center justify-center gap-1 p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  style={{ backgroundColor: '#d4a574', border: '2px solid #b8956a' }}
                 >
-                  <span className="text-base group-hover:scale-110 transition-transform">🌙</span>
-                  <div>
-                    <div className="text-xs font-semibold text-pink-800">All Kids Night Out</div>
-                    <div className="text-xs text-pink-600">Open all KNO pages</div>
-                  </div>
+                  <span className="text-2xl">🌙</span>
+                  <span className="text-xs font-bold text-white">All KNO</span>
                 </button>
 
+                {/* All Open Gym - Muted Green */}
                 <button
                   onClick={() => {
                     const openGymUrls = getAllUrlsForEventType('OPEN GYM');
-                    openMultipleTabs(
-                      openGymUrls,
-                      `🎯 Opening ${openGymUrls.length} open gym pages... (allow pop-ups!)`,
-                      `✨ Successfully opened all ${openGymUrls.length} open gym pages!`
-                    );
+                    openMultipleTabs(openGymUrls, `Opening ${openGymUrls.length} Open Gym pages...`, `Opened ${openGymUrls.length} Open Gym pages!`);
                   }}
-                  className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 bg-white rounded border border-green-200 hover:border-green-400 hover:bg-green-50 transition-all duration-200 group text-center"
+                  className="flex flex-col items-center justify-center gap-1 p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  style={{ backgroundColor: '#6b8e6b', border: '2px solid #5a7a5a' }}
                 >
-                  <span className="text-base group-hover:scale-110 transition-transform">🎯</span>
-                  <div>
-                    <div className="text-xs font-semibold text-green-800">All Open Gym</div>
-                    <div className="text-xs text-green-600">Open all open gym pages</div>
-                  </div>
+                  <span className="text-2xl">🎯</span>
+                  <span className="text-xs font-bold text-white">All Open Gym</span>
                 </button>
 
+                {/* All Booking - Teal */}
                 <button
                   onClick={() => {
                     const bookingUrls = getAllUrlsForEventType('BOOKING');
-                    openMultipleTabs(
-                      bookingUrls,
-                      `🌐 Opening ${bookingUrls.length} gym booking pages... (allow pop-ups!)`,
-                      `✨ Successfully opened all ${bookingUrls.length} gym booking pages!`
-                    );
+                    openMultipleTabs(bookingUrls, `Opening ${bookingUrls.length} Booking pages...`, `Opened ${bookingUrls.length} Booking pages!`);
                   }}
-                  className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 bg-white rounded border border-orange-200 hover:border-orange-400 hover:bg-orange-50 transition-all duration-200 group text-center"
+                  className="flex flex-col items-center justify-center gap-1 p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  style={{ backgroundColor: '#7a9a9e', border: '2px solid #6a8a8e' }}
                 >
-                  <span className="text-base group-hover:scale-110 transition-transform">🌐</span>
-                  <div>
-                    <div className="text-xs font-semibold text-orange-800">All Booking</div>
-                    <div className="text-xs text-orange-600">Open all gym booking pages</div>
-                  </div>
+                  <span className="text-2xl">🌐</span>
+                  <span className="text-xs font-bold text-white">All Booking</span>
                 </button>
 
-                {/* School Year Camps */}
-                <div className="flex flex-col gap-1">
-                  <button
-                    onClick={() => {
-                      const campUrls = getAllUrlsForEventType('camps');
-                      openMultipleTabs(
-                        campUrls,
-                        `🏕️ Opening ${campUrls.length} school year full day camp pages...`,
-                        `✨ Opened ${campUrls.length} school year full day camp pages!`
-                      );
-                    }}
-                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-white rounded border border-teal-200 hover:border-teal-400 hover:bg-teal-50 transition-all duration-200 group text-center"
-                  >
-                    <span className="text-sm group-hover:scale-110 transition-transform">🏕️</span>
-                    <div>
-                      <div className="text-xs font-semibold text-teal-800">School Year Full</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => {
-                      const halfDayCampUrls = getAllUrlsForEventType('camps_half');
-                      openMultipleTabs(
-                        halfDayCampUrls,
-                        `🕐 Opening ${halfDayCampUrls.length} school year half day camp pages...`,
-                        `✨ Opened ${halfDayCampUrls.length} school year half day camp pages!`
-                      );
-                    }}
-                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-white rounded border border-amber-200 hover:border-amber-400 hover:bg-amber-50 transition-all duration-200 group text-center"
-                  >
-                    <span className="text-sm group-hover:scale-110 transition-transform">🕐</span>
-                    <div>
-                      <div className="text-xs font-semibold text-amber-800">School Year Half</div>
-                    </div>
-                  </button>
-                </div>
+                {/* School Year Full - Coral */}
+                <button
+                  onClick={() => {
+                    const campUrls = getAllUrlsForEventType('camps');
+                    openMultipleTabs(campUrls, `Opening ${campUrls.length} School Year Full camp pages...`, `Opened ${campUrls.length} pages!`);
+                  }}
+                  className="flex flex-col items-center justify-center gap-1 p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  style={{ backgroundColor: '#c4956b', border: '2px solid #a67b51' }}
+                >
+                  <span className="text-2xl">🏕️</span>
+                  <span className="text-xs font-bold text-white">School Year Full</span>
+                </button>
 
-                {/* Summer Camps */}
-                <div className="flex flex-col gap-1">
-                  <button
-                    onClick={() => {
-                      const summerFullUrls = getAllUrlsForEventType('camps_summer_full');
-                      openMultipleTabs(
-                        summerFullUrls,
-                        `☀️ Opening ${summerFullUrls.length} summer full day camp pages...`,
-                        `✨ Opened ${summerFullUrls.length} summer full day camp pages!`
-                      );
-                    }}
-                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-white rounded border border-yellow-200 hover:border-yellow-400 hover:bg-yellow-50 transition-all duration-200 group text-center"
-                  >
-                    <span className="text-sm group-hover:scale-110 transition-transform">☀️</span>
-                    <div>
-                      <div className="text-xs font-semibold text-yellow-800">Summer Full Day</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => {
-                      const summerHalfUrls = getAllUrlsForEventType('camps_summer_half');
-                      openMultipleTabs(
-                        summerHalfUrls,
-                        `🌤️ Opening ${summerHalfUrls.length} summer half day camp pages...`,
-                        `✨ Opened ${summerHalfUrls.length} summer half day camp pages!`
-                      );
-                    }}
-                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 bg-white rounded border border-orange-200 hover:border-orange-400 hover:bg-orange-50 transition-all duration-200 group text-center"
-                  >
-                    <span className="text-sm group-hover:scale-110 transition-transform">🌤️</span>
-                    <div>
-                      <div className="text-xs font-semibold text-orange-800">Summer Half Day</div>
-                    </div>
-                  </button>
-                </div>
+                {/* School Year Half - Gray */}
+                <button
+                  onClick={() => {
+                    const halfDayCampUrls = getAllUrlsForEventType('camps_half');
+                    openMultipleTabs(halfDayCampUrls, `Opening ${halfDayCampUrls.length} School Year Half camp pages...`, `Opened ${halfDayCampUrls.length} pages!`);
+                  }}
+                  className="flex flex-col items-center justify-center gap-1 p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  style={{ backgroundColor: '#9e9e9e', border: '2px solid #8a8a8a' }}
+                >
+                  <span className="text-2xl">🕐</span>
+                  <span className="text-xs font-bold text-white">School Year Half</span>
+                </button>
+
+                {/* Summer Full Day - Warm Orange */}
+                <button
+                  onClick={() => {
+                    const summerFullUrls = getAllUrlsForEventType('camps_summer_full');
+                    openMultipleTabs(summerFullUrls, `Opening ${summerFullUrls.length} Summer Full Day camp pages...`, `Opened ${summerFullUrls.length} pages!`);
+                  }}
+                  className="flex flex-col items-center justify-center gap-1 p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  style={{ backgroundColor: '#d4a060', border: '2px solid #b88a4a' }}
+                >
+                  <span className="text-2xl">☀️</span>
+                  <span className="text-xs font-bold text-white">Summer Full Day</span>
+                </button>
+
+                {/* Summer Half Day - Salmon */}
+                <button
+                  onClick={() => {
+                    const summerHalfUrls = getAllUrlsForEventType('camps_summer_half');
+                    openMultipleTabs(summerHalfUrls, `Opening ${summerHalfUrls.length} Summer Half Day camp pages...`, `Opened ${summerHalfUrls.length} pages!`);
+                  }}
+                  className="flex flex-col items-center justify-center gap-1 p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  style={{ backgroundColor: '#c4856b', border: '2px solid #a66b51' }}
+                >
+                  <span className="text-2xl">🌤️</span>
+                  <span className="text-xs font-bold text-white">Summer Half Day</span>
+                </button>
               </div>
-            </div>
-        </div>
+          </div>
 
 
-        {/* Special Event Statistics by Gym */}
-        <div className="bg-white rounded shadow p-3 mb-2 mx-2" style={{ borderColor: '#cec4c1', borderWidth: '1px' }}>
+        {/* Monthly Requirements */}
+        <div className="rounded-lg shadow-lg p-3 mb-2 mx-2" style={{ backgroundColor: '#e6e6e6', border: '1px solid #adb2c6' }}>
             {/* Month Navigation */}
             <div className="flex justify-center items-center gap-4 mb-3">
               <button
@@ -2420,8 +2406,8 @@ The system will add new events and update any changed events automatically.`;
             
             {/* Title */}
             <div className="text-center mb-2">
-              <h3 className="text-sm font-semibold" style={{ color: theme.colors.textSecondary }}>
-                Special Event Statistics by Gym
+              <h3 className="text-sm font-semibold" style={{ color: '#737373' }}>
+                📊 Monthly Requirements
               </h3>
             </div>
             
@@ -2443,17 +2429,17 @@ The system will add new events and update any changed events automatically.`;
             <div className="overflow-x-auto">
               <table className="min-w-full border border-gray-200">
                 <thead>
-                  <tr className="bg-gray-100">
-                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>
+                  <tr style={{ backgroundColor: '#8b6f6f' }}>
+                    <th className="p-2 border text-sm text-center font-bold text-white">
                       Gym
                     </th>
                     {eventTypes.filter(et => et.is_tracked).map((eventType, i) => (
-                      <th key={i} className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>
+                      <th key={i} className="p-2 border text-sm text-center font-bold text-white">
                         {eventType.display_name || eventType.name}
                       </th>
                     ))}
-                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }}>Status</th>
-                    <th className="p-1 border text-sm text-center" style={{ color: theme.colors.textPrimary }} title="Data audit check for this month">Audit Check</th>
+                    <th className="p-2 border text-sm text-center font-bold text-white">Status</th>
+                    <th className="p-2 border text-sm text-center font-bold text-white" title="Data quality issues">Issues</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2560,13 +2546,13 @@ The system will add new events and update any changed events automatically.`;
                             
                             if (meetsAllRequirements) {
                               return (
-                                <span className="text-green-700 font-bold bg-green-100 px-3 py-2 rounded-lg border border-green-200">
+                                <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white" style={{ backgroundColor: '#6b8e6b' }}>
                                   ✓ Complete
                                 </span>
                               );
                             } else {
                               return (
-                                <span className="text-red-700 font-bold bg-red-100 px-3 py-2 rounded-lg border border-red-200">
+                                <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white" style={{ backgroundColor: '#c27878' }}>
                                   {missingItems.join(' • ')}
                                 </span>
                               );
@@ -2589,7 +2575,7 @@ The system will add new events and update any changed events automatically.`;
                             const errors = gymEvents.filter(e => {
                               const acknowledged = e.acknowledged_errors || [];
                               return (e.validation_errors || []).some(err => 
-                                err.type !== 'sold_out' && !acknowledged.includes(err.message)
+                                err.type !== 'sold_out' && !isErrorAcknowledged(acknowledged, err.message)
                               );
                             }).length;
                             const warnings = gymEvents.filter(e => e.description_status === 'flyer_only').length;
@@ -2600,20 +2586,23 @@ The system will add new events and update any changed events automatically.`;
                             // Show sold out count even if otherwise clean (it's informational, not an error)
                             if (totalIssues === 0) {
                               return (
-                                <div className="flex items-center justify-center gap-1 text-xs">
-                                  {soldOut > 0 && <span title={`${soldOut} sold out`} className="text-purple-600 font-medium">🔴{soldOut}</span>}
-                                  <span className="text-green-600 font-medium">✓ Clean</span>
-                                </div>
+                                <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white text-xs" style={{ backgroundColor: '#6b8e6b' }}>
+                                  ✓
+                                </span>
                               );
                             }
                             
                             return (
-                              <div className="flex items-center justify-center gap-1 text-xs flex-wrap">
-                                {soldOut > 0 && <span title={`${soldOut} sold out`} className="text-purple-600 font-medium">🔴{soldOut}</span>}
-                                {errors > 0 && <span title={`${errors} wrong info`} className="text-red-600 font-medium">🚨{errors}</span>}
-                                {warnings > 0 && <span title={`${warnings} flyer, no text`} className="text-yellow-600 font-medium">⚠️{warnings}</span>}
-                                {missing > 0 && <span title={`${missing} no description`} className="text-gray-500 font-medium">❌{missing}</span>}
-                              </div>
+                              <span 
+                                className="font-bold px-3 py-1 rounded-lg shadow-sm text-white text-xs inline-flex items-center gap-1 cursor-pointer hover:shadow-md"
+                                style={{ backgroundColor: '#c27878' }}
+                                title={`${totalIssues} issues: ${errors} errors, ${warnings} warnings, ${missing} missing`}
+                              >
+                                {totalIssues}
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </span>
                             );
                           })()}
                         </td>
@@ -3216,13 +3205,17 @@ The system will add new events and update any changed events automatically.`;
                                           {/* NOTE: sold_out type is excluded - it's informational, not an audit error */}
                                           {(() => {
                                             const acknowledged = event.acknowledged_errors || [];
-                                            const hasUnacknowledgedErrors = (event.validation_errors || []).some(
-                                              err => err.type !== 'sold_out' && !acknowledged.includes(err.message)
+                                            const activeErrors = (event.validation_errors || []).filter(
+                                              err => err.type !== 'sold_out' && !isErrorAcknowledged(acknowledged, err.message)
                                             );
-                                            if (hasUnacknowledgedErrors) {
-                                              return <span className="absolute -top-1 -right-1 text-sm" title="Wrong info - data doesn't match!">🚨</span>;
+                                            // Check if any are data errors (high priority)
+                                            const hasDataErrors = activeErrors.some(err => err.category === 'data_error');
+                                            if (hasDataErrors) {
+                                              return <span className="absolute -top-1 -right-1 text-sm" title="DATA ERROR - wrong info that affects customers!">🚨</span>;
+                                            } else if (activeErrors.length > 0) {
+                                              return <span className="absolute -top-1 -right-1 text-xs" title="Formatting issue - incomplete info">⚠️</span>;
                                             } else if (event.description_status === 'flyer_only') {
-                                              return <span className="absolute -top-1 -right-1 text-xs" title="Has flyer but no text description">⚠️</span>;
+                                              return <span className="absolute -top-1 -right-1 text-xs" title="Has flyer but no text description">📋</span>;
                                             } else if (event.description_status === 'none') {
                                               return <span className="absolute -top-1 -right-1 text-xs" title="No description at all">❌</span>;
                                             }
@@ -3480,12 +3473,17 @@ The system will add new events and update any changed events automatically.`;
                       // Filter out acknowledged errors AND sold_out type (it's info, not an error)
                       const acknowledgedErrors = selectedEventForPanel.acknowledged_errors || [];
                       const activeErrors = (selectedEventForPanel.validation_errors || []).filter(
-                        error => error.type !== 'sold_out' && !acknowledgedErrors.includes(error.message)
+                        error => error.type !== 'sold_out' && !isErrorAcknowledged(acknowledgedErrors, error.message)
                       );
                       const hasDescriptionIssue = selectedEventForPanel.description_status === 'flyer_only' || 
                                                   selectedEventForPanel.description_status === 'none';
                       
-                      if (activeErrors.length === 0 && !hasDescriptionIssue) return null;
+                      // Get dismissed errors with notes for display
+                      const dismissedWithNotes = acknowledgedErrors.filter(ack => 
+                        typeof ack === 'object' && ack.note
+                      );
+                      
+                      if (activeErrors.length === 0 && !hasDescriptionIssue && dismissedWithNotes.length === 0) return null;
                       
                       // Helper to get friendly label for error type
                       const getErrorLabel = (type) => {
@@ -3520,179 +3518,233 @@ The system will add new events and update any changed events automatically.`;
                         return labels[type] || type;
                       };
                       
+                      // Handler for dismissing with optional note
+                      const handleDismissWithNote = (eventId, errorMessage) => {
+                        const note = window.prompt(
+                          'Optional: Add a note explaining why this is OK (or leave blank):',
+                          ''
+                        );
+                        // If user clicks Cancel, note will be null - still dismiss but without note
+                        if (note !== null) {
+                          acknowledgeValidationError(eventId, errorMessage, note || null);
+                        }
+                      };
+                      
                       // Count total issues including description status
                       const totalIssues = activeErrors.length + (hasDescriptionIssue ? 1 : 0);
                       
-                      // Separate by category
-                      const completenessErrors = activeErrors.filter(e => 
-                        e.type?.startsWith('missing_') || e.type === 'clinic_missing_skill'
-                      );
-                      const accuracyErrors = activeErrors.filter(e => 
-                        e.type?.includes('mismatch')
-                      );
-                      const registrationErrors = activeErrors.filter(e =>
-                        e.type === 'registration_closed' || e.type === 'registration_not_open'
-                      );
-                      const otherErrors = activeErrors.filter(e => 
-                        !e.type?.startsWith('missing_') && 
-                        !e.type?.includes('mismatch') && 
-                        e.type !== 'clinic_missing_skill' &&
-                        e.type !== 'registration_closed' &&
-                        e.type !== 'registration_not_open'
-                      );
+                      // Separate by NEW category field (data_error, formatting, status)
+                      const dataErrors = activeErrors.filter(e => e.category === 'data_error');
+                      const formattingErrors = activeErrors.filter(e => e.category === 'formatting');
+                      const statusErrors = activeErrors.filter(e => e.category === 'status');
+                      // Fallback for errors without category (legacy data)
+                      const uncategorizedErrors = activeErrors.filter(e => !e.category);
                       
                       return (
                         <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
-                          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                            <div className="font-semibold text-red-800 mb-2 flex items-center justify-between">
-                              <span className="flex items-center gap-2">
-                                🚨 Data Issues Detected
-                              </span>
-                              <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded-full font-bold">
-                                {totalIssues} issue{totalIssues !== 1 ? 's' : ''} to fix
-                              </span>
+                          {/* Active Issues */}
+                          {(activeErrors.length > 0 || hasDescriptionIssue) && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+                              <div className="font-semibold text-red-800 mb-2 flex items-center justify-between">
+                                <span className="flex items-center gap-2">
+                                  🚨 Data Issues Detected
+                                </span>
+                                <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded-full font-bold">
+                                  {totalIssues} issue{totalIssues !== 1 ? 's' : ''} to fix
+                                </span>
+                              </div>
+                              
+                              <ul className="text-sm text-red-700 space-y-2">
+                                {/* Description Status Issues */}
+                                {selectedEventForPanel.description_status === 'none' && (
+                                  <li className="flex items-center gap-2 p-2 bg-red-100 rounded">
+                                    <span>❌ <strong>No description</strong> - Event has no description text</span>
+                                  </li>
+                                )}
+                                {selectedEventForPanel.description_status === 'flyer_only' && (
+                                  <li className="flex items-center gap-2 p-2 bg-yellow-100 rounded">
+                                    <span>⚠️ <strong>Flyer only</strong> - Has image but no text description</span>
+                                  </li>
+                                )}
+                                
+                                {/* DATA ERRORS - High Priority (Red) */}
+                                {dataErrors.length > 0 && (
+                                  <li className="pt-1">
+                                    <div className="text-xs font-semibold text-red-700 uppercase mb-1 flex items-center gap-1">
+                                      <span className="bg-red-600 text-white px-1.5 py-0.5 rounded text-[10px]">HIGH PRIORITY</span>
+                                      Data Errors (Wrong Info):
+                                    </div>
+                                    <ul className="space-y-1 ml-2">
+                                      {dataErrors.map((error, idx) => (
+                                        <li key={`data-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-red-100 rounded border-l-4 border-red-500">
+                                          <span className="flex-1">
+                                            🚨 <strong>{getErrorLabel(error.type)}</strong>
+                                            <span className="text-xs block text-red-600 mt-0.5">{error.message}</span>
+                                          </span>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDismissWithNote(selectedEventForPanel.id, error.message);
+                                            }}
+                                            className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
+                                            title="Dismiss with optional note"
+                                          >
+                                            ✓ OK
+                                          </button>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </li>
+                                )}
+                                
+                                {/* FORMATTING ERRORS - Lower Priority (Yellow/Orange) */}
+                                {formattingErrors.length > 0 && (
+                                  <li className="pt-1">
+                                    <div className="text-xs font-semibold text-orange-700 uppercase mb-1 flex items-center gap-1">
+                                      <span className="bg-orange-500 text-white px-1.5 py-0.5 rounded text-[10px]">FORMATTING</span>
+                                      Missing/Incomplete Info:
+                                    </div>
+                                    <ul className="space-y-1 ml-2">
+                                      {formattingErrors.map((error, idx) => (
+                                        <li key={`fmt-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-orange-50 rounded border-l-4 border-orange-400 text-orange-800">
+                                          <span className="flex-1">
+                                            {error.severity === 'info' ? 'ℹ️' : '⚠️'} <strong>{getErrorLabel(error.type)}</strong>
+                                            <span className="text-xs block text-orange-600 mt-0.5">{error.message}</span>
+                                          </span>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDismissWithNote(selectedEventForPanel.id, error.message);
+                                            }}
+                                            className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
+                                            title="Dismiss with optional note"
+                                          >
+                                            ✓ OK
+                                          </button>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </li>
+                                )}
+                                
+                                {/* STATUS INFO - Informational (Blue) */}
+                                {statusErrors.length > 0 && (
+                                  <li className="pt-1">
+                                    <div className="text-xs font-semibold text-blue-600 uppercase mb-1 flex items-center gap-1">
+                                      <span className="bg-blue-500 text-white px-1.5 py-0.5 rounded text-[10px]">INFO</span>
+                                      Registration Status:
+                                    </div>
+                                    <ul className="space-y-1 ml-2">
+                                      {statusErrors.map((error, idx) => (
+                                        <li key={`status-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-blue-50 rounded border-l-4 border-blue-400 text-blue-800">
+                                          <span className="flex-1">
+                                            ℹ️ <strong>{getErrorLabel(error.type)}</strong>
+                                            <span className="text-xs block text-blue-600 mt-0.5">{error.message}</span>
+                                          </span>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDismissWithNote(selectedEventForPanel.id, error.message);
+                                            }}
+                                            className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
+                                            title="Dismiss with optional note"
+                                          >
+                                            ✓ OK
+                                          </button>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </li>
+                                )}
+                                
+                                {/* UNCATEGORIZED - Legacy errors without category */}
+                                {uncategorizedErrors.length > 0 && (
+                                  <li className="pt-1">
+                                    <div className="text-xs font-semibold text-gray-600 uppercase mb-1">Other Issues:</div>
+                                    <ul className="space-y-1 ml-2">
+                                      {uncategorizedErrors.map((error, idx) => (
+                                        <li key={`other-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-gray-100 rounded text-gray-800">
+                                          <span className="flex-1">
+                                            {error.severity === 'error' ? '🚨' : '⚠️'} <strong>{getErrorLabel(error.type)}</strong>
+                                            <span className="text-xs block text-gray-600 mt-0.5">{error.message}</span>
+                                          </span>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDismissWithNote(selectedEventForPanel.id, error.message);
+                                            }}
+                                            className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
+                                            title="Dismiss with optional note"
+                                          >
+                                            ✓ OK
+                                          </button>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </li>
+                                )}
+                              </ul>
+                              
+                              {/* Link to fix in iClassPro */}
+                              {selectedEventForPanel.event_url && (
+                                <a 
+                                  href={selectedEventForPanel.event_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                                >
+                                  🔗 View Event in iClassPro
+                                </a>
+                              )}
                             </div>
-                            
-                            <ul className="text-sm text-red-700 space-y-2">
-                              {/* Description Status Issues */}
-                              {selectedEventForPanel.description_status === 'none' && (
-                                <li className="flex items-center gap-2 p-2 bg-red-100 rounded">
-                                  <span>❌ <strong>No description</strong> - Event has no description text</span>
-                                </li>
-                              )}
-                              {selectedEventForPanel.description_status === 'flyer_only' && (
-                                <li className="flex items-center gap-2 p-2 bg-yellow-100 rounded">
-                                  <span>⚠️ <strong>Flyer only</strong> - Has image but no text description</span>
-                                </li>
-                              )}
-                              
-                              {/* Completeness Errors */}
-                              {completenessErrors.length > 0 && (
-                                <li className="pt-1">
-                                  <div className="text-xs font-semibold text-red-600 uppercase mb-1">Missing Required Fields:</div>
-                                  <ul className="space-y-1 ml-2">
-                                    {completenessErrors.map((error, idx) => (
-                                      <li key={`comp-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-orange-50 rounded text-orange-800">
-                                        <span className="flex-1">
-                                          {error.severity === 'info' ? 'ℹ️' : '⚠️'} <strong>{getErrorLabel(error.type)}</strong>
-                                          <span className="text-xs block text-orange-600 mt-0.5">{error.message}</span>
-                                        </span>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            acknowledgeValidationError(selectedEventForPanel.id, error.message);
-                                          }}
-                                          className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
-                                          title="I verified this - dismiss the warning"
-                                        >
-                                          ✓ OK
-                                        </button>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </li>
-                              )}
-                              
-                              {/* Accuracy Errors */}
-                              {accuracyErrors.length > 0 && (
-                                <li className="pt-1">
-                                  <div className="text-xs font-semibold text-red-600 uppercase mb-1">Data Mismatches (iClass vs Title/Description):</div>
-                                  <ul className="space-y-1 ml-2">
-                                    {accuracyErrors.map((error, idx) => (
-                                      <li key={`acc-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-red-100 rounded">
-                                        <span className="flex-1">
-                                          {error.severity === 'error' ? '🚨' : '⚠️'} <strong>{getErrorLabel(error.type)}</strong>
-                                          <span className="text-xs block text-red-600 mt-0.5">{error.message}</span>
-                                        </span>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            acknowledgeValidationError(selectedEventForPanel.id, error.message);
-                                          }}
-                                          className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
-                                          title="I verified this - dismiss the warning"
-                                        >
-                                          ✓ OK
-                                        </button>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </li>
-                              )}
-                              
-                              {/* Other Errors */}
-                              {otherErrors.map((error, idx) => (
-                                <li key={`other-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-red-100 rounded">
-                                  <span className="flex-1">
-                                    {error.severity === 'error' ? '🚨' : '⚠️'} <strong>{getErrorLabel(error.type)}</strong>
-                                    <span className="text-xs block text-red-600 mt-0.5">{error.message}</span>
-                                  </span>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      acknowledgeValidationError(selectedEventForPanel.id, error.message);
-                                    }}
-                                    className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
-                                    title="I verified this - dismiss the warning"
-                                  >
-                                    ✓ OK
-                                  </button>
-                                </li>
-                              ))}
-                              
-                              {/* Registration Info */}
-                              {registrationErrors.length > 0 && (
-                                <li className="pt-1">
-                                  <div className="text-xs font-semibold text-blue-600 uppercase mb-1">Registration Status:</div>
-                                  <ul className="space-y-1 ml-2">
-                                    {registrationErrors.map((error, idx) => (
-                                      <li key={`reg-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-blue-50 rounded text-blue-800">
-                                        <span className="flex-1">
-                                          ℹ️ <strong>{getErrorLabel(error.type)}</strong>
-                                          <span className="text-xs block text-blue-600 mt-0.5">{error.message}</span>
-                                        </span>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            acknowledgeValidationError(selectedEventForPanel.id, error.message);
-                                          }}
-                                          className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
-                                          title="I verified this - dismiss the info"
-                                        >
-                                          ✓ OK
-                                        </button>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </li>
-                              )}
-                            </ul>
-                            
-                            {/* Link to fix in iClassPro */}
-                            {selectedEventForPanel.event_url && (
-                              <a 
-                                href={selectedEventForPanel.event_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors"
-                              >
-                                🔗 View Event in iClassPro
-                              </a>
-                            )}
-                            
-                            {acknowledgedErrors.length > 0 && (
-                              <div className="mt-2 pt-2 border-t border-red-200 text-xs text-gray-500 flex items-center justify-between">
-                                <span>✓ {acknowledgedErrors.length} warning(s) verified & dismissed</span>
+                          )}
+                          
+                          {/* Dismissed Errors with Notes */}
+                          {acknowledgedErrors.length > 0 && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                              <div className="font-semibold text-green-800 mb-2 flex items-center justify-between">
+                                <span className="flex items-center gap-2">
+                                  ✓ Dismissed Warnings ({acknowledgedErrors.length})
+                                </span>
                                 <button
                                   onClick={() => resetAcknowledgedErrors(selectedEventForPanel.id)}
-                                  className="text-red-600 hover:text-red-800 underline"
+                                  className="text-xs text-red-600 hover:text-red-800 underline"
                                   title="Restore all dismissed warnings"
                                 >
                                   Undo all
                                 </button>
                               </div>
-                            )}
-                          </div>
+                              
+                              <ul className="text-sm text-green-700 space-y-1">
+                                {acknowledgedErrors.map((ack, idx) => {
+                                  const message = typeof ack === 'string' ? ack : ack.message;
+                                  const note = typeof ack === 'object' ? ack.note : null;
+                                  const dismissedAt = typeof ack === 'object' && ack.dismissed_at 
+                                    ? new Date(ack.dismissed_at).toLocaleDateString() 
+                                    : null;
+                                  
+                                  return (
+                                    <li key={`ack-${idx}`} className="p-1.5 bg-green-100 rounded text-xs">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-green-600">✓</span>
+                                        <span className="line-through text-green-600">{message}</span>
+                                      </div>
+                                      {note && (
+                                        <div className="mt-1 ml-4 text-green-700 italic bg-green-50 p-1 rounded">
+                                          📝 Note: {note}
+                                        </div>
+                                      )}
+                                      {dismissedAt && (
+                                        <div className="ml-4 text-green-500 text-[10px]">
+                                          Dismissed on {dismissedAt}
+                                        </div>
+                                      )}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
