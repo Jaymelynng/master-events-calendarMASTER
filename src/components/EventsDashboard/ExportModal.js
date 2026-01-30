@@ -224,6 +224,20 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     );
   };
 
+  // Helper: Infer category from error type (for legacy data that doesn't have category field)
+  const inferErrorCategory = (error) => {
+    if (error.category) return error.category;
+    const dataErrorTypes = [
+      'year_mismatch', 'date_mismatch', 'time_mismatch', 'age_mismatch',
+      'day_mismatch', 'program_mismatch', 'skill_mismatch', 'price_mismatch',
+      'title_desc_mismatch', 'camp_price_mismatch'
+    ];
+    const statusErrorTypes = ['registration_closed', 'registration_not_open', 'sold_out'];
+    if (dataErrorTypes.includes(error.type)) return 'data_error';
+    if (statusErrorTypes.includes(error.type)) return 'status';
+    return 'formatting';
+  };
+
   // Get events with audit check failures (validation errors, missing descriptions, etc.)
   // This matches the "Audit Check" column in the main dashboard table
   // NOTE: Sold out (type: 'sold_out') is excluded - it's informational, not a data quality issue
@@ -238,24 +252,39 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       return unacknowledged.length > 0 || 
              e.description_status === 'none' || 
              e.description_status === 'flyer_only';
-    }).map(e => ({
-      gym_id: e.gym_id,
-      gym_name: e.gym_name || e.gym_id,
-      title: e.title,
-      date: e.date,
-      type: e.type,
-      issues: [
-        // Filter out sold_out type from displayed issues
-        ...(e.validation_errors || [])
-          .filter(err => err.type !== 'sold_out')
-          .map(err => `${err.category ? `[${err.category.toUpperCase()}] ` : ''}${err.severity}: ${err.message}`),
-        e.description_status === 'none' ? 'Missing description' : null,
-        e.description_status === 'flyer_only' ? 'Flyer only (no text)' : null
-      ].filter(Boolean),
-      has_flyer: e.has_flyer || false,
-      flyer_url: e.flyer_url || null,
-      event_url: e.event_url
-    }));
+    }).map(e => {
+      const errors = e.validation_errors || [];
+      const acknowledged = e.acknowledged_errors || [];
+      // Only include unacknowledged errors (not sold_out)
+      const unacknowledgedErrors = errors.filter(err => 
+        err.type !== 'sold_out' && !isErrorAcknowledged(acknowledged, err.message)
+      );
+      
+      // Separate by category for better display
+      const dataErrors = unacknowledgedErrors.filter(err => inferErrorCategory(err) === 'data_error');
+      const formattingErrors = unacknowledgedErrors.filter(err => inferErrorCategory(err) === 'formatting');
+      
+      return {
+        gym_id: e.gym_id,
+        gym_name: e.gym_name || e.gym_id,
+        title: e.title,
+        date: e.date,
+        type: e.type,
+        // Categorized issue counts
+        data_error_count: dataErrors.length,
+        formatting_error_count: formattingErrors.length,
+        // All issues as formatted strings
+        issues: [
+          ...dataErrors.map(err => `[DATA ERROR] ${err.message}`),
+          ...formattingErrors.map(err => `[FORMATTING] ${err.message}`),
+          e.description_status === 'none' ? '[MISSING] No description' : null,
+          e.description_status === 'flyer_only' ? '[INCOMPLETE] Flyer only (no text)' : null
+        ].filter(Boolean),
+        has_flyer: e.has_flyer || false,
+        flyer_url: e.flyer_url || null,
+        event_url: e.event_url
+      };
+    });
   };
 
   // Get events with dismissed warnings (for "View All Exceptions" feature)
@@ -427,17 +456,22 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     if (includeAuditCheck) {
       const issues = getAuditCheckIssues();
       csvContent += `AUDIT CHECK ISSUES - ${monthName}\n`;
+      csvContent += `Total events with issues: ${issues.length} out of ${filteredEvents.length} events\n`;
+      const totalDataErrors = issues.reduce((sum, i) => sum + i.data_error_count, 0);
+      const totalFormattingErrors = issues.reduce((sum, i) => sum + i.formatting_error_count, 0);
+      csvContent += `Data Errors (wrong info): ${totalDataErrors} | Formatting Issues (missing info): ${totalFormattingErrors}\n\n`;
+      
       if (issues.length > 0) {
-        csvContent += 'Gym,Title,Date,Type,Issues,Has Flyer,Flyer URL,Event URL\n';
+        csvContent += 'Gym,Title,Date,Type,Data Errors,Formatting Issues,All Issues,Event URL\n';
         issues.forEach(issue => {
           csvContent += [
             `"${issue.gym_name}"`,
             `"${(issue.title || '').replace(/"/g, '""')}"`,
             issue.date,
             issue.type,
+            issue.data_error_count,
+            issue.formatting_error_count,
             `"${issue.issues.join('; ')}"`,
-            issue.has_flyer ? 'Yes' : 'No',
-            issue.flyer_url || '',
             issue.event_url || ''
           ].join(',') + '\n';
         });
