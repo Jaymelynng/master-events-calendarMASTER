@@ -333,7 +333,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
           event.day_of_week || '',
           event.time || '',
           event.price || '',
-          event.age_min && event.age_max ? `${event.age_min}-${event.age_max}` : (event.age_min ? `${event.age_min}+` : ''),
+          (event.age_min !== undefined && event.age_min !== null) && (event.age_max !== undefined && event.age_max !== null) ? `${event.age_min}-${event.age_max}` : ((event.age_min !== undefined && event.age_min !== null) ? `${event.age_min}+` : ''),
           event.description_status || 'unknown',
           event.has_openings === false ? 'SOLD OUT' : 'Available',
           event.event_url || ''

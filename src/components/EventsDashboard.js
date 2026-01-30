@@ -485,7 +485,7 @@ const EventsDashboard = () => {
         event.date || '',
         event.time || '',
         event.price || '',
-        event.age_min && event.age_max ? `${event.age_min}-${event.age_max}` : (event.age_min ? `${event.age_min}+` : ''),
+        (event.age_min !== undefined && event.age_min !== null) && (event.age_max !== undefined && event.age_max !== null) ? `${event.age_min}-${event.age_max}` : ((event.age_min !== undefined && event.age_min !== null) ? `${event.age_min}+` : ''),
         event.event_url || ''
       ].join(',');
     });
@@ -1094,8 +1094,8 @@ const EventsDashboard = () => {
           price: price,
           type: eventType,
           event_url: eventUrl,
-          age_min: event.minAge || null,
-          age_max: event.maxAge || null
+          age_min: event.minAge !== undefined && event.minAge !== null ? event.minAge : null,
+          age_max: event.maxAge !== undefined && event.maxAge !== null ? event.maxAge : null
         }];
       });
       
@@ -3384,15 +3384,15 @@ The system will add new events and update any changed events automatically.`;
                         </div>
                       </div>
                       {/* Age Range */}
-                      {(selectedEventForPanel.age_min || selectedEventForPanel.age_max) && (
+                      {(selectedEventForPanel.age_min !== undefined && selectedEventForPanel.age_min !== null) || (selectedEventForPanel.age_max !== undefined && selectedEventForPanel.age_max !== null)) && (
                         <div className="flex items-start gap-3">
                           <Users className="w-5 h-5 text-gray-400 mt-0.5" />
                           <div>
                             <div className="font-semibold text-xs text-gray-500 uppercase mb-1">Ages</div>
                             <div>
-                              {selectedEventForPanel.age_min && selectedEventForPanel.age_max 
+                              {(selectedEventForPanel.age_min !== undefined && selectedEventForPanel.age_min !== null) && (selectedEventForPanel.age_max !== undefined && selectedEventForPanel.age_max !== null)
                                 ? `${selectedEventForPanel.age_min} - ${selectedEventForPanel.age_max} years`
-                                : selectedEventForPanel.age_min 
+                                : (selectedEventForPanel.age_min !== undefined && selectedEventForPanel.age_min !== null)
                                   ? `${selectedEventForPanel.age_min}+ years`
                                   : `Up to ${selectedEventForPanel.age_max} years`
                               }
