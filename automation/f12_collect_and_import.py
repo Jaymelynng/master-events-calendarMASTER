@@ -71,7 +71,7 @@ EVENT_TYPE_ALIASES = {
 # Validates Full Day Daily and Full Day Weekly prices only
 
 def fetch_camp_pricing():
-    """Fetch camp pricing from Supabase camp_pricing table"""
+    """Fetch camp pricing from Supabase camp_pricing table (all 4 price types)"""
     try:
         url = f"{SUPABASE_URL}/rest/v1/camp_pricing?select=*"
         req = Request(url)
@@ -87,10 +87,12 @@ def fetch_camp_pricing():
             if gym_id:
                 pricing[gym_id] = {
                     'full_day_daily': row.get('full_day_daily'),
-                    'full_day_weekly': row.get('full_day_weekly')
+                    'full_day_weekly': row.get('full_day_weekly'),
+                    'half_day_daily': row.get('half_day_daily'),
+                    'half_day_weekly': row.get('half_day_weekly')
                 }
         
-        print(f"[INFO] Loaded camp pricing for {len(pricing)} gyms from Supabase")
+        print(f"[INFO] Loaded camp pricing for {len(pricing)} gyms from Supabase (Full Day + Half Day)")
         return pricing
     except Exception as e:
         print(f"[WARN] Could not fetch camp pricing: {e}")
@@ -868,7 +870,9 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     print(f"    [!] COMPLETENESS: Description missing date/time")
                 
                 # 5. DESCRIPTION: Must have TIME (required per standardization doc)
-                if not has_time_in_text(description):
+                # EXCEPTION: Camps can use "Full Day" or "Half Day" instead of specific times
+                has_camp_time_format = event_type == 'CAMP' and ('full day' in description_lower or 'half day' in description_lower)
+                if not has_time_in_text(description) and not has_camp_time_format:
                     validation_errors.append({
                         "type": "missing_time_in_description",
                         "severity": "warning",
@@ -1496,36 +1500,49 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     })
                     print(f"    ❌ PRICE MISMATCH: Title ${title_price:.0f} vs Desc ${desc_price:.0f}")
             
-            # --- CAMP PRICE VALIDATION (Full Day only) ---
-            # For CAMP events: check if price matches Full Day Daily OR Full Day Weekly from Supabase
+            # --- CAMP PRICE VALIDATION (Full Day + Half Day, Daily + Weekly) ---
+            # Checks if price in description matches ANY valid camp price for this gym
+            # Valid prices: full_day_daily, full_day_weekly, half_day_daily, half_day_weekly
+            # Note: Some gyms don't offer half day (NULL values) - those are skipped
             if event_type == 'CAMP' and desc_prices:
                 camp_pricing = get_camp_pricing()
                 if gym_id in camp_pricing:
                     gym_prices = camp_pricing[gym_id]
-                    full_day_daily = gym_prices.get('full_day_daily')
-                    full_day_weekly = gym_prices.get('full_day_weekly')
                     
-                    # Get the first price from description
-                    desc_price = float(desc_prices[0])
-                    
-                    # Check if price matches either Full Day Daily or Full Day Weekly
+                    # Build list of all valid prices for this gym (skip NULL values)
                     valid_prices = []
-                    if full_day_daily:
-                        valid_prices.append(float(full_day_daily))
-                    if full_day_weekly:
-                        valid_prices.append(float(full_day_weekly))
+                    price_labels = []
                     
-                    if valid_prices and desc_price not in valid_prices:
-                        # Allow small tolerance ($2) for rounding
-                        close_match = any(abs(desc_price - vp) <= 2 for vp in valid_prices)
-                        if not close_match:
-                            validation_errors.append({
-                                "type": "camp_price_mismatch",
-                                "severity": "warning",
-                                "category": "data_error",
-                                "message": f"Price ${desc_price:.0f} doesn't match Full Day Daily (${full_day_daily}) or Weekly (${full_day_weekly}) for {gym_id}"
-                            })
-                            print(f"    ⚠️ CAMP PRICE: ${desc_price:.0f} not in valid prices for {gym_id} (Daily: ${full_day_daily}, Weekly: ${full_day_weekly})")
+                    if gym_prices.get('full_day_daily'):
+                        valid_prices.append(float(gym_prices['full_day_daily']))
+                        price_labels.append(f"Full Day Daily ${gym_prices['full_day_daily']}")
+                    if gym_prices.get('full_day_weekly'):
+                        valid_prices.append(float(gym_prices['full_day_weekly']))
+                        price_labels.append(f"Full Day Weekly ${gym_prices['full_day_weekly']}")
+                    if gym_prices.get('half_day_daily'):
+                        valid_prices.append(float(gym_prices['half_day_daily']))
+                        price_labels.append(f"Half Day Daily ${gym_prices['half_day_daily']}")
+                    if gym_prices.get('half_day_weekly'):
+                        valid_prices.append(float(gym_prices['half_day_weekly']))
+                        price_labels.append(f"Half Day Weekly ${gym_prices['half_day_weekly']}")
+                    
+                    if valid_prices:
+                        # Check each price found in description
+                        for desc_price_str in desc_prices:
+                            desc_price = float(desc_price_str)
+                            
+                            # Check if price matches any valid price (with $2 tolerance for rounding)
+                            is_valid = any(abs(desc_price - vp) <= 2 for vp in valid_prices)
+                            
+                            if not is_valid:
+                                validation_errors.append({
+                                    "type": "camp_price_mismatch",
+                                    "severity": "warning",
+                                    "category": "data_error",
+                                    "message": f"Camp price ${desc_price:.0f} doesn't match any valid price for {gym_id}. Valid: {', '.join(price_labels)}"
+                                })
+                                print(f"    ⚠️ CAMP PRICE: ${desc_price:.0f} not valid for {gym_id}. Expected one of: {', '.join(price_labels)}")
+                                break  # Only flag once per event
         
         # ========== AVAILABILITY INFO ==========
         # NOTE: Sold out is NOT a validation error - it's informational status
