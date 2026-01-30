@@ -830,7 +830,42 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
     <div class="section" style="border-left: 4px solid #f59e0b;">
       <h2>🔍 Audit Check Issues (${getAuditCheckIssues().length} events)</h2>
       ${getAuditCheckIssues().length > 0 ? `
-      <p style="margin-bottom: 16px; color: #666;">Events grouped by gym. Click 🔗 to open in iClassPro.</p>
+      
+      <!-- Filter Controls -->
+      <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+        <div style="margin-bottom: 8px;">
+          <strong style="font-size: 12px; color: #555;">Filter by Error Type:</strong>
+          <div style="margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button onclick="filterByType('all')" class="filter-btn active" data-filter="all" style="padding: 6px 12px; border: 2px solid #6366f1; background: #6366f1; color: white; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
+              📋 All Issues
+            </button>
+            <button onclick="filterByType('data')" class="filter-btn" data-filter="data" style="padding: 6px 12px; border: 2px solid #dc2626; background: white; color: #dc2626; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
+              🚨 Data Errors Only
+            </button>
+            <button onclick="filterByType('formatting')" class="filter-btn" data-filter="formatting" style="padding: 6px 12px; border: 2px solid #f59e0b; background: white; color: #f59e0b; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
+              ⚠️ Formatting Only
+            </button>
+          </div>
+        </div>
+        <div>
+          <strong style="font-size: 12px; color: #555;">Filter by Gym:</strong>
+          <div style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+            <button onclick="filterByGym('all')" class="gym-btn active" data-gym="all" style="padding: 4px 10px; border: 1px solid #6366f1; background: #6366f1; color: white; border-radius: 4px; cursor: pointer; font-size: 11px;">
+              All Gyms
+            </button>
+            ${(() => {
+              const gymIds = [...new Set(getAuditCheckIssues().map(i => i.gym_id))].sort();
+              return gymIds.map(gid => \`
+                <button onclick="filterByGym('\${gid}')" class="gym-btn" data-gym="\${gid}" style="padding: 4px 10px; border: 1px solid #9ca3af; background: white; color: #374151; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                  \${gid}
+                </button>
+              \`).join('');
+            })()}
+          </div>
+        </div>
+      </div>
+      
+      <p style="margin-bottom: 16px; color: #666; font-size: 13px;">Events grouped by gym. Click 🔗 to open in iClassPro.</p>
       
       ${(() => {
         // Group issues by gym
@@ -851,7 +886,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         const sortedGyms = Object.values(issuesByGym).sort((a, b) => a.gym_name.localeCompare(b.gym_name));
         
         return sortedGyms.map(gym => `
-          <div style="margin-bottom: 24px;">
+          <div class="gym-section" data-gym="${gym.gym_id}" style="margin-bottom: 24px;">
             <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
               <div>
                 <strong style="font-size: 16px;">🏢 ${gym.gym_name}</strong>
@@ -861,7 +896,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             </div>
             <div style="border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; padding: 12px;">
               ${gym.issues.map(issue => `
-              <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+              <div class="event-card" data-has-data="${issue.data_error_count > 0}" data-has-formatting="${issue.formatting_error_count > 0}" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
                   <div>
                     <strong style="color: #333; font-size: 13px;">${issue.title?.substring(0, 55)}${issue.title?.length > 55 ? '...' : ''}</strong>
@@ -873,7 +908,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
                 </div>
                 
                 ${issue.data_error_count > 0 ? `
-                <div style="margin-bottom: 6px;">
+                <div class="data-errors" style="margin-bottom: 6px;">
                   <div style="background: #dc2626; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; display: inline-block;">HIGH PRIORITY</div>
                   <ul style="margin: 4px 0 0 0; padding: 0; list-style: none;">
                     ${issue.issues.filter(i => i.startsWith('[DATA ERROR]')).map(i => `
@@ -886,7 +921,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
                 ` : ''}
                 
                 ${issue.formatting_error_count > 0 ? `
-                <div>
+                <div class="formatting-errors">
                   <div style="background: #f59e0b; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; display: inline-block;">FORMATTING</div>
                   <ul style="margin: 4px 0 0 0; padding: 0; list-style: none;">
                     ${issue.issues.filter(i => i.startsWith('[FORMATTING]') || i.startsWith('[MISSING]') || i.startsWith('[INCOMPLETE]')).map(i => `
@@ -922,6 +957,69 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
     </div>
     
     <script>
+      let currentTypeFilter = 'all';
+      let currentGymFilter = 'all';
+      
+      function filterByType(type) {
+        currentTypeFilter = type;
+        applyFilters();
+        // Update button styles
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+          if (btn.dataset.filter === type) {
+            btn.style.background = btn.dataset.filter === 'all' ? '#6366f1' : btn.dataset.filter === 'data' ? '#dc2626' : '#f59e0b';
+            btn.style.color = 'white';
+          } else {
+            btn.style.background = 'white';
+            btn.style.color = btn.dataset.filter === 'all' ? '#6366f1' : btn.dataset.filter === 'data' ? '#dc2626' : '#f59e0b';
+          }
+        });
+      }
+      
+      function filterByGym(gym) {
+        currentGymFilter = gym;
+        applyFilters();
+        // Update button styles
+        document.querySelectorAll('.gym-btn').forEach(btn => {
+          if (btn.dataset.gym === gym) {
+            btn.style.background = '#6366f1';
+            btn.style.borderColor = '#6366f1';
+            btn.style.color = 'white';
+          } else {
+            btn.style.background = 'white';
+            btn.style.borderColor = '#9ca3af';
+            btn.style.color = '#374151';
+          }
+        });
+      }
+      
+      function applyFilters() {
+        document.querySelectorAll('.gym-section').forEach(section => {
+          const gymId = section.dataset.gym;
+          const showGym = currentGymFilter === 'all' || currentGymFilter === gymId;
+          
+          if (!showGym) {
+            section.style.display = 'none';
+            return;
+          }
+          
+          let hasVisibleEvents = false;
+          section.querySelectorAll('.event-card').forEach(card => {
+            const hasData = card.dataset.hasData === 'true';
+            const hasFormatting = card.dataset.hasFormatting === 'true';
+            
+            let show = false;
+            if (currentTypeFilter === 'all') show = true;
+            else if (currentTypeFilter === 'data' && hasData) show = true;
+            else if (currentTypeFilter === 'formatting' && hasFormatting) show = true;
+            
+            card.style.display = show ? 'block' : 'none';
+            if (show) hasVisibleEvents = true;
+          });
+          
+          section.style.display = hasVisibleEvents ? 'block' : 'none';
+        });
+      }
+      
       function downloadHTML() {
         const html = document.documentElement.outerHTML;
         const blob = new Blob([html], { type: 'text/html' });
