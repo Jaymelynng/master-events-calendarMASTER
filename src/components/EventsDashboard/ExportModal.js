@@ -830,51 +830,79 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
     <div class="section" style="border-left: 4px solid #f59e0b;">
       <h2>🔍 Audit Check Issues (${getAuditCheckIssues().length} events)</h2>
       ${getAuditCheckIssues().length > 0 ? `
-      <p style="margin-bottom: 16px; color: #666;">Events with data errors, formatting issues, or missing descriptions. Click 🔗 to open in iClassPro.</p>
+      <p style="margin-bottom: 16px; color: #666;">Events grouped by gym. Click 🔗 to open in iClassPro.</p>
       
-      ${getAuditCheckIssues().slice(0, 50).map(issue => `
-      <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-          <div>
-            <strong style="color: #333;">${issue.title?.substring(0, 60)}${issue.title?.length > 60 ? '...' : ''}</strong>
-            <div style="font-size: 12px; color: #666; margin-top: 2px;">
-              📍 ${issue.gym_name || issue.gym_id} &nbsp;|&nbsp; 📅 ${issue.date} &nbsp;|&nbsp; ${issue.type}
+      ${(() => {
+        // Group issues by gym
+        const issuesByGym = {};
+        getAuditCheckIssues().forEach(issue => {
+          const gymKey = issue.gym_id;
+          if (!issuesByGym[gymKey]) {
+            issuesByGym[gymKey] = {
+              gym_name: issue.gym_name || issue.gym_id,
+              gym_id: issue.gym_id,
+              issues: []
+            };
+          }
+          issuesByGym[gymKey].issues.push(issue);
+        });
+        
+        // Sort gyms alphabetically by name
+        const sortedGyms = Object.values(issuesByGym).sort((a, b) => a.gym_name.localeCompare(b.gym_name));
+        
+        return sortedGyms.map(gym => `
+          <div style="margin-bottom: 24px;">
+            <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong style="font-size: 16px;">🏢 ${gym.gym_name}</strong>
+                <span style="opacity: 0.8; margin-left: 8px; font-size: 12px;">(${gym.gym_id})</span>
+              </div>
+              <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px;">${gym.issues.length} issue${gym.issues.length !== 1 ? 's' : ''}</span>
+            </div>
+            <div style="border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; padding: 12px;">
+              ${gym.issues.map(issue => `
+              <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                  <div>
+                    <strong style="color: #333; font-size: 13px;">${issue.title?.substring(0, 55)}${issue.title?.length > 55 ? '...' : ''}</strong>
+                    <div style="font-size: 11px; color: #666; margin-top: 2px;">
+                      📅 ${issue.date} &nbsp;|&nbsp; ${issue.type}
+                    </div>
+                  </div>
+                  ${issue.event_url ? `<a href="${issue.event_url}" target="_blank" style="background: #3b82f6; color: white; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; white-space: nowrap;">🔗 Open</a>` : ''}
+                </div>
+                
+                ${issue.data_error_count > 0 ? `
+                <div style="margin-bottom: 6px;">
+                  <div style="background: #dc2626; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; display: inline-block;">HIGH PRIORITY</div>
+                  <ul style="margin: 4px 0 0 0; padding: 0; list-style: none;">
+                    ${issue.issues.filter(i => i.startsWith('[DATA ERROR]')).map(i => `
+                    <li style="background: #fee2e2; padding: 4px 8px; border-radius: 4px; margin: 3px 0; border-left: 3px solid #dc2626; font-size: 11px;">
+                      🚨 ${i.replace('[DATA ERROR] ', '')}
+                    </li>
+                    `).join('')}
+                  </ul>
+                </div>
+                ` : ''}
+                
+                ${issue.formatting_error_count > 0 ? `
+                <div>
+                  <div style="background: #f59e0b; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; display: inline-block;">FORMATTING</div>
+                  <ul style="margin: 4px 0 0 0; padding: 0; list-style: none;">
+                    ${issue.issues.filter(i => i.startsWith('[FORMATTING]') || i.startsWith('[MISSING]') || i.startsWith('[INCOMPLETE]')).map(i => `
+                    <li style="background: #fef3c7; padding: 4px 8px; border-radius: 4px; margin: 3px 0; border-left: 3px solid #f59e0b; font-size: 11px;">
+                      ⚠️ ${i.replace('[FORMATTING] ', '').replace('[MISSING] ', '').replace('[INCOMPLETE] ', '')}
+                    </li>
+                    `).join('')}
+                  </ul>
+                </div>
+                ` : ''}
+              </div>
+              `).join('')}
             </div>
           </div>
-          ${issue.event_url ? `<a href="${issue.event_url}" target="_blank" style="background: #3b82f6; color: white; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-size: 12px;">🔗 Open</a>` : ''}
-        </div>
-        
-        ${issue.data_error_count > 0 ? `
-        <div style="margin-bottom: 8px;">
-          <div style="background: #dc2626; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; display: inline-block; margin-bottom: 4px;">HIGH PRIORITY</div>
-          <span style="font-size: 11px; color: #991b1b; margin-left: 8px;">DATA ERRORS (WRONG INFO):</span>
-          <ul style="margin: 4px 0 0 16px; padding: 0; list-style: none;">
-            ${issue.issues.filter(i => i.startsWith('[DATA ERROR]')).map(i => `
-            <li style="background: #fee2e2; padding: 6px 10px; border-radius: 4px; margin: 4px 0; border-left: 3px solid #dc2626; font-size: 12px;">
-              🚨 ${i.replace('[DATA ERROR] ', '')}
-            </li>
-            `).join('')}
-          </ul>
-        </div>
-        ` : ''}
-        
-        ${issue.formatting_error_count > 0 ? `
-        <div>
-          <div style="background: #f59e0b; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; display: inline-block; margin-bottom: 4px;">FORMATTING</div>
-          <span style="font-size: 11px; color: #92400e; margin-left: 8px;">MISSING/INCOMPLETE INFO:</span>
-          <ul style="margin: 4px 0 0 16px; padding: 0; list-style: none;">
-            ${issue.issues.filter(i => i.startsWith('[FORMATTING]') || i.startsWith('[MISSING]') || i.startsWith('[INCOMPLETE]')).map(i => `
-            <li style="background: #fef3c7; padding: 6px 10px; border-radius: 4px; margin: 4px 0; border-left: 3px solid #f59e0b; font-size: 12px;">
-              ⚠️ ${i.replace('[FORMATTING] ', '').replace('[MISSING] ', '').replace('[INCOMPLETE] ', '')}
-            </li>
-            `).join('')}
-          </ul>
-        </div>
-        ` : ''}
-      </div>
-      `).join('')}
-      
-      ${getAuditCheckIssues().length > 50 ? `<p style="margin-top: 12px; color: #888; font-size: 12px; text-align: center; padding: 12px; background: #f3f4f6; border-radius: 8px;">Showing first 50 of ${getAuditCheckIssues().length} issues. Export to CSV for full list.</p>` : ''}
+        `).join('');
+      })()}
       ` : `
       <p style="color: #22c55e;">✅ No audit issues found! All events have complete descriptions and no validation errors.</p>
       `}
