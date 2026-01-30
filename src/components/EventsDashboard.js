@@ -3384,7 +3384,7 @@ The system will add new events and update any changed events automatically.`;
                         </div>
                       </div>
                       {/* Age Range */}
-                      {(selectedEventForPanel.age_min !== undefined && selectedEventForPanel.age_min !== null) || (selectedEventForPanel.age_max !== undefined && selectedEventForPanel.age_max !== null)) && (
+                      {((selectedEventForPanel.age_min !== undefined && selectedEventForPanel.age_min !== null) || (selectedEventForPanel.age_max !== undefined && selectedEventForPanel.age_max !== null)) && (
                         <div className="flex items-start gap-3">
                           <Users className="w-5 h-5 text-gray-400 mt-0.5" />
                           <div>
