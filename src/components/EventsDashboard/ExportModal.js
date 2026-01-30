@@ -826,6 +826,42 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
     </div>
     `}
     
+    ${includeAuditCheck ? `
+    <div class="section" style="border-left: 4px solid #f59e0b;">
+      <h2>🔍 Audit Check Issues (${getAuditCheckIssues().length} events)</h2>
+      ${getAuditCheckIssues().length > 0 ? `
+      <p style="margin-bottom: 16px; color: #666;">Events with data errors, formatting issues, or missing descriptions:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Gym</th>
+            <th>Event</th>
+            <th>Date</th>
+            <th style="text-align:center">Data Errors</th>
+            <th style="text-align:center">Formatting</th>
+            <th>Issues</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${getAuditCheckIssues().slice(0, 100).map(issue => `
+          <tr>
+            <td><small style="color:#888">${issue.gym_id}</small></td>
+            <td><strong>${issue.title?.substring(0, 40)}${issue.title?.length > 40 ? '...' : ''}</strong></td>
+            <td>${issue.date}</td>
+            <td style="text-align:center">${issue.data_error_count > 0 ? `<span class="badge danger">${issue.data_error_count}</span>` : '-'}</td>
+            <td style="text-align:center">${issue.formatting_error_count > 0 ? `<span class="badge warning">${issue.formatting_error_count}</span>` : '-'}</td>
+            <td><small>${issue.issues.slice(0, 2).join('; ')}${issue.issues.length > 2 ? '...' : ''}</small></td>
+          </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      ${getAuditCheckIssues().length > 100 ? `<p style="margin-top: 12px; color: #888; font-size: 12px;">Showing first 100 of ${getAuditCheckIssues().length} issues. Export to CSV for full list.</p>` : ''}
+      ` : `
+      <p style="color: #22c55e;">✅ No audit issues found! All events have complete descriptions and no validation errors.</p>
+      `}
+    </div>
+    ` : ''}
+    
     <div class="footer">
       <p>Master Events Calendar • Report generated automatically</p>
       <p style="margin-top: 4px;">
