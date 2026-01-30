@@ -2986,7 +2986,8 @@ The system will add new events and update any changed events automatically.`;
                       Formatting
                     </span>
                     <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 bg-red-500 rounded-full border-2 border-orange-400 inline-block"></span>
+                      <span className="w-2.5 h-2.5 bg-red-500 rounded-full border border-red-700 inline-block"></span>
+                      <span className="w-2 h-2 bg-orange-400 rounded-full border border-orange-600 inline-block -ml-1.5"></span>
                       Both
                     </span>
                     <span className="flex items-center gap-1">
@@ -3256,10 +3257,11 @@ The system will add new events and update any changed events automatically.`;
                                             
                                             // Show colored dots based on error types
                                             if (hasDataErrors && hasFormattingErrors) {
-                                              // Both types - show red dot with orange ring
+                                              // Both types - show TWO dots: red + orange side by side
                                               return (
-                                                <span className="absolute -top-1 -right-1 flex items-center gap-0.5" title={`DATA: ${dataErrors.length} | FORMAT: ${formattingErrors.length}`}>
-                                                  <span className="w-3 h-3 bg-red-500 rounded-full border-2 border-orange-400 shadow-sm"></span>
+                                                <span className="absolute -top-1 -right-1 flex items-center" title={`DATA: ${dataErrors.length} | FORMAT: ${formattingErrors.length}`}>
+                                                  <span className="w-2.5 h-2.5 bg-red-500 rounded-full shadow-sm inline-block border border-red-700"></span>
+                                                  <span className="w-2 h-2 bg-orange-400 rounded-full shadow-sm inline-block border border-orange-600 -ml-1"></span>
                                                 </span>
                                               );
                                             } else if (hasDataErrors) {
