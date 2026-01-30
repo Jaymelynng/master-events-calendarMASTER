@@ -965,9 +965,9 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                         <td className="px-3 py-2 text-gray-800">{event.title}</td>
                         <td className="px-3 py-2 text-gray-600">{event.date}</td>
                         <td className="px-3 py-2 text-gray-600">
-                          {event.age_min && event.age_max 
+                          {(event.age_min !== undefined && event.age_min !== null) && (event.age_max !== undefined && event.age_max !== null)
                             ? `${event.age_min}-${event.age_max}`
-                            : event.age_min 
+                            : (event.age_min !== undefined && event.age_min !== null)
                               ? `${event.age_min}+`
                               : '-'}
                         </td>

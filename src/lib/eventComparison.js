@@ -230,10 +230,11 @@ function normalizeValue(value, fieldName = '') {
   }
   
   // Special handling for age fields - convert to integer
+  // NOTE: Age 0 is valid (e.g., infant/toddler programs), so don't treat it as null
   if (fieldName === 'age_min' || fieldName === 'age_max') {
     const num = parseInt(value, 10);
-    // Treat 0 as null for age (no age = 0 = null)
-    return isNaN(num) || num === 0 ? null : num;
+    // Only treat NaN as null, preserve 0 as a valid age
+    return isNaN(num) ? null : num;
   }
   
   // Special handling for date fields - normalize to YYYY-MM-DD format
