@@ -72,3 +72,7 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# Claude temp files
+tmpclaude-*
+nul
