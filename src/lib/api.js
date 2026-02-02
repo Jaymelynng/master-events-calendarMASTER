@@ -433,4 +433,46 @@ export const auditLogApi = {
     if (error) throw new Error(error.message);
     return data || [];
   }
-}; 
+};
+
+// Gym Valid Values API - per-gym rules for valid prices, times, etc.
+// These prevent false positive validation errors (e.g. $20 aftercare, 8:30am early dropoff)
+export const gymValidValuesApi = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('gym_valid_values')
+      .select('*')
+      .order('gym_id')
+      .order('rule_type');
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async getByGym(gymId) {
+    const { data, error } = await supabase
+      .from('gym_valid_values')
+      .select('*')
+      .eq('gym_id', gymId)
+      .order('rule_type');
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async create(rule) {
+    const { data, error } = await supabase
+      .from('gym_valid_values')
+      .insert([rule])
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('gym_valid_values')
+      .delete()
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+};

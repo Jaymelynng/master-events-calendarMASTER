@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 // Import real API functions
-import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi } from '../lib/api';
+import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi, gymValidValuesApi } from '../lib/api';
 import { gymLinksApi } from '../lib/gymLinksApi';
 import { cachedApi, cache } from '../lib/cache';
 import { supabase } from '../lib/supabase';
@@ -506,7 +506,71 @@ const EventsDashboard = () => {
     }
   };
 
-  
+  // Add a permanent per-gym rule so the system stops flagging a known valid value
+  const handleAddAsRule = async (event, error) => {
+    try {
+      const gymId = event.gym_id;
+      if (!gymId) {
+        alert('Could not determine gym.');
+        return;
+      }
+
+      let ruleType = null;
+      let value = null;
+
+      if (error.type === 'camp_price_mismatch') {
+        const priceMatch = error.message.match(/\$(\d+(?:\.\d{2})?)/);
+        if (!priceMatch) {
+          alert('Could not extract price. Please add this rule manually in Admin.');
+          return;
+        }
+        ruleType = 'price';
+        value = priceMatch[1];
+      } else if (error.type === 'time_mismatch') {
+        const timeMatch = error.message.match(/(?:description|title) says (\d{1,2}(?::\d{2})?\s*(?:am|pm|a|p))/i);
+        if (!timeMatch) {
+          alert('Could not extract time. Please add this rule manually in Admin.');
+          return;
+        }
+        ruleType = 'time';
+        value = timeMatch[1].trim();
+      } else {
+        return;
+      }
+
+      const label = window.prompt(
+        `Add "${ruleType === 'price' ? '$' + value : value}" as a valid ${ruleType} for ${gymId}.\n\nWhat is this? (e.g. "Before Care", "Early Dropoff"):`,
+        ''
+      );
+
+      if (label === null) return;
+      if (!label.trim()) {
+        alert('Please provide a label (e.g. "Before Care", "After Care", "Early Dropoff")');
+        return;
+      }
+
+      await gymValidValuesApi.create({
+        gym_id: gymId,
+        rule_type: ruleType,
+        value: value,
+        label: label.trim(),
+        event_type: 'CAMP'
+      });
+
+      // Also dismiss this specific error
+      await acknowledgeValidationError(event.id, error.message, `Rule added: ${label.trim()}`);
+
+      alert(`Rule added! "${ruleType === 'price' ? '$' + value : value}" is now valid for ${gymId} (${label.trim()}).\n\nTakes effect on next sync.`);
+    } catch (err) {
+      console.error('Error adding rule:', err);
+      alert('Failed to add rule. Please try again.');
+    }
+  };
+
+  const canAddAsRule = (errorType) => {
+    return errorType === 'camp_price_mismatch' || errorType === 'time_mismatch';
+  };
+
   // ✨ Toggle individual event expansion - Shows full detail popup
   // Removed toggleEventExpansion - now using side panel on click
   
@@ -1846,6 +1910,7 @@ The system will add new events and update any changed events automatically.`;
                 setShowAuditHistory(true);
               }, 100);
             }}
+            gyms={gymsList}
           />
         </Suspense>
       )}
@@ -3659,16 +3724,30 @@ The system will add new events and update any changed events automatically.`;
                                             🚨 <strong>{getErrorLabel(error.type)}</strong>
                                             <span className="text-xs block text-red-600 mt-0.5">{error.message}</span>
                                           </span>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleDismissWithNote(selectedEventForPanel.id, error.message);
-                                            }}
-                                            className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
-                                            title="Dismiss with optional note"
-                                          >
-                                            ✓ OK
-                                          </button>
+                                          <div className="flex-shrink-0 flex gap-1">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDismissWithNote(selectedEventForPanel.id, error.message);
+                                              }}
+                                              className="px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
+                                              title="Dismiss with optional note"
+                                            >
+                                              ✓ OK
+                                            </button>
+                                            {canAddAsRule(error.type) && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleAddAsRule(selectedEventForPanel, error);
+                                                }}
+                                                className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md transition-colors font-medium"
+                                                title="Add as permanent rule for this gym"
+                                              >
+                                                + Rule
+                                              </button>
+                                            )}
+                                          </div>
                                         </li>
                                       ))}
                                     </ul>

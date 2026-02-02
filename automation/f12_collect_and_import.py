@@ -108,6 +108,51 @@ def get_camp_pricing():
         CAMP_PRICING = fetch_camp_pricing()
     return CAMP_PRICING
 
+# Per-gym valid values (extra prices, times, etc.) from gym_valid_values table
+GYM_VALID_VALUES = None
+
+def fetch_gym_valid_values():
+    """Fetch per-gym valid values from Supabase gym_valid_values table.
+    Returns dict grouped by gym_id and rule_type:
+    { 'RBA': { 'price': [{'value': '20', 'label': 'Before Care'}], 'time': [...] } }
+    """
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/gym_valid_values?select=*"
+        req = Request(url)
+        req.add_header("apikey", SUPABASE_KEY)
+        req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
+
+        with urlopen(req) as response:
+            rows = json.loads(response.read().decode())
+
+        values = {}
+        for row in rows:
+            gym_id = row.get('gym_id')
+            rule_type = row.get('rule_type')
+            if gym_id and rule_type:
+                if gym_id not in values:
+                    values[gym_id] = {}
+                if rule_type not in values[gym_id]:
+                    values[gym_id][rule_type] = []
+                values[gym_id][rule_type].append({
+                    'value': row.get('value', ''),
+                    'label': row.get('label', '')
+                })
+
+        total_rules = sum(len(v) for gym in values.values() for v in gym.values())
+        print(f"[INFO] Loaded {total_rules} gym valid value rules for {len(values)} gyms from Supabase")
+        return values
+    except Exception as e:
+        print(f"[WARN] Could not fetch gym valid values: {e}")
+        return {}
+
+def get_gym_valid_values():
+    """Get cached gym valid values or fetch from Supabase"""
+    global GYM_VALID_VALUES
+    if GYM_VALID_VALUES is None:
+        GYM_VALID_VALUES = fetch_gym_valid_values()
+    return GYM_VALID_VALUES
+
 def fetch_event_type_urls():
     """Fetch EVENT_TYPE_URLS from Supabase gym_links table"""
     try:
@@ -1023,27 +1068,39 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                                 return time_str_formatted
                         return None
                     
+                    # Get extra valid times for this gym (e.g. "8:30 AM" for early dropoff)
+                    extra_time_rules = get_gym_valid_values().get(gym_id, {}).get('time', [])
+                    extra_time_values = [t['value'].lower().strip() for t in extra_time_rules]
+
                     # Check times in TITLE
                     title_time_mismatch = check_times_in_text(title, "title", char_limit=200)
                     if title_time_mismatch:
-                        validation_errors.append({
-                            "type": "time_mismatch",
-                            "severity": "warning",
-                            "category": "data_error",
-                            "message": f"iClass time is {time_str} but title says {title_time_mismatch}"
-                        })
-                        print(f"    [!] TIME MISMATCH: iClass={time_str}, Title says {title_time_mismatch}")
-                    
+                        # Check if this time is an approved extra time for this gym
+                        if title_time_mismatch.lower().strip() not in extra_time_values:
+                            validation_errors.append({
+                                "type": "time_mismatch",
+                                "severity": "warning",
+                                "category": "data_error",
+                                "message": f"iClass time is {time_str} but title says {title_time_mismatch}"
+                            })
+                            print(f"    [!] TIME MISMATCH: iClass={time_str}, Title says {title_time_mismatch}")
+                        else:
+                            print(f"    [OK] Time {title_time_mismatch} is a valid extra time for {gym_id}")
+
                     # Check times in DESCRIPTION
                     desc_time_mismatch = check_times_in_text(description, "description", char_limit=300)
                     if desc_time_mismatch:
-                        validation_errors.append({
-                            "type": "time_mismatch",
-                            "severity": "warning",
-                            "category": "data_error",
-                            "message": f"iClass time is {time_str} but description says {desc_time_mismatch}"
-                        })
-                        print(f"    [!] TIME MISMATCH: iClass={time_str}, Description says {desc_time_mismatch}")
+                        # Check if this time is an approved extra time for this gym
+                        if desc_time_mismatch.lower().strip() not in extra_time_values:
+                            validation_errors.append({
+                                "type": "time_mismatch",
+                                "severity": "warning",
+                                "category": "data_error",
+                                "message": f"iClass time is {time_str} but description says {desc_time_mismatch}"
+                            })
+                            print(f"    [!] TIME MISMATCH: iClass={time_str}, Description says {desc_time_mismatch}")
+                        else:
+                            print(f"    [OK] Time {desc_time_mismatch} is a valid extra time for {gym_id}")
             
             # --- AGE VALIDATION: Compare iClass age_min vs Title vs Description ---
             # All three should match (we only check MIN age because managers often use "Ages 5+")
@@ -1525,7 +1582,19 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     if gym_prices.get('half_day_weekly'):
                         valid_prices.append(float(gym_prices['half_day_weekly']))
                         price_labels.append(f"Half Day Weekly ${gym_prices['half_day_weekly']}")
-                    
+
+                    # Also add any extra valid prices from gym_valid_values table
+                    # (e.g. Before Care $20, After Care $20 - per-gym rules)
+                    extra_price_rules = get_gym_valid_values().get(gym_id, {}).get('price', [])
+                    for ep in extra_price_rules:
+                        try:
+                            extra_price = float(ep['value'])
+                            if extra_price not in valid_prices:
+                                valid_prices.append(extra_price)
+                                price_labels.append(f"{ep.get('label', 'Custom')} ${ep['value']}")
+                        except (ValueError, TypeError):
+                            pass
+
                     if valid_prices:
                         # Check each price found in description
                         for desc_price_str in desc_prices:
