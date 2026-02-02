@@ -13,6 +13,7 @@ import { useRealtimeEvents, useRealtimeGymLinks, useRealtimeGyms } from '../lib/
 import AdminPortalModal from './EventsDashboard/AdminPortalModal';
 import SyncModal from './EventsDashboard/SyncModal';
 import ExportModal from './EventsDashboard/ExportModal';
+import DismissRuleModal from './EventsDashboard/DismissRuleModal';
 
 // Exact Color Theme from user's specification
 const theme = {
@@ -299,6 +300,7 @@ const EventsDashboard = () => {
   // New Admin Portal State (safe addition)
   const [showAdminPortal, setShowAdminPortal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [dismissModalState, setDismissModalState] = useState(null); // { eventId, errorMessage, errorObj, gymId }
   const [newEvent, setNewEvent] = useState({
     gym_id: '',
     title: '',
@@ -1889,6 +1891,42 @@ The system will add new events and update any changed events automatically.`;
           monthlyRequirements={monthlyRequirements}
           currentMonth={currentMonth}
           currentYear={currentYear}
+        />
+      )}
+
+      {/* Dismiss/Rule Modal for validation errors */}
+      {dismissModalState && (
+        <DismissRuleModal
+          errorMessage={dismissModalState.errorMessage}
+          gymId={dismissModalState.gymId}
+          ruleEligible={dismissModalState.ruleEligible}
+          ruleInfo={dismissModalState.ruleInfo}
+          onCancel={() => setDismissModalState(null)}
+          onDismiss={async (note) => {
+            await acknowledgeValidationError(dismissModalState.eventId, dismissModalState.errorMessage, note);
+            setDismissModalState(null);
+          }}
+          onDismissAndRule={async (note, label) => {
+            await acknowledgeValidationError(dismissModalState.eventId, dismissModalState.errorMessage, note);
+            const { ruleInfo, gymId } = dismissModalState;
+            if (ruleInfo && gymId) {
+              try {
+                await gymValidValuesApi.create({
+                  gym_id: gymId,
+                  rule_type: ruleInfo.ruleType,
+                  value: ruleInfo.value,
+                  label: label,
+                  event_type: 'CAMP'
+                });
+                const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
+                alert(`Rule saved! "${displayValue}" is now valid for ${gymId} (${label}).`);
+              } catch (ruleErr) {
+                console.error('Error adding rule:', ruleErr);
+                alert('Dismissed OK, but failed to add rule. Add it manually in Admin → Gym Rules.');
+              }
+            }
+            setDismissModalState(null);
+          }}
         />
       )}
 
@@ -3613,53 +3651,12 @@ The system will add new events and update any changed events automatically.`;
                         return labels[type] || type;
                       };
                       
-                      // Handler for dismissing with optional note + optional rule creation
-                      const handleDismissWithNote = async (eventId, errorMessage, errorObj = null) => {
-                        const note = window.prompt(
-                          'Optional: Add a note explaining why this is OK (or leave blank):',
-                          ''
-                        );
-                        if (note === null) return; // User clicked Cancel
-
-                        await acknowledgeValidationError(eventId, errorMessage, note || null);
-
-                        // After dismissing, offer to add as permanent rule if eligible
-                        if (errorObj && canAddAsRule(errorObj.type)) {
-                          const ruleInfo = extractRuleValue(errorObj);
-                          if (ruleInfo && selectedEventForPanel?.gym_id) {
-                            const gymId = selectedEventForPanel.gym_id;
-                            const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
-
-                            const wantRule = window.confirm(
-                              `Done! Warning dismissed.\n\n` +
-                              `Want to also make "${displayValue}" a permanent rule for ${gymId}?\n\n` +
-                              `YES (OK) = Never flag this on ${gymId} camps again\n` +
-                              `NO (Cancel) = Just dismiss this one time`
-                            );
-
-                            if (wantRule) {
-                              const label = window.prompt(
-                                `What is "${displayValue}"? (e.g. "Before Care", "After Care", "Early Dropoff"):`,
-                                ''
-                              );
-                              if (label && label.trim()) {
-                                try {
-                                  await gymValidValuesApi.create({
-                                    gym_id: gymId,
-                                    rule_type: ruleInfo.ruleType,
-                                    value: ruleInfo.value,
-                                    label: label.trim(),
-                                    event_type: 'CAMP'
-                                  });
-                                  alert(`Rule saved! "${displayValue}" is now valid for ${gymId} (${label.trim()}).`);
-                                } catch (ruleErr) {
-                                  console.error('Error adding rule:', ruleErr);
-                                  alert('Dismissed OK, but failed to add rule. Add it manually in Admin → Gym Rules.');
-                                }
-                              }
-                            }
-                          }
-                        }
+                      // Handler for dismissing - opens the custom modal
+                      const handleDismissWithNote = (eventId, errorMessage, errorObj = null) => {
+                        const gymId = selectedEventForPanel?.gym_id || '';
+                        const ruleEligible = errorObj ? canAddAsRule(errorObj.type) : false;
+                        const ruleInfo = errorObj ? extractRuleValue(errorObj) : null;
+                        setDismissModalState({ eventId, errorMessage, errorObj, gymId, ruleEligible, ruleInfo });
                       };
                       
                       // Count total issues including description status

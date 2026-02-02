@@ -3,6 +3,7 @@ import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import { eventsApi, syncLogApi, auditLogApi, gymValidValuesApi } from '../../lib/api';
 import { compareEvents } from '../../lib/eventComparison';
 import { supabase } from '../../lib/supabase';
+import DismissRuleModal from './DismissRuleModal';
 
 export default function SyncModal({ theme, onClose, onBack, gyms }) {
   const [selectedGym, setSelectedGym] = useState('');
@@ -18,6 +19,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
   const [forceUpdate, setForceUpdate] = useState(false); // Force re-import even if "same"
   const [showAuditPanel, setShowAuditPanel] = useState(false); // Show validation errors panel
   const [dismissingError, setDismissingError] = useState(null); // Track which error is being dismissed
+  const [dismissModalState, setDismissModalState] = useState(null); // { event, errorMessage, errorObj, gymId }
 
   // Load sync log on mount
   useEffect(() => {
@@ -122,9 +124,16 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
     return null;
   };
 
-  // Dismiss a validation error for an event (saves to database)
-  // For rule-eligible errors (camp_price_mismatch, time_mismatch), also offers to save as a permanent rule
-  const handleDismissError = async (event, errorMessage, errorObj = null) => {
+  // Opens the custom dismiss modal instead of using window.prompt/confirm
+  const handleDismissError = (event, errorMessage, errorObj = null) => {
+    const gymId = event.gym_id || selectedGym;
+    const ruleEligible = errorObj ? canAddAsRule(errorObj.type) : false;
+    const ruleInfo = errorObj ? extractRuleValue(errorObj) : null;
+    setDismissModalState({ event, errorMessage, errorObj, gymId, ruleEligible, ruleInfo });
+  };
+
+  // Actually dismiss the error in the database (called by modal callbacks)
+  const executeDismiss = async (event, errorMessage, note) => {
     try {
       setDismissingError(`${event.event_url}-${errorMessage}`);
 
@@ -136,17 +145,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
 
       if (fetchError || !existingEvent) {
         alert('This event needs to be imported first before you can dismiss warnings.');
-        setDismissingError(null);
-        return;
-      }
-
-      // Prompt for optional note
-      const note = window.prompt(
-        'Optional: Add a note explaining why this is OK (or leave blank):',
-        ''
-      );
-
-      if (note === null) {
         setDismissingError(null);
         return;
       }
@@ -169,46 +167,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
 
         if (updateError) throw updateError;
         console.log(`✅ Dismissed error for "${event.title}": "${errorMessage}"`);
-      }
-
-      // After dismissing, offer to add as a permanent rule if eligible
-      if (errorObj && canAddAsRule(errorObj.type)) {
-        const ruleInfo = extractRuleValue(errorObj);
-        if (ruleInfo) {
-          const gymId = event.gym_id || selectedGym;
-          const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
-
-          const wantRule = window.confirm(
-            `Done! Warning dismissed.\n\n` +
-            `Want to also make "${displayValue}" a permanent rule for ${gymId}?\n\n` +
-            `YES (OK) = Never flag this on ${gymId} camps again\n` +
-            `NO (Cancel) = Just dismiss this one time`
-          );
-
-          if (wantRule) {
-            const label = window.prompt(
-              `What is "${displayValue}"? (e.g. "Before Care", "After Care", "Early Dropoff"):`,
-              ''
-            );
-
-            if (label && label.trim()) {
-              try {
-                await gymValidValuesApi.create({
-                  gym_id: gymId,
-                  rule_type: ruleInfo.ruleType,
-                  value: ruleInfo.value,
-                  label: label.trim(),
-                  event_type: 'CAMP'
-                });
-                console.log(`✅ Added ${ruleInfo.ruleType} rule for ${gymId}: ${ruleInfo.value} = "${label.trim()}"`);
-                alert(`Rule saved! "${displayValue}" is now a valid ${ruleInfo.ruleType} for ${gymId} (${label.trim()}).`);
-              } catch (ruleErr) {
-                console.error('Error adding rule:', ruleErr);
-                alert('Dismissed OK, but failed to add rule. You can add it manually in Admin → Gym Rules.');
-              }
-            }
-          }
-        }
       }
 
       setDismissingError(null);
@@ -1606,6 +1564,41 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
           </div>
         )}
       </div>
+      {/* Dismiss/Rule Modal for validation errors */}
+      {dismissModalState && (
+        <DismissRuleModal
+          errorMessage={dismissModalState.errorMessage}
+          gymId={dismissModalState.gymId}
+          ruleEligible={dismissModalState.ruleEligible}
+          ruleInfo={dismissModalState.ruleInfo}
+          onCancel={() => setDismissModalState(null)}
+          onDismiss={async (note) => {
+            await executeDismiss(dismissModalState.event, dismissModalState.errorMessage, note);
+            setDismissModalState(null);
+          }}
+          onDismissAndRule={async (note, label) => {
+            await executeDismiss(dismissModalState.event, dismissModalState.errorMessage, note);
+            const { ruleInfo, gymId } = dismissModalState;
+            if (ruleInfo && gymId) {
+              try {
+                await gymValidValuesApi.create({
+                  gym_id: gymId,
+                  rule_type: ruleInfo.ruleType,
+                  value: ruleInfo.value,
+                  label: label,
+                  event_type: 'CAMP'
+                });
+                const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
+                alert(`Rule saved! "${displayValue}" is now valid for ${gymId} (${label}).`);
+              } catch (ruleErr) {
+                console.error('Error adding rule:', ruleErr);
+                alert('Dismissed OK, but failed to add rule. Add it manually in Admin → Gym Rules.');
+              }
+            }
+            setDismissModalState(null);
+          }}
+        />
+      )}
     </div>
   );
 }
