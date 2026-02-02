@@ -109,8 +109,10 @@ Prevent false positive validation errors with per-gym rules:
 - 📋 Rules stored in `gym_valid_values` table
 - Created via dismiss flow ("Make Permanent Rule") or Admin Portal
 - Dismissed warnings show badges: **📋 Permanent Rule** vs **One-time**
-- Only for camp_price_mismatch and time_mismatch errors
-- Rules are gym-specific — a rule for RBA doesn't affect other gyms
+- Three rule types: `price`, `time`, and `program_synonym`
+- Program synonyms replace hardcoded overrides (e.g., "Gym Fun Friday" = OPEN GYM)
+- Rules with `gym_id = 'ALL'` apply globally to all gyms
+- Gym-specific rules override or extend global rules
 
 ---
 
@@ -348,6 +350,8 @@ You built this entire system through **vibe coding** with AI assistance:
 
 | Date | Changes |
 |------|---------|
+| Feb 2, 2026 | Added program_synonym rule type — program name overrides now in database |
+| Feb 2, 2026 | Added global rules (gym_id='ALL') for rules that apply to every gym |
 | Feb 2, 2026 | Added per-gym validation rules system (gym_valid_values) |
 | Feb 2, 2026 | Added custom dismiss modal (Accept Exception / Make Permanent Rule) |
 | Feb 2, 2026 | Added Gym Rules manager to Super Admin portal |

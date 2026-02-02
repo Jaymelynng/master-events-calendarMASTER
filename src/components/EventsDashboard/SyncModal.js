@@ -109,17 +109,23 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
 
   // Check if an error type supports "Add as Rule"
   const canAddAsRule = (errorType) => {
-    return errorType === 'camp_price_mismatch' || errorType === 'time_mismatch';
+    return errorType === 'camp_price_mismatch' || errorType === 'time_mismatch' ||
+           errorType === 'program_mismatch' || errorType === 'missing_program_in_title';
   };
 
-  // Extract rule value from an error message (price or time)
-  const extractRuleValue = (errorObj) => {
+  // Extract rule value from an error message (price, time, or program synonym)
+  const extractRuleValue = (errorObj, event = null) => {
     if (errorObj.type === 'camp_price_mismatch') {
       const priceMatch = errorObj.message.match(/\$(\d+(?:\.\d{2})?)/);
       return priceMatch ? { ruleType: 'price', value: priceMatch[1] } : null;
     } else if (errorObj.type === 'time_mismatch') {
       const timeMatch = errorObj.message.match(/(?:description|title) says (\d{1,2}(?::\d{2})?\s*(?:am|pm|a|p))/i);
       return timeMatch ? { ruleType: 'time', value: timeMatch[1].trim() } : null;
+    } else if (errorObj.type === 'program_mismatch' || errorObj.type === 'missing_program_in_title') {
+      // For program mismatches, the value is the event title (as the synonym keyword)
+      // and the label will be the expected program type (set by user or from event.type)
+      const titleValue = event?.title || '';
+      return titleValue ? { ruleType: 'program_synonym', value: titleValue.toLowerCase(), suggestedLabel: event?.type || '' } : null;
     }
     return null;
   };
@@ -128,7 +134,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
   const handleDismissError = (event, errorMessage, errorObj = null) => {
     const gymId = event.gym_id || selectedGym;
     const ruleEligible = errorObj ? canAddAsRule(errorObj.type) : false;
-    const ruleInfo = errorObj ? extractRuleValue(errorObj) : null;
+    const ruleInfo = errorObj ? extractRuleValue(errorObj, event) : null;
     setDismissModalState({ event, errorMessage, errorObj, gymId, ruleEligible, ruleInfo });
   };
 
@@ -1582,12 +1588,13 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
             const { ruleInfo, gymId } = dismissModalState;
             if (ruleInfo && gymId) {
               try {
+                const isProgramSynonym = ruleInfo.ruleType === 'program_synonym';
                 await gymValidValuesApi.create({
                   gym_id: gymId,
                   rule_type: ruleInfo.ruleType,
-                  value: ruleInfo.value,
+                  value: isProgramSynonym ? ruleInfo.value.toLowerCase() : ruleInfo.value,
                   label: label,
-                  event_type: 'CAMP'
+                  event_type: isProgramSynonym ? label.toUpperCase() : 'CAMP'
                 });
                 const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
                 alert(`Rule saved! "${displayValue}" is now valid for ${gymId} (${label}).`);

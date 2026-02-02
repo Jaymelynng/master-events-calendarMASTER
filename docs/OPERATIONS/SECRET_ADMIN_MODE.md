@@ -152,11 +152,12 @@ Step 6: Super Admin features appear!
 │  │🗄️Supabase│ │🚂Railway │ │🔍Audit History│    │
 │  └──────────┘ └──────────┘ └───────────────┘    │
 │                                                 │
-│  📋 Gym Rules  (valid prices, times per gym)  ▼ │
+│  📋 Gym Rules  (prices, times, synonyms)      ▼ │
 │  ┌───────────────────────────────────────────┐  │
 │  │ RBA | price | $20 = "Before Care"    [✕]  │  │
 │  │ RBK | time  | 8:30 am = "Early Drop" [✕]  │  │
-│  │ [Gym...] [Price▾] [Value] [Label] [+Add]  │  │
+│  │ ALL | synonym| gym fun friday = "OPEN GYM" │  │
+│  │ [Gym...] [Type▾] [Value] [Label] [+Add]   │  │
 │  └───────────────────────────────────────────┘  │
 │                                                 │
 │  ⚡ Automated Sync                              │
@@ -302,6 +303,7 @@ This was the original access method before the visible Admin button was added. I
 
 | Date | Change |
 |------|--------|
+| Feb 2, 2026 | Added program synonym rule type + ALL (global) gym option |
 | Feb 2, 2026 | Added Gym Rules manager to Super Admin tools |
 | Feb 2, 2026 | Updated Level 3 diagram to show Gym Rules section |
 | Dec 28, 2025 | Merged MAGIC_CONTROL_FEATURES.md into this doc |

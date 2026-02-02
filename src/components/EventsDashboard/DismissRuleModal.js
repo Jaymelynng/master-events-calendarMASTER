@@ -30,8 +30,9 @@ export default function DismissRuleModal({
 }) {
   const [note, setNote] = useState('');
   const [showLabelInput, setShowLabelInput] = useState(false);
-  const [label, setLabel] = useState('');
+  const [label, setLabel] = useState(ruleInfo?.suggestedLabel || '');
 
+  const isProgramSynonym = ruleInfo?.ruleType === 'program_synonym';
   const displayValue = ruleInfo
     ? ruleInfo.ruleType === 'price'
       ? `$${ruleInfo.value}`
@@ -98,13 +99,16 @@ export default function DismissRuleModal({
         {showLabelInput && (
           <div className="mb-5 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <label className="block text-sm font-medium text-blue-800 mb-1">
-              What is "{displayValue}"?
+              {isProgramSynonym
+                ? `What program type is "${displayValue}"?`
+                : `What is "${displayValue}"?`
+              }
             </label>
             <input
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. Before Care, After Care, Early Dropoff"
+              placeholder={isProgramSynonym ? 'e.g. OPEN GYM, CLINIC, KIDS NIGHT OUT' : 'e.g. Before Care, After Care, Early Dropoff'}
               className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               autoFocus
               onKeyDown={(e) => {
@@ -149,7 +153,10 @@ export default function DismissRuleModal({
               >
                 Make Permanent Rule
                 <span className="block text-xs font-normal text-blue-500 mt-0.5">
-                  Never flag {displayValue} on {gymId}
+                  {isProgramSynonym
+                    ? `Teach system "${displayValue}" = program type`
+                    : `Never flag ${displayValue} on ${gymId}`
+                  }
                 </span>
               </button>
             )}

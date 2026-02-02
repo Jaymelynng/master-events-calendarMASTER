@@ -80,12 +80,15 @@ export default function AdminPortalModal({
       return;
     }
     try {
+      // For program synonyms: value = keyword (e.g. "Gym Fun Friday"), label = maps to (e.g. "OPEN GYM")
+      // event_type stores the TARGET program type for synonyms
+      const eventType = newRuleType === 'program_synonym' ? newRuleLabel.trim().toUpperCase() : 'CAMP';
       const created = await gymValidValuesApi.create({
         gym_id: newRuleGym,
         rule_type: newRuleType,
-        value: newRuleValue.trim(),
+        value: newRuleValue.trim().toLowerCase(),
         label: newRuleLabel.trim(),
-        event_type: 'CAMP'
+        event_type: eventType
       });
       setRules([...rules, created]);
       setNewRuleValue('');
@@ -218,7 +221,7 @@ export default function AdminPortalModal({
               >
                 <span className="font-bold text-blue-800 flex items-center gap-2">
                   📋 Gym Rules
-                  <span className="text-xs font-normal text-blue-600">(valid prices, times per gym)</span>
+                  <span className="text-xs font-normal text-blue-600">(prices, times, program synonyms per gym)</span>
                 </span>
                 <span className="text-blue-500">{showRules ? '▲' : '▼'}</span>
               </button>
@@ -239,11 +242,18 @@ export default function AdminPortalModal({
                               <span>
                                 <strong className="text-blue-800">{rule.gym_id}</strong>
                                 <span className="mx-1 text-gray-400">|</span>
-                                <span className={rule.rule_type === 'price' ? 'text-green-700' : 'text-purple-700'}>
+                                <span className={`${
+                                  rule.rule_type === 'price' ? 'text-green-700' :
+                                  rule.rule_type === 'program_synonym' ? 'text-orange-700' :
+                                  'text-purple-700'
+                                }`}>
                                   {rule.rule_type === 'price' ? `$${rule.value}` : rule.value}
                                 </span>
                                 <span className="mx-1 text-gray-400">=</span>
                                 <span className="text-gray-700">"{rule.label}"</span>
+                                {rule.rule_type === 'program_synonym' && (
+                                  <span className="ml-1 px-1 py-0.5 bg-orange-100 text-orange-600 rounded text-[10px]">synonym</span>
+                                )}
                                 <span className="ml-1 text-gray-400 text-[10px]">({rule.event_type})</span>
                               </span>
                               <button
@@ -268,6 +278,7 @@ export default function AdminPortalModal({
                             className="px-2 py-1.5 border rounded text-xs flex-shrink-0"
                           >
                             <option value="">Gym...</option>
+                            <option value="ALL">ALL (Global)</option>
                             {gymList.map(g => (
                               <option key={g.id} value={g.id}>{g.id}</option>
                             ))}
@@ -279,19 +290,20 @@ export default function AdminPortalModal({
                           >
                             <option value="price">Price</option>
                             <option value="time">Time</option>
+                            <option value="program_synonym">Program Synonym</option>
                           </select>
                           <input
                             type="text"
                             value={newRuleValue}
                             onChange={(e) => setNewRuleValue(e.target.value)}
-                            placeholder={newRuleType === 'price' ? '20' : '8:30 AM'}
-                            className="px-2 py-1.5 border rounded text-xs w-20"
+                            placeholder={newRuleType === 'price' ? '20' : newRuleType === 'program_synonym' ? 'Gym Fun Friday' : '8:30 AM'}
+                            className={`px-2 py-1.5 border rounded text-xs ${newRuleType === 'program_synonym' ? 'w-32' : 'w-20'}`}
                           />
                           <input
                             type="text"
                             value={newRuleLabel}
                             onChange={(e) => setNewRuleLabel(e.target.value)}
-                            placeholder="Before Care"
+                            placeholder={newRuleType === 'program_synonym' ? 'OPEN GYM' : 'Before Care'}
                             className="px-2 py-1.5 border rounded text-xs flex-1 min-w-[100px]"
                           />
                           <button

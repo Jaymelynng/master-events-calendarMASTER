@@ -458,15 +458,41 @@ Sometimes a validation warning is a **false positive** - the data is actually co
 
 ### Option 2: Make Permanent Rule (Never Flag Again)
 
-For `camp_price_mismatch` and `time_mismatch` errors only:
+For `camp_price_mismatch`, `time_mismatch`, `program_mismatch`, and `missing_program_in_title` errors:
 
 1. Click **[✓ OK]** on the error — custom modal appears
 2. Add a note (optional)
 3. Click **"Make Permanent Rule"** instead of "Accept Exception"
-4. Enter a label (e.g., "Before Care", "Early Dropoff")
+4. Enter a label:
+   - For price rules: e.g., "Before Care", "After Care"
+   - For time rules: e.g., "Early Dropoff"
+   - For program synonyms: e.g., "OPEN GYM", "CLINIC" (the program type this title maps to)
 5. Rule is saved to `gym_valid_values` table for that specific gym
 6. Badge shows: **📋 Permanent Rule** (blue)
 7. Future syncs will never flag this value for this gym again
+
+### Program Synonym Rules (NEW)
+
+Previously, program name variations like "Gym Fun Friday" → Open Gym were hardcoded in Python. Now they're database rules:
+
+| Keyword | Maps To | Gym |
+|---------|---------|-----|
+| `gym fun friday` | OPEN GYM | ALL (global) |
+| `fun gym` | OPEN GYM | ALL (global) |
+| `preschool fun` | OPEN GYM | ALL (global) |
+| `bonus tumbling` | OPEN GYM | ALL (global) |
+
+**How it works:**
+- When a title says "Gym Fun Friday" and the event is synced as OPEN GYM, the system checks `gym_valid_values` for a `program_synonym` rule
+- If it finds `gym fun friday → OPEN GYM`, it passes validation
+- Rules with `gym_id = 'ALL'` apply to every gym
+- Gym-specific rules override or extend global rules
+
+**To add a new synonym:**
+1. Go to Admin → Super Admin → 📋 Gym Rules
+2. Select gym (or "ALL" for global), type "Program Synonym"
+3. Enter the keyword (e.g., "ninja night") and what it maps to (e.g., "KIDS NIGHT OUT")
+4. Or click "Make Permanent Rule" on any program mismatch error during sync
 
 ### Managing Rules
 
@@ -508,6 +534,9 @@ If you dismissed something by mistake:
 
 | Date | Change |
 |------|--------|
+| Feb 2, 2026 | **NEW** Program synonym rules — program name variations now managed via database instead of hardcoded |
+| Feb 2, 2026 | **NEW** Global rules (gym_id='ALL') apply to all gyms, merged with gym-specific rules |
+| Feb 2, 2026 | **ENHANCED** "Make Permanent Rule" now available on program_mismatch and missing_program_in_title errors |
 | Feb 2, 2026 | **NEW** Per-gym validation rules system (`gym_valid_values` table) |
 | Feb 2, 2026 | **NEW** Custom dismiss modal with "Accept Exception" / "Make Permanent Rule" buttons |
 | Feb 2, 2026 | **NEW** Dismissed warnings show badges: "Permanent Rule" vs "One-time" |
@@ -520,7 +549,7 @@ If you dismissed something by mistake:
 | Jan 6, 2026 | **NEW** `missing_program_in_description` - flags descriptions missing program type keyword |
 | Jan 6, 2026 | **ENHANCED** Time format tolerance - handles `6:30p`, `9-3`, `9:00a - 3:00p` formats |
 | Jan 6, 2026 | **ENHANCED** Skills list expanded - added trampoline, kickover, walkover, flip-flop, etc. |
-| Jan 6, 2026 | **ENHANCED** Program synonyms - "Gym Fun Friday", "Fun Gym", "Preschool Fun" recognized as Open Gym |
+| Jan 6, 2026 | **ENHANCED** Program synonyms - "Gym Fun Friday", "Fun Gym", "Preschool Fun" recognized as Open Gym (now moved to database rules) |
 | Jan 6, 2026 | **NEW** COMPLETENESS CHECKS - Title must have age, Title must have date |
 | Jan 6, 2026 | **NEW** COMPLETENESS CHECKS - Description must have age, Description must have date/time |
 | Jan 6, 2026 | **NEW** COMPLETENESS CHECKS - Clinic should mention skill (INFO level) |

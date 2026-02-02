@@ -355,22 +355,34 @@ sync_log (
 
 ## 10. GYM_VALID_VALUES TABLE
 
-**Purpose:** Per-gym rules for valid prices, times, etc. Prevents false positive validation errors.
+**Purpose:** Per-gym rules for valid prices, times, and program synonyms. Prevents false positive validation errors.
 **Row Count:** Varies
 **Column Count:** 7
 
 ```sql
 gym_valid_values (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  gym_id TEXT NOT NULL,              -- FK to gyms.id (CCP, EST, etc.)
-  rule_type TEXT NOT NULL,           -- 'price' or 'time'
-  value TEXT NOT NULL,               -- '20' for price, '8:30 AM' for time
-  label TEXT NOT NULL,               -- 'Before Care', 'Early Dropoff'
-  event_type TEXT DEFAULT 'CAMP',    -- What event type this applies to
+  gym_id TEXT NOT NULL,              -- FK to gyms.id (CCP, EST, etc.) or 'ALL' for global
+  rule_type TEXT NOT NULL,           -- 'price', 'time', or 'program_synonym'
+  value TEXT NOT NULL,               -- '20' for price, '8:30 AM' for time, 'gym fun friday' for synonym
+  label TEXT NOT NULL,               -- 'Before Care', 'Early Dropoff', 'OPEN GYM'
+  event_type TEXT DEFAULT 'CAMP',    -- Target event type (for synonyms: the program it maps to)
   created_at TIMESTAMPTZ DEFAULT NOW()
   -- UNIQUE(gym_id, rule_type, value, event_type)
 )
 ```
+
+**Rule Types:**
+
+| rule_type | value | label | Used For |
+|-----------|-------|-------|----------|
+| `price` | `20` | Before Care | Camp price exceptions |
+| `time` | `8:30 am` | Early Dropoff | Time validation exceptions |
+| `program_synonym` | `gym fun friday` | OPEN GYM | Program name variations |
+
+**Special gym_id values:**
+- `ALL` — rule applies to every gym (global rule)
+- Gym-specific rules (e.g., `RBA`) override or extend global rules
 
 **Example Rules:**
 
@@ -379,6 +391,10 @@ gym_valid_values (
 | RBA | price | 20 | Before Care | CAMP |
 | RBA | price | 20 | After Care | CAMP |
 | RBK | time | 8:30 am | Early Dropoff | CAMP |
+| ALL | program_synonym | gym fun friday | OPEN GYM | OPEN GYM |
+| ALL | program_synonym | fun gym | OPEN GYM | OPEN GYM |
+| ALL | program_synonym | preschool fun | OPEN GYM | OPEN GYM |
+| ALL | program_synonym | bonus tumbling | OPEN GYM | OPEN GYM |
 
 **Usage:** During sync, the Python backend fetches these rules and skips validation errors that match. The React frontend can create rules via the dismiss flow or Admin Portal.
 
@@ -670,6 +686,7 @@ SELECT
 | Dec 2025 | Added data quality columns |
 | Dec 2025 | Added acknowledged_errors column |
 | Dec 2025 | Added availability columns |
+| Feb 2, 2026 | Added program_synonym rule type and ALL (global) gym support |
 | Feb 2, 2026 | Created gym_valid_values table for per-gym validation rules |
 | Dec 28, 2025 | Full schema audit - documented all 30 columns |
 

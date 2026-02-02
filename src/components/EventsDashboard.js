@@ -368,6 +368,10 @@ const EventsDashboard = () => {
         return errorMessage.includes(`$${rule.value}`);
       } else if (rule.rule_type === 'time') {
         return errorMessage.toLowerCase().includes(rule.value.toLowerCase());
+      } else if (rule.rule_type === 'program_synonym') {
+        // Program synonym rules match if the error mentions program mismatch/missing
+        return errorMessage.toLowerCase().includes('program') &&
+               errorMessage.toLowerCase().includes(rule.value.toLowerCase());
       }
       return false;
     });
@@ -538,17 +542,23 @@ const EventsDashboard = () => {
 
   // Check if an error type supports "Add as Rule"
   const canAddAsRule = (errorType) => {
-    return errorType === 'camp_price_mismatch' || errorType === 'time_mismatch';
+    return errorType === 'camp_price_mismatch' || errorType === 'time_mismatch' ||
+           errorType === 'program_mismatch' || errorType === 'missing_program_in_title';
   };
 
-  // Extract rule value from an error object (price or time)
-  const extractRuleValue = (errorObj) => {
+  // Extract rule value from an error object (price, time, or program synonym)
+  const extractRuleValue = (errorObj, event = null) => {
     if (errorObj.type === 'camp_price_mismatch') {
       const priceMatch = errorObj.message.match(/\$(\d+(?:\.\d{2})?)/);
       return priceMatch ? { ruleType: 'price', value: priceMatch[1] } : null;
     } else if (errorObj.type === 'time_mismatch') {
       const timeMatch = errorObj.message.match(/(?:description|title) says (\d{1,2}(?::\d{2})?\s*(?:am|pm|a|p))/i);
       return timeMatch ? { ruleType: 'time', value: timeMatch[1].trim() } : null;
+    } else if (errorObj.type === 'program_mismatch' || errorObj.type === 'missing_program_in_title') {
+      // For program mismatches, the value is the event title (the synonym keyword)
+      // and the suggestedLabel is the expected program type from event.type
+      const titleValue = event?.title || '';
+      return titleValue ? { ruleType: 'program_synonym', value: titleValue.toLowerCase(), suggestedLabel: event?.type || '' } : null;
     }
     return null;
   };
@@ -1939,12 +1949,13 @@ The system will add new events and update any changed events automatically.`;
             const { ruleInfo, gymId } = dismissModalState;
             if (ruleInfo && gymId) {
               try {
+                const isProgramSynonym = ruleInfo.ruleType === 'program_synonym';
                 await gymValidValuesApi.create({
                   gym_id: gymId,
                   rule_type: ruleInfo.ruleType,
-                  value: ruleInfo.value,
+                  value: isProgramSynonym ? ruleInfo.value.toLowerCase() : ruleInfo.value,
                   label: label,
-                  event_type: 'CAMP'
+                  event_type: isProgramSynonym ? label.toUpperCase() : 'CAMP'
                 });
                 const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
                 // Refresh gym rules so badge updates immediately
@@ -3685,7 +3696,7 @@ The system will add new events and update any changed events automatically.`;
                       const handleDismissWithNote = (eventId, errorMessage, errorObj = null) => {
                         const gymId = selectedEventForPanel?.gym_id || '';
                         const ruleEligible = errorObj ? canAddAsRule(errorObj.type) : false;
-                        const ruleInfo = errorObj ? extractRuleValue(errorObj) : null;
+                        const ruleInfo = errorObj ? extractRuleValue(errorObj, selectedEventForPanel) : null;
                         setDismissModalState({ eventId, errorMessage, errorObj, gymId, ruleEligible, ruleInfo });
                       };
                       

@@ -147,11 +147,32 @@ def fetch_gym_valid_values():
         return {}
 
 def get_gym_valid_values():
-    """Get cached gym valid values or fetch from Supabase"""
+    """Get cached gym valid values or fetch from Supabase.
+    Rules with gym_id='ALL' are merged into every gym's rules."""
     global GYM_VALID_VALUES
     if GYM_VALID_VALUES is None:
         GYM_VALID_VALUES = fetch_gym_valid_values()
     return GYM_VALID_VALUES
+
+def get_rules_for_gym(gym_id):
+    """Get merged rules for a specific gym (gym-specific + ALL global rules)."""
+    all_values = get_gym_valid_values()
+    gym_rules = {}
+
+    # Start with global 'ALL' rules
+    for rule_type, rules_list in all_values.get('ALL', {}).items():
+        gym_rules[rule_type] = list(rules_list)
+
+    # Merge gym-specific rules (override/add to global)
+    for rule_type, rules_list in all_values.get(gym_id, {}).items():
+        if rule_type not in gym_rules:
+            gym_rules[rule_type] = []
+        existing_values = {r['value'] for r in gym_rules[rule_type]}
+        for rule in rules_list:
+            if rule['value'] not in existing_values:
+                gym_rules[rule_type].append(rule)
+
+    return gym_rules
 
 def fetch_event_type_urls():
     """Fetch EVENT_TYPE_URLS from Supabase gym_links table"""
@@ -491,10 +512,14 @@ async def collect_events_via_f12(gym_id, camp_type):
         events_raw: list of event dicts (one per event)
         OR for "ALL": dict of { event_type: [events...] }
     """
+    # Reset gym_valid_values cache so freshly added rules are picked up
+    global GYM_VALID_VALUES
+    GYM_VALID_VALUES = None
+
     if gym_id not in GYMS:
         print(f"Unknown gym ID: {gym_id}")
         return [] if camp_type != "ALL" else {}
-    
+
     # Special handling for "ALL" - collect ALL program types
     if camp_type == "ALL":
         return await collect_all_programs_for_gym(gym_id)
@@ -868,16 +893,23 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             def has_program_type_in_text(text, etype):
                 txt = text.lower()
                 txt_no_apos = txt.replace("'", "").replace("'", "")
-                
+
+                # First check gym_valid_values for program_synonym rules for this gym
+                synonym_rules = get_rules_for_gym(gym_id).get('program_synonym', [])
+                for rule in synonym_rules:
+                    keyword = rule.get('value', '').lower()
+                    target_type = rule.get('label', '').upper()
+                    if keyword and keyword in txt and target_type == etype:
+                        return True
+
                 if etype == 'KIDS NIGHT OUT':
-                    return ('kids night out' in txt_no_apos or 'kid night out' in txt_no_apos or 
+                    return ('kids night out' in txt_no_apos or 'kid night out' in txt_no_apos or
                             'kno' in txt or 'night out' in txt or 'parents night out' in txt_no_apos or
                             'ninja night out' in txt)
                 elif etype == 'CLINIC':
                     return 'clinic' in txt
                 elif etype == 'OPEN GYM':
-                    return ('open gym' in txt or 'fun gym' in txt or 'gym fun' in txt or 
-                            'preschool fun' in txt or 'bonus tumbling' in txt)
+                    return 'open gym' in txt
                 elif etype == 'CAMP':
                     return 'camp' in txt
                 return True  # Unknown types pass
@@ -1069,7 +1101,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         return None
                     
                     # Get extra valid times for this gym (e.g. "8:30 AM" for early dropoff)
-                    extra_time_rules = get_gym_valid_values().get(gym_id, {}).get('time', [])
+                    extra_time_rules = get_rules_for_gym(gym_id).get('time', [])
                     extra_time_values = [t['value'].lower().strip() for t in extra_time_rules]
 
                     # Check times in TITLE
@@ -1194,8 +1226,21 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             # This catches: iClass says "CLINIC" but title says "Kids Night Out"
             kno_title_keywords = ['kids night out', "kid's night out", "kids' night out", 'kno', 'ninja night out']
             clinic_title_keywords = ['clinic']
-            open_gym_title_keywords = ['open gym', 'gym fun', 'fun gym', 'preschool fun', 'bonus tumbling']
-            
+            open_gym_title_keywords = ['open gym']
+            # Add program_synonym rules from gym_valid_values for dynamic keyword matching
+            synonym_rules = get_rules_for_gym(gym_id).get('program_synonym', [])
+            for rule in synonym_rules:
+                target = rule.get('label', '').upper()
+                keyword = rule.get('value', '').lower()
+                if not keyword:
+                    continue
+                if target == 'OPEN GYM' and keyword not in open_gym_title_keywords:
+                    open_gym_title_keywords.append(keyword)
+                elif target == 'KIDS NIGHT OUT' and keyword not in kno_title_keywords:
+                    kno_title_keywords.append(keyword)
+                elif target == 'CLINIC' and keyword not in clinic_title_keywords:
+                    clinic_title_keywords.append(keyword)
+
             title_has_kno = any(kw in title_lower for kw in kno_title_keywords)
             title_has_clinic = any(kw in title_lower for kw in clinic_title_keywords)
             title_has_open_gym = any(kw in title_lower for kw in open_gym_title_keywords)
@@ -1358,15 +1403,19 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             
             elif event_type == 'OPEN GYM':
                 # OPEN GYM: Must contain "open gym" or variations, should NOT say Clinic or KNO
-                # Some gyms call it "Gym Fun Fridays", "Preschool Fun Gym", "Fun Gym", etc.
+                # Program synonym rules from gym_valid_values replace hardcoded keywords
                 has_open_gym = (
                     'open gym' in description_lower or
-                    'fun gym' in description_lower or
-                    'gym fun' in description_lower or
-                    'preschool fun' in description_lower or
                     'play and explore the gym' in description_lower or
                     'open to all' in description_lower
                 )
+                # Also check program_synonym rules for this gym that map to OPEN GYM
+                if not has_open_gym:
+                    og_synonym_rules = get_rules_for_gym(gym_id).get('program_synonym', [])
+                    for rule in og_synonym_rules:
+                        if rule.get('label', '').upper() == 'OPEN GYM' and rule.get('value', '').lower() in description_lower:
+                            has_open_gym = True
+                            break
                 has_clinic = description_lower[:100].startswith('clinic') or 'clinic' in description_lower[:50]
                 # Check for any variation of kids night out
                 desc_start_no_apos = description_lower[:100].replace("'", "").replace("'", "")
@@ -1456,10 +1505,15 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             title_has_kno = ('kids night out' in title_no_apos or 
                             'kid night out' in title_no_apos or
                             title_lower.startswith('kno ') or ' kno ' in title_lower)
-            title_has_open_gym = ('open gym' in title_lower or 
-                                  'gym fun' in title_lower or
-                                  'fun gym' in title_lower)
-            
+            title_has_open_gym = 'open gym' in title_lower
+            # Also check program_synonym rules for this gym that map to OPEN GYM
+            if not title_has_open_gym:
+                og_syn_rules = get_rules_for_gym(gym_id).get('program_synonym', [])
+                for rule in og_syn_rules:
+                    if rule.get('label', '').upper() == 'OPEN GYM' and rule.get('value', '').lower() in title_lower:
+                        title_has_open_gym = True
+                        break
+
             # Check what program keywords are in the DESCRIPTION (first 150 chars)
             desc_start = description_lower[:150]
             desc_start_no_apos = desc_start.replace("'", "").replace("'", "")
@@ -1585,7 +1639,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
 
                     # Also add any extra valid prices from gym_valid_values table
                     # (e.g. Before Care $20, After Care $20 - per-gym rules)
-                    extra_price_rules = get_gym_valid_values().get(gym_id, {}).get('price', [])
+                    extra_price_rules = get_rules_for_gym(gym_id).get('price', [])
                     for ep in extra_price_rules:
                         try:
                             extra_price = float(ep['value'])
