@@ -2,7 +2,7 @@
 ## Team Calendar - FULLY WORKING!
 
 **Live URL:** https://teamcalendar.mygymtools.com  
-**Last Updated:** December 28, 2025  
+**Last Updated:** February 2, 2026  
 **Status:** ✅ **PRODUCTION READY & DEPLOYED**  
 **Part of:** mygymtools.com suite  
 **Verified By:** Cross-checked against live iClassPro data - 100% accuracy
@@ -100,7 +100,17 @@ Automatically detects errors in event data:
 - ⚠️ Flyer-only descriptions
 - ❌ Missing descriptions
 
-**Note:** CAMPs are skipped for validation to avoid false positives.
+CAMPs now validated with per-gym rules to handle false positives (e.g., Before Care $20, Early Dropoff 8:30am).
+
+---
+
+### ✅ **Per-Gym Validation Rules**
+Prevent false positive validation errors with per-gym rules:
+- 📋 Rules stored in `gym_valid_values` table
+- Created via dismiss flow ("Make Permanent Rule") or Admin Portal
+- Dismissed warnings show badges: **📋 Permanent Rule** vs **One-time**
+- Only for camp_price_mismatch and time_mismatch errors
+- Rules are gym-specific — a rule for RBA doesn't affect other gyms
 
 ---
 
@@ -184,6 +194,8 @@ Tracks visitors and page views on your calendar.
 - ✅ Camp consolidation with options display
 - ✅ Validation error icons on calendar
 - ✅ Dismiss validation warnings feature
+- ✅ Per-gym validation rules with dismiss modal
+- ✅ Gym Rules manager in Super Admin
 
 ---
 
@@ -266,6 +278,7 @@ Calendar Refreshes via Real-time Subscription
 | `event_types` | Event categories |
 | `link_types` | Link categories |
 | `monthly_requirements` | Business rules |
+| `gym_valid_values` | Per-gym validation rules |
 
 ### Database Views
 | View | Purpose |
@@ -277,7 +290,7 @@ Calendar Refreshes via Real-time Subscription
 
 ## ⚠️ KNOWN LIMITATIONS
 
-1. **Camp validation skipped** - CAMPs only check for missing/flyer-only descriptions (no content validation to avoid false positives).
+1. ~~Camp validation skipped~~ - CAMPs now fully validated with per-gym exception rules.
 
 2. **No historical analytics** - Vercel Analytics only tracks from enable date forward.
 
@@ -335,6 +348,10 @@ You built this entire system through **vibe coding** with AI assistance:
 
 | Date | Changes |
 |------|---------|
+| Feb 2, 2026 | Added per-gym validation rules system (gym_valid_values) |
+| Feb 2, 2026 | Added custom dismiss modal (Accept Exception / Make Permanent Rule) |
+| Feb 2, 2026 | Added Gym Rules manager to Super Admin portal |
+| Feb 2, 2026 | Camp validation now active with per-gym exception handling |
 | Dec 28, 2025 | Fixed volatile fields causing false "CHANGED" alerts |
 | Dec 28, 2025 | Removed Skill Clinic Link Editor (not needed) |
 | Dec 28, 2025 | Full documentation audit |
@@ -349,7 +366,7 @@ You built this entire system through **vibe coding** with AI assistance:
 
 **This document is the source of truth for current system status.**
 
-**Last Verified:** December 28, 2025 - Full audit completed
+**Last Verified:** February 2, 2026 - Full audit completed
 
 
 

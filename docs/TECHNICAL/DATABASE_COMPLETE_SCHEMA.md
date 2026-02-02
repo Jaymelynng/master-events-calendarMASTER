@@ -1,7 +1,7 @@
 # 🗄️ COMPLETE DATABASE SCHEMA
 ## Master Events Calendar - All Tables & Views
 
-**Last Updated:** December 28, 2025  
+**Last Updated:** February 2, 2026  
 **Database:** `https://xftiwouxpefchwoxxgpf.supabase.co`  
 **Status:** ✅ PRODUCTION READY
 
@@ -11,7 +11,7 @@
 
 | Category | Count |
 |----------|-------|
-| **Tables** | 9 |
+| **Tables** | 10 |
 | **Views** | 2 |
 | **Total Events** | ~500+ (active + archived) |
 | **Gyms** | 10 |
@@ -36,7 +36,8 @@
 7. [monthly_requirements](#7-monthly_requirements-table) - Business rules (2 columns)
 8. [event_audit_log](#8-event_audit_log-table) - Change tracking (11 columns)
 9. [sync_log](#9-sync_log-table) - Sync progress (6 columns)
-10. [Views](#views) - events_with_gym, gym_links_detailed
+10. [gym_valid_values](#10-gym_valid_values-table) - Per-gym validation rules (7 columns)
+11. [Views](#views) - events_with_gym, gym_links_detailed
 
 ---
 
@@ -347,8 +348,39 @@ sync_log (
 
 **Usage:** Powers the Sync Progress Tracker grid with color coding:
 - 🟢 Green = Synced with events found
-- 🟡 Yellow = Synced but no events  
+- 🟡 Yellow = Synced but no events
 - 🔴 Red = Never synced
+
+---
+
+## 10. GYM_VALID_VALUES TABLE
+
+**Purpose:** Per-gym rules for valid prices, times, etc. Prevents false positive validation errors.
+**Row Count:** Varies
+**Column Count:** 7
+
+```sql
+gym_valid_values (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id TEXT NOT NULL,              -- FK to gyms.id (CCP, EST, etc.)
+  rule_type TEXT NOT NULL,           -- 'price' or 'time'
+  value TEXT NOT NULL,               -- '20' for price, '8:30 AM' for time
+  label TEXT NOT NULL,               -- 'Before Care', 'Early Dropoff'
+  event_type TEXT DEFAULT 'CAMP',    -- What event type this applies to
+  created_at TIMESTAMPTZ DEFAULT NOW()
+  -- UNIQUE(gym_id, rule_type, value, event_type)
+)
+```
+
+**Example Rules:**
+
+| gym_id | rule_type | value | label | event_type |
+|--------|-----------|-------|-------|------------|
+| RBA | price | 20 | Before Care | CAMP |
+| RBA | price | 20 | After Care | CAMP |
+| RBK | time | 8:30 am | Early Dropoff | CAMP |
+
+**Usage:** During sync, the Python backend fetches these rules and skips validation errors that match. The React frontend can create rules via the dismiss flow or Admin Portal.
 
 ---
 
@@ -436,6 +468,9 @@ gyms (10 rows)
   │     └── gym_id → gyms.id
   │
   └──< event_audit_log (1,198 rows)
+        └── gym_id → gyms.id
+  │
+  └──< gym_valid_values
         └── gym_id → gyms.id
 
 link_types (10 rows)
@@ -635,6 +670,7 @@ SELECT
 | Dec 2025 | Added data quality columns |
 | Dec 2025 | Added acknowledged_errors column |
 | Dec 2025 | Added availability columns |
+| Feb 2, 2026 | Created gym_valid_values table for per-gym validation rules |
 | Dec 28, 2025 | Full schema audit - documented all 30 columns |
 
 ---
@@ -643,6 +679,7 @@ SELECT
 
 | Date | Change |
 |------|--------|
+| Feb 2, 2026 | Added gym_valid_values table documentation |
 | Dec 28, 2025 | Created complete schema documentation |
 | Dec 28, 2025 | Documented all 9 tables with exact column counts |
 | Dec 28, 2025 | Added all current data (link_types, event_types, etc.) |

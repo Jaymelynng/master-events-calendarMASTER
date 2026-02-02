@@ -1,7 +1,7 @@
 # 🔐 ADMIN MODE - Complete Guide
 ## Three-Tier Access System
 
-**Last Updated:** December 28, 2025  
+**Last Updated:** February 2, 2026  
 **Status:** ✅ Fully Implemented  
 **File:** `src/components/EventsDashboard/AdminPortalModal.js`
 
@@ -62,6 +62,7 @@ Everything from Level 1 and 2, PLUS:
 - ✅ **Supabase Dashboard Link** - Direct access to database editor
 - ✅ **Railway Dashboard Link** - Direct access to API server
 - ✅ **Audit History** - See all changes made to events
+- ✅ **Gym Rules Manager** - View, add, and delete per-gym validation rules
 
 **Why is this hidden?**
 - These links give FULL access to your infrastructure
@@ -143,20 +144,27 @@ Step 6: Super Admin features appear!
 
 ### Level 3 (Super Admin)
 ```
-┌─────────────────────────────────────────────┐
-│  🪄 Admin Control Center [🔐 Super Admin] × │
-├─────────────────────────────────────────────┤
-│  🔐 Super Admin Tools  [Exit Super Admin]   │
-│  ┌─────────┐ ┌─────────┐ ┌──────────────┐   │
-│  │🗄️Supabase│ │🚂Railway│ │🔍Audit History│  │
-│  └─────────┘ └─────────┘ └──────────────┘   │
-│                                             │
-│  ⚡ Automated Sync                          │
-│  [Open Automated Sync]                      │
-│                                             │
-│  🚀 JSON Import (F12 Method)                │
-│  [Open JSON Import]                         │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  🪄 Admin Control Center   [🔐 Super Admin] ×  │
+├─────────────────────────────────────────────────┤
+│  🔐 Super Admin Tools    [Exit Super Admin]     │
+│  ┌──────────┐ ┌──────────┐ ┌───────────────┐    │
+│  │🗄️Supabase│ │🚂Railway │ │🔍Audit History│    │
+│  └──────────┘ └──────────┘ └───────────────┘    │
+│                                                 │
+│  📋 Gym Rules  (valid prices, times per gym)  ▼ │
+│  ┌───────────────────────────────────────────┐  │
+│  │ RBA | price | $20 = "Before Care"    [✕]  │  │
+│  │ RBK | time  | 8:30 am = "Early Drop" [✕]  │  │
+│  │ [Gym...] [Price▾] [Value] [Label] [+Add]  │  │
+│  └───────────────────────────────────────────┘  │
+│                                                 │
+│  ⚡ Automated Sync                              │
+│  [Open Automated Sync]                          │
+│                                                 │
+│  🚀 JSON Import (F12 Method)                    │
+│  [Open JSON Import]                             │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
@@ -286,6 +294,7 @@ This was the original access method before the visible Admin button was added. I
 | `F12-IMPORT-GUIDE.md` | Manual JSON import method (Level 2 feature) |
 | `SYNC_PROGRESS_TRACKER.md` | Tracking sync status |
 | `AUDIT-SYSTEM.md` | Audit History feature (Level 3 feature) |
+| `DATA_QUALITY_VALIDATION.md` | Validation rules and dismiss flow (uses Gym Rules) |
 
 ---
 
@@ -293,6 +302,8 @@ This was the original access method before the visible Admin button was added. I
 
 | Date | Change |
 |------|--------|
+| Feb 2, 2026 | Added Gym Rules manager to Super Admin tools |
+| Feb 2, 2026 | Updated Level 3 diagram to show Gym Rules section |
 | Dec 28, 2025 | Merged MAGIC_CONTROL_FEATURES.md into this doc |
 | Dec 28, 2025 | Added Removed Features section |
 | Dec 28, 2025 | Added Related Documentation links |

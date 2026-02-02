@@ -1,7 +1,7 @@
 # 📚 Team Calendar - Documentation Index
 
 **Live URL:** https://teamcalendar.mygymtools.com  
-**Last Updated:** December 28, 2025  
+**Last Updated:** February 2, 2026  
 **Status:** ✅ FULLY DEPLOYED & VERIFIED  
 **Part of:** mygymtools.com suite  
 **Maintained by:** Jayme
@@ -95,7 +95,7 @@ docs/
 | **[EXPORT_DATA_GUIDE.md](OPERATIONS/EXPORT_DATA_GUIDE.md)** ⭐ | Export, reports, presets (CSV/JSON/HTML) |
 | [AUTO_ARCHIVE_SYSTEM.md](OPERATIONS/AUTO_ARCHIVE_SYSTEM.md) | Automatic event archiving |
 | [AUDIT-SYSTEM.md](OPERATIONS/AUDIT-SYSTEM.md) | Change tracking / audit history |
-| [DATA_QUALITY_VALIDATION.md](OPERATIONS/DATA_QUALITY_VALIDATION.md) | Automatic data validation |
+| [DATA_QUALITY_VALIDATION.md](OPERATIONS/DATA_QUALITY_VALIDATION.md) | Automatic data validation + per-gym rules |
 
 ### Technical Operations
 
@@ -128,6 +128,7 @@ docs/
 | **Quick sync reminder (non-technical)** | `OPERATIONS/SYNC-QUICK-REFERENCE.md` |
 | **Access admin/super admin features** | `OPERATIONS/SECRET_ADMIN_MODE.md` |
 | **Export data or generate reports** | `OPERATIONS/EXPORT_DATA_GUIDE.md` |
+| **Manage per-gym validation rules** | `OPERATIONS/DATA_QUALITY_VALIDATION.md` |
 | **Troubleshoot deployment issues** | `OPERATIONS/DEPLOYMENT_PLAN.md` |
 | **Understand the database** | `TECHNICAL/DATABASE_COMPLETE_SCHEMA.md` |
 
@@ -186,5 +187,5 @@ Code can be rewritten, but this knowledge is irreplaceable.
 
 ---
 
-**Last Updated:** December 28, 2025  
+**Last Updated:** February 2, 2026  
 **Maintained by:** Jayme

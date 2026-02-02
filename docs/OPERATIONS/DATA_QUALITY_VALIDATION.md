@@ -1,8 +1,8 @@
 # Data Quality Validation System
 
-**Last Updated:** January 6, 2026  
+**Last Updated:** February 2, 2026  
 **Status:** ✅ Fully Deployed  
-**Files:** `automation/f12_collect_and_import.py`, `src/components/EventsDashboard.js`
+**Files:** `automation/f12_collect_and_import.py`, `src/components/EventsDashboard.js`, `src/components/EventsDashboard/DismissRuleModal.js`
 
 ---
 
@@ -325,6 +325,19 @@ flowchart TD
 
 **Why CAMP is skipped:** Camp pricing is complex (varies by day, week, half-day vs full-day). Price validation for camps will be added later with confirmed pricing data.
 
+#### 7b. Camp Price Validation (CAMP Only)
+Compares prices found in camp description against **two sources of truth**:
+1. `camp_pricing` table — standard daily/weekly prices per gym
+2. `gym_valid_values` table — per-gym exception rules (e.g., "$20 Before Care")
+
+If a price in the description matches either source, it passes. Otherwise: 🚨 Flag.
+
+**Example:**
+- Camp description mentions "$20"
+- Standard pricing for RBA: Full Day Daily $62, Full Day Weekly $250
+- But `gym_valid_values` has a rule: RBA | price | 20 = "Before Care"
+- ✅ No flag — $20 is a known valid price for RBA
+
 #### 8. Flyer Detection (All Programs)
 Detects `<img>` tags in description HTML.
 
@@ -432,14 +445,33 @@ Frontend (displays icons)
 
 ## Dismissing Validation Warnings
 
-Sometimes a validation warning is a **false positive** - the data is actually correct but the system flagged it anyway. You can dismiss these warnings.
+Sometimes a validation warning is a **false positive** - the data is actually correct but the system flagged it anyway. You can dismiss these warnings in two ways.
 
-### How to Dismiss a Warning
+### Option 1: Accept Exception (One-Time Dismiss)
 
 1. Click on the event in the calendar
 2. In the Event Details panel, you'll see the warning with a **[✓ OK]** button
-3. Click **[✓ OK]** to dismiss that specific warning
-4. The warning won't reappear for that event
+3. Click **[✓ OK]** — a custom modal appears
+4. Optionally add a note explaining why it's OK
+5. Click **"Accept Exception"** — dismisses this one time only
+6. Badge shows: **One-time** (gray)
+
+### Option 2: Make Permanent Rule (Never Flag Again)
+
+For `camp_price_mismatch` and `time_mismatch` errors only:
+
+1. Click **[✓ OK]** on the error — custom modal appears
+2. Add a note (optional)
+3. Click **"Make Permanent Rule"** instead of "Accept Exception"
+4. Enter a label (e.g., "Before Care", "Early Dropoff")
+5. Rule is saved to `gym_valid_values` table for that specific gym
+6. Badge shows: **📋 Permanent Rule** (blue)
+7. Future syncs will never flag this value for this gym again
+
+### Managing Rules
+
+Rules can also be viewed, added, and deleted in:
+**🪄 Admin → Super Admin (PIN) → 📋 Gym Rules**
 
 ### What Happens When You Dismiss
 
@@ -447,6 +479,13 @@ Sometimes a validation warning is a **false positive** - the data is actually co
 - The 🚨 icon disappears from the calendar
 - The stats no longer count it as an error
 - **Change detection still works** - if the event is modified in iClassPro, the sync will still detect it
+
+### Dismissed Warning Badges
+
+| Badge | Meaning |
+|-------|---------|
+| 📋 **Permanent Rule** (blue) | Backed by a rule in `gym_valid_values` — won't be flagged on future syncs |
+| **One-time** (gray) | One-time exception — may re-flag on next sync |
 
 ### If the Event is Updated Later
 
@@ -460,7 +499,7 @@ Sometimes a validation warning is a **false positive** - the data is actually co
 
 If you dismissed something by mistake:
 1. Click on the event
-2. Look for "✓ X warning(s) verified & dismissed"
+2. Look for "✓ Dismissed Warnings"
 3. Click **"Undo all"** to restore the warnings
 
 ---
@@ -469,6 +508,12 @@ If you dismissed something by mistake:
 
 | Date | Change |
 |------|--------|
+| Feb 2, 2026 | **NEW** Per-gym validation rules system (`gym_valid_values` table) |
+| Feb 2, 2026 | **NEW** Custom dismiss modal with "Accept Exception" / "Make Permanent Rule" buttons |
+| Feb 2, 2026 | **NEW** Dismissed warnings show badges: "Permanent Rule" vs "One-time" |
+| Feb 2, 2026 | **NEW** Gym Rules manager in Super Admin portal |
+| Feb 2, 2026 | **ENHANCED** Camp price validation now checks `gym_valid_values` for per-gym exceptions |
+| Feb 2, 2026 | **ENHANCED** Time validation now checks `gym_valid_values` for per-gym exceptions |
 | Jan 6, 2026 | **DEPLOYED** Full validation system with all checks working |
 | Jan 6, 2026 | **ENABLED** CAMP validation - now receives full completeness and accuracy checks |
 | Jan 6, 2026 | **NEW** `missing_program_in_title` - flags titles missing program type keyword |

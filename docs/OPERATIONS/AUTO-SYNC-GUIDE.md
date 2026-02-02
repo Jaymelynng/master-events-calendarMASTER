@@ -1,7 +1,7 @@
 # ⚡ AUTOMATED SYNC GUIDE
 ## One-Click Event Collection from iClassPro
 
-**Last Updated:** December 28, 2025  
+**Last Updated:** February 2, 2026  
 **Status:** ✅ FULLY WORKING - Verified against live data  
 **New Feature:** 🚀 SYNC ALL PROGRAMS - One click syncs everything!
 
@@ -270,7 +270,13 @@ The system compares events by **event_url** (unique identifier).
 **If ANY of these change, the event shows as "CHANGED."**
 
 **NOT checked (to prevent false positives):**
-- has_openings, registration dates, flyer fields, validation_errors
+- has_openings, registration dates, flyer fields, validation_errors, acknowledged_errors
+
+**Per-Gym Validation Rules:**
+- Some warnings are false positives (e.g., $20 Before Care pricing, 8:30am Early Dropoff)
+- You can dismiss warnings as **one-time exceptions** or **permanent rules** per gym
+- Permanent rules are stored in `gym_valid_values` and checked during future syncs
+- Manage rules in: **🪄 Admin → Super Admin → 📋 Gym Rules**
 
 ---
 

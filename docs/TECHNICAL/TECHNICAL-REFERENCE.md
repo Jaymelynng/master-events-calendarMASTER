@@ -2,7 +2,7 @@
 ## Updated Production-Ready Documentation
 
 **Live URL:** https://teamcalendar.mygymtools.com  
-**Last Updated:** December 28, 2025  
+**Last Updated:** February 2, 2026  
 **Version:** Production 3.2  
 **Status:** ✅ FULLY DEPLOYED & WORKING  
 **Part of:** mygymtools.com suite
@@ -90,6 +90,7 @@ Your Master Events Calendar is a **production-deployed event management platform
 - ✅ **Auto-Archive** - Past events automatically archived at midnight
 - ✅ **Data Export** - Export to CSV/JSON with custom date ranges
 - ✅ **Data Quality Tracking** - Flyer detection, validation errors
+- ✅ **Per-Gym Validation Rules** - Prevent false positives with `gym_valid_values` table
 
 ---
 
@@ -99,7 +100,7 @@ Your Master Events Calendar is a **production-deployed event management platform
 **Database:** `https://xftiwouxpefchwoxxgpf.supabase.co`
 
 ### **Current Stats:**
-- **9 Tables** + 2 Views
+- **10 Tables** + 2 Views
 - **500+ Events** (active + archived, counts change frequently)
 - **~75 Gym Links** configured
 - **10 Gyms** across TX, AZ, CA
@@ -388,7 +389,8 @@ API_KEY=your-shared-api-key
 | `src/components/EventsDashboard/SyncModal.js` | Automated sync UI |
 | `src/components/EventsDashboard/AdminPortalModal.js` | Admin portal with tiers |
 | `src/components/EventsDashboard/ExportModal.js` | Data export UI |
-| `src/lib/api.js` | Database API functions |
+| `src/components/EventsDashboard/DismissRuleModal.js` | Dismiss warning / create rule modal |
+| `src/lib/api.js` | Database API functions (includes gymValidValuesApi) |
 | `src/lib/eventComparison.js` | New/changed/deleted logic |
 | `src/lib/gymLinksApi.js` | Gym links from Supabase |
 | `src/App.js` | Main app with Analytics |
@@ -533,7 +535,7 @@ API_KEY=your-shared-api-key
 
 ---
 
-**Last Updated:** December 28, 2025  
+**Last Updated:** February 2, 2026  
 **Version:** Production 3.2  
 **Status:** ✅ FULLY DEPLOYED & VERIFIED - Cross-checked against live iClassPro data
 
