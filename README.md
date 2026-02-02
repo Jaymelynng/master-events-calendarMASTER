@@ -80,9 +80,12 @@ REACT_APP_API_KEY=[your-api-key-here]
 - 🔐 Super Admin mode (PIN protected)
 
 ### **Data Quality:**
-- 🚨 Wrong info detection
+- 🔴 **Data Errors** - Wrong info (date/time/age mismatches) - RED indicators
+- 🟠 **Formatting Issues** - Missing info (incomplete descriptions) - ORANGE indicators
 - ⚠️ Flyer-only warnings
 - ❌ Missing description alerts
+- ✅ Dismiss warnings with notes (persists across syncs)
+- 📤 Export dismissed warnings report
 - Auto-archive past events
 
 ---
@@ -168,7 +171,7 @@ master-events-calendar/
 
 ---
 
-**Last Updated:** January 14, 2026  
-**Version:** 3.0 (Production)  
+**Last Updated:** January 30, 2026  
+**Version:** 3.5 (Production)  
 **Live URL:** https://teamcalendar.mygymtools.com  
 **Owner:** Jayme - Powers Gym Management

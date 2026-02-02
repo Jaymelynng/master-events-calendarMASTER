@@ -855,11 +855,11 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             </button>
             ${(() => {
               const gymIds = [...new Set(getAuditCheckIssues().map(i => i.gym_id))].sort();
-              return gymIds.map(gid => \`
-                <button onclick="filterByGym('\${gid}')" class="gym-btn" data-gym="\${gid}" style="padding: 4px 10px; border: 1px solid #9ca3af; background: white; color: #374151; border-radius: 4px; cursor: pointer; font-size: 11px;">
-                  \${gid}
+              return gymIds.map(gid => `
+                <button onclick="filterByGym('${gid}')" class="gym-btn" data-gym="${gid}" style="padding: 4px 10px; border: 1px solid #9ca3af; background: white; color: #374151; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                  ${gid}
                 </button>
-              \`).join('');
+              `).join('');
             })()}
           </div>
         </div>

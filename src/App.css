@@ -1,3 +1,21 @@
+/* Color System - Dashboard Theme */
+:root {
+  --bg-app: #d6c5bf;           /* Page background - warm canvas */
+  --bg-surface: #e6e6e6;       /* Card/container background */
+  --bg-surface-2: #e5e7eb;     /* Alternative surface */
+  --border: #adb2c6;           /* Cool-neutral borders */
+  --border-warm: #c3a5a5;      /* Warm shadow/depth borders */
+  --text: #737373;             /* Primary text */
+  --text-dark: #4a4a4a;        /* Darker text for emphasis */
+  --text-invert: #ffffff;      /* White text on dark fills */
+  --accent: #b48f8f;           /* Brand accent - dusty rose */
+  --accent-dark: #8b6f6f;      /* Darker accent for headers */
+  --success: #6b8e6b;          /* Muted green for status */
+  --success-light: #d4e6d4;    /* Light green background */
+  --danger: #c27878;           /* Rose-red for issues */
+  --danger-light: #f0d4d4;     /* Light red background */
+}
+
 .App {
   text-align: left;
 }
@@ -9,6 +27,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-app);
 }
 
 * {

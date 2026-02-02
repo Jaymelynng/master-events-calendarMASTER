@@ -3121,11 +3121,15 @@ The system will add new events and update any changed events automatically.`;
                               };
                               
                               // For multi-day events, check if current date falls within start_date and end_date range
-                              if (event.start_date && event.end_date) {
+                              // ONLY CAMPS can be multi-day. Clinics, Open Gym, and KNO are always single-day events.
+                              const multiDayTypes = ['CAMP', 'CAMPS', 'SUMMER CAMP', 'SUMMER CAMP - GYMNASTICS', 'SUMMER CAMP - NINJA'];
+                              const isMultiDayType = multiDayTypes.includes((event.type || '').toUpperCase());
+
+                              if (isMultiDayType && event.start_date && event.end_date) {
                                 const currentDate = new Date(currentYear, currentMonth, date);
                                 const startDate = parseYmdLocal(event.start_date);
                                 const endDate = getActualEndDate(event); // Use parsed end date
-                                
+
                                 // Only treat as multi-day if start and end are actually different
                                 if (startDate.getTime() !== endDate.getTime()) {
                                   // Check if current date is within the event's date range (inclusive)
