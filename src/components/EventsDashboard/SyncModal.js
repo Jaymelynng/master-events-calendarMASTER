@@ -179,9 +179,10 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
           const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
 
           const wantRule = window.confirm(
-            `Also add "${displayValue}" as a permanent rule for ${gymId}?\n\n` +
-            `This will prevent this from flagging on ALL future ${gymId} camp events.\n\n` +
-            `Click OK to add rule, or Cancel to just dismiss this one time.`
+            `Done! Warning dismissed.\n\n` +
+            `Want to also make "${displayValue}" a permanent rule for ${gymId}?\n\n` +
+            `YES (OK) = Never flag this on ${gymId} camps again\n` +
+            `NO (Cancel) = Just dismiss this one time`
           );
 
           if (wantRule) {
