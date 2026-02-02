@@ -506,69 +506,21 @@ const EventsDashboard = () => {
     }
   };
 
-  // Add a permanent per-gym rule so the system stops flagging a known valid value
-  const handleAddAsRule = async (event, error) => {
-    try {
-      const gymId = event.gym_id;
-      if (!gymId) {
-        alert('Could not determine gym.');
-        return;
-      }
-
-      let ruleType = null;
-      let value = null;
-
-      if (error.type === 'camp_price_mismatch') {
-        const priceMatch = error.message.match(/\$(\d+(?:\.\d{2})?)/);
-        if (!priceMatch) {
-          alert('Could not extract price. Please add this rule manually in Admin.');
-          return;
-        }
-        ruleType = 'price';
-        value = priceMatch[1];
-      } else if (error.type === 'time_mismatch') {
-        const timeMatch = error.message.match(/(?:description|title) says (\d{1,2}(?::\d{2})?\s*(?:am|pm|a|p))/i);
-        if (!timeMatch) {
-          alert('Could not extract time. Please add this rule manually in Admin.');
-          return;
-        }
-        ruleType = 'time';
-        value = timeMatch[1].trim();
-      } else {
-        return;
-      }
-
-      const label = window.prompt(
-        `Add "${ruleType === 'price' ? '$' + value : value}" as a valid ${ruleType} for ${gymId}.\n\nWhat is this? (e.g. "Before Care", "Early Dropoff"):`,
-        ''
-      );
-
-      if (label === null) return;
-      if (!label.trim()) {
-        alert('Please provide a label (e.g. "Before Care", "After Care", "Early Dropoff")');
-        return;
-      }
-
-      await gymValidValuesApi.create({
-        gym_id: gymId,
-        rule_type: ruleType,
-        value: value,
-        label: label.trim(),
-        event_type: 'CAMP'
-      });
-
-      // Also dismiss this specific error
-      await acknowledgeValidationError(event.id, error.message, `Rule added: ${label.trim()}`);
-
-      alert(`Rule added! "${ruleType === 'price' ? '$' + value : value}" is now valid for ${gymId} (${label.trim()}).\n\nTakes effect on next sync.`);
-    } catch (err) {
-      console.error('Error adding rule:', err);
-      alert('Failed to add rule. Please try again.');
-    }
-  };
-
+  // Check if an error type supports "Add as Rule"
   const canAddAsRule = (errorType) => {
     return errorType === 'camp_price_mismatch' || errorType === 'time_mismatch';
+  };
+
+  // Extract rule value from an error object (price or time)
+  const extractRuleValue = (errorObj) => {
+    if (errorObj.type === 'camp_price_mismatch') {
+      const priceMatch = errorObj.message.match(/\$(\d+(?:\.\d{2})?)/);
+      return priceMatch ? { ruleType: 'price', value: priceMatch[1] } : null;
+    } else if (errorObj.type === 'time_mismatch') {
+      const timeMatch = errorObj.message.match(/(?:description|title) says (\d{1,2}(?::\d{2})?\s*(?:am|pm|a|p))/i);
+      return timeMatch ? { ruleType: 'time', value: timeMatch[1].trim() } : null;
+    }
+    return null;
   };
 
   // ✨ Toggle individual event expansion - Shows full detail popup
@@ -3661,15 +3613,51 @@ The system will add new events and update any changed events automatically.`;
                         return labels[type] || type;
                       };
                       
-                      // Handler for dismissing with optional note
-                      const handleDismissWithNote = (eventId, errorMessage) => {
+                      // Handler for dismissing with optional note + optional rule creation
+                      const handleDismissWithNote = async (eventId, errorMessage, errorObj = null) => {
                         const note = window.prompt(
                           'Optional: Add a note explaining why this is OK (or leave blank):',
                           ''
                         );
-                        // If user clicks Cancel, note will be null - still dismiss but without note
-                        if (note !== null) {
-                          acknowledgeValidationError(eventId, errorMessage, note || null);
+                        if (note === null) return; // User clicked Cancel
+
+                        await acknowledgeValidationError(eventId, errorMessage, note || null);
+
+                        // After dismissing, offer to add as permanent rule if eligible
+                        if (errorObj && canAddAsRule(errorObj.type)) {
+                          const ruleInfo = extractRuleValue(errorObj);
+                          if (ruleInfo && selectedEventForPanel?.gym_id) {
+                            const gymId = selectedEventForPanel.gym_id;
+                            const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
+
+                            const wantRule = window.confirm(
+                              `Also add "${displayValue}" as a permanent rule for ${gymId}?\n\n` +
+                              `This will prevent this from flagging on ALL future ${gymId} camp events.\n\n` +
+                              `Click OK to add rule, or Cancel to just dismiss this one time.`
+                            );
+
+                            if (wantRule) {
+                              const label = window.prompt(
+                                `What is "${displayValue}"? (e.g. "Before Care", "After Care", "Early Dropoff"):`,
+                                ''
+                              );
+                              if (label && label.trim()) {
+                                try {
+                                  await gymValidValuesApi.create({
+                                    gym_id: gymId,
+                                    rule_type: ruleInfo.ruleType,
+                                    value: ruleInfo.value,
+                                    label: label.trim(),
+                                    event_type: 'CAMP'
+                                  });
+                                  alert(`Rule saved! "${displayValue}" is now valid for ${gymId} (${label.trim()}).`);
+                                } catch (ruleErr) {
+                                  console.error('Error adding rule:', ruleErr);
+                                  alert('Dismissed OK, but failed to add rule. Add it manually in Admin → Gym Rules.');
+                                }
+                              }
+                            }
+                          }
                         }
                       };
                       
@@ -3724,30 +3712,16 @@ The system will add new events and update any changed events automatically.`;
                                             🚨 <strong>{getErrorLabel(error.type)}</strong>
                                             <span className="text-xs block text-red-600 mt-0.5">{error.message}</span>
                                           </span>
-                                          <div className="flex-shrink-0 flex gap-1">
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDismissWithNote(selectedEventForPanel.id, error.message);
-                                              }}
-                                              className="px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
-                                              title="Dismiss with optional note"
-                                            >
-                                              ✓ OK
-                                            </button>
-                                            {canAddAsRule(error.type) && (
-                                              <button
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleAddAsRule(selectedEventForPanel, error);
-                                                }}
-                                                className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md transition-colors font-medium"
-                                                title="Add as permanent rule for this gym"
-                                              >
-                                                + Rule
-                                              </button>
-                                            )}
-                                          </div>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDismissWithNote(selectedEventForPanel.id, error.message, error);
+                                            }}
+                                            className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
+                                            title="Dismiss with optional note"
+                                          >
+                                            ✓ OK
+                                          </button>
                                         </li>
                                       ))}
                                     </ul>

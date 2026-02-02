@@ -105,140 +105,117 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
     });
   };
 
+  // Check if an error type supports "Add as Rule"
+  const canAddAsRule = (errorType) => {
+    return errorType === 'camp_price_mismatch' || errorType === 'time_mismatch';
+  };
+
+  // Extract rule value from an error message (price or time)
+  const extractRuleValue = (errorObj) => {
+    if (errorObj.type === 'camp_price_mismatch') {
+      const priceMatch = errorObj.message.match(/\$(\d+(?:\.\d{2})?)/);
+      return priceMatch ? { ruleType: 'price', value: priceMatch[1] } : null;
+    } else if (errorObj.type === 'time_mismatch') {
+      const timeMatch = errorObj.message.match(/(?:description|title) says (\d{1,2}(?::\d{2})?\s*(?:am|pm|a|p))/i);
+      return timeMatch ? { ruleType: 'time', value: timeMatch[1].trim() } : null;
+    }
+    return null;
+  };
+
   // Dismiss a validation error for an event (saves to database)
-  const handleDismissError = async (event, errorMessage) => {
-    // First, find the event in the database by event_url
+  // For rule-eligible errors (camp_price_mismatch, time_mismatch), also offers to save as a permanent rule
+  const handleDismissError = async (event, errorMessage, errorObj = null) => {
     try {
       setDismissingError(`${event.event_url}-${errorMessage}`);
-      
+
       const { data: existingEvent, error: fetchError } = await supabase
         .from('events')
         .select('id, acknowledged_errors')
         .eq('event_url', event.event_url)
         .single();
-      
+
       if (fetchError || !existingEvent) {
-        // Event not in database yet - can't dismiss until imported
         alert('This event needs to be imported first before you can dismiss warnings.');
         setDismissingError(null);
         return;
       }
-      
+
       // Prompt for optional note
       const note = window.prompt(
         'Optional: Add a note explaining why this is OK (or leave blank):',
         ''
       );
-      
+
       if (note === null) {
-        // User clicked Cancel
         setDismissingError(null);
         return;
       }
-      
+
       const currentAcknowledged = existingEvent.acknowledged_errors || [];
-      
-      // Check if already acknowledged
+
       if (!isErrorAcknowledged(currentAcknowledged, errorMessage)) {
         const acknowledgment = {
           message: errorMessage,
           note: note || null,
           dismissed_at: new Date().toISOString()
         };
-        
+
         const updatedAcknowledged = [...currentAcknowledged, acknowledgment];
-        
+
         const { error: updateError } = await supabase
           .from('events')
           .update({ acknowledged_errors: updatedAcknowledged })
           .eq('id', existingEvent.id);
-        
+
         if (updateError) throw updateError;
-        
         console.log(`✅ Dismissed error for "${event.title}": "${errorMessage}"`);
       }
-      
+
+      // After dismissing, offer to add as a permanent rule if eligible
+      if (errorObj && canAddAsRule(errorObj.type)) {
+        const ruleInfo = extractRuleValue(errorObj);
+        if (ruleInfo) {
+          const gymId = event.gym_id || selectedGym;
+          const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
+
+          const wantRule = window.confirm(
+            `Also add "${displayValue}" as a permanent rule for ${gymId}?\n\n` +
+            `This will prevent this from flagging on ALL future ${gymId} camp events.\n\n` +
+            `Click OK to add rule, or Cancel to just dismiss this one time.`
+          );
+
+          if (wantRule) {
+            const label = window.prompt(
+              `What is "${displayValue}"? (e.g. "Before Care", "After Care", "Early Dropoff"):`,
+              ''
+            );
+
+            if (label && label.trim()) {
+              try {
+                await gymValidValuesApi.create({
+                  gym_id: gymId,
+                  rule_type: ruleInfo.ruleType,
+                  value: ruleInfo.value,
+                  label: label.trim(),
+                  event_type: 'CAMP'
+                });
+                console.log(`✅ Added ${ruleInfo.ruleType} rule for ${gymId}: ${ruleInfo.value} = "${label.trim()}"`);
+                alert(`Rule saved! "${displayValue}" is now a valid ${ruleInfo.ruleType} for ${gymId} (${label.trim()}).`);
+              } catch (ruleErr) {
+                console.error('Error adding rule:', ruleErr);
+                alert('Dismissed OK, but failed to add rule. You can add it manually in Admin → Gym Rules.');
+              }
+            }
+          }
+        }
+      }
+
       setDismissingError(null);
     } catch (error) {
       console.error('Error dismissing validation error:', error);
       alert('Failed to dismiss error. Please try again.');
       setDismissingError(null);
     }
-  };
-
-  // Add a permanent per-gym rule so the system stops flagging a known valid value
-  // Only works for camp_price_mismatch and time_mismatch errors
-  const handleAddAsRule = async (event, error) => {
-    try {
-      const gymId = event.gym_id || selectedGym;
-      if (!gymId) {
-        alert('Could not determine gym. Please try again.');
-        return;
-      }
-
-      let ruleType = null;
-      let value = null;
-      let defaultLabel = '';
-
-      if (error.type === 'camp_price_mismatch') {
-        // Extract price from message like "Camp price $20 doesn't match..."
-        const priceMatch = error.message.match(/\$(\d+(?:\.\d{2})?)/);
-        if (!priceMatch) {
-          alert('Could not extract price from error. Please add this rule manually in Admin.');
-          return;
-        }
-        ruleType = 'price';
-        value = priceMatch[1];
-        defaultLabel = '';
-      } else if (error.type === 'time_mismatch') {
-        // Extract the mismatched time from message like "...but description says 8:30 am"
-        const timeMatch = error.message.match(/(?:description|title) says (\d{1,2}(?::\d{2})?\s*(?:am|pm|a|p))/i);
-        if (!timeMatch) {
-          alert('Could not extract time from error. Please add this rule manually in Admin.');
-          return;
-        }
-        ruleType = 'time';
-        value = timeMatch[1].trim();
-        defaultLabel = '';
-      } else {
-        return; // Not a rule-eligible error type
-      }
-
-      const label = window.prompt(
-        `Add "${ruleType === 'price' ? '$' + value : value}" as a valid ${ruleType} for ${gymId}.\n\nWhat is this? (e.g. "Before Care", "Early Dropoff"):`,
-        defaultLabel
-      );
-
-      if (label === null) return; // User clicked Cancel
-
-      if (!label.trim()) {
-        alert('Please provide a label (e.g. "Before Care", "After Care", "Early Dropoff")');
-        return;
-      }
-
-      await gymValidValuesApi.create({
-        gym_id: gymId,
-        rule_type: ruleType,
-        value: value,
-        label: label.trim(),
-        event_type: 'CAMP'
-      });
-
-      console.log(`✅ Added ${ruleType} rule for ${gymId}: ${value} = "${label.trim()}"`);
-
-      // Also auto-dismiss this error on the current event
-      await handleDismissError(event, error.message);
-
-      alert(`Rule added! "${ruleType === 'price' ? '$' + value : value}" is now a valid ${ruleType} for ${gymId} (${label.trim()}).\n\nThis will take effect on the next sync.`);
-    } catch (err) {
-      console.error('Error adding rule:', err);
-      alert('Failed to add rule. Please try again or add manually in Admin.');
-    }
-  };
-
-  // Check if an error type supports "Add as Rule"
-  const canAddAsRule = (errorType) => {
-    return errorType === 'camp_price_mismatch' || errorType === 'time_mismatch';
   };
 
   // All sync option (includes ALL event types at once)
@@ -1129,25 +1106,14 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                                   <span className="flex-1 text-red-800">
                                     🚨 {error.message}
                                   </span>
-                                  <div className="flex-shrink-0 flex gap-1">
-                                    <button
-                                      onClick={() => handleDismissError(event, error.message)}
-                                      disabled={dismissingError === `${event.event_url}-${error.message}`}
-                                      className="px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors font-medium disabled:opacity-50"
-                                      title="Dismiss with optional note"
-                                    >
-                                      {dismissingError === `${event.event_url}-${error.message}` ? '...' : '✓ OK'}
-                                    </button>
-                                    {canAddAsRule(error.type) && (
-                                      <button
-                                        onClick={() => handleAddAsRule(event, error)}
-                                        className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors font-medium"
-                                        title="Add as permanent rule for this gym (prevents this false positive on future syncs)"
-                                      >
-                                        + Rule
-                                      </button>
-                                    )}
-                                  </div>
+                                  <button
+                                    onClick={() => handleDismissError(event, error.message, error)}
+                                    disabled={dismissingError === `${event.event_url}-${error.message}`}
+                                    className="flex-shrink-0 px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors font-medium disabled:opacity-50"
+                                    title="Dismiss with optional note"
+                                  >
+                                    {dismissingError === `${event.event_url}-${error.message}` ? '...' : '✓ OK'}
+                                  </button>
                                 </div>
                               ))}
                             </div>
