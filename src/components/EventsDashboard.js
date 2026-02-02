@@ -301,6 +301,7 @@ const EventsDashboard = () => {
   const [showAdminPortal, setShowAdminPortal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [dismissModalState, setDismissModalState] = useState(null); // { eventId, errorMessage, errorObj, gymId }
+  const [gymRules, setGymRules] = useState([]); // Loaded from gym_valid_values for badge display
   const [newEvent, setNewEvent] = useState({
     gym_id: '',
     title: '',
@@ -345,6 +346,32 @@ const EventsDashboard = () => {
 
   const monthlyRequirements = useMonthlyRequirements();
 
+  // Load gym rules for badge display (permanent rule vs one-time exception)
+  useEffect(() => {
+    const loadGymRules = async () => {
+      try {
+        const rules = await gymValidValuesApi.getAll();
+        setGymRules(rules || []);
+      } catch (err) {
+        console.error('Error loading gym rules:', err);
+      }
+    };
+    loadGymRules();
+  }, []);
+
+  // Helper: check if a dismissed error message matches an existing permanent rule for this gym
+  const isMatchedByRule = (errorMessage, gymId) => {
+    if (!gymRules.length || !gymId) return false;
+    const rulesForGym = gymRules.filter(r => r.gym_id === gymId);
+    return rulesForGym.some(rule => {
+      if (rule.rule_type === 'price') {
+        return errorMessage.includes(`$${rule.value}`);
+      } else if (rule.rule_type === 'time') {
+        return errorMessage.toLowerCase().includes(rule.value.toLowerCase());
+      }
+      return false;
+    });
+  };
 
   // Helper function to get URLs from main Supabase database
   const getGymLinkUrl = (gymName, eventType) => {
@@ -1920,6 +1947,8 @@ The system will add new events and update any changed events automatically.`;
                   event_type: 'CAMP'
                 });
                 const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
+                // Refresh gym rules so badge updates immediately
+                try { const updated = await gymValidValuesApi.getAll(); setGymRules(updated || []); } catch (e) {}
                 alert(`Rule saved! "${displayValue}" is now valid for ${gymId} (${label}).`);
               } catch (ruleErr) {
                 console.error('Error adding rule:', ruleErr);
@@ -3852,19 +3881,21 @@ The system will add new events and update any changed events automatically.`;
                                   const dismissedAt = typeof ack === 'object' && ack.dismissed_at
                                     ? new Date(ack.dismissed_at).toLocaleDateString()
                                     : null;
-                                  const hasRule = typeof ack === 'object' && ack.has_rule;
+                                  // Check if this dismissed error is backed by a permanent rule in gym_valid_values
+                                  const hasPermanentRule = (typeof ack === 'object' && ack.has_rule) ||
+                                    isMatchedByRule(message, selectedEventForPanel?.gym_id);
 
                                   return (
                                     <li key={`ack-${idx}`} className="p-1.5 bg-green-100 rounded text-xs">
                                       <div className="flex items-center gap-1">
                                         <span className="text-green-600">✓</span>
                                         <span className="line-through text-green-600 flex-1">{message}</span>
-                                        {hasRule ? (
-                                          <span className="flex-shrink-0 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-semibold" title="Saved as a permanent rule in Gym Rules">
+                                        {hasPermanentRule ? (
+                                          <span className="flex-shrink-0 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-semibold" title="Backed by a permanent rule in Gym Rules — won't be flagged on future syncs">
                                             📋 Permanent Rule
                                           </span>
                                         ) : (
-                                          <span className="flex-shrink-0 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]" title="One-time exception, will re-flag on next sync if the value appears again">
+                                          <span className="flex-shrink-0 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]" title="One-time exception — may re-flag on next sync">
                                             One-time
                                           </span>
                                         )}
