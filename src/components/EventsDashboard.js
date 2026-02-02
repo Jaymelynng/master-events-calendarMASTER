@@ -3784,7 +3784,7 @@ The system will add new events and update any changed events automatically.`;
                                           <button
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              handleDismissWithNote(selectedEventForPanel.id, error.message);
+                                              handleDismissWithNote(selectedEventForPanel.id, error.message, error);
                                             }}
                                             className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
                                             title="Dismiss with optional note"

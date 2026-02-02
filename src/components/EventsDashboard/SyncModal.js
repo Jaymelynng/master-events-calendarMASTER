@@ -1100,7 +1100,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                                     ⚠️ {error.message}
                                   </span>
                                   <button
-                                    onClick={() => handleDismissError(event, error.message)}
+                                    onClick={() => handleDismissError(event, error.message, error)}
                                     disabled={dismissingError === `${event.event_url}-${error.message}`}
                                     className="flex-shrink-0 px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors font-medium disabled:opacity-50"
                                     title="Dismiss with optional note"
