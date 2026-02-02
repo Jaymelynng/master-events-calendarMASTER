@@ -133,7 +133,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
   };
 
   // Actually dismiss the error in the database (called by modal callbacks)
-  const executeDismiss = async (event, errorMessage, note) => {
+  const executeDismiss = async (event, errorMessage, note, hasRule = false) => {
     try {
       setDismissingError(`${event.event_url}-${errorMessage}`);
 
@@ -155,7 +155,8 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
         const acknowledgment = {
           message: errorMessage,
           note: note || null,
-          dismissed_at: new Date().toISOString()
+          dismissed_at: new Date().toISOString(),
+          ...(hasRule ? { has_rule: true } : {})
         };
 
         const updatedAcknowledged = [...currentAcknowledged, acknowledgment];
@@ -1577,7 +1578,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
             setDismissModalState(null);
           }}
           onDismissAndRule={async (note, label) => {
-            await executeDismiss(dismissModalState.event, dismissModalState.errorMessage, note);
+            await executeDismiss(dismissModalState.event, dismissModalState.errorMessage, note, true);
             const { ruleInfo, gymId } = dismissModalState;
             if (ruleInfo && gymId) {
               try {

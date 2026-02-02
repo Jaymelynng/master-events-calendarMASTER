@@ -426,7 +426,7 @@ const EventsDashboard = () => {
 
   // Acknowledge/dismiss a validation error - saves to database so it doesn't reappear
   // Now supports optional note and stores timestamp
-  const acknowledgeValidationError = async (eventId, errorMessage, note = null) => {
+  const acknowledgeValidationError = async (eventId, errorMessage, note = null, hasRule = false) => {
     try {
       // Get current acknowledged errors for this event
       const { data: currentEvent, error: fetchError } = await supabase
@@ -445,11 +445,12 @@ const EventsDashboard = () => {
       );
       
       if (!alreadyAcknowledged) {
-        // New format: store as object with message, note, and timestamp
+        // New format: store as object with message, note, timestamp, and rule flag
         const acknowledgment = {
           message: errorMessage,
           note: note || null,
-          dismissed_at: new Date().toISOString()
+          dismissed_at: new Date().toISOString(),
+          ...(hasRule ? { has_rule: true } : {})
         };
         
         const updatedAcknowledged = [...currentAcknowledged, acknowledgment];
@@ -1907,7 +1908,7 @@ The system will add new events and update any changed events automatically.`;
             setDismissModalState(null);
           }}
           onDismissAndRule={async (note, label) => {
-            await acknowledgeValidationError(dismissModalState.eventId, dismissModalState.errorMessage, note);
+            await acknowledgeValidationError(dismissModalState.eventId, dismissModalState.errorMessage, note, true);
             const { ruleInfo, gymId } = dismissModalState;
             if (ruleInfo && gymId) {
               try {
@@ -3848,15 +3849,25 @@ The system will add new events and update any changed events automatically.`;
                                 {acknowledgedErrors.map((ack, idx) => {
                                   const message = typeof ack === 'string' ? ack : ack.message;
                                   const note = typeof ack === 'object' ? ack.note : null;
-                                  const dismissedAt = typeof ack === 'object' && ack.dismissed_at 
-                                    ? new Date(ack.dismissed_at).toLocaleDateString() 
+                                  const dismissedAt = typeof ack === 'object' && ack.dismissed_at
+                                    ? new Date(ack.dismissed_at).toLocaleDateString()
                                     : null;
-                                  
+                                  const hasRule = typeof ack === 'object' && ack.has_rule;
+
                                   return (
                                     <li key={`ack-${idx}`} className="p-1.5 bg-green-100 rounded text-xs">
                                       <div className="flex items-center gap-1">
                                         <span className="text-green-600">✓</span>
-                                        <span className="line-through text-green-600">{message}</span>
+                                        <span className="line-through text-green-600 flex-1">{message}</span>
+                                        {hasRule ? (
+                                          <span className="flex-shrink-0 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-semibold" title="Saved as a permanent rule in Gym Rules">
+                                            📋 Permanent Rule
+                                          </span>
+                                        ) : (
+                                          <span className="flex-shrink-0 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]" title="One-time exception, will re-flag on next sync if the value appears again">
+                                            One-time
+                                          </span>
+                                        )}
                                       </div>
                                       {note && (
                                         <div className="mt-1 ml-4 text-green-700 italic bg-green-50 p-1 rounded">
