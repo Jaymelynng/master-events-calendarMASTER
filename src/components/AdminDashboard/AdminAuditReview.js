@@ -1,0 +1,341 @@
+import React, { useState, useCallback } from 'react';
+import { supabase } from '../../lib/supabase';
+import { gymValidValuesApi } from '../../lib/api';
+import { inferErrorCategory, isErrorAcknowledged, canAddAsRule, extractRuleValue } from '../../lib/validationHelpers';
+import AdminAuditFilters from './AdminAuditFilters';
+import AdminAuditErrorCard from './AdminAuditErrorCard';
+import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
+
+export default function AdminAuditReview({ gyms }) {
+  const [selectedGym, setSelectedGym] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedProgramType, setSelectedProgramType] = useState('all');
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [dismissModalState, setDismissModalState] = useState(null);
+  const [dismissingError, setDismissingError] = useState(null);
+  const [showDismissed, setShowDismissed] = useState(true);
+
+  // Load events with validation errors for selected gym
+  const loadEvents = useCallback(async (gymId) => {
+    if (!gymId) {
+      setEvents([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      let query = supabase
+        .from('events_with_gym')
+        .select('*')
+        .eq('gym_id', gymId)
+        .is('deleted_at', null)
+        .order('date', { ascending: true });
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Filter to only events with validation issues
+      const eventsWithIssues = (data || []).filter(event => {
+        const errors = event.validation_errors || [];
+        const realErrors = errors.filter(err => err.type !== 'sold_out');
+        return realErrors.length > 0 ||
+               event.description_status === 'none' ||
+               event.description_status === 'flyer_only';
+      });
+
+      setEvents(eventsWithIssues);
+    } catch (err) {
+      console.error('Error loading events:', err);
+      setEvents([]);
+    }
+    setLoading(false);
+  }, []);
+
+  const handleGymChange = (gymId) => {
+    setSelectedGym(gymId);
+    setSelectedCategory('all');
+    setSelectedProgramType('all');
+    loadEvents(gymId);
+  };
+
+  // Apply filters
+  const filteredEvents = events.filter(event => {
+    // Month filter
+    if (selectedMonth !== 'all') {
+      const eventDate = event.date || event.start_date || '';
+      if (!eventDate.startsWith(selectedMonth)) return false;
+    }
+
+    // Program type filter
+    if (selectedProgramType !== 'all') {
+      if (event.type !== selectedProgramType) return false;
+    }
+
+    // Category filter - show event if it has errors in the selected category
+    if (selectedCategory !== 'all') {
+      const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
+      const acknowledged = event.acknowledged_errors || [];
+
+      if (selectedCategory === 'description') {
+        if (event.description_status !== 'none' && event.description_status !== 'flyer_only') return false;
+      } else {
+        const hasActiveInCategory = errors.some(e =>
+          inferErrorCategory(e) === selectedCategory &&
+          !isErrorAcknowledged(acknowledged, e.message)
+        );
+        const hasDismissedInCategory = showDismissed && errors.some(e =>
+          inferErrorCategory(e) === selectedCategory &&
+          isErrorAcknowledged(acknowledged, e.message)
+        );
+        if (!hasActiveInCategory && !hasDismissedInCategory) return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Count errors across all filtered events
+  const counts = filteredEvents.reduce((acc, event) => {
+    const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
+    const acknowledged = event.acknowledged_errors || [];
+    errors.forEach(e => {
+      if (isErrorAcknowledged(acknowledged, e.message)) return; // Don't count dismissed
+      const cat = inferErrorCategory(e);
+      if (cat === 'data_error') acc.data++;
+      else if (cat === 'formatting') acc.format++;
+    });
+    if (event.description_status === 'none' || event.description_status === 'flyer_only') acc.desc++;
+    return acc;
+  }, { data: 0, format: 0, desc: 0 });
+
+  // Handle dismiss error - opens DismissRuleModal
+  const handleDismissError = (event, errorMessage, errorObj = null) => {
+    const gymId = event.gym_id || selectedGym;
+    const ruleEligible = errorObj ? canAddAsRule(errorObj.type) : false;
+    const ruleInfo = errorObj ? extractRuleValue(errorObj, event) : null;
+    setDismissModalState({ event, eventId: event.id, errorMessage, errorObj, gymId, ruleEligible, ruleInfo });
+  };
+
+  // Accept exception (dismiss once)
+  const handleAcceptException = async (note) => {
+    if (!dismissModalState) return;
+    const { eventId, errorMessage, event } = dismissModalState;
+    setDismissingError(`${eventId}-${errorMessage}`);
+
+    try {
+      const { data: currentEvent, error: fetchError } = await supabase
+        .from('events')
+        .select('acknowledged_errors')
+        .eq('id', eventId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentAcknowledged = currentEvent?.acknowledged_errors || [];
+      const alreadyAcknowledged = currentAcknowledged.some(ack =>
+        typeof ack === 'string' ? ack === errorMessage : ack.message === errorMessage
+      );
+
+      if (!alreadyAcknowledged) {
+        const acknowledgment = {
+          message: errorMessage,
+          note: note || null,
+          dismissed_at: new Date().toISOString(),
+        };
+        const updatedAcknowledged = [...currentAcknowledged, acknowledgment];
+
+        const { error: updateError } = await supabase
+          .from('events')
+          .update({ acknowledged_errors: updatedAcknowledged })
+          .eq('id', eventId);
+
+        if (updateError) throw updateError;
+
+        // Update local state
+        setEvents(prev => prev.map(e =>
+          e.id === eventId ? { ...e, acknowledged_errors: updatedAcknowledged } : e
+        ));
+      }
+    } catch (err) {
+      console.error('Error dismissing error:', err);
+      alert('Failed to dismiss error. Please try again.');
+    }
+
+    setDismissingError(null);
+    setDismissModalState(null);
+  };
+
+  // Dismiss and create rule
+  const handleDismissAndRule = async (note, label) => {
+    if (!dismissModalState) return;
+    const { eventId, errorMessage, gymId, ruleInfo, event } = dismissModalState;
+    setDismissingError(`${eventId}-${errorMessage}`);
+
+    try {
+      // Create the rule
+      const isProgramSynonym = ruleInfo.ruleType === 'program_synonym';
+      await gymValidValuesApi.create({
+        gym_id: gymId,
+        rule_type: ruleInfo.ruleType,
+        value: isProgramSynonym ? ruleInfo.value.toLowerCase() : ruleInfo.value,
+        label: label,
+        event_type: isProgramSynonym ? label.toUpperCase() : 'CAMP'
+      });
+
+      // Dismiss the error with rule flag
+      const { data: currentEvent, error: fetchError } = await supabase
+        .from('events')
+        .select('acknowledged_errors')
+        .eq('id', eventId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentAcknowledged = currentEvent?.acknowledged_errors || [];
+      const acknowledgment = {
+        message: errorMessage,
+        note: note || `Rule created: ${ruleInfo.value} = ${label}`,
+        dismissed_at: new Date().toISOString(),
+        has_rule: true,
+      };
+      const updatedAcknowledged = [...currentAcknowledged, acknowledgment];
+
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ acknowledged_errors: updatedAcknowledged })
+        .eq('id', eventId);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setEvents(prev => prev.map(e =>
+        e.id === eventId ? { ...e, acknowledged_errors: updatedAcknowledged } : e
+      ));
+
+    } catch (err) {
+      console.error('Error creating rule:', err);
+      alert('Dismissed OK, but failed to add rule. Add it manually in Gym Rules tab.');
+    }
+
+    setDismissingError(null);
+    setDismissModalState(null);
+  };
+
+  const gymName = gyms?.find(g => g.id === selectedGym)?.name || selectedGym;
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <AdminAuditFilters
+        gyms={gyms}
+        selectedGym={selectedGym}
+        onGymChange={handleGymChange}
+        selectedMonth={selectedMonth}
+        onMonthChange={setSelectedMonth}
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+        selectedProgramType={selectedProgramType}
+        onProgramTypeChange={setSelectedProgramType}
+        counts={counts}
+      />
+
+      {/* Results Header */}
+      {selectedGym && !loading && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h3 className="font-bold text-gray-800">
+              {gymName}
+            </h3>
+            <span className="text-sm text-gray-500">
+              {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} with issues
+            </span>
+            {(counts.data > 0 || counts.format > 0 || counts.desc > 0) && (
+              <div className="flex gap-1.5">
+                {counts.data > 0 && (
+                  <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded">{counts.data} DATA</span>
+                )}
+                {counts.format > 0 && (
+                  <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded">{counts.format} FORMAT</span>
+                )}
+                {counts.desc > 0 && (
+                  <span className="px-2 py-0.5 bg-gray-500 text-white text-xs font-bold rounded">{counts.desc} DESC</span>
+                )}
+              </div>
+            )}
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showDismissed}
+              onChange={(e) => setShowDismissed(e.target.checked)}
+              className="rounded"
+            />
+            Show resolved
+          </label>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-3"></div>
+          <p className="text-sm text-gray-500">Loading events...</p>
+        </div>
+      )}
+
+      {/* No Gym Selected */}
+      {!selectedGym && !loading && (
+        <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+          <div className="text-4xl mb-3">📋</div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-1">Select a gym to review</h3>
+          <p className="text-sm text-gray-500">Choose a gym from the dropdown above to see all validation issues</p>
+        </div>
+      )}
+
+      {/* No Issues */}
+      {selectedGym && !loading && filteredEvents.length === 0 && (
+        <div className="text-center py-12 bg-green-50 rounded-xl border-2 border-green-200">
+          <div className="text-4xl mb-3">✅</div>
+          <h3 className="text-lg font-semibold text-green-700 mb-1">All clear!</h3>
+          <p className="text-sm text-green-600">No validation issues found for the selected filters</p>
+        </div>
+      )}
+
+      {/* Event Error Cards */}
+      {selectedGym && !loading && filteredEvents.length > 0 && (
+        <div className="space-y-3">
+          {filteredEvents.map(event => (
+            <AdminAuditErrorCard
+              key={event.id}
+              event={event}
+              onDismissError={handleDismissError}
+              dismissingError={dismissingError}
+              showDismissedErrors={showDismissed}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Help text */}
+      {selectedGym && !loading && filteredEvents.length > 0 && (
+        <div className="text-center py-2 text-xs text-gray-500">
+          💡 "✓ OK" = dismiss once | "+ Rule" = teach the system for this gym
+        </div>
+      )}
+
+      {/* DismissRuleModal */}
+      {dismissModalState && (
+        <DismissRuleModal
+          isOpen={true}
+          onClose={() => setDismissModalState(null)}
+          errorMessage={dismissModalState.errorMessage}
+          ruleEligible={dismissModalState.ruleEligible}
+          ruleInfo={dismissModalState.ruleInfo}
+          onAcceptException={handleAcceptException}
+          onDismissAndRule={handleDismissAndRule}
+        />
+      )}
+    </div>
+  );
+}

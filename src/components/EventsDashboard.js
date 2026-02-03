@@ -10,7 +10,7 @@ import { gymLinksApi } from '../lib/gymLinksApi';
 import { cachedApi, cache } from '../lib/cache';
 import { supabase } from '../lib/supabase';
 import { useRealtimeEvents, useRealtimeGymLinks, useRealtimeGyms } from '../lib/useRealtimeEvents';
-import AdminPortalModal from './EventsDashboard/AdminPortalModal';
+import AdminDashboard from './AdminDashboard/AdminDashboard';
 import SyncModal from './EventsDashboard/SyncModal';
 import ExportModal from './EventsDashboard/ExportModal';
 import DismissRuleModal from './EventsDashboard/DismissRuleModal';
@@ -314,17 +314,17 @@ const EventsDashboard = () => {
   
   // Lock body scroll when modals are open
   useEffect(() => {
-    if (showAdminPortal || showBulkImportModal || showAddEventModal) {
+    if (showBulkImportModal || showAddEventModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
-    
+
     // Cleanup on unmount
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [showAdminPortal, showBulkImportModal, showAddEventModal]);
+  }, [showBulkImportModal, showAddEventModal]);
   
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -1826,6 +1826,31 @@ The system will add new events and update any changed events automatically.`;
     }
   };
 
+  // Full-page Admin Dashboard - replaces calendar view when active
+  if (showAdminPortal) {
+    return (
+      <AdminDashboard
+        gyms={gymsList}
+        onClose={() => setShowAdminPortal(false)}
+        onOpenSyncModal={() => {
+          setShowAdminPortal(false);
+          setTimeout(() => setShowSyncModal(true), 100);
+        }}
+        onOpenBulkImport={() => {
+          setShowAdminPortal(false);
+          setTimeout(() => setShowBulkImportModal(true), 100);
+        }}
+        onOpenAuditHistory={() => {
+          setShowAdminPortal(false);
+          setTimeout(() => {
+            loadAuditHistory();
+            setShowAuditHistory(true);
+          }, 100);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen pb-16" style={{ backgroundColor: theme.colors.background }}>
       
@@ -1882,30 +1907,7 @@ The system will add new events and update any changed events automatically.`;
         </Suspense>
       )}
       
-      {/* Admin Control Center */}
-      {showAdminPortal && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"><div className="bg-white rounded-lg p-6">Loading...</div></div>}>
-          <AdminPortalModal
-            onClose={() => setShowAdminPortal(false)}
-            onOpenBulkImport={() => {
-              setShowAdminPortal(false);
-              setTimeout(() => setShowBulkImportModal(true), 100);
-            }}
-            onOpenSyncModal={() => {
-              setShowAdminPortal(false);
-              setTimeout(() => setShowSyncModal(true), 100);
-            }}
-            onOpenAuditHistory={() => {
-              setShowAdminPortal(false);
-              setTimeout(() => {
-                loadAuditHistory();
-                setShowAuditHistory(true);
-              }, 100);
-            }}
-            gyms={gymsList}
-          />
-        </Suspense>
-      )}
+      {/* Admin Dashboard is now rendered as full-page via early return above */}
 
       {/* Automated Sync Modal */}
       {showSyncModal && (
