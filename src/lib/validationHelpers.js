@@ -96,35 +96,39 @@ export const processEventsWithIssues = (events) => {
   });
 };
 
-// Check if an error has been verified
+// Check if an error has been verified (verdict: 'correct' or 'incorrect')
 export const isErrorVerified = (verifiedErrors, errorMessage) => {
   if (!verifiedErrors || !Array.isArray(verifiedErrors)) return null;
   return verifiedErrors.find(v => v.message === errorMessage) || null;
 };
 
 // Compute accuracy stats from an array of events
+// Only counts verified_errors entries:
+//   - verdict: 'correct' (checkbox) = system was right
+//   - verdict: 'incorrect' (X button) = system was wrong
+// Dismissals (acknowledged_errors) are NOT counted - they just mean "handled"
 export const computeAccuracyStats = (events) => {
-  let verified = 0;
-  let dismissed = 0;
+  let correct = 0;
+  let incorrect = 0;
 
   (events || []).forEach(event => {
     const verifiedArr = event.verified_errors || [];
-    const acknowledgedArr = event.acknowledged_errors || [];
-    verified += verifiedArr.length;
-    // Only count acknowledged errors that aren't ALSO verified (avoid double-counting)
-    acknowledgedArr.forEach(ack => {
-      const msg = typeof ack === 'string' ? ack : ack.message;
-      const alsoVerified = verifiedArr.some(v => v.message === msg);
-      if (!alsoVerified) dismissed++;
+    verifiedArr.forEach(v => {
+      if (v.verdict === 'incorrect') {
+        incorrect++;
+      } else {
+        // Default to 'correct' for backwards compatibility (old entries without verdict)
+        correct++;
+      }
     });
   });
 
-  const total = verified + dismissed;
+  const total = correct + incorrect;
   return {
     total,
-    verified,
-    dismissed,
-    accuracyPct: total > 0 ? Math.round((verified / total) * 100) : null,
+    verified: correct,      // renamed from "verified" but keeping for UI compatibility
+    incorrect,
+    accuracyPct: total > 0 ? Math.round((correct / total) * 100) : null,
   };
 };
 

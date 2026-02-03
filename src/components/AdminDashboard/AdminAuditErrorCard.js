@@ -75,25 +75,41 @@ export default function AdminAuditErrorCard({
             </span>
           )}
           {verifiedEntry && (
-            <span className="text-xs block text-green-600 mt-0.5">
-              <span className="bg-green-100 text-green-700 px-1 rounded text-[10px]">✓ verified</span>
+            <span className={`text-xs block mt-0.5 ${verifiedEntry.verdict === 'incorrect' ? 'text-red-600' : 'text-green-600'}`}>
+              <span className={`px-1 rounded text-[10px] ${verifiedEntry.verdict === 'incorrect' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                {verifiedEntry.verdict === 'incorrect' ? '✗ incorrect' : '✓ verified'}
+              </span>
               <span className="text-gray-400 ml-1">({new Date(verifiedEntry.verified_at).toLocaleDateString()})</span>
             </span>
           )}
         </div>
         <div className="flex-shrink-0 flex items-center gap-1.5">
-          {/* Verify checkbox */}
+          {/* Verify correct checkbox (green) */}
           {onVerifyError && (
             <button
-              onClick={() => onVerifyError(event, error.message, !verifiedEntry, error)}
+              onClick={() => onVerifyError(event, error.message, verifiedEntry?.verdict === 'correct' ? null : 'correct', error)}
               className={`w-7 h-7 rounded border-2 flex items-center justify-center transition-colors ${
-                verifiedEntry
+                verifiedEntry?.verdict === 'correct'
                   ? 'bg-green-500 border-green-500 text-white'
                   : 'bg-white border-gray-400 hover:border-green-500 hover:bg-green-50 text-gray-300 hover:text-green-500'
               }`}
-              title={verifiedEntry ? 'Uncheck — remove verification' : 'Check — verified this is a real issue'}
+              title={verifiedEntry?.verdict === 'correct' ? 'Uncheck — remove verification' : 'Check — verified this is a real issue'}
             >
-              <span className="text-sm font-bold">{verifiedEntry ? '✓' : '☐'}</span>
+              <span className="text-sm font-bold">{verifiedEntry?.verdict === 'correct' ? '✓' : '☐'}</span>
+            </button>
+          )}
+          {/* Mark incorrect button (red X) */}
+          {onVerifyError && (
+            <button
+              onClick={() => onVerifyError(event, error.message, verifiedEntry?.verdict === 'incorrect' ? null : 'incorrect', error)}
+              className={`w-7 h-7 rounded border-2 flex items-center justify-center transition-colors ${
+                verifiedEntry?.verdict === 'incorrect'
+                  ? 'bg-red-500 border-red-500 text-white'
+                  : 'bg-white border-gray-400 hover:border-red-500 hover:bg-red-50 text-gray-300 hover:text-red-500'
+              }`}
+              title={verifiedEntry?.verdict === 'incorrect' ? 'Unmark — remove incorrect flag' : 'Mark — system was wrong/buggy'}
+            >
+              <span className="text-sm font-bold">{verifiedEntry?.verdict === 'incorrect' ? '✗' : '✗'}</span>
             </button>
           )}
           {/* Dismiss button */}
@@ -207,25 +223,42 @@ export default function AdminAuditErrorCard({
                           {event.description_status === 'none' ? 'Event has no description text or flyer image' : 'Event has a flyer image but no text description'}
                         </span>
                         {descVerified && (
-                          <span className="text-xs block text-green-600 mt-0.5">
-                            <span className="bg-green-100 text-green-700 px-1 rounded text-[10px]">✓ verified</span>
+                          <span className={`text-xs block mt-0.5 ${descVerified.verdict === 'incorrect' ? 'text-red-600' : 'text-green-600'}`}>
+                            <span className={`px-1 rounded text-[10px] ${descVerified.verdict === 'incorrect' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                              {descVerified.verdict === 'incorrect' ? '✗ incorrect' : '✓ verified'}
+                            </span>
                             <span className="text-gray-400 ml-1">({new Date(descVerified.verified_at).toLocaleDateString()})</span>
                           </span>
                         )}
                       </div>
-                      {onVerifyError && (
-                        <button
-                          onClick={() => onVerifyError(event, descMsg, !descVerified, null)}
-                          className={`flex-shrink-0 w-7 h-7 rounded border-2 flex items-center justify-center transition-colors ${
-                            descVerified
-                              ? 'bg-green-500 border-green-500 text-white'
-                              : 'bg-white border-gray-400 hover:border-green-500 hover:bg-green-50 text-gray-300 hover:text-green-500'
-                          }`}
-                          title={descVerified ? 'Uncheck — remove verification' : 'Check — verified this is a real issue'}
-                        >
-                          <span className="text-sm font-bold">{descVerified ? '✓' : '☐'}</span>
-                        </button>
-                      )}
+                      <div className="flex-shrink-0 flex items-center gap-1.5">
+                        {onVerifyError && (
+                          <button
+                            onClick={() => onVerifyError(event, descMsg, descVerified?.verdict === 'correct' ? null : 'correct', null)}
+                            className={`w-7 h-7 rounded border-2 flex items-center justify-center transition-colors ${
+                              descVerified?.verdict === 'correct'
+                                ? 'bg-green-500 border-green-500 text-white'
+                                : 'bg-white border-gray-400 hover:border-green-500 hover:bg-green-50 text-gray-300 hover:text-green-500'
+                            }`}
+                            title={descVerified?.verdict === 'correct' ? 'Uncheck — remove verification' : 'Check — verified this is a real issue'}
+                          >
+                            <span className="text-sm font-bold">{descVerified?.verdict === 'correct' ? '✓' : '☐'}</span>
+                          </button>
+                        )}
+                        {onVerifyError && (
+                          <button
+                            onClick={() => onVerifyError(event, descMsg, descVerified?.verdict === 'incorrect' ? null : 'incorrect', null)}
+                            className={`w-7 h-7 rounded border-2 flex items-center justify-center transition-colors ${
+                              descVerified?.verdict === 'incorrect'
+                                ? 'bg-red-500 border-red-500 text-white'
+                                : 'bg-white border-gray-400 hover:border-red-500 hover:bg-red-50 text-gray-300 hover:text-red-500'
+                            }`}
+                            title={descVerified?.verdict === 'incorrect' ? 'Unmark — remove incorrect flag' : 'Mark — system was wrong/buggy'}
+                          >
+                            <span className="text-sm font-bold">{descVerified?.verdict === 'incorrect' ? '✗' : '✗'}</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })()}

@@ -226,8 +226,8 @@ export default function AdminAuditReview({ gyms }) {
     setDismissModalState(null);
   };
 
-  // Handle verify error - toggle checkbox
-  const handleVerifyError = async (event, errorMessage, isChecked, errorObj = null) => {
+  // Handle verify error - set verdict ('correct', 'incorrect', or null to remove)
+  const handleVerifyError = async (event, errorMessage, verdict, errorObj = null) => {
     try {
       const { data: currentEvent, error: fetchError } = await supabase
         .from('events')
@@ -241,12 +241,13 @@ export default function AdminAuditReview({ gyms }) {
       // Remove existing entry for this message
       const filtered = currentVerified.filter(v => v.message !== errorMessage);
 
-      // If checking, add new entry
-      if (isChecked) {
+      // If setting a verdict, add new entry
+      if (verdict) {
         filtered.push({
           message: errorMessage,
           verified_at: new Date().toISOString(),
           category: errorObj ? inferErrorCategory(errorObj) : 'formatting',
+          verdict: verdict, // 'correct' or 'incorrect'
         });
       }
 
@@ -319,10 +320,10 @@ export default function AdminAuditReview({ gyms }) {
                     ></div>
                   </div>
                   <span className="text-xs font-bold text-gray-700">{accuracyStats.accuracyPct}%</span>
-                  <span className="text-[10px] text-gray-400">({accuracyStats.verified}✓ / {accuracyStats.dismissed}✗ of {accuracyStats.total} reviewed)</span>
+                  <span className="text-[10px] text-gray-400">({accuracyStats.verified}✓ / {accuracyStats.incorrect}✗ of {accuracyStats.total} rated)</span>
                 </>
               ) : (
-                <span className="text-[10px] text-gray-400">{accuracyStats.total}/5 reviewed — keep going!</span>
+                <span className="text-[10px] text-gray-400">{accuracyStats.total}/5 rated — keep going!</span>
               )}
             </div>
           )}
@@ -411,7 +412,7 @@ export default function AdminAuditReview({ gyms }) {
       {/* Help text */}
       {selectedGyms.length > 0 && !loading && filteredEvents.length > 0 && (
         <div className="text-center py-2 text-xs text-gray-500">
-          💡 ☑ = verified real issue | "✓ OK" = dismiss/not accurate | "+ Rule" = teach the system
+          💡 <span className="text-green-600">☑</span> = system correct | <span className="text-red-600">✗</span> = system wrong/buggy | "✓ OK" = handled (not rated) | "+ Rule" = teach the system
         </div>
       )}
 
