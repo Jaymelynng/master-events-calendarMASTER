@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { gymValidValuesApi } from '../../lib/api';
 import { inferErrorCategory, isErrorAcknowledged, canAddAsRule, extractRuleValue } from '../../lib/validationHelpers';
@@ -7,7 +7,7 @@ import AdminAuditErrorCard from './AdminAuditErrorCard';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
 
 export default function AdminAuditReview({ gyms }) {
-  const [selectedGym, setSelectedGym] = useState('');
+  const [selectedGyms, setSelectedGyms] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedProgramType, setSelectedProgramType] = useState('all');
@@ -17,9 +17,9 @@ export default function AdminAuditReview({ gyms }) {
   const [dismissingError, setDismissingError] = useState(null);
   const [showDismissed, setShowDismissed] = useState(true);
 
-  // Load events with validation errors for selected gym
-  const loadEvents = useCallback(async (gymId) => {
-    if (!gymId) {
+  // Load events with validation errors for selected gyms
+  const loadEvents = useCallback(async (gymIds) => {
+    if (!gymIds || gymIds.length === 0) {
       setEvents([]);
       return;
     }
@@ -28,7 +28,7 @@ export default function AdminAuditReview({ gyms }) {
       let query = supabase
         .from('events_with_gym')
         .select('*')
-        .eq('gym_id', gymId)
+        .in('gym_id', gymIds)
         .is('deleted_at', null)
         .order('date', { ascending: true });
 
@@ -52,11 +52,14 @@ export default function AdminAuditReview({ gyms }) {
     setLoading(false);
   }, []);
 
-  const handleGymChange = (gymId) => {
-    setSelectedGym(gymId);
+  // Reload when selected gyms change
+  useEffect(() => {
+    loadEvents(selectedGyms);
+  }, [selectedGyms, loadEvents]);
+
+  const handleGymsChange = (newGyms) => {
+    setSelectedGyms(newGyms);
     setSelectedCategory('all');
-    setSelectedProgramType('all');
-    loadEvents(gymId);
   };
 
   // Apply filters
@@ -95,12 +98,20 @@ export default function AdminAuditReview({ gyms }) {
     return true;
   });
 
+  // Group filtered events by gym for display
+  const eventsByGym = {};
+  filteredEvents.forEach(event => {
+    const gymId = event.gym_id;
+    if (!eventsByGym[gymId]) eventsByGym[gymId] = [];
+    eventsByGym[gymId].push(event);
+  });
+
   // Count errors across all filtered events
   const counts = filteredEvents.reduce((acc, event) => {
     const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
     const acknowledged = event.acknowledged_errors || [];
     errors.forEach(e => {
-      if (isErrorAcknowledged(acknowledged, e.message)) return; // Don't count dismissed
+      if (isErrorAcknowledged(acknowledged, e.message)) return;
       const cat = inferErrorCategory(e);
       if (cat === 'data_error') acc.data++;
       else if (cat === 'formatting') acc.format++;
@@ -111,7 +122,7 @@ export default function AdminAuditReview({ gyms }) {
 
   // Handle dismiss error - opens DismissRuleModal
   const handleDismissError = (event, errorMessage, errorObj = null) => {
-    const gymId = event.gym_id || selectedGym;
+    const gymId = event.gym_id;
     const ruleEligible = errorObj ? canAddAsRule(errorObj.type) : false;
     const ruleInfo = errorObj ? extractRuleValue(errorObj, event) : null;
     setDismissModalState({ event, eventId: event.id, errorMessage, errorObj, gymId, ruleEligible, ruleInfo });
@@ -120,7 +131,7 @@ export default function AdminAuditReview({ gyms }) {
   // Accept exception (dismiss once)
   const handleAcceptException = async (note) => {
     if (!dismissModalState) return;
-    const { eventId, errorMessage, event } = dismissModalState;
+    const { eventId, errorMessage } = dismissModalState;
     setDismissingError(`${eventId}-${errorMessage}`);
 
     try {
@@ -169,11 +180,10 @@ export default function AdminAuditReview({ gyms }) {
   // Dismiss and create rule
   const handleDismissAndRule = async (note, label) => {
     if (!dismissModalState) return;
-    const { eventId, errorMessage, gymId, ruleInfo, event } = dismissModalState;
+    const { eventId, errorMessage, gymId, ruleInfo } = dismissModalState;
     setDismissingError(`${eventId}-${errorMessage}`);
 
     try {
-      // Create the rule
       const isProgramSynonym = ruleInfo.ruleType === 'program_synonym';
       await gymValidValuesApi.create({
         gym_id: gymId,
@@ -183,7 +193,6 @@ export default function AdminAuditReview({ gyms }) {
         event_type: isProgramSynonym ? label.toUpperCase() : 'CAMP'
       });
 
-      // Dismiss the error with rule flag
       const { data: currentEvent, error: fetchError } = await supabase
         .from('events')
         .select('acknowledged_errors')
@@ -208,7 +217,6 @@ export default function AdminAuditReview({ gyms }) {
 
       if (updateError) throw updateError;
 
-      // Update local state
       setEvents(prev => prev.map(e =>
         e.id === eventId ? { ...e, acknowledged_errors: updatedAcknowledged } : e
       ));
@@ -222,15 +230,15 @@ export default function AdminAuditReview({ gyms }) {
     setDismissModalState(null);
   };
 
-  const gymName = gyms?.find(g => g.id === selectedGym)?.name || selectedGym;
+  const gymNames = selectedGyms.map(id => gyms?.find(g => g.id === id)?.name || id);
 
   return (
     <div className="space-y-4">
       {/* Filters */}
       <AdminAuditFilters
         gyms={gyms}
-        selectedGym={selectedGym}
-        onGymChange={handleGymChange}
+        selectedGyms={selectedGyms}
+        onGymsChange={handleGymsChange}
         selectedMonth={selectedMonth}
         onMonthChange={setSelectedMonth}
         selectedCategory={selectedCategory}
@@ -241,14 +249,12 @@ export default function AdminAuditReview({ gyms }) {
       />
 
       {/* Results Header */}
-      {selectedGym && !loading && (
+      {selectedGyms.length > 0 && !loading && (
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h3 className="font-bold text-gray-800">
-              {gymName}
-            </h3>
+          <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm text-gray-500">
               {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} with issues
+              {selectedGyms.length > 1 ? ` across ${selectedGyms.length} gyms` : ''}
             </span>
             {(counts.data > 0 || counts.format > 0 || counts.desc > 0) && (
               <div className="flex gap-1.5">
@@ -285,16 +291,16 @@ export default function AdminAuditReview({ gyms }) {
       )}
 
       {/* No Gym Selected */}
-      {!selectedGym && !loading && (
+      {selectedGyms.length === 0 && !loading && (
         <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
           <div className="text-4xl mb-3">📋</div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-1">Select a gym to review</h3>
-          <p className="text-sm text-gray-500">Choose a gym from the dropdown above to see all validation issues</p>
+          <h3 className="text-lg font-semibold text-gray-700 mb-1">Select gyms to review</h3>
+          <p className="text-sm text-gray-500">Choose one or more gyms from the dropdown above to see all validation issues</p>
         </div>
       )}
 
       {/* No Issues */}
-      {selectedGym && !loading && filteredEvents.length === 0 && (
+      {selectedGyms.length > 0 && !loading && filteredEvents.length === 0 && (
         <div className="text-center py-12 bg-green-50 rounded-xl border-2 border-green-200">
           <div className="text-4xl mb-3">✅</div>
           <h3 className="text-lg font-semibold text-green-700 mb-1">All clear!</h3>
@@ -302,23 +308,55 @@ export default function AdminAuditReview({ gyms }) {
         </div>
       )}
 
-      {/* Event Error Cards */}
-      {selectedGym && !loading && filteredEvents.length > 0 && (
-        <div className="space-y-3">
-          {filteredEvents.map(event => (
-            <AdminAuditErrorCard
-              key={event.id}
-              event={event}
-              onDismissError={handleDismissError}
-              dismissingError={dismissingError}
-              showDismissedErrors={showDismissed}
-            />
-          ))}
+      {/* Event Error Cards - grouped by gym when multiple selected */}
+      {selectedGyms.length > 0 && !loading && filteredEvents.length > 0 && (
+        <div className="space-y-6">
+          {selectedGyms.length > 1 ? (
+            // Multiple gyms: group by gym with headers
+            Object.keys(eventsByGym).sort().map(gymId => {
+              const gymName = gyms?.find(g => g.id === gymId)?.name || gymId;
+              const gymEvents = eventsByGym[gymId];
+              return (
+                <div key={gymId}>
+                  <div className="flex items-center gap-2 mb-3 pb-2 border-b-2 border-purple-200">
+                    <h3 className="font-bold text-purple-800 text-lg">{gymName}</h3>
+                    <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-medium">
+                      {gymEvents.length} event{gymEvents.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    {gymEvents.map(event => (
+                      <AdminAuditErrorCard
+                        key={event.id}
+                        event={event}
+                        onDismissError={handleDismissError}
+                        dismissingError={dismissingError}
+                        showDismissedErrors={showDismissed}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            // Single gym: flat list
+            <div className="space-y-3">
+              {filteredEvents.map(event => (
+                <AdminAuditErrorCard
+                  key={event.id}
+                  event={event}
+                  onDismissError={handleDismissError}
+                  dismissingError={dismissingError}
+                  showDismissedErrors={showDismissed}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Help text */}
-      {selectedGym && !loading && filteredEvents.length > 0 && (
+      {selectedGyms.length > 0 && !loading && filteredEvents.length > 0 && (
         <div className="text-center py-2 text-xs text-gray-500">
           💡 "✓ OK" = dismiss once | "+ Rule" = teach the system for this gym
         </div>
