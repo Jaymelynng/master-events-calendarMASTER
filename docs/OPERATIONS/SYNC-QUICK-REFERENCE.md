@@ -25,9 +25,9 @@ So our calendar always matches what's in iClassPro without manual data entry.
 
 1. **Open the Calendar** (teamcalendar.mygymtools.com)
 
-2. **Click the 🪄 Admin button** (top of page, next to Export)
+2. **Shift+Click the 🪄 wand** (in stats table header) → Admin Dashboard opens
 
-3. **Click "Open Automated Sync"**
+3. **Go to Quick Actions tab → Click "Automated Sync"**
 
 4. **Click a gym name** (like "Capital Gymnastics Cedar Park")
 
@@ -132,7 +132,7 @@ You can still click individual buttons (KNO, CLINIC, etc.) below the SYNC ALL bu
 ## ✅ MONTHLY CHECKLIST
 
 ```
-□ Click 🪄 Admin → Open Automated Sync
+□ Shift+Click 🪄 wand → Admin Dashboard → Quick Actions → Automated Sync
 □ CCP (Cedar Park) - SYNC ALL - Import
 □ CPF (Pflugerville) - SYNC ALL - Import
 □ CRR (Round Rock) - SYNC ALL - Import

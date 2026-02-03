@@ -216,8 +216,8 @@ Expected: Calendar loads with events
 
 ### **Test 3: Sync Works**
 ```
-1. Click 🪄 Admin button
-2. Click "Open Automated Sync"
+1. Shift+Click 🪄 wand → Admin Dashboard
+2. Quick Actions tab → Click "Automated Sync"
 3. Select a gym
 4. Click "🚀 SYNC ALL PROGRAMS"
 5. Wait for results

@@ -1,9 +1,9 @@
 # 🔐 ADMIN MODE - Complete Guide
-## Three-Tier Access System
+## Three-Tier Access System + Full-Page Admin Dashboard
 
-**Last Updated:** February 2, 2026  
-**Status:** ✅ Fully Implemented  
-**File:** `src/components/EventsDashboard/AdminPortalModal.js`
+**Last Updated:** February 2, 2026
+**Status:** ✅ Fully Implemented
+**Files:** `src/components/AdminDashboard/AdminDashboard.js` + sub-components
 
 ---
 
@@ -34,35 +34,40 @@ The Master Events Calendar has a **hidden admin system** with three levels of ac
 
 ### 🪄 **Level 2: Admin View (Jayme)**
 
-**Who:** You (Jayme)  
-**How to access:** Click the **🪄 Admin** button (next to Export button)  
+**Who:** You (Jayme)
+**How to access:** **Shift+Click** the 🪄 wand icon in the stats table header
 **What you see:**
 
-Everything from Level 1, PLUS:
-- ✅ **Automated Sync** - One-click sync from iClassPro (primary action)
-- ✅ **JSON Import (F12 Method)** - Bulk import via copy/paste
+A **full-page Admin Dashboard** replaces the calendar with **3 tabs**:
 
-**Where is the Admin button?**
-- Look for the **🪄 Admin** button in the button bar (near 📤 Export)
-- It's visible to everyone but only useful if you know what it does
+- ✅ **Audit & Review** (default tab) - See ALL validation errors across selected gyms, filter by category (DATA/FORMAT), month, program type, status (Active/Resolved). Dismiss errors or create permanent rules.
+- ✅ **Gym Rules** - View, add, delete per-gym validation rules (price, time, program_synonym). Rules grouped by gym.
+- ✅ **Quick Actions** - Automated Sync and JSON Import buttons. Super Admin tools require PIN.
+- ✅ **"Back to Calendar"** button returns to normal view
+
+**Where is the wand?**
+- In the stats table header row, there's a small 🪄 icon
+- **Shift+Click** it to open the Admin Dashboard
+- Regular click does nothing — protects against accidental access
 
 ---
 
 ### 🔒 **Level 3: Super Admin (Jayme Only)**
 
-**Who:** Only you  
-**How to access:** Inside Level 2 Admin Portal:
-1. Click the 🔐 lock icon (top right of modal), OR press the `*` key
+**Who:** Only you
+**How to access:** Inside the Admin Dashboard:
+1. Click the 🔐 lock icon (top right of header), OR press the `*` key
 2. Enter PIN: `1426`
 3. Click "Unlock"
 
 **What you see:**
 
-Everything from Level 1 and 2, PLUS:
+Everything from Level 2, PLUS (in the Quick Actions tab):
 - ✅ **Supabase Dashboard Link** - Direct access to database editor
 - ✅ **Railway Dashboard Link** - Direct access to API server
 - ✅ **Audit History** - See all changes made to events
-- ✅ **Gym Rules Manager** - View, add, and delete per-gym validation rules
+- ✅ **Automated Sync** button - Opens the SyncModal
+- ✅ **JSON Import** button - Opens the BulkImportModal
 
 **Why is this hidden?**
 - These links give FULL access to your infrastructure
@@ -73,13 +78,15 @@ Everything from Level 1 and 2, PLUS:
 
 ## 🎮 HOW TO USE EACH LEVEL
 
-### Accessing Level 2 (Admin)
+### Accessing Level 2 (Admin Dashboard)
 
 ```
 Step 1: Go to your calendar
-Step 2: Find the 🪄 Admin button (in the button bar near Export)
-Step 3: Click the Admin button
-Step 4: Admin Control Center opens!
+Step 2: Find the 🪄 wand icon in the stats table header
+Step 3: Hold Shift and click the wand
+Step 4: Full-page Admin Dashboard opens (replaces calendar)
+Step 5: Use tabs: Audit & Review | Gym Rules | Quick Actions
+Step 6: Click "Back to Calendar" when done
 ```
 
 ---
@@ -87,14 +94,14 @@ Step 4: Admin Control Center opens!
 ### Accessing Level 3 (Super Admin)
 
 ```
-Step 1: Open Level 2 Admin Portal (Click 🪄 Admin button)
-Step 2: Look for the 🔐 lock icon (top right of the modal)
+Step 1: Open Admin Dashboard (Shift+Click 🪄 wand)
+Step 2: Look for the 🔐 lock icon (top right of the dashboard header)
 Step 3: Either:
    - Click the 🔐 lock icon, OR
    - Press: * (asterisk key)
 Step 4: Enter PIN: 1426 in the popup
 Step 5: Click "Unlock"
-Step 6: Super Admin features appear!
+Step 6: Super Admin badge appears, Quick Actions tab unlocks all tools
 ```
 
 **The PIN is:** `1426`
@@ -125,47 +132,39 @@ Step 6: Super Admin features appear!
 └─────────────────────────────────────────┘
 ```
 
-### Level 2 (Admin View)
+### Level 2 (Admin Dashboard - Full Page)
 ```
-┌─────────────────────────────────────────┐
-│  🪄 Admin Control Center    [Admin] 🔐× │
-├─────────────────────────────────────────┤
-│                                         │
-│  ⚡ Automated Sync  [PRIMARY]           │
-│  Automatically collect from iClassPro   │
-│  [Open Automated Sync]                  │
-│                                         │
-│  🚀 JSON Import (F12 Method)            │
-│  Import multiple events from F12        │
-│  [Open JSON Import]                     │
-│                                         │
-└─────────────────────────────────────────┘
-```
-
-### Level 3 (Super Admin)
-```
-┌─────────────────────────────────────────────────┐
-│  🪄 Admin Control Center   [🔐 Super Admin] ×  │
-├─────────────────────────────────────────────────┤
-│  🔐 Super Admin Tools    [Exit Super Admin]     │
-│  ┌──────────┐ ┌──────────┐ ┌───────────────┐    │
-│  │🗄️Supabase│ │🚂Railway │ │🔍Audit History│    │
-│  └──────────┘ └──────────┘ └───────────────┘    │
-│                                                 │
-│  📋 Gym Rules  (prices, times, synonyms)      ▼ │
-│  ┌───────────────────────────────────────────┐  │
-│  │ RBA | price | $20 = "Before Care"    [✕]  │  │
-│  │ RBK | time  | 8:30 am = "Early Drop" [✕]  │  │
-│  │ ALL | synonym| gym fun friday = "OPEN GYM" │  │
-│  │ [Gym...] [Type▾] [Value] [Label] [+Add]   │  │
-│  └───────────────────────────────────────────┘  │
-│                                                 │
-│  ⚡ Automated Sync                              │
-│  [Open Automated Sync]                          │
-│                                                 │
-│  🚀 JSON Import (F12 Method)                    │
-│  [Open JSON Import]                             │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  ← Back to Calendar │ 🪄 Admin Dashboard [Admin] 🔐    │
+│  [Audit & Review] [Gym Rules] [Quick Actions]           │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  AUDIT & REVIEW TAB (default):                          │
+│  ┌─ Gyms ──────────────────────────────────────────┐    │
+│  │ [✓] All Gyms  [✓] CCP  [ ] CPF  [✓] EST  ...  │    │
+│  └─────────────────────────────────────────────────┘    │
+│  Month: [All▾]  Program: [All▾]  Status: [Active▾]     │
+│  [ALL] [DATA (8)] [FORMAT (13)]                         │
+│                                                         │
+│  ── EST (3 events) ────────────────────────────         │
+│  ┌ Camp | Spring Break | 2026-03-16 ──────────┐        │
+│  │ 🚨 HIGH: Data Errors                       │        │
+│  │   Camp Price Mismatch: $20 not in...  [✓OK] │        │
+│  │ ⚠️ FORMAT: Missing/Incomplete Info          │        │
+│  │   Flyer Only (no text)                      │        │
+│  └─────────────────────────────────────────────┘        │
+│                                                         │
+│  GYM RULES TAB:                                         │
+│  📋 All Gym Rules (12 rules)                            │
+│  RBA | price | $20 = "Before Care"              [✕]     │
+│  ALL | synonym | gym fun friday = "OPEN GYM"    [✕]     │
+│  ➕ Add New Rule: [Gym▾] [Type▾] [Value] [Label] [+]   │
+│                                                         │
+│  QUICK ACTIONS TAB (Super Admin):                       │
+│  [⚡ Automated Sync]  [🚀 JSON Import]                  │
+│  [🗄️ Supabase] [🚂 Railway] [🔍 Audit History]          │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -173,55 +172,58 @@ Step 6: Super Admin features appear!
 ## 🔧 TECHNICAL DETAILS (For AI/Developers)
 
 ### Code Location
-**File:** `src/components/EventsDashboard/AdminPortalModal.js`
+**Main file:** `src/components/AdminDashboard/AdminDashboard.js`
+**Sub-components:**
+- `AdminAuditReview.js` — Audit & Review tab
+- `AdminAuditFilters.js` — Filter bar (gym checkboxes, month, program, status, category)
+- `AdminAuditErrorCard.js` — Single event error card
+- `AdminGymRules.js` — Gym Rules tab
+- `AdminQuickActions.js` — Quick Actions tab
 
 ### How Level 2 Access Works
 ```javascript
-// In EventsDashboard.js
-<button
-  onClick={() => setShowAdminPortal(true)}
->
-  🪄 Admin
-</button>
+// In EventsDashboard.js — state-based view swap (no router)
+if (showAdminPortal) {
+  return <AdminDashboard gyms={gyms} onClose={() => setShowAdminPortal(false)} ... />;
+}
+// Normal calendar renders below...
 ```
+
+The trigger is a Shift+Click on the 🪄 wand icon in the stats table header. This sets `showAdminPortal = true`, causing the full-page dashboard to render instead of the calendar.
 
 ### How Level 3 Access Works
 ```javascript
-// In AdminPortalModal.js
+// In AdminDashboard.js
 const [superAdminMode, setSuperAdminMode] = useState(false);
-const [pinInput, setPinInput] = useState('');
-const [showPinModal, setShowPinModal] = useState(false);
-const SUPER_ADMIN_PIN = '1426';
+const SUPER_ADMIN_PIN = process.env.REACT_APP_ADMIN_PIN || '1426';
 
 // * key shows PIN modal (or toggles off if already in super admin)
+// Ignores keypresses in INPUT/TEXTAREA/SELECT elements
 useEffect(() => {
   const handleKeyDown = (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     if (e.key === '*') {
-      if (superAdminMode) {
-        setSuperAdminMode(false);  // Toggle off
-      } else {
-        setShowPinModal(true);     // Show PIN input
-      }
+      if (superAdminMode) setSuperAdminMode(false);
+      else { setShowPinModal(true); setPinInput(''); }
     }
   };
   window.addEventListener('keydown', handleKeyDown);
   return () => window.removeEventListener('keydown', handleKeyDown);
 }, [superAdminMode]);
-
-// Unlock with correct PIN
-const handlePinSubmit = () => {
-  if (pinInput === SUPER_ADMIN_PIN) {
-    setSuperAdminMode(true);
-    setShowPinModal(false);
-  }
-};
 ```
 
 ### State Management
-- `superAdminMode` resets to `false` when modal closes
-- User must re-enter PIN each time they open admin portal
+- `superAdminMode` resets to `false` when dashboard closes
+- User must re-enter PIN each time they open the admin dashboard
 - Press `*` again to exit Super Admin mode
 - This is intentional for security
+
+### Admin Dashboard Tabs
+| Tab | Component | When Visible |
+|-----|-----------|-------------|
+| Audit & Review | `AdminAuditReview` | Always (default tab) |
+| Gym Rules | `AdminGymRules` | Always |
+| Quick Actions | `AdminQuickActions` | Always (Super Admin tools hidden behind PIN) |
 
 ### Super Admin Tools URLs
 ```javascript
@@ -240,17 +242,18 @@ These features were removed during cleanup:
 
 | Feature | Removed Date | Reason |
 |---------|--------------|--------|
+| AdminPortalModal (popup) | Feb 2, 2026 | Replaced with full-page AdminDashboard with tabs |
+| Visible Admin button | Feb 2, 2026 | Replaced with Shift+Click wand (cleaner for public view) |
 | Skill Clinic Link Editor | Dec 28, 2025 | Confusing placement; links already configured in Supabase `gym_links` table |
 | Quick Add Event | Dec 18, 2025 | Automated Sync is the preferred method |
 | Export Data (in Admin) | Dec 18, 2025 | Moved to main UI (visible to everyone) |
-| Shift+Click to open Admin | Dec 18, 2025 | Replaced with visible 🪄 Admin button |
 
 ---
 
 ## ❓ FAQ
 
 ### **Q: Can I change the PIN?**
-A: Yes! Edit `AdminPortalModal.js` and change `SUPER_ADMIN_PIN = '1426'` to whatever you want.
+A: Yes! Set `REACT_APP_ADMIN_PIN` in your Vercel environment variables, or edit `AdminDashboard.js` directly. Default is `1426`.
 
 ### **Q: What if I forget the PIN?**
 A: It's `1426`. Also, you can press `*` instead. And it's in this document!
@@ -274,16 +277,15 @@ A: Because this is faster and simpler for a single-user admin scenario. Real aut
 
 ---
 
-## 📜 LEGACY ACCESS (Still in Code)
+## 📜 ACCESS METHOD
 
-### Hidden Shift+Click Wand
-There's still a hidden 🪄 wand icon in the stats table header that opens the Admin Portal when **Shift+Clicked**.
+### Shift+Click Wand (Primary Method)
+The 🪄 wand icon in the stats table header opens the full-page Admin Dashboard when **Shift+Clicked**.
 
-**Location:** Stats table, in the header row  
-**How it works:** Shift+Click the small wand icon  
-**Status:** Still functional but not documented for users
-
-This was the original access method before the visible Admin button was added. It remains as a backup.
+**Location:** Stats table, in the header row
+**How it works:** Shift+Click the small wand icon
+**What happens:** Calendar view is replaced with full-page Admin Dashboard
+**Return:** Click "Back to Calendar" button in the dashboard header
 
 ---
 
@@ -303,9 +305,15 @@ This was the original access method before the visible Admin button was added. I
 
 | Date | Change |
 |------|--------|
+| Feb 2, 2026 | **MAJOR** Replaced AdminPortalModal with full-page AdminDashboard (3 tabs) |
+| Feb 2, 2026 | **NEW** Audit & Review tab — see all validation errors across gyms with filters |
+| Feb 2, 2026 | **NEW** Gym Rules tab — view/add/delete per-gym validation rules |
+| Feb 2, 2026 | **NEW** Quick Actions tab — Sync, Import, Super Admin tools |
+| Feb 2, 2026 | **NEW** Multi-select gym checkboxes in Audit & Review (grid layout) |
+| Feb 2, 2026 | **NEW** Status filter (Active Only / All / Resolved Only) |
+| Feb 2, 2026 | **NEW** Category filter buttons (ALL / DATA / FORMAT) |
 | Feb 2, 2026 | Added program synonym rule type + ALL (global) gym option |
-| Feb 2, 2026 | Added Gym Rules manager to Super Admin tools |
-| Feb 2, 2026 | Updated Level 3 diagram to show Gym Rules section |
+| Feb 2, 2026 | Reverted to Shift+Click wand access (cleaner public view) |
 | Dec 28, 2025 | Merged MAGIC_CONTROL_FEATURES.md into this doc |
 | Dec 28, 2025 | Added Removed Features section |
 | Dec 28, 2025 | Added Related Documentation links |

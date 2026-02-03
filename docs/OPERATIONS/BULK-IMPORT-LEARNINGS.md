@@ -178,7 +178,7 @@ ORDER BY last_synced DESC;
 ## 📊 CURRENT WORKFLOW (December 2025)
 
 ### **Primary Method: Automated Sync**
-1. Click **🪄 Admin** button → **Open Automated Sync**
+1. Shift+Click **🪄 wand** → Admin Dashboard → **Quick Actions** → **Automated Sync**
 2. Select gym → Click **🚀 SYNC ALL PROGRAMS**
 3. Review results → Click **Import**
 4. Done!

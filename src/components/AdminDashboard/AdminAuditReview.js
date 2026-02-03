@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { gymValidValuesApi } from '../../lib/api';
-import { inferErrorCategory, isErrorAcknowledged, canAddAsRule, extractRuleValue } from '../../lib/validationHelpers';
+import { inferErrorCategory, isErrorAcknowledged, canAddAsRule, extractRuleValue, computeAccuracyStats } from '../../lib/validationHelpers';
 import AdminAuditFilters from './AdminAuditFilters';
 import AdminAuditErrorCard from './AdminAuditErrorCard';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
@@ -226,6 +226,49 @@ export default function AdminAuditReview({ gyms }) {
     setDismissModalState(null);
   };
 
+  // Handle verify error - toggle checkbox
+  const handleVerifyError = async (event, errorMessage, isChecked, errorObj = null) => {
+    try {
+      const { data: currentEvent, error: fetchError } = await supabase
+        .from('events')
+        .select('verified_errors')
+        .eq('id', event.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentVerified = currentEvent?.verified_errors || [];
+      // Remove existing entry for this message
+      const filtered = currentVerified.filter(v => v.message !== errorMessage);
+
+      // If checking, add new entry
+      if (isChecked) {
+        filtered.push({
+          message: errorMessage,
+          verified_at: new Date().toISOString(),
+          category: errorObj ? inferErrorCategory(errorObj) : 'formatting',
+        });
+      }
+
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ verified_errors: filtered })
+        .eq('id', event.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setEvents(prev => prev.map(e =>
+        e.id === event.id ? { ...e, verified_errors: filtered } : e
+      ));
+    } catch (err) {
+      console.error('Error verifying error:', err);
+    }
+  };
+
+  // Compute accuracy stats from pre-filtered events
+  const accuracyStats = computeAccuracyStats(preFilteredEvents);
+
   const gymNames = selectedGyms.map(id => gyms?.find(g => g.id === id)?.name || id);
 
   return (
@@ -260,6 +303,26 @@ export default function AdminAuditReview({ gyms }) {
               )}
               {(counts.format > 0 || counts.desc > 0) && (
                 <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded">{(counts.format || 0) + (counts.desc || 0)} FORMAT</span>
+              )}
+            </div>
+          )}
+          {/* Accuracy Score */}
+          {accuracyStats.total > 0 && (
+            <div className="flex items-center gap-2 ml-auto bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+              <span className="text-xs text-gray-500">📊 Accuracy:</span>
+              {accuracyStats.total >= 5 ? (
+                <>
+                  <div className="w-16 bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${accuracyStats.accuracyPct >= 80 ? 'bg-green-500' : accuracyStats.accuracyPct >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                      style={{ width: `${accuracyStats.accuracyPct}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs font-bold text-gray-700">{accuracyStats.accuracyPct}%</span>
+                  <span className="text-[10px] text-gray-400">({accuracyStats.verified}✓ / {accuracyStats.dismissed}✗ of {accuracyStats.total} reviewed)</span>
+                </>
+              ) : (
+                <span className="text-[10px] text-gray-400">{accuracyStats.total}/5 reviewed — keep going!</span>
               )}
             </div>
           )}
@@ -314,6 +377,7 @@ export default function AdminAuditReview({ gyms }) {
                         key={event.id}
                         event={event}
                         onDismissError={handleDismissError}
+                        onVerifyError={handleVerifyError}
                         dismissingError={dismissingError}
                         showDismissedErrors={showResolved}
                         showActiveErrors={showActive}
@@ -332,9 +396,10 @@ export default function AdminAuditReview({ gyms }) {
                   key={event.id}
                   event={event}
                   onDismissError={handleDismissError}
+                  onVerifyError={handleVerifyError}
                   dismissingError={dismissingError}
                   showDismissedErrors={showResolved}
-                        showActiveErrors={showActive}
+                  showActiveErrors={showActive}
                   selectedCategory={selectedCategory}
                 />
               ))}
@@ -346,7 +411,7 @@ export default function AdminAuditReview({ gyms }) {
       {/* Help text */}
       {selectedGyms.length > 0 && !loading && filteredEvents.length > 0 && (
         <div className="text-center py-2 text-xs text-gray-500">
-          💡 "✓ OK" = dismiss once | "+ Rule" = teach the system for this gym
+          💡 ☑ = verified real issue | "✓ OK" = dismiss/not accurate | "+ Rule" = teach the system
         </div>
       )}
 

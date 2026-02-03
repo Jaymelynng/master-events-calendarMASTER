@@ -96,6 +96,38 @@ export const processEventsWithIssues = (events) => {
   });
 };
 
+// Check if an error has been verified
+export const isErrorVerified = (verifiedErrors, errorMessage) => {
+  if (!verifiedErrors || !Array.isArray(verifiedErrors)) return null;
+  return verifiedErrors.find(v => v.message === errorMessage) || null;
+};
+
+// Compute accuracy stats from an array of events
+export const computeAccuracyStats = (events) => {
+  let verified = 0;
+  let dismissed = 0;
+
+  (events || []).forEach(event => {
+    const verifiedArr = event.verified_errors || [];
+    const acknowledgedArr = event.acknowledged_errors || [];
+    verified += verifiedArr.length;
+    // Only count acknowledged errors that aren't ALSO verified (avoid double-counting)
+    acknowledgedArr.forEach(ack => {
+      const msg = typeof ack === 'string' ? ack : ack.message;
+      const alsoVerified = verifiedArr.some(v => v.message === msg);
+      if (!alsoVerified) dismissed++;
+    });
+  });
+
+  const total = verified + dismissed;
+  return {
+    total,
+    verified,
+    dismissed,
+    accuracyPct: total > 0 ? Math.round((verified / total) * 100) : null,
+  };
+};
+
 // Get error type label for display
 export const getErrorLabel = (type) => {
   const labels = {

@@ -126,8 +126,8 @@ A **fully automated event management system** that collects events from all 10 g
 4. Use filters to find specific events
 
 ### **For Updating (Jayme):**
-1. Click the 🪄 Admin button (top of page)
-2. Click "Open Automated Sync"
+1. Shift+Click the 🪄 wand → Admin Dashboard opens
+2. Go to Quick Actions → Click "Automated Sync"
 3. Select gym → Click "🚀 SYNC ALL PROGRAMS"
 4. Review results → Click "Import"
 5. Repeat for other gyms (or use one-by-one sync)

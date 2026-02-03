@@ -2,7 +2,7 @@
 
 **Last Updated:** February 2, 2026  
 **Status:** ✅ Fully Deployed  
-**Files:** `automation/f12_collect_and_import.py`, `src/components/EventsDashboard.js`, `src/components/EventsDashboard/DismissRuleModal.js`
+**Files:** `automation/f12_collect_and_import.py`, `src/components/EventsDashboard.js`, `src/components/EventsDashboard/DismissRuleModal.js`, `src/components/AdminDashboard/AdminAuditReview.js`
 
 ---
 
@@ -393,7 +393,7 @@ SET
   flyer_url = NULL;
 ```
 
-Then re-sync gyms: **🪄 Admin → Open Automated Sync**
+Then re-sync gyms: **Admin Dashboard → Quick Actions → Automated Sync**
 
 ## CAMP Validation (Enabled Jan 6, 2026)
 
@@ -426,8 +426,12 @@ Camp events now receive **full validation** including:
 - `automation/f12_collect_and_import.py` - Validation logic runs during sync
 - `automation/local_api_server.py` - ALLOWED_EVENT_FIELDS includes validation fields
 - `src/lib/eventComparison.js` - Comparison includes validation fields
+- `src/lib/validationHelpers.js` - Shared helpers (inferErrorCategory, canAddAsRule, etc.)
 - `src/components/EventsDashboard/SyncModal.js` - Update logic saves validation fields
 - `src/components/EventsDashboard.js` - Displays icons on calendar
+- `src/components/AdminDashboard/AdminAuditReview.js` - Bulk review of validation errors
+- `src/components/AdminDashboard/AdminAuditErrorCard.js` - Error card with dismiss buttons
+- `src/components/AdminDashboard/AdminGymRules.js` - Rules management
 
 ### Validation Flow
 ```
@@ -449,12 +453,20 @@ Sometimes a validation warning is a **false positive** - the data is actually co
 
 ### Option 1: Accept Exception (One-Time Dismiss)
 
+**From Calendar (Event Details panel):**
 1. Click on the event in the calendar
 2. In the Event Details panel, you'll see the warning with a **[✓ OK]** button
 3. Click **[✓ OK]** — a custom modal appears
 4. Optionally add a note explaining why it's OK
 5. Click **"Accept Exception"** — dismisses this one time only
 6. Badge shows: **One-time** (gray)
+
+**From Admin Dashboard (Audit & Review tab):**
+1. Shift+Click 🪄 wand → Admin Dashboard opens
+2. Select gyms via checkboxes → validation errors load
+3. Filter by category (DATA/FORMAT), month, program type, status
+4. Click **[✓ OK]** on any error → same DismissRuleModal opens
+5. Accept exception or create permanent rule
 
 ### Option 2: Make Permanent Rule (Never Flag Again)
 
@@ -489,15 +501,15 @@ Previously, program name variations like "Gym Fun Friday" → Open Gym were hard
 - Gym-specific rules override or extend global rules
 
 **To add a new synonym:**
-1. Go to Admin → Super Admin → 📋 Gym Rules
+1. Go to Admin Dashboard → Gym Rules tab
 2. Select gym (or "ALL" for global), type "Program Synonym"
 3. Enter the keyword (e.g., "ninja night") and what it maps to (e.g., "KIDS NIGHT OUT")
-4. Or click "Make Permanent Rule" on any program mismatch error during sync
+4. Or click "Make Permanent Rule" on any program mismatch error (from calendar details panel or Admin Dashboard Audit & Review tab)
 
 ### Managing Rules
 
-Rules can also be viewed, added, and deleted in:
-**🪄 Admin → Super Admin (PIN) → 📋 Gym Rules**
+Rules can be viewed, added, and deleted in:
+**Admin Dashboard → Gym Rules tab** (no Super Admin PIN required for this tab)
 
 ### What Happens When You Dismiss
 
@@ -534,6 +546,7 @@ If you dismissed something by mistake:
 
 | Date | Change |
 |------|--------|
+| Feb 2, 2026 | **NEW** Admin Dashboard Audit & Review tab — bulk review/dismiss errors across gyms with filters |
 | Feb 2, 2026 | **NEW** Program synonym rules — program name variations now managed via database instead of hardcoded |
 | Feb 2, 2026 | **NEW** Global rules (gym_id='ALL') apply to all gyms, merged with gym-specific rules |
 | Feb 2, 2026 | **ENHANCED** "Make Permanent Rule" now available on program_mismatch and missing_program_in_title errors |

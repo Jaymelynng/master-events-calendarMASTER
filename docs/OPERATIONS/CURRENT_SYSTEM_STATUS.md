@@ -116,13 +116,18 @@ Prevent false positive validation errors with per-gym rules:
 
 ---
 
-### ✅ **Secret Admin Mode (3 Tiers)**
+### ✅ **Full-Page Admin Dashboard (3 Tiers + Tabs)**
 
 | Level | Who | How to Access | What You See |
 |-------|-----|---------------|--------------|
 | 1 | Everyone | Just visit the site | Calendar, event details, stats, export |
-| 2 | Admin (Jayme) | Click Admin button | JSON Import, Automated Sync |
-| 3 | Super Admin (Jayme only) | Inside Admin, click lock + enter PIN `1426` | Supabase link, Railway link, Audit History |
+| 2 | Admin (Jayme) | Shift+Click 🪄 wand | Full-page Admin Dashboard with 3 tabs |
+| 3 | Super Admin (Jayme only) | Inside dashboard, press `*` + enter PIN `1426` | Quick Actions: Supabase, Railway, Audit History, Sync, Import |
+
+**Admin Dashboard Tabs:**
+- **Audit & Review** — See all validation errors across selected gyms, filter by DATA/FORMAT category, month, program type, Active/Resolved status. Dismiss errors or create permanent rules.
+- **Gym Rules** — View, add, delete per-gym validation rules (price, time, program_synonym).
+- **Quick Actions** — Automated Sync, JSON Import (Super Admin required for infrastructure links).
 
 ---
 
@@ -197,7 +202,10 @@ Tracks visitors and page views on your calendar.
 - ✅ Validation error icons on calendar
 - ✅ Dismiss validation warnings feature
 - ✅ Per-gym validation rules with dismiss modal
-- ✅ Gym Rules manager in Super Admin
+- ✅ Gym Rules manager in Admin Dashboard
+- ✅ Full-page Admin Dashboard with Audit & Review, Gym Rules, Quick Actions tabs
+- ✅ Multi-select gym checkboxes with grid layout in Audit & Review
+- ✅ Error category filter (DATA/FORMAT) and status filter (Active/Resolved)
 
 ---
 
@@ -256,7 +264,10 @@ Calendar Refreshes via Real-time Subscription
 |------|---------|
 | `src/components/EventsDashboard.js` | Main dashboard with calendar & camp consolidation |
 | `src/components/EventsDashboard/SyncModal.js` | Automated sync UI |
-| `src/components/EventsDashboard/AdminPortalModal.js` | Admin portal with tiers |
+| `src/components/AdminDashboard/AdminDashboard.js` | Full-page admin dashboard (tabs, PIN, layout) |
+| `src/components/AdminDashboard/AdminAuditReview.js` | Audit & Review tab |
+| `src/components/AdminDashboard/AdminGymRules.js` | Gym Rules tab |
+| `src/components/AdminDashboard/AdminQuickActions.js` | Quick Actions tab |
 | `src/components/EventsDashboard/ExportModal.js` | Data export UI |
 | `src/lib/api.js` | Database API functions |
 | `src/lib/eventComparison.js` | New/changed/deleted logic |
@@ -350,6 +361,8 @@ You built this entire system through **vibe coding** with AI assistance:
 
 | Date | Changes |
 |------|---------|
+| Feb 2, 2026 | **MAJOR** Full-page Admin Dashboard replacing AdminPortalModal (3 tabs: Audit & Review, Gym Rules, Quick Actions) |
+| Feb 2, 2026 | Added Audit & Review tab with multi-gym selection, category/status/month/program filters |
 | Feb 2, 2026 | Added program_synonym rule type — program name overrides now in database |
 | Feb 2, 2026 | Added global rules (gym_id='ALL') for rules that apply to every gym |
 | Feb 2, 2026 | Added per-gym validation rules system (gym_valid_values) |

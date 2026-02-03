@@ -871,10 +871,10 @@ const { data, error } = await supabase
   - `comparison` - Comparison results (new, changed, unchanged, deleted)
   - `syncLog` - Array of sync log entries for progress tracker
 
-#### `AdminPortalModal.js`
-- **Purpose:** Admin portal with sync button
-- **Location:** `src/components/EventsDashboard/AdminPortalModal.js`
-- **Function:** Opens `SyncModal` when "⚡ Open Sync Modal" clicked
+#### `AdminDashboard.js` (replaced AdminPortalModal)
+- **Purpose:** Full-page admin dashboard with tabs
+- **Location:** `src/components/AdminDashboard/AdminDashboard.js`
+- **Function:** 3 tabs — Audit & Review, Gym Rules, Quick Actions. Opens `SyncModal` from Quick Actions tab.
 
 ### 2. Flask API Server
 
@@ -1374,7 +1374,7 @@ app.run(host='127.0.0.1', port=5000, debug=True)
 
 ### JavaScript Files
 - `src/components/EventsDashboard/SyncModal.js` - Main sync UI (radio buttons + event type buttons)
-- `src/components/EventsDashboard/AdminPortalModal.js` - Admin portal
+- `src/components/AdminDashboard/AdminDashboard.js` - Full-page admin dashboard
 - `src/components/EventsDashboard.js` - Event details sidebar (shows description)
 - `src/lib/eventComparison.js` - Comparison logic
 - `src/lib/api.js` - Database API functions (eventsApi, syncLogApi)

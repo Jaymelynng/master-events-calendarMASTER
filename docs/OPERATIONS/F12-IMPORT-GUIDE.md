@@ -107,10 +107,10 @@ When you visit a gym's event page (like Capital Gymnastics), the page makes API 
 
 ## 👥 STEP-BY-STEP USER WORKFLOW
 
-### **Step 1: Access the Admin Portal**
+### **Step 1: Access the Admin Dashboard**
 1. **Go to Master Events app** (`teamcalendar.mygymtools.com`)
-2. **Click** the "🪄 Admin" button (top of page, next to Export)
-3. **Click "Open JSON Import"** in the secondary actions section
+2. **Shift+Click** the 🪄 wand icon (in stats table header) → Admin Dashboard opens
+3. Go to **Quick Actions** tab → **Click "JSON Import"**
 
 ### **Step 2: Open All Gym Pages (Bulk Method)**
 1. **Supabase link available in Admin Portal** (for cross-checking existing data)
@@ -668,8 +668,8 @@ const totalMs = performance.now() - t0;
 
 ## 🎨 USER INTERFACE COMPONENTS
 
-### **Admin Portal Access:**
-The 🪄 Admin button is visible at the top of the calendar. Click it to open the Admin Control Center, then click "Open JSON Import" to access the F12 import modal.
+### **Admin Dashboard Access:**
+Shift+Click the 🪄 wand icon in the stats table header to open the full-page Admin Dashboard. Go to the Quick Actions tab and click "JSON Import" to access the F12 import modal.
 
 ### **F12 Import Modal Structure:**
 ```jsx

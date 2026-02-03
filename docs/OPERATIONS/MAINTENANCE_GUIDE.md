@@ -23,7 +23,7 @@
 
 **Steps:**
 1. Open the dashboard
-2. Click **🪄 Admin** button → **Open Automated Sync**
+2. Shift+Click **🪄 wand** → Admin Dashboard → **Quick Actions** → **Automated Sync**
 3. Select each gym → Click **🚀 SYNC ALL PROGRAMS**
 4. Wait for confirmation (green checkmarks)
 5. Click **Import** if there are new/changed events

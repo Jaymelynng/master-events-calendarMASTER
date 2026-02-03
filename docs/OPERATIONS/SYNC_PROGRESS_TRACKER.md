@@ -71,8 +71,8 @@ The tracker shows how long ago you synced:
 
 ## 📍 WHERE TO FIND IT
 
-1. Click the **🪄 Admin** button (top of calendar, next to Export)
-2. Click **"Open Automated Sync"**
+1. **Shift+Click** the 🪄 wand icon (in stats table header) → Admin Dashboard opens
+2. Go to **Quick Actions** tab → Click **"Automated Sync"**
 3. The progress tracker is at the **TOP of the sync modal**
 4. Click **[Collapse]** to hide it, **[Expand]** to show it
 

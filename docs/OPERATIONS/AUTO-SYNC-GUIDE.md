@@ -21,17 +21,18 @@ Automated Sync is the **main feature** of the Master Events Calendar. It lets yo
 
 ## 🚀 HOW TO USE AUTOMATED SYNC
 
-### Step 1: Open the Admin Portal
+### Step 1: Open the Admin Dashboard
 
 1. Go to your calendar
-2. Look for the **"🪄 Admin"** button at the top of the dashboard
-3. Click it to open Admin Control Center
+2. Find the 🪄 wand icon in the stats table header
+3. **Shift+Click** it to open the full-page Admin Dashboard
 
 ### Step 2: Open Automated Sync
 
-1. In the Admin Control Center, you'll see the **"⚡ Automated Sync"** section
-2. Click **"Open Automated Sync"**
-3. The Sync Modal opens
+1. In the Admin Dashboard, click the **"Quick Actions"** tab
+2. If prompted, enter Super Admin PIN (`1426`)
+3. Click **"⚡ Automated Sync"** button
+4. The Sync Modal opens
 
 ### Step 3: Select a Gym
 
@@ -276,7 +277,8 @@ The system compares events by **event_url** (unique identifier).
 - Some warnings are false positives (e.g., $20 Before Care pricing, 8:30am Early Dropoff)
 - You can dismiss warnings as **one-time exceptions** or **permanent rules** per gym
 - Permanent rules are stored in `gym_valid_values` and checked during future syncs
-- Manage rules in: **🪄 Admin → Super Admin → 📋 Gym Rules**
+- Manage rules in: **Admin Dashboard → Gym Rules tab**
+- Review all errors across gyms: **Admin Dashboard → Audit & Review tab**
 
 ---
 
@@ -295,8 +297,8 @@ If a gym doesn't have any events of that type scheduled:
 
 ### Monthly Full Sync (Recommended - Using SYNC ALL)
 
-1. Open Admin Portal (click 🪄 Admin button)
-2. Click "Open Automated Sync"
+1. Open Admin Dashboard (Shift+Click 🪄 wand)
+2. Go to Quick Actions tab → Click "Automated Sync"
 3. Look at progress tracker - see what needs syncing
 4. Select first gym
 5. Click **"🚀 SYNC ALL PROGRAMS"**
@@ -310,8 +312,8 @@ If a gym doesn't have any events of that type scheduled:
 
 ### Quick Update (Daily/Weekly)
 
-1. Open Admin Portal
-2. Click "Open Automated Sync"
+1. Open Admin Dashboard (Shift+Click 🪄 wand)
+2. Go to Quick Actions → Click "Automated Sync"
 3. Look at progress tracker
 4. Select gym that needs update
 5. Either:
@@ -449,16 +451,26 @@ This section documents the evolution of the sync system - what was tried, what c
 </button>
 ```
 
-### Phase 2: Visible Admin Button (Current)
+### Phase 2: Visible Admin Button (Dec 2025 - Feb 2026)
+
+**What it was:**
+- A visible **"🪄 Admin"** button at top of dashboard
+- Opened an AdminPortalModal popup
+
+**Status:** Replaced by full-page Admin Dashboard
+
+### Phase 2b: Full-Page Admin Dashboard (Current - Feb 2026)
 
 **What changed:**
-- Added a visible **"🪄 Admin"** button at top of dashboard
-- No shift-click required - just click it
+- Replaced AdminPortalModal popup with full-page AdminDashboard
+- Shift+Click wand in stats header opens full-page dashboard
+- 3 tabs: Audit & Review, Gym Rules, Quick Actions
+- Audit & Review tab lets you see ALL validation errors across multiple gyms at once
 
 **Why it changed:**
-- Once automation was working reliably, hiding it felt unnecessary
-- Faster access for daily use
-- Still requires clicking into Admin Portal, then Automated Sync (2 steps = some protection)
+- Need to review validation errors across all gyms in one view
+- Modal was too cramped for the audit workflow
+- Full-page gives room for filters, multi-gym selection, error cards
 
 **Status:** ✅ Current primary method
 

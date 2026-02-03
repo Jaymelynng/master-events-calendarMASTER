@@ -3,8 +3,8 @@
 
 **Live URL:** https://teamcalendar.mygymtools.com  
 **Last Updated:** February 2, 2026  
-**Version:** Production 3.2  
-**Status:** ✅ FULLY DEPLOYED & WORKING  
+**Version:** Production 3.3
+**Status:** ✅ FULLY DEPLOYED & WORKING
 **Part of:** mygymtools.com suite
 
 ---
@@ -46,7 +46,7 @@ Your Master Events Calendar is a **production-deployed event management platform
 1. **📅 Real-Time Calendar** - Live event tracking across all gyms and months
 2. **⚡ Automated Sync** - One-click event collection from iClassPro portals
 3. **📊 Sync Progress Tracker** - Visual grid showing sync status for all gyms
-4. **🔐 Admin Mode** - 3-tier access system (Normal/Admin/Super Admin)
+4. **🔐 Admin Mode** - 3-tier access system (Normal/Admin/Super Admin) with full-page Admin Dashboard
 5. **📱 Responsive Design** - Works on mobile, tablet, desktop
 6. **📈 Vercel Analytics** - Track visitors and page views
 7. **🗄️ Auto-Archive** - Past events automatically archived at midnight
@@ -70,6 +70,10 @@ Your Master Events Calendar is a **production-deployed event management platform
 - ✅ **Bulk Actions** - Open all clinic/KNO/open gym pages at once
 
 ### **Admin Features (Jayme - Level 2):**
+- ✅ **Full-Page Admin Dashboard** - Replaces old modal with tabbed full-page interface
+- ✅ **Audit & Review Tab** - See ALL validation errors across gyms, filter by category/month/program/status
+- ✅ **Gym Rules Tab** - View, add, delete per-gym validation rules
+- ✅ **Quick Actions Tab** - Automated Sync, JSON Import (Super Admin required for some)
 - ✅ **JSON Import (F12)** - Bulk import via copy/paste
 - ✅ **Automated Sync** - One-click iClassPro collection
 - ✅ **Sync Progress Tracker** - See what's synced, what needs sync
@@ -91,6 +95,7 @@ Your Master Events Calendar is a **production-deployed event management platform
 - ✅ **Data Export** - Export to CSV/JSON with custom date ranges
 - ✅ **Data Quality Tracking** - Flyer detection, validation errors
 - ✅ **Per-Gym Validation Rules** - Prevent false positives with `gym_valid_values` table
+- ✅ **Full-Page Admin Dashboard** - Tabbed interface with Audit & Review, Gym Rules, Quick Actions
 
 ---
 
@@ -283,8 +288,19 @@ open_gym_required: 1
 | Level | Who | Access Method | Features |
 |-------|-----|---------------|----------|
 | **1 - Normal** | Everyone | Just visit URL | Calendar, event details, stats, export |
-| **2 - Admin** | Jayme | Click 🪄 Admin button | JSON Import, Automated Sync |
-| **3 - Super Admin** | Jayme only | Inside Admin, click 🔒 + PIN `1426` | Supabase link, Railway link, Audit History |
+| **2 - Admin** | Jayme | Shift+Click 🪄 wand | Full-page Admin Dashboard with 3 tabs |
+| **3 - Super Admin** | Jayme only | Inside Admin Dashboard, press `*` + PIN `1426` | Quick Actions: Supabase/Railway links, Audit History, Sync, Import |
+
+### **Admin Dashboard (Full-Page):**
+Shift+clicking the 🪄 wand replaces the calendar with a full-page Admin Dashboard containing:
+
+| Tab | Purpose |
+|-----|---------|
+| **Audit & Review** | See all validation errors across selected gyms, filter by category (DATA/FORMAT), month, program type, status (Active/Resolved). Dismiss errors or create permanent rules. |
+| **Gym Rules** | View, add, and delete per-gym validation rules (price, time, program_synonym). Rules grouped by gym. |
+| **Quick Actions** | Automated Sync and JSON Import buttons. Super Admin tools (Supabase, Railway, Audit History) require PIN. |
+
+**Architecture:** State-based view swap (no React Router). `showAdminPortal` flag triggers an early return of `<AdminDashboard>` instead of the calendar.
 
 **Full documentation:** `docs/OPERATIONS/SECRET_ADMIN_MODE.md`
 
@@ -293,7 +309,7 @@ open_gym_required: 1
 ## 🚀 ADMIN BULK IMPORT
 
 ### **Access Method:**
-Click the 🪄 Admin button → "JSON Import (F12 Method)"
+Admin Dashboard → Quick Actions → "JSON Import (F12 Method)"
 
 ### **F12 Method Workflow:**
 1. Open iClassPro portal in browser
@@ -386,10 +402,16 @@ API_KEY=your-shared-api-key
 **Frontend (React):**
 | File | Purpose |
 |------|---------|
+| `src/components/AdminDashboard/AdminDashboard.js` | Full-page admin dashboard shell (tabs, PIN, layout) |
+| `src/components/AdminDashboard/AdminAuditReview.js` | Audit & Review tab — validation errors across gyms |
+| `src/components/AdminDashboard/AdminAuditFilters.js` | Filter bar (gym checkboxes, month, program, status, category) |
+| `src/components/AdminDashboard/AdminAuditErrorCard.js` | Single event error card with dismiss buttons |
+| `src/components/AdminDashboard/AdminGymRules.js` | Gym Rules tab — view/add/delete rules |
+| `src/components/AdminDashboard/AdminQuickActions.js` | Quick Actions tab — sync, import, Super Admin tools |
 | `src/components/EventsDashboard/SyncModal.js` | Automated sync UI |
-| `src/components/EventsDashboard/AdminPortalModal.js` | Admin portal with tiers |
 | `src/components/EventsDashboard/ExportModal.js` | Data export UI |
 | `src/components/EventsDashboard/DismissRuleModal.js` | Dismiss warning / create rule modal |
+| `src/lib/validationHelpers.js` | Shared validation helpers (inferErrorCategory, canAddAsRule, etc.) |
 | `src/lib/api.js` | Database API functions (includes gymValidValuesApi) |
 | `src/lib/eventComparison.js` | New/changed/deleted logic |
 | `src/lib/gymLinksApi.js` | Gym links from Supabase |
@@ -442,11 +464,14 @@ API_KEY=your-shared-api-key
 
 ## 🎯 FUTURE ROADMAP
 
-### **Completed (Dec 2025):**
+### **Completed (Dec 2025 - Feb 2026):**
 - ✅ Export Data (CSV/JSON)
 - ✅ Auto-archive system
 - ✅ Data quality tracking
 - ✅ Availability tracking
+- ✅ Per-gym validation rules (gym_valid_values)
+- ✅ Full-page Admin Dashboard with Audit & Review
+- ✅ Program synonym rules (database-driven)
 
 ### **Immediate Enhancements:**
 - **📊 Import Analytics** - Track import history
@@ -535,7 +560,7 @@ API_KEY=your-shared-api-key
 
 ---
 
-**Last Updated:** February 2, 2026  
-**Version:** Production 3.2  
+**Last Updated:** February 2, 2026
+**Version:** Production 3.3
 **Status:** ✅ FULLY DEPLOYED & VERIFIED - Cross-checked against live iClassPro data
 

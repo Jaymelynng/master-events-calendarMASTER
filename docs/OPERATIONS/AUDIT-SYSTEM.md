@@ -1,9 +1,9 @@
 # 🔍 Audit History System
 ## Complete Change Tracking for Events
 
-**Last Updated:** December 28, 2025  
-**Status:** ✅ Working  
-**Location:** Super Admin (PIN required) access
+**Last Updated:** February 2, 2026
+**Status:** ✅ Working
+**Location:** Admin Dashboard → Quick Actions (Super Admin PIN required) + Audit & Review tab for validation errors
 
 ---
 
@@ -20,13 +20,19 @@ This provides complete accountability and the ability to see what changed and wh
 
 ## 🔓 HOW TO ACCESS
 
-### **Method 1: Super Admin Portal (Primary)**
-1. Click the **"🪄 Admin"** button at the top of dashboard
-2. Click the **🔐 lock icon** (or press `*` key)
-3. Enter PIN: **1426**
-4. Click **"🔍 Audit History"** button in the Super Admin section
+### **Method 1: Admin Dashboard → Quick Actions (Primary)**
+1. **Shift+Click** the 🪄 wand icon in the stats table header
+2. Click the **Quick Actions** tab
+3. Click the **🔐 lock icon** (or press `*` key) and enter PIN: **1426**
+4. Click **"🔍 Audit History"** button
 
-### **Method 2: Ctrl+Click (Legacy/Hidden)**
+### **Method 2: Audit & Review Tab (Validation Errors)**
+For reviewing validation errors across gyms (not the change audit log):
+1. **Shift+Click** the 🪄 wand icon
+2. The **Audit & Review** tab (default) shows all validation errors
+3. Select gyms via checkboxes, apply filters, dismiss or create rules
+
+### **Method 3: Ctrl+Click (Legacy/Hidden)**
 1. Find the date/time text below "✨ Master Events Calendar ✨" header
 2. **Ctrl+Click** (or Cmd+Click on Mac) on it
 3. The audit history modal will open directly
@@ -155,6 +161,34 @@ IMPORT SUMMARY:
 
 ---
 
+## 📋 ADMIN DASHBOARD: AUDIT & REVIEW TAB (NEW - Feb 2026)
+
+The Admin Dashboard now includes an **Audit & Review** tab that provides a comprehensive view of all validation errors across gyms. This is separate from the Audit History (change log) described above.
+
+### What It Does
+- Shows all events with validation errors for selected gyms
+- Multi-select gym checkboxes (grid layout) to review multiple gyms at once
+- Error category filter: **ALL** / **DATA** (red, high severity) / **FORMAT** (orange, missing info)
+- Status filter: **Active Only** / **All (Active + Resolved)** / **Resolved Only**
+- Month and Program Type filters
+- Each event shows its errors grouped by category with dismiss buttons
+- **✓ OK** button dismisses a single error (one-time exception)
+- **+ Rule** button creates a permanent rule in `gym_valid_values`
+- Description issues (no description, flyer only) appear under FORMAT category
+
+### Error Categories
+| Category | Badge | Color | Examples |
+|----------|-------|-------|----------|
+| DATA | HIGH | Red | Date mismatch, skill mismatch, program type mismatch |
+| FORMAT | FORMAT | Orange | Missing price, missing age, flyer only, no description |
+
+### Files
+- `src/components/AdminDashboard/AdminAuditReview.js` — Main tab component
+- `src/components/AdminDashboard/AdminAuditFilters.js` — Filter bar
+- `src/components/AdminDashboard/AdminAuditErrorCard.js` — Per-event error card
+
+---
+
 ## 📋 CURRENT LIMITATIONS
 
 The current audit modal is a **simple viewer** with these constraints:
@@ -278,6 +312,8 @@ A: Performance - the full log could have thousands of entries. Use Supabase for 
 
 | Date | Change |
 |------|--------|
+| Feb 2, 2026 | **NEW** Audit & Review tab in Admin Dashboard for validation error review |
+| Feb 2, 2026 | Audit History moved to Admin Dashboard → Quick Actions (Super Admin) |
 | Oct 2025 | Initial audit system created |
 | Nov 2025 | Moved to Super Admin access |
 | Nov 2025 | Added source tracking |

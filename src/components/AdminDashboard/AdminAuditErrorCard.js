@@ -1,9 +1,10 @@
 import React from 'react';
-import { inferErrorCategory, isErrorAcknowledged, getAcknowledgmentDetails, getErrorLabel } from '../../lib/validationHelpers';
+import { inferErrorCategory, isErrorAcknowledged, getAcknowledgmentDetails, getErrorLabel, isErrorVerified } from '../../lib/validationHelpers';
 
 export default function AdminAuditErrorCard({
   event,
   onDismissError,
+  onVerifyError,
   dismissingError,
   showDismissedErrors = true,
   showActiveErrors = true,
@@ -25,6 +26,7 @@ export default function AdminAuditErrorCard({
   const dismissedFormattingErrors = formattingErrors.filter(e => isErrorAcknowledged(acknowledged, e.message));
   const dismissedStatusErrors = statusErrors.filter(e => isErrorAcknowledged(acknowledged, e.message));
 
+  const verified = event.verified_errors || [];
   const hasDescriptionIssue = event.description_status === 'none' || event.description_status === 'flyer_only';
   const totalActive = activeDataErrors.length + activeFormattingErrors.length + activeStatusErrors.length + (hasDescriptionIssue ? 1 : 0);
   const totalDismissed = dismissedDataErrors.length + dismissedFormattingErrors.length + dismissedStatusErrors.length;
@@ -39,6 +41,7 @@ export default function AdminAuditErrorCard({
     const isLoading = dismissingError === `${event.id}-${error.message}`;
     const ackDetails = isDismissed ? getAcknowledgmentDetails(acknowledged, error.message) : null;
     const category = inferErrorCategory(error);
+    const verifiedEntry = isErrorVerified(verified, error.message);
 
     return (
       <div
@@ -71,17 +74,40 @@ export default function AdminAuditErrorCard({
               )}
             </span>
           )}
+          {verifiedEntry && (
+            <span className="text-xs block text-green-600 mt-0.5">
+              <span className="bg-green-100 text-green-700 px-1 rounded text-[10px]">✓ verified</span>
+              <span className="text-gray-400 ml-1">({new Date(verifiedEntry.verified_at).toLocaleDateString()})</span>
+            </span>
+          )}
         </div>
-        {!isDismissed && (
-          <button
-            onClick={() => onDismissError(event, error.message, error)}
-            disabled={isLoading}
-            className="flex-shrink-0 px-2.5 py-1.5 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors font-medium disabled:opacity-50"
-            title="Dismiss with optional note"
-          >
-            {isLoading ? '...' : '✓ OK'}
-          </button>
-        )}
+        <div className="flex-shrink-0 flex items-center gap-1.5">
+          {/* Verify checkbox */}
+          {onVerifyError && (
+            <button
+              onClick={() => onVerifyError(event, error.message, !verifiedEntry, error)}
+              className={`w-7 h-7 rounded border-2 flex items-center justify-center transition-colors ${
+                verifiedEntry
+                  ? 'bg-green-500 border-green-500 text-white'
+                  : 'bg-white border-gray-400 hover:border-green-500 hover:bg-green-50 text-gray-300 hover:text-green-500'
+              }`}
+              title={verifiedEntry ? 'Uncheck — remove verification' : 'Check — verified this is a real issue'}
+            >
+              <span className="text-sm font-bold">{verifiedEntry ? '✓' : '☐'}</span>
+            </button>
+          )}
+          {/* Dismiss button */}
+          {!isDismissed && (
+            <button
+              onClick={() => onDismissError(event, error.message, error)}
+              disabled={isLoading}
+              className="px-2.5 py-1.5 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors font-medium disabled:opacity-50"
+              title="Dismiss with optional note"
+            >
+              {isLoading ? '...' : '✓ OK'}
+            </button>
+          )}
+        </div>
       </div>
     );
   };
@@ -164,22 +190,45 @@ export default function AdminAuditErrorCard({
                 Missing/Incomplete Info:
               </div>
               <div className="space-y-1">
-                {showActiveErrors && hasDescriptionIssue && (
-                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg border-l-4 border-orange-400 bg-orange-50">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm">
-                        {event.description_status === 'none' ? '⚠️' : '📸'}
-                        {' '}
-                        <strong className="text-xs">
-                          {event.description_status === 'none' ? 'No Description' : 'Flyer Only (no text)'}
-                        </strong>
-                      </span>
-                      <span className="text-xs block text-gray-600 mt-0.5">
-                        {event.description_status === 'none' ? 'Event has no description text or flyer image' : 'Event has a flyer image but no text description'}
-                      </span>
+                {showActiveErrors && hasDescriptionIssue && (() => {
+                  const descMsg = `description:${event.description_status}`;
+                  const descVerified = isErrorVerified(verified, descMsg);
+                  return (
+                    <div className="flex items-center justify-between gap-2 p-2 rounded-lg border-l-4 border-orange-400 bg-orange-50">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm">
+                          {event.description_status === 'none' ? '⚠️' : '📸'}
+                          {' '}
+                          <strong className="text-xs">
+                            {event.description_status === 'none' ? 'No Description' : 'Flyer Only (no text)'}
+                          </strong>
+                        </span>
+                        <span className="text-xs block text-gray-600 mt-0.5">
+                          {event.description_status === 'none' ? 'Event has no description text or flyer image' : 'Event has a flyer image but no text description'}
+                        </span>
+                        {descVerified && (
+                          <span className="text-xs block text-green-600 mt-0.5">
+                            <span className="bg-green-100 text-green-700 px-1 rounded text-[10px]">✓ verified</span>
+                            <span className="text-gray-400 ml-1">({new Date(descVerified.verified_at).toLocaleDateString()})</span>
+                          </span>
+                        )}
+                      </div>
+                      {onVerifyError && (
+                        <button
+                          onClick={() => onVerifyError(event, descMsg, !descVerified, null)}
+                          className={`flex-shrink-0 w-7 h-7 rounded border-2 flex items-center justify-center transition-colors ${
+                            descVerified
+                              ? 'bg-green-500 border-green-500 text-white'
+                              : 'bg-white border-gray-400 hover:border-green-500 hover:bg-green-50 text-gray-300 hover:text-green-500'
+                          }`}
+                          title={descVerified ? 'Uncheck — remove verification' : 'Check — verified this is a real issue'}
+                        >
+                          <span className="text-sm font-bold">{descVerified ? '✓' : '☐'}</span>
+                        </button>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
                 {showActiveErrors && activeFormattingErrors.map(error => renderErrorRow(error, false))}
                 {showDismissedErrors && dismissedFormattingErrors.map(error => renderErrorRow(error, true))}
               </div>
