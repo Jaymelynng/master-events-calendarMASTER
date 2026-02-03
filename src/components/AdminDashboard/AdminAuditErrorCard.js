@@ -6,6 +6,7 @@ export default function AdminAuditErrorCard({
   onDismissError,
   dismissingError,
   showDismissedErrors = true,
+  showActiveErrors = true,
   selectedCategory = 'all',
 }) {
   const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
@@ -28,7 +29,10 @@ export default function AdminAuditErrorCard({
   const totalDismissed = dismissedDataErrors.length + dismissedFormattingErrors.length + dismissedStatusErrors.length;
   const hasDescriptionIssue = event.description_status === 'none' || event.description_status === 'flyer_only';
 
-  if (totalActive === 0 && !hasDescriptionIssue && (!showDismissedErrors || totalDismissed === 0)) {
+  const visibleActive = showActiveErrors ? totalActive : 0;
+  const visibleDismissed = showDismissedErrors ? totalDismissed : 0;
+  const visibleDesc = showActiveErrors && hasDescriptionIssue ? 1 : 0;
+  if (visibleActive === 0 && visibleDismissed === 0 && visibleDesc === 0) {
     return null;
   }
 
@@ -84,7 +88,9 @@ export default function AdminAuditErrorCard({
   };
 
   const renderSection = (title, badge, activeErrors, dismissedErrors, bgColor, textColor) => {
-    if (activeErrors.length === 0 && (!showDismissedErrors || dismissedErrors.length === 0)) return null;
+    const showActive = showActiveErrors && activeErrors.length > 0;
+    const showDismissed = showDismissedErrors && dismissedErrors.length > 0;
+    if (!showActive && !showDismissed) return null;
     return (
       <div className="mt-2">
         <div className={`text-xs font-semibold ${textColor} mb-1 flex items-center gap-1`}>
@@ -92,7 +98,7 @@ export default function AdminAuditErrorCard({
           {title}
         </div>
         <div className="space-y-1">
-          {activeErrors.map(error => renderErrorRow(error, false))}
+          {showActiveErrors && activeErrors.map(error => renderErrorRow(error, false))}
           {showDismissedErrors && dismissedErrors.map(error => renderErrorRow(error, true))}
         </div>
       </div>
@@ -144,7 +150,7 @@ export default function AdminAuditErrorCard({
       {/* Errors */}
       <div className="px-4 py-3 space-y-1">
         {/* Description Issue */}
-        {hasDescriptionIssue && (selectedCategory === 'all' || selectedCategory === 'description') && (
+        {hasDescriptionIssue && showActiveErrors && (selectedCategory === 'all' || selectedCategory === 'description') && (
           <div className="p-2 rounded-lg border-l-4 border-gray-400 bg-gray-50">
             <span className="text-sm">
               {event.description_status === 'none' ? '❌' : '📸'}

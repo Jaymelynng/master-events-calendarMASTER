@@ -15,7 +15,7 @@ export default function AdminAuditReview({ gyms }) {
   const [loading, setLoading] = useState(false);
   const [dismissModalState, setDismissModalState] = useState(null);
   const [dismissingError, setDismissingError] = useState(null);
-  const [showDismissed, setShowDismissed] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('active');
 
   // Load events with validation errors for selected gyms
   const loadEvents = useCallback(async (gymIds) => {
@@ -87,26 +87,25 @@ export default function AdminAuditReview({ gyms }) {
     return acc;
   }, { data: 0, format: 0, desc: 0 });
 
-  // Now apply category filter
-  const filteredEvents = preFilteredEvents.filter(event => {
-    if (selectedCategory === 'all') return true;
+  // Now apply category + status filters
+  const showActive = statusFilter === 'active' || statusFilter === 'all';
+  const showResolved = statusFilter === 'resolved' || statusFilter === 'all';
 
+  const filteredEvents = preFilteredEvents.filter(event => {
     const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
     const acknowledged = event.acknowledged_errors || [];
 
-    if (selectedCategory === 'description') {
-      return event.description_status === 'none' || event.description_status === 'flyer_only';
-    }
+    // Check if event has active or resolved errors (respecting category filter)
+    const matchCategory = (e) => selectedCategory === 'all' || inferErrorCategory(e) === selectedCategory;
 
-    const hasActiveInCategory = errors.some(e =>
-      inferErrorCategory(e) === selectedCategory &&
-      !isErrorAcknowledged(acknowledged, e.message)
-    );
-    const hasDismissedInCategory = showDismissed && errors.some(e =>
-      inferErrorCategory(e) === selectedCategory &&
-      isErrorAcknowledged(acknowledged, e.message)
-    );
-    return hasActiveInCategory || hasDismissedInCategory;
+    const hasActive = errors.some(e => matchCategory(e) && !isErrorAcknowledged(acknowledged, e.message));
+    const hasResolved = errors.some(e => matchCategory(e) && isErrorAcknowledged(acknowledged, e.message));
+    const hasDescIssue = (selectedCategory === 'all' || selectedCategory === 'description') &&
+      (event.description_status === 'none' || event.description_status === 'flyer_only');
+
+    if (showActive && (hasActive || hasDescIssue)) return true;
+    if (showResolved && hasResolved) return true;
+    return false;
   });
 
   // Group filtered events by gym for display
@@ -242,40 +241,31 @@ export default function AdminAuditReview({ gyms }) {
         onCategoryChange={setSelectedCategory}
         selectedProgramType={selectedProgramType}
         onProgramTypeChange={setSelectedProgramType}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
         counts={counts}
       />
 
       {/* Results Header */}
       {selectedGyms.length > 0 && !loading && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm text-gray-500">
-              {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} with issues
-              {selectedGyms.length > 1 ? ` across ${selectedGyms.length} gyms` : ''}
-            </span>
-            {(counts.data > 0 || counts.format > 0 || counts.desc > 0) && (
-              <div className="flex gap-1.5">
-                {counts.data > 0 && (
-                  <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded">{counts.data} DATA</span>
-                )}
-                {counts.format > 0 && (
-                  <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded">{counts.format} FORMAT</span>
-                )}
-                {counts.desc > 0 && (
-                  <span className="px-2 py-0.5 bg-gray-500 text-white text-xs font-bold rounded">{counts.desc} DESC</span>
-                )}
-              </div>
-            )}
-          </div>
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showDismissed}
-              onChange={(e) => setShowDismissed(e.target.checked)}
-              className="rounded"
-            />
-            Show resolved
-          </label>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-sm text-gray-500">
+            {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} with issues
+            {selectedGyms.length > 1 ? ` across ${selectedGyms.length} gyms` : ''}
+          </span>
+          {(counts.data > 0 || counts.format > 0 || counts.desc > 0) && (
+            <div className="flex gap-1.5">
+              {counts.data > 0 && (
+                <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded">{counts.data} DATA</span>
+              )}
+              {counts.format > 0 && (
+                <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded">{counts.format} FORMAT</span>
+              )}
+              {counts.desc > 0 && (
+                <span className="px-2 py-0.5 bg-gray-500 text-white text-xs font-bold rounded">{counts.desc} DESC</span>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -328,7 +318,8 @@ export default function AdminAuditReview({ gyms }) {
                         event={event}
                         onDismissError={handleDismissError}
                         dismissingError={dismissingError}
-                        showDismissedErrors={showDismissed}
+                        showDismissedErrors={showResolved}
+                        showActiveErrors={showActive}
                         selectedCategory={selectedCategory}
                       />
                     ))}
@@ -345,7 +336,8 @@ export default function AdminAuditReview({ gyms }) {
                   event={event}
                   onDismissError={handleDismissError}
                   dismissingError={dismissingError}
-                  showDismissedErrors={showDismissed}
+                  showDismissedErrors={showResolved}
+                        showActiveErrors={showActive}
                   selectedCategory={selectedCategory}
                 />
               ))}

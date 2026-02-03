@@ -10,6 +10,8 @@ export default function AdminAuditFilters({
   onCategoryChange,
   selectedProgramType,
   onProgramTypeChange,
+  statusFilter,
+  onStatusFilterChange,
   counts,
 }) {
   // Generate month options: current month ± 6 months
@@ -120,6 +122,20 @@ export default function AdminAuditFilters({
             <option value="OPEN GYM">OPEN GYM</option>
             <option value="KIDS NIGHT OUT">KIDS NIGHT OUT</option>
             <option value="SPECIAL EVENT">SPECIAL EVENT</option>
+          </select>
+        </div>
+
+        {/* Status Filter */}
+        <div className="min-w-[150px]">
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => onStatusFilterChange(e.target.value)}
+            className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-purple-400 focus:outline-none"
+          >
+            <option value="active">Active Only</option>
+            <option value="all">All (Active + Resolved)</option>
+            <option value="resolved">Resolved Only</option>
           </select>
         </div>
       </div>
