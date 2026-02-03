@@ -6,6 +6,7 @@ export default function AdminAuditErrorCard({
   onDismissError,
   dismissingError,
   showDismissedErrors = true,
+  selectedCategory = 'all',
 }) {
   const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
   const acknowledged = event.acknowledged_errors || [];
@@ -143,7 +144,7 @@ export default function AdminAuditErrorCard({
       {/* Errors */}
       <div className="px-4 py-3 space-y-1">
         {/* Description Issue */}
-        {hasDescriptionIssue && (
+        {hasDescriptionIssue && (selectedCategory === 'all' || selectedCategory === 'description') && (
           <div className="p-2 rounded-lg border-l-4 border-gray-400 bg-gray-50">
             <span className="text-sm">
               {event.description_status === 'none' ? '❌' : '📸'}
@@ -156,13 +157,16 @@ export default function AdminAuditErrorCard({
         )}
 
         {/* Data Errors */}
-        {renderSection('Data Errors (Wrong Info):', 'HIGH', activeDataErrors, dismissedDataErrors, 'bg-red-500', 'text-red-700')}
+        {(selectedCategory === 'all' || selectedCategory === 'data_error') &&
+          renderSection('Data Errors (Wrong Info):', 'HIGH', activeDataErrors, dismissedDataErrors, 'bg-red-500', 'text-red-700')}
 
         {/* Formatting Errors */}
-        {renderSection('Missing/Incomplete Info:', 'FORMAT', activeFormattingErrors, dismissedFormattingErrors, 'bg-orange-500', 'text-orange-700')}
+        {(selectedCategory === 'all' || selectedCategory === 'formatting') &&
+          renderSection('Missing/Incomplete Info:', 'FORMAT', activeFormattingErrors, dismissedFormattingErrors, 'bg-orange-500', 'text-orange-700')}
 
         {/* Status Errors */}
-        {renderSection('Status:', 'INFO', activeStatusErrors, dismissedStatusErrors, 'bg-blue-500', 'text-blue-700')}
+        {(selectedCategory === 'all' || selectedCategory === 'status') &&
+          renderSection('Status:', 'INFO', activeStatusErrors, dismissedStatusErrors, 'bg-blue-500', 'text-blue-700')}
       </div>
     </div>
   );

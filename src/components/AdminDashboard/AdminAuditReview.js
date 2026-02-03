@@ -329,6 +329,7 @@ export default function AdminAuditReview({ gyms }) {
                         onDismissError={handleDismissError}
                         dismissingError={dismissingError}
                         showDismissedErrors={showDismissed}
+                        selectedCategory={selectedCategory}
                       />
                     ))}
                   </div>
@@ -345,6 +346,7 @@ export default function AdminAuditReview({ gyms }) {
                   onDismissError={handleDismissError}
                   dismissingError={dismissingError}
                   showDismissedErrors={showDismissed}
+                  selectedCategory={selectedCategory}
                 />
               ))}
             </div>
