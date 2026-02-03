@@ -174,4 +174,4 @@ master-events-calendar/
 **Last Updated:** January 30, 2026  
 **Version:** 3.5 (Production)  
 **Live URL:** https://teamcalendar.mygymtools.com  
-**Owner:** Jayme - Powers Gym Management
+**Jayme -
