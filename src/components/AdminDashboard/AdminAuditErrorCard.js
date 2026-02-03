@@ -25,14 +25,13 @@ export default function AdminAuditErrorCard({
   const dismissedFormattingErrors = formattingErrors.filter(e => isErrorAcknowledged(acknowledged, e.message));
   const dismissedStatusErrors = statusErrors.filter(e => isErrorAcknowledged(acknowledged, e.message));
 
-  const totalActive = activeDataErrors.length + activeFormattingErrors.length + activeStatusErrors.length;
-  const totalDismissed = dismissedDataErrors.length + dismissedFormattingErrors.length + dismissedStatusErrors.length;
   const hasDescriptionIssue = event.description_status === 'none' || event.description_status === 'flyer_only';
+  const totalActive = activeDataErrors.length + activeFormattingErrors.length + activeStatusErrors.length + (hasDescriptionIssue ? 1 : 0);
+  const totalDismissed = dismissedDataErrors.length + dismissedFormattingErrors.length + dismissedStatusErrors.length;
 
   const visibleActive = showActiveErrors ? totalActive : 0;
   const visibleDismissed = showDismissedErrors ? totalDismissed : 0;
-  const visibleDesc = showActiveErrors && hasDescriptionIssue ? 1 : 0;
-  if (visibleActive === 0 && visibleDismissed === 0 && visibleDesc === 0) {
+  if (visibleActive === 0 && visibleDismissed === 0) {
     return null;
   }
 
@@ -149,26 +148,44 @@ export default function AdminAuditErrorCard({
 
       {/* Errors */}
       <div className="px-4 py-3 space-y-1">
-        {/* Description Issue */}
-        {hasDescriptionIssue && showActiveErrors && (selectedCategory === 'all' || selectedCategory === 'description') && (
-          <div className="p-2 rounded-lg border-l-4 border-gray-400 bg-gray-50">
-            <span className="text-sm">
-              {event.description_status === 'none' ? '❌' : '📸'}
-              {' '}
-              <strong className="text-xs">
-                {event.description_status === 'none' ? 'No description' : 'Flyer only (no text)'}
-              </strong>
-            </span>
-          </div>
-        )}
-
         {/* Data Errors */}
         {(selectedCategory === 'all' || selectedCategory === 'data_error') &&
           renderSection('Data Errors (Wrong Info):', 'HIGH', activeDataErrors, dismissedDataErrors, 'bg-red-500', 'text-red-700')}
 
-        {/* Formatting Errors */}
-        {(selectedCategory === 'all' || selectedCategory === 'formatting') &&
-          renderSection('Missing/Incomplete Info:', 'FORMAT', activeFormattingErrors, dismissedFormattingErrors, 'bg-orange-500', 'text-orange-700')}
+        {/* Formatting Errors + Description Issues */}
+        {(selectedCategory === 'all' || selectedCategory === 'formatting') && (() => {
+          const hasFormatActive = showActiveErrors && (activeFormattingErrors.length > 0 || hasDescriptionIssue);
+          const hasFormatDismissed = showDismissedErrors && dismissedFormattingErrors.length > 0;
+          if (!hasFormatActive && !hasFormatDismissed) return null;
+          return (
+            <div className="mt-2">
+              <div className="text-xs font-semibold text-orange-700 mb-1 flex items-center gap-1">
+                <span className="bg-orange-500 text-white px-1.5 py-0.5 rounded text-[10px]">FORMAT</span>
+                Missing/Incomplete Info:
+              </div>
+              <div className="space-y-1">
+                {showActiveErrors && hasDescriptionIssue && (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg border-l-4 border-orange-400 bg-orange-50">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm">
+                        {event.description_status === 'none' ? '⚠️' : '📸'}
+                        {' '}
+                        <strong className="text-xs">
+                          {event.description_status === 'none' ? 'No Description' : 'Flyer Only (no text)'}
+                        </strong>
+                      </span>
+                      <span className="text-xs block text-gray-600 mt-0.5">
+                        {event.description_status === 'none' ? 'Event has no description text or flyer image' : 'Event has a flyer image but no text description'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {showActiveErrors && activeFormattingErrors.map(error => renderErrorRow(error, false))}
+                {showDismissedErrors && dismissedFormattingErrors.map(error => renderErrorRow(error, true))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Status Errors */}
         {(selectedCategory === 'all' || selectedCategory === 'status') &&

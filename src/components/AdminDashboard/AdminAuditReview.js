@@ -100,7 +100,7 @@ export default function AdminAuditReview({ gyms }) {
 
     const hasActive = errors.some(e => matchCategory(e) && !isErrorAcknowledged(acknowledged, e.message));
     const hasResolved = errors.some(e => matchCategory(e) && isErrorAcknowledged(acknowledged, e.message));
-    const hasDescIssue = (selectedCategory === 'all' || selectedCategory === 'description') &&
+    const hasDescIssue = (selectedCategory === 'all' || selectedCategory === 'formatting') &&
       (event.description_status === 'none' || event.description_status === 'flyer_only');
 
     if (showActive && (hasActive || hasDescIssue)) return true;
@@ -258,11 +258,8 @@ export default function AdminAuditReview({ gyms }) {
               {counts.data > 0 && (
                 <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded">{counts.data} DATA</span>
               )}
-              {counts.format > 0 && (
-                <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded">{counts.format} FORMAT</span>
-              )}
-              {counts.desc > 0 && (
-                <span className="px-2 py-0.5 bg-gray-500 text-white text-xs font-bold rounded">{counts.desc} DESC</span>
+              {(counts.format > 0 || counts.desc > 0) && (
+                <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded">{(counts.format || 0) + (counts.desc || 0)} FORMAT</span>
               )}
             </div>
           )}
