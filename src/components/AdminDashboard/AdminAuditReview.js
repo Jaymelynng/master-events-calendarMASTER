@@ -59,55 +59,22 @@ export default function AdminAuditReview({ gyms }) {
 
   const handleGymsChange = (newGyms) => {
     setSelectedGyms(newGyms);
-    setSelectedCategory('all');
   };
 
-  // Apply filters
-  const filteredEvents = events.filter(event => {
-    // Month filter
+  // Apply month + program filters first (before category)
+  const preFilteredEvents = events.filter(event => {
     if (selectedMonth !== 'all') {
       const eventDate = event.date || event.start_date || '';
       if (!eventDate.startsWith(selectedMonth)) return false;
     }
-
-    // Program type filter
     if (selectedProgramType !== 'all') {
       if (event.type !== selectedProgramType) return false;
     }
-
-    // Category filter - show event if it has errors in the selected category
-    if (selectedCategory !== 'all') {
-      const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
-      const acknowledged = event.acknowledged_errors || [];
-
-      if (selectedCategory === 'description') {
-        if (event.description_status !== 'none' && event.description_status !== 'flyer_only') return false;
-      } else {
-        const hasActiveInCategory = errors.some(e =>
-          inferErrorCategory(e) === selectedCategory &&
-          !isErrorAcknowledged(acknowledged, e.message)
-        );
-        const hasDismissedInCategory = showDismissed && errors.some(e =>
-          inferErrorCategory(e) === selectedCategory &&
-          isErrorAcknowledged(acknowledged, e.message)
-        );
-        if (!hasActiveInCategory && !hasDismissedInCategory) return false;
-      }
-    }
-
     return true;
   });
 
-  // Group filtered events by gym for display
-  const eventsByGym = {};
-  filteredEvents.forEach(event => {
-    const gymId = event.gym_id;
-    if (!eventsByGym[gymId]) eventsByGym[gymId] = [];
-    eventsByGym[gymId].push(event);
-  });
-
-  // Count errors across all filtered events
-  const counts = filteredEvents.reduce((acc, event) => {
+  // Count errors from pre-filtered events (so counts stay stable across category switches)
+  const counts = preFilteredEvents.reduce((acc, event) => {
     const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
     const acknowledged = event.acknowledged_errors || [];
     errors.forEach(e => {
@@ -119,6 +86,36 @@ export default function AdminAuditReview({ gyms }) {
     if (event.description_status === 'none' || event.description_status === 'flyer_only') acc.desc++;
     return acc;
   }, { data: 0, format: 0, desc: 0 });
+
+  // Now apply category filter
+  const filteredEvents = preFilteredEvents.filter(event => {
+    if (selectedCategory === 'all') return true;
+
+    const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
+    const acknowledged = event.acknowledged_errors || [];
+
+    if (selectedCategory === 'description') {
+      return event.description_status === 'none' || event.description_status === 'flyer_only';
+    }
+
+    const hasActiveInCategory = errors.some(e =>
+      inferErrorCategory(e) === selectedCategory &&
+      !isErrorAcknowledged(acknowledged, e.message)
+    );
+    const hasDismissedInCategory = showDismissed && errors.some(e =>
+      inferErrorCategory(e) === selectedCategory &&
+      isErrorAcknowledged(acknowledged, e.message)
+    );
+    return hasActiveInCategory || hasDismissedInCategory;
+  });
+
+  // Group filtered events by gym for display
+  const eventsByGym = {};
+  filteredEvents.forEach(event => {
+    const gymId = event.gym_id;
+    if (!eventsByGym[gymId]) eventsByGym[gymId] = [];
+    eventsByGym[gymId].push(event);
+  });
 
   // Handle dismiss error - opens DismissRuleModal
   const handleDismissError = (event, errorMessage, errorObj = null) => {
