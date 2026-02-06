@@ -1,7 +1,7 @@
 # 📚 Team Calendar - Documentation Index
 
 **Live URL:** https://teamcalendar.mygymtools.com  
-**Last Updated:** February 2, 2026  
+**Last Updated:** February 5, 2026  
 **Status:** ✅ FULLY DEPLOYED & VERIFIED  
 **Part of:** mygymtools.com suite  
 **Maintained by:** Jayme
@@ -68,9 +68,11 @@ docs/
 | Document | Purpose |
 |----------|---------|
 | **[TECHNICAL-REFERENCE.md](TECHNICAL/TECHNICAL-REFERENCE.md)** ⭐ | Complete system overview - START HERE for technical |
+| **[VALIDATION_RULES_ARCHITECTURE.md](TECHNICAL/VALIDATION_RULES_ARCHITECTURE.md)** ⭐ | Precoded vs configurable rules - CRITICAL for selling |
 | [DATABASE_COMPLETE_SCHEMA.md](TECHNICAL/DATABASE_COMPLETE_SCHEMA.md) | All 9 tables, views, design decisions, SQL commands |
 | [SCALABILITY-ROADMAP.md](TECHNICAL/SCALABILITY-ROADMAP.md) | Future scaling plan (not needed yet) |
 | [SYNC_SYSTEM_TECHNICAL.md](TECHNICAL/SYNC_SYSTEM_TECHNICAL.md) | Deep technical details of sync system |
+| [EXPORT_BUG_ANALYSIS.md](TECHNICAL/EXPORT_BUG_ANALYSIS.md) | ⚠️ Known bug - Analytics ignores event type filters |
 
 ---
 
@@ -124,6 +126,7 @@ docs/
 | **Understand what's working RIGHT NOW** | `OPERATIONS/CURRENT_SYSTEM_STATUS.md` |
 | **Sell or present the project** | `BUSINESS/BOSS-PRESENTATION.md` |
 | **Understand how it works technically** | `TECHNICAL/TECHNICAL-REFERENCE.md` |
+| **Understand precoded vs configurable rules** | `TECHNICAL/VALIDATION_RULES_ARCHITECTURE.md` |
 | **Learn how to use automated sync** | `OPERATIONS/AUTO-SYNC-GUIDE.md` |
 | **Quick sync reminder (non-technical)** | `OPERATIONS/SYNC-QUICK-REFERENCE.md` |
 | **Access admin/super admin features** | `OPERATIONS/SECRET_ADMIN_MODE.md` |
@@ -131,6 +134,7 @@ docs/
 | **Manage per-gym validation rules** | `OPERATIONS/DATA_QUALITY_VALIDATION.md` |
 | **Troubleshoot deployment issues** | `OPERATIONS/DEPLOYMENT_PLAN.md` |
 | **Understand the database** | `TECHNICAL/DATABASE_COMPLETE_SCHEMA.md` |
+| **See known export bug** | `TECHNICAL/EXPORT_BUG_ANALYSIS.md` |
 
 ---
 
@@ -148,36 +152,26 @@ docs/
 
 ## 📊 Documentation Stats
 
-- **Total Documents:** 22 (consolidated Dec 28, 2025)
+- **Total Documents:** 23 (updated Feb 5, 2026)
 - **BUSINESS:** 2 documents
-- **TECHNICAL:** 4 documents  
+- **TECHNICAL:** 6 documents  
 - **OPERATIONS:** 16 documents
-- **Last Major Update:** December 28, 2025 (Full audit & reorganization)
+- **Last Major Update:** February 5, 2026 (Root cleanup, moved EXPORT_BUG_ANALYSIS)
 
 ---
 
-## 🔄 Recent Changes (Dec 28, 2025)
+## 🔄 Recent Changes
 
-### Major Upgrades:
-- **EXPORT_DATA_GUIDE.md** - Complete 10/10 rewrite with:
-  - Quick Presets (Monthly Compliance, Boss Report, Full Backup, Data Quality, Sync History)
-  - HTML Report format with visual charts and email-ready summaries
-  - Data Quality Issues export
-  - Sync History export
-  - Enhanced CSV/JSON with more fields
+### February 5, 2026
+- **MOVED** `EXPORT_FEATURE_ANALYSIS.md` → `docs/TECHNICAL/EXPORT_BUG_ANALYSIS.md`
+- **DELETED** `EXPORT_TERMINOLOGY_CLARIFIED.md` (content in EXPORT_DATA_GUIDE)
+- **DELETED** `HOW_TO_SEE_CHANGE_HISTORY.md` (content in AUDIT-SYSTEM)
+- **DELETED** `WHAT_IS_DATA_QUALITY.md` (content in DATA_QUALITY_VALIDATION)
+- **Root folder cleanup** - only AI_RULES_READ_FIRST.md and README.md remain
 
-### Merged/Consolidated:
-- `SUPABASE_AUDIT_REPORT.md` → merged into `DATABASE_COMPLETE_SCHEMA.md`
-- `MAGIC_CONTROL_FEATURES.md` → merged into `SECRET_ADMIN_MODE.md`
-- `SUPABASE-ARCHITECTURE.md` → merged into `DATABASE_COMPLETE_SCHEMA.md`
-- `DEPLOYMENT_CHECKLIST.md` → merged into `DEPLOYMENT_PLAN.md`
-
-### Moved:
-- `AUTOMATED_SYNC_SYSTEM_DETAILED.md` → `TECHNICAL/SYNC_SYSTEM_TECHNICAL.md`
-- `GYM_DATA_IMPROVEMENTS.md` → `BUSINESS/`
-
-### Deleted (outdated):
-- Various test files and one-time scripts
+### December 28, 2025
+- **EXPORT_DATA_GUIDE.md** - Complete 10/10 rewrite with Quick Presets
+- Merged/consolidated multiple docs into single comprehensive guides
 
 ---
 
@@ -187,5 +181,5 @@ Code can be rewritten, but this knowledge is irreplaceable.
 
 ---
 
-**Last Updated:** February 2, 2026  
+**Last Updated:** February 5, 2026  
 **Maintained by:** Jayme

@@ -108,6 +108,56 @@ def get_camp_pricing():
         CAMP_PRICING = fetch_camp_pricing()
     return CAMP_PRICING
 
+# Event pricing (Clinic, KNO, Open Gym) from event_pricing table
+EVENT_PRICING = None
+
+def fetch_event_pricing():
+    """Fetch event pricing from Supabase event_pricing table.
+    Returns dict grouped by gym_id and event_type with list of valid prices.
+    Only returns prices that are currently effective (based on effective_date and end_date).
+    { 'CCP': { 'KIDS NIGHT OUT': [40.0], 'CLINIC': [35.0], 'OPEN GYM': [10.0] } }
+    """
+    try:
+        # Get today's date for filtering
+        from datetime import date
+        today = date.today().isoformat()
+        
+        # Query with date filtering - get prices where today is between effective_date and end_date
+        url = f"{SUPABASE_URL}/rest/v1/event_pricing?select=*&effective_date=lte.{today}&or=(end_date.is.null,end_date.gte.{today})"
+        req = Request(url)
+        req.add_header("apikey", SUPABASE_KEY)
+        req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
+
+        with urlopen(req) as response:
+            rows = json.loads(response.read().decode())
+
+        pricing = {}
+        for row in rows:
+            gym_id = row.get('gym_id')
+            event_type = row.get('event_type')
+            price = row.get('price')
+            if gym_id and event_type and price is not None:
+                if gym_id not in pricing:
+                    pricing[gym_id] = {}
+                if event_type not in pricing[gym_id]:
+                    pricing[gym_id][event_type] = []
+                # Convert to float and add to list (gym may have multiple valid prices)
+                pricing[gym_id][event_type].append(float(price))
+
+        total_prices = sum(len(prices) for gym in pricing.values() for prices in gym.values())
+        print(f"[INFO] Loaded {total_prices} event prices for {len(pricing)} gyms from Supabase (effective {today})")
+        return pricing
+    except Exception as e:
+        print(f"[WARN] Could not fetch event pricing: {e}")
+        return {}
+
+def get_event_pricing():
+    """Get cached event pricing or fetch from Supabase"""
+    global EVENT_PRICING
+    if EVENT_PRICING is None:
+        EVENT_PRICING = fetch_event_pricing()
+    return EVENT_PRICING
+
 # Per-gym valid values (extra prices, times, etc.) from gym_valid_values table
 GYM_VALID_VALUES = None
 
@@ -997,21 +1047,56 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         if description:
             
             # --- DATE/MONTH VALIDATION: Compare structured date to description ---
-            # Extract month from structured start_date
+            # Extract month from structured start_date AND end_date (for multi-day events)
             try:
                 event_date = datetime.strptime(start_date, "%Y-%m-%d")
                 event_month = event_date.strftime("%B").lower()  # e.g., "january"
                 event_year = event_date.year
                 event_day = event_date.day
                 
-                # Check if description mentions a DIFFERENT month
+                # Get end_date month for multi-day events (e.g., June 30 - July 5)
+                end_date_str = ev.get("endDate") or start_date
+                end_date_obj = datetime.strptime(end_date_str, "%Y-%m-%d")
+                end_month = end_date_obj.strftime("%B").lower()
+                
+                # Valid months = start month AND end month (for events spanning months)
+                # Include both full names AND abbreviations
                 import calendar
-                all_months = {m.lower(): i for i, m in enumerate(calendar.month_name) if m}
+                event_month_abbr = event_date.strftime("%b").lower()  # e.g., "jan"
+                end_month_abbr = end_date_obj.strftime("%b").lower()
+                valid_months = {event_month, end_month, event_month_abbr, end_month_abbr}
+                
+                # Check if description mentions a DIFFERENT month
+                # Build dict of all months: full names AND abbreviations
+                all_months = {}
+                for i, full_name in enumerate(calendar.month_name):
+                    if full_name:  # Skip empty string at index 0
+                        all_months[full_name.lower()] = i  # january, february, etc.
+                for i, abbr in enumerate(calendar.month_abbr):
+                    if abbr:  # Skip empty string at index 0
+                        all_months[abbr.lower()] = i  # jan, feb, etc.
                 
                 for month_name, month_num in all_months.items():
-                    if month_name in description_lower and month_name != event_month:
+                    # Use word boundary check to avoid false matches (e.g., "march" in "marching")
+                    # For abbreviations, require them to be followed by space, number, or punctuation
+                    if len(month_name) <= 3:
+                        # Abbreviation: check with word boundary (jan, feb, mar, etc.)
+                        pattern = r'\b' + month_name + r'\b'
+                        if not re.search(pattern, description_lower):
+                            continue
+                    else:
+                        # Full name: simple contains check
+                        if month_name not in description_lower:
+                            continue
+                    
+                    if month_name not in valid_months:
                         # Found a different month - check if it's prominent (in first 200 chars)
-                        if month_name in description_lower[:200]:
+                        if len(month_name) <= 3:
+                            in_first_200 = bool(re.search(r'\b' + month_name + r'\b', description_lower[:200]))
+                        else:
+                            in_first_200 = month_name in description_lower[:200]
+                        
+                        if in_first_200:
                             validation_errors.append({
                                 "type": "date_mismatch",
                                 "severity": "error",
@@ -1666,6 +1751,41 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                                 })
                                 print(f"    ⚠️ CAMP PRICE: ${desc_price:.0f} not valid for {gym_id}. Expected one of: {', '.join(price_labels)}")
                                 break  # Only flag once per event
+            
+            # --- EVENT PRICE VALIDATION (Clinic, KNO, Open Gym) ---
+            # Checks if price in description matches the correct price from event_pricing table
+            # Uses effective_date to automatically use correct price (handles price increases)
+            if event_type in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'] and desc_prices:
+                event_pricing = get_event_pricing()
+                if gym_id in event_pricing and event_type in event_pricing[gym_id]:
+                    valid_prices = event_pricing[gym_id][event_type]
+                    
+                    # Also add any extra valid prices from gym_valid_values table
+                    extra_price_rules = get_rules_for_gym(gym_id).get('price', [])
+                    for ep in extra_price_rules:
+                        try:
+                            extra_price = float(ep['value'])
+                            if extra_price not in valid_prices:
+                                valid_prices.append(extra_price)
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    if valid_prices:
+                        # Check the first/primary price in description
+                        desc_price = float(desc_prices[0])
+                        
+                        # Check if price matches any valid price (exact match)
+                        is_valid = any(abs(desc_price - vp) <= 1 for vp in valid_prices)
+                        
+                        if not is_valid:
+                            valid_str = ', '.join([f'${p:.0f}' for p in valid_prices])
+                            validation_errors.append({
+                                "type": "event_price_mismatch",
+                                "severity": "error",
+                                "category": "data_error",
+                                "message": f"{event_type} price ${desc_price:.0f} doesn't match expected price for {gym_id}. Valid: {valid_str}"
+                            })
+                            print(f"    ❌ {event_type} PRICE: ${desc_price:.0f} not valid for {gym_id}. Expected: {valid_str}")
         
         # ========== AVAILABILITY INFO ==========
         # NOTE: Sold out is NOT a validation error - it's informational status
