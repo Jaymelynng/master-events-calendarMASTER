@@ -1,6 +1,6 @@
 # Data Quality Validation System
 
-**Last Updated:** February 2, 2026  
+**Last Updated:** February 5, 2026  
 **Status:** ✅ Fully Deployed  
 **Files:** `automation/f12_collect_and_import.py`, `src/components/EventsDashboard.js`, `src/components/EventsDashboard/DismissRuleModal.js`, `src/components/AdminDashboard/AdminAuditReview.js`
 
@@ -9,6 +9,72 @@
 ## Overview
 
 The Data Quality Validation system automatically detects errors and issues in event data by comparing structured API data against description text. This catches copy/paste errors, outdated descriptions, and missing content.
+
+---
+
+## ⭐ SOURCE OF TRUTH - CRITICAL REFERENCE ⭐
+
+This section defines EXACTLY what data is considered "correct" and what gets compared against it.
+
+### Where Data Comes From
+
+| Data Type | Source of Truth | Where It Comes From |
+|-----------|-----------------|---------------------|
+| **Date** | iClass API `startDate` field | The date managers set when creating the event in iClass |
+| **Year** | iClass API `startDate` field | Extracted from the date above |
+| **Day of Week** | Calculated from `startDate` | Code calculates "Saturday" from "2026-02-15" |
+| **Time** | iClass API `schedule.startTime` / `endTime` | The time fields managers set in iClass |
+| **Age** | iClass API `minAge` / `maxAge` | The age restriction fields managers set in iClass |
+| **Program Type** | iClass API `link_type_id` | Which section the event is listed under (camps, skill_clinics, kids_night_out, open_gym) |
+| **Price (CAMP)** | ✅ Supabase `camp_pricing` table | YOUR manually-maintained pricing table per gym |
+| **Price (Other)** | ❌ NO SOURCE - parsed from text | Extracted from `$XX` patterns in title/description |
+
+### Price Source of Truth by Event Type
+
+| Event Type | Price Source of Truth | What Gets Compared |
+|------------|----------------------|-------------------|
+| **CAMP** | ✅ `camp_pricing` table (full_day_daily, full_day_weekly, half_day_daily, half_day_weekly) + `gym_valid_values` exceptions | Description price vs your Supabase pricing table |
+| **CLINIC** | ❌ None | Title price vs Description price only |
+| **KIDS NIGHT OUT** | ❌ None | Title price vs Description price only |
+| **OPEN GYM** | ❌ None | Title price vs Description price only |
+
+### What Gets Compared to What
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        iClass API Fields                            │
+│  (startDate, schedule.startTime, minAge, maxAge, link_type_id)      │
+│                    = THE SOURCE OF TRUTH                            │
+└─────────────────────────────────────────────────────────────────────┘
+                              ↓ compared to ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│                         EVENT TITLE                                 │
+│  (Manager-written text: "Tumbling Clinic Ages 5-12 Feb 15 $45")     │
+└─────────────────────────────────────────────────────────────────────┘
+                              ↓ compared to ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│                       EVENT DESCRIPTION                             │
+│  (Manager-written text: "Join us for tumbling! $45, ages 5+...")    │
+└─────────────────────────────────────────────────────────────────────┘
+                              ↓ compared to ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│               SUPABASE PRICING TABLES (CAMP only)                   │
+│  camp_pricing: full_day_daily, full_day_weekly, etc.                │
+│  gym_valid_values: custom exceptions (Before Care $20, etc.)        │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Description Status & Validation Behavior
+
+| Scenario | `description_status` | What Happens |
+|----------|---------------------|--------------|
+| **No description AND no flyer** | `none` | ❌ Flagged as error. NO other validations run (nothing to compare). |
+| **Flyer image only, no text** | `flyer_only` | ⚠️ Flagged as warning. NO other validations run (can't read images). |
+| **Has text description** | `full` | ✅ ALL validations run (date, time, age, price, program type comparisons). |
+
+**Important:** If an event only has a flyer image with no text, the system CANNOT validate anything because there's no text to compare against the iClass fields.
+
+---
 
 ## Current Validation Stats (Full Year 2026)
 

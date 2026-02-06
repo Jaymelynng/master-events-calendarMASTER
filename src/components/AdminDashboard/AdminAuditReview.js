@@ -88,23 +88,47 @@ export default function AdminAuditReview({ gyms }) {
   }, { data: 0, format: 0, desc: 0 });
 
   // Now apply category + status filters
-  const showActive = statusFilter === 'active' || statusFilter === 'all';
-  const showResolved = statusFilter === 'resolved' || statusFilter === 'all';
+  // Status options: active, verified, bugs, resolved, all
 
   const filteredEvents = preFilteredEvents.filter(event => {
     const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
     const acknowledged = event.acknowledged_errors || [];
+    const verified = event.verified_errors || [];
 
     // Check if event has active or resolved errors (respecting category filter)
     const matchCategory = (e) => selectedCategory === 'all' || inferErrorCategory(e) === selectedCategory;
 
-    const hasActive = errors.some(e => matchCategory(e) && !isErrorAcknowledged(acknowledged, e.message));
+    // Helper to check if an error is verified as accurate or marked as bug
+    const isVerifiedAccurate = (msg) => verified.some(v => v.message === msg && v.verdict === 'correct');
+    const isMarkedBug = (msg) => verified.some(v => v.message === msg && v.verdict === 'incorrect');
+
+    // Active = not acknowledged AND not verified accurate (still needs review)
+    const hasActive = errors.some(e => matchCategory(e) && !isErrorAcknowledged(acknowledged, e.message) && !isVerifiedAccurate(e.message));
+
+    // Resolved = dismissed via temp override or permanent rule
     const hasResolved = errors.some(e => matchCategory(e) && isErrorAcknowledged(acknowledged, e.message));
+
+    // Verified = marked as accurate (system caught real error)
+    const hasVerified = errors.some(e => matchCategory(e) && isVerifiedAccurate(e.message));
+
+    // Bugs = marked as invalid/bug (needs code fix)
+    const hasBugs = errors.some(e => matchCategory(e) && isMarkedBug(e.message));
+
+    // Description issues
     const hasDescIssue = (selectedCategory === 'all' || selectedCategory === 'formatting') &&
       (event.description_status === 'none' || event.description_status === 'flyer_only');
+    const descMsg = `description:${event.description_status}`;
+    const descVerifiedAccurate = isVerifiedAccurate(descMsg);
+    const descMarkedBug = isMarkedBug(descMsg);
 
-    if (showActive && (hasActive || hasDescIssue)) return true;
-    if (showResolved && hasResolved) return true;
+    // For active, exclude description issues that have been verified
+    const hasActiveDescIssue = hasDescIssue && !descVerifiedAccurate && !descMarkedBug;
+
+    if (statusFilter === 'active' && (hasActive || hasActiveDescIssue)) return true;
+    if (statusFilter === 'verified' && (hasVerified || (hasDescIssue && descVerifiedAccurate))) return true;
+    if (statusFilter === 'bugs' && (hasBugs || (hasDescIssue && descMarkedBug))) return true;
+    if (statusFilter === 'resolved' && hasResolved) return true;
+    if (statusFilter === 'all') return true;
     return false;
   });
 
@@ -179,6 +203,7 @@ export default function AdminAuditReview({ gyms }) {
     const { eventId, errorMessage, gymId, ruleInfo } = dismissModalState;
     setDismissingError(`${eventId}-${errorMessage}`);
 
+    let ruleCreated = false;
     try {
       const isProgramSynonym = ruleInfo.ruleType === 'program_synonym';
       await gymValidValuesApi.create({
@@ -188,6 +213,7 @@ export default function AdminAuditReview({ gyms }) {
         label: label,
         event_type: isProgramSynonym ? label.toUpperCase() : 'CAMP'
       });
+      ruleCreated = true;
 
       const { data: currentEvent, error: fetchError } = await supabase
         .from('events')
@@ -219,7 +245,12 @@ export default function AdminAuditReview({ gyms }) {
 
     } catch (err) {
       console.error('Error creating rule:', err);
-      alert('Dismissed OK, but failed to add rule. Add it manually in Gym Rules tab.');
+      if (ruleCreated) {
+        // Rule was created but updating event failed - just log it, rule is saved
+        console.log('Rule was created successfully, but failed to update event acknowledgment');
+      } else {
+        alert('Failed to create rule. Please try again or add it manually in Gym Rules tab.');
+      }
     }
 
     setDismissingError(null);
@@ -227,7 +258,7 @@ export default function AdminAuditReview({ gyms }) {
   };
 
   // Handle verify error - set verdict ('correct', 'incorrect', or null to remove)
-  const handleVerifyError = async (event, errorMessage, verdict, errorObj = null) => {
+  const handleVerifyError = async (event, errorMessage, verdict, errorObj = null, note = null) => {
     try {
       const { data: currentEvent, error: fetchError } = await supabase
         .from('events')
@@ -243,12 +274,17 @@ export default function AdminAuditReview({ gyms }) {
 
       // If setting a verdict, add new entry
       if (verdict) {
-        filtered.push({
+        const entry = {
           message: errorMessage,
           verified_at: new Date().toISOString(),
           category: errorObj ? inferErrorCategory(errorObj) : 'formatting',
           verdict: verdict, // 'correct' or 'incorrect'
-        });
+        };
+        // Only add note if provided and non-empty
+        if (note && note.trim()) {
+          entry.note = note.trim();
+        }
+        filtered.push(entry);
       }
 
       const { error: updateError } = await supabase
@@ -269,8 +305,6 @@ export default function AdminAuditReview({ gyms }) {
 
   // Compute accuracy stats from pre-filtered events
   const accuracyStats = computeAccuracyStats(preFilteredEvents);
-
-  const gymNames = selectedGyms.map(id => gyms?.find(g => g.id === id)?.name || id);
 
   return (
     <div className="space-y-4">
@@ -380,8 +414,7 @@ export default function AdminAuditReview({ gyms }) {
                         onDismissError={handleDismissError}
                         onVerifyError={handleVerifyError}
                         dismissingError={dismissingError}
-                        showDismissedErrors={showResolved}
-                        showActiveErrors={showActive}
+                        statusFilter={statusFilter}
                         selectedCategory={selectedCategory}
                       />
                     ))}
@@ -399,8 +432,7 @@ export default function AdminAuditReview({ gyms }) {
                   onDismissError={handleDismissError}
                   onVerifyError={handleVerifyError}
                   dismissingError={dismissingError}
-                  showDismissedErrors={showResolved}
-                  showActiveErrors={showActive}
+                  statusFilter={statusFilter}
                   selectedCategory={selectedCategory}
                 />
               ))}
@@ -412,7 +444,7 @@ export default function AdminAuditReview({ gyms }) {
       {/* Help text */}
       {selectedGyms.length > 0 && !loading && filteredEvents.length > 0 && (
         <div className="text-center py-2 text-xs text-gray-500">
-          💡 <span className="text-green-600">☑</span> = system correct | <span className="text-red-600">✗</span> = system wrong/buggy | "✓ OK" = handled (not rated) | "+ Rule" = teach the system
+          💡 <span className="text-green-600">✓</span> = verified accurate (real error) | <span className="text-red-600">✗</span> = bug (needs code fix) | "✓ OK" = temp override | "+ Rule" = permanent rule
         </div>
       )}
 

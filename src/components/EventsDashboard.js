@@ -1914,10 +1914,7 @@ The system will add new events and update any changed events automatically.`;
         <SyncModal
           theme={theme}
           onClose={() => setShowSyncModal(false)}
-          onBack={() => {
-            setShowSyncModal(false);
-            setTimeout(() => setShowAdminPortal(true), 100);
-          }}
+          onBack={() => setShowSyncModal(false)}
           gyms={gymsList}
         />
       )}
@@ -2300,10 +2297,10 @@ The system will add new events and update any changed events automatically.`;
 
           </div>
 
-          {/* ✨ Jayme's Command Center + Export - TOP SECTION */}
+          {/* ✨ Sync + Export - TOP SECTION */}
           <div className="flex justify-center items-center gap-4 mb-3">
             <button
-              onClick={() => setShowAdminPortal(true)}
+              onClick={() => setShowSyncModal(true)}
               style={{
                 background: 'linear-gradient(180deg, #d4a5a5 0%, #c3a5a5 100%)',
                 color: '#2a2a2a',
@@ -2316,7 +2313,7 @@ The system will add new events and update any changed events automatically.`;
                 textShadow: '0 1px 0 rgba(255, 255, 255, 0.3)'
               }}
               className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 text-base font-bold uppercase tracking-wide hover:scale-105 active:scale-95"
-              title="Open Admin Control Center"
+              title="Open Automated Sync"
             >
               <span className="text-lg">🔄</span>
               <span>SYNC</span>
@@ -2358,6 +2355,41 @@ The system will add new events and update any changed events automatically.`;
                 right: 0,
                 bottom: 0,
                 background: 'radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 50%)',
+                pointerEvents: 'none'
+              }} />
+            </button>
+          </div>
+
+          {/* Magic Wand - Admin Dashboard (Shift+Click) - Centered below SYNC/EXPORT */}
+          <div className="flex justify-center mb-3">
+            <button
+              onClick={(e) => {
+                if (e.shiftKey) {
+                  setShowAdminPortal(true);
+                }
+              }}
+              style={{
+                background: 'linear-gradient(180deg, #9b7bb8 0%, #8a6ba8 100%)',
+                color: '#ffffff',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.2)',
+                border: '2px solid #7a5b98',
+                borderTopColor: '#b89bd0',
+                borderBottomColor: '#6a4b88',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+              className="flex items-center justify-center px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+              title=""
+            >
+              <span className="text-xl">🪄</span>
+              {/* Sparkle overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.4) 0%, transparent 40%), radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.2) 0%, transparent 50%)',
                 pointerEvents: 'none'
               }} />
             </button>
