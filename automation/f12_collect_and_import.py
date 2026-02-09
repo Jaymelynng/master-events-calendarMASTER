@@ -529,6 +529,15 @@ async def _collect_events_from_url(gym_id, url):
             print(f"    [CAPTURED] Event {event_id}: {data.get('name', 'Unknown')[:50]}...")
             # DEBUG: Log age fields immediately when captured
             print(f"      [RAW API] minAge={data.get('minAge')}, maxAge={data.get('maxAge')}")
+            # DEBUG: Log ALL fields to find price-related data
+            price_related = [k for k in data.keys() if any(word in k.lower() for word in ['price', 'fee', 'cost', 'amount', 'rate', 'tuition', 'charge'])]
+            if price_related:
+                print(f"      [RAW API] PRICE FIELDS FOUND: {price_related}")
+                for pk in price_related:
+                    print(f"        - {pk}: {data.get(pk)}")
+            # Log all keys on first event to see full API response structure
+            if len(captured_events) == 1:
+                print(f"      [RAW API] ALL FIELDS IN API RESPONSE: {list(data.keys())}")
     
     print(f"  [BROWSER] Opening: {url}")
     async with async_playwright() as p:
@@ -729,18 +738,75 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         title = (ev.get("name") or "Untitled Event").strip()
         title = " ".join(title.split())
         
-        # Extract price from title or description
+        # Get price from SOURCE OF TRUTH (camp_pricing / event_pricing tables)
+        # NOT from regex parsing of title/description
         price = None
-        price_match = re.search(r'\$(\d+(?:\.\d{2})?)', title)
-        if price_match:
-            price = float(price_match.group(1))
-        else:
-            # Try description if available
-            description_html = ev.get('description', '')
-            if description_html:
-                price_match = re.search(r'\$(\d+(?:\.\d{2})?)', description_html)
-                if price_match:
-                    price = float(price_match.group(1))
+        event_type_upper = camp_type_label.upper()
+
+        # For CAMP events, get price from camp_pricing table
+        if event_type_upper == 'CAMP':
+            camp_pricing = get_camp_pricing()
+            if gym_id in camp_pricing:
+                gym_prices = camp_pricing[gym_id]
+
+                # Use programName from iClassPro API to determine half/full day and summer/school year
+                program_name = (ev.get("programName") or "").lower()
+                title_lower = title.lower()
+
+                # Determine if half day or full day (check programName first, then title)
+                is_half_day = 'half day' in program_name or 'half-day' in program_name or \
+                              'half day' in title_lower or 'half-day' in title_lower
+
+                # Determine if weekly or daily based on programName and title
+                # Summer camps are typically weekly, School Year camps are typically daily
+                is_summer = 'summer' in program_name or 'summer' in title_lower
+                has_week_keyword = 'week' in title_lower or '/wk' in title_lower or '/week' in title_lower
+
+                # School year camps default to daily pricing
+                is_school_year = 'school year' in program_name or 'school year' in title_lower or \
+                                 'schools out' in title_lower or "school's out" in title_lower or \
+                                 'holiday' in program_name or 'break' in title_lower
+
+                # Weekly if: summer camp OR has explicit week keyword (and not school year daily)
+                is_weekly = (is_summer or has_week_keyword) and not (is_school_year and not has_week_keyword)
+
+                if is_half_day:
+                    if is_weekly and gym_prices.get('half_day_weekly'):
+                        price = gym_prices['half_day_weekly']
+                    elif gym_prices.get('half_day_daily'):
+                        price = gym_prices['half_day_daily']
+                else:  # Full day
+                    if is_weekly and gym_prices.get('full_day_weekly'):
+                        price = gym_prices['full_day_weekly']
+                    elif gym_prices.get('full_day_daily'):
+                        price = gym_prices['full_day_daily']
+
+                if price:
+                    print(f"    [PRICE] Source of truth: ${price} ({'half' if is_half_day else 'full'} day, {'weekly' if is_weekly else 'daily'}) [program: {ev.get('programName', 'N/A')}]")
+
+        # For non-CAMP events, get price from event_pricing table
+        elif event_type_upper in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']:
+            event_pricing_data = get_event_pricing()
+            if gym_id in event_pricing_data and event_type_upper in event_pricing_data[gym_id]:
+                valid_prices = event_pricing_data[gym_id][event_type_upper]
+                if valid_prices:
+                    price = valid_prices[0]  # Use first valid price
+                    print(f"    [PRICE] Using source of truth: ${price} ({event_type_upper})")
+
+        # Fallback: extract from title/description only if no source of truth price found
+        if price is None:
+            price_match = re.search(r'\$(\d+(?:\.\d{2})?)', title)
+            if price_match:
+                price = float(price_match.group(1))
+                print(f"    [PRICE] Fallback - extracted from title: ${price}")
+            else:
+                # Try description if available
+                description_html = ev.get('description', '')
+                if description_html:
+                    price_match = re.search(r'\$(\d+(?:\.\d{2})?)', description_html)
+                    if price_match:
+                        price = float(price_match.group(1))
+                        print(f"    [PRICE] Fallback - extracted from description: ${price}")
         
         # Calculate day_of_week from start_date
         try:
