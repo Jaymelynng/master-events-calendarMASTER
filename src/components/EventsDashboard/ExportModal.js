@@ -31,16 +31,42 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [syncLog, setSyncLog] = useState([]);
   const [loadingSyncLog, setLoadingSyncLog] = useState(false);
+  const [campPricing, setCampPricing] = useState({});
 
   // Quick preset selected
   const [activePreset, setActivePreset] = useState(null);
 
   const eventTypes = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM', 'CAMP', 'SPECIAL EVENT'];
 
-  // Fetch events when date range changes
+  // Fetch events and camp pricing when date range changes
   useEffect(() => {
     fetchEventsForDateRange();
+    fetchCampPricing();
   }, [startDate, endDate]);
+
+  const fetchCampPricing = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('camp_pricing')
+        .select('*');
+
+      if (error) throw error;
+
+      // Convert to lookup by gym_id
+      const pricingByGym = {};
+      (data || []).forEach(row => {
+        pricingByGym[row.gym_id] = {
+          full_day_daily: row.full_day_daily,
+          full_day_weekly: row.full_day_weekly,
+          half_day_daily: row.half_day_daily,
+          half_day_weekly: row.half_day_weekly
+        };
+      });
+      setCampPricing(pricingByGym);
+    } catch (err) {
+      console.error('Error fetching camp pricing:', err);
+    }
+  };
 
   // Fetch sync log when needed
   useEffect(() => {
@@ -384,13 +410,32 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
 
   const exportCSV = (monthName, timestamp) => {
     let csvContent = '';
-    
+
     // Events section
     if (includeEvents && filteredEvents.length > 0) {
       csvContent += `EVENTS - ${monthName}\n`;
-      csvContent += 'Gym,Gym ID,Title,Type,Date,Day,Time,Price,Ages,Description Status,Has Openings,URL\n';
+      csvContent += 'Gym,Gym ID,Title,Type,Date,Day,Time,Full Day Daily,Full Day Weekly,Half Day Daily,Half Day Weekly,Ages,Description Status,Has Openings,URL\n';
       filteredEvents.forEach(event => {
         const gym = gyms.find(g => g.id === event.gym_id);
+        // Format ages with "Ages " prefix to prevent Excel from converting to date
+        // e.g., "Ages 5-12" instead of "5-12" (which Excel reads as May 12th)
+        const ageDisplay = event.age_min && event.age_max
+          ? `"Ages ${event.age_min}-${event.age_max}"`
+          : (event.age_min ? `"Ages ${event.age_min}+"` : '');
+
+        // Get camp pricing from source of truth table for CAMP events
+        let fdDaily = '', fdWeekly = '', hdDaily = '', hdWeekly = '';
+        if (event.type === 'CAMP' && campPricing[event.gym_id]) {
+          const pricing = campPricing[event.gym_id];
+          fdDaily = pricing.full_day_daily ? `$${pricing.full_day_daily}` : '';
+          fdWeekly = pricing.full_day_weekly ? `$${pricing.full_day_weekly}` : '';
+          hdDaily = pricing.half_day_daily ? `$${pricing.half_day_daily}` : '';
+          hdWeekly = pricing.half_day_weekly ? `$${pricing.half_day_weekly}` : '';
+        } else if (event.price) {
+          // For non-CAMP events, just show the event price in first column
+          fdDaily = `$${event.price}`;
+        }
+
         csvContent += [
           `"${(gym?.name || event.gym_id).replace(/"/g, '""')}"`,
           event.gym_id || '',
@@ -399,8 +444,11 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
           event.date || '',
           event.day_of_week || '',
           event.time || '',
-          event.price || '',
-          event.age_min && event.age_max ? `${event.age_min}-${event.age_max}` : (event.age_min ? `${event.age_min}+` : ''),
+          fdDaily,
+          fdWeekly,
+          hdDaily,
+          hdWeekly,
+          ageDisplay,
           event.description_status || 'unknown',
           event.has_openings === false ? 'SOLD OUT' : 'Available',
           event.event_url || ''
