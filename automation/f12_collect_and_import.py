@@ -749,26 +749,17 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             if gym_id in camp_pricing:
                 gym_prices = camp_pricing[gym_id]
 
-                # Use programName from iClassPro API to determine half/full day and summer/school year
+                # Use ONLY iClassPro API data - NOT title/description text
                 program_name = (ev.get("programName") or "").lower()
-                title_lower = title.lower()
+                camp_start = ev.get("startDate") or ""
+                camp_end = ev.get("endDate") or ""
 
-                # Determine if half day or full day (check programName first, then title)
-                is_half_day = 'half day' in program_name or 'half-day' in program_name or \
-                              'half day' in title_lower or 'half-day' in title_lower
+                # Half day vs Full day: ONLY from programName (iClassPro API field)
+                is_half_day = 'half day' in program_name or 'half-day' in program_name
 
-                # Determine if weekly or daily based on programName and title
-                # Summer camps are typically weekly, School Year camps are typically daily
-                is_summer = 'summer' in program_name or 'summer' in title_lower
-                has_week_keyword = 'week' in title_lower or '/wk' in title_lower or '/week' in title_lower
-
-                # School year camps default to daily pricing
-                is_school_year = 'school year' in program_name or 'school year' in title_lower or \
-                                 'schools out' in title_lower or "school's out" in title_lower or \
-                                 'holiday' in program_name or 'break' in title_lower
-
-                # Weekly if: summer camp OR has explicit week keyword (and not school year daily)
-                is_weekly = (is_summer or has_week_keyword) and not (is_school_year and not has_week_keyword)
+                # Weekly vs Daily: Based on startDate vs endDate (iClassPro API fields)
+                # If camp spans multiple days = weekly, single day = daily
+                is_weekly = camp_start != camp_end and camp_start and camp_end
 
                 if is_half_day:
                     if is_weekly and gym_prices.get('half_day_weekly'):
@@ -782,7 +773,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         price = gym_prices['full_day_daily']
 
                 if price:
-                    print(f"    [PRICE] Source of truth: ${price} ({'half' if is_half_day else 'full'} day, {'weekly' if is_weekly else 'daily'}) [program: {ev.get('programName', 'N/A')}]")
+                    print(f"    [PRICE] Source of truth: ${price} ({'half' if is_half_day else 'full'} day, {'weekly' if is_weekly else 'daily'}) [program: {ev.get('programName', 'N/A')}, dates: {camp_start} to {camp_end}]")
 
         # For non-CAMP events, get price from event_pricing table
         elif event_type_upper in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']:
