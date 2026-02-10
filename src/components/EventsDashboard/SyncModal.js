@@ -378,11 +378,8 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
     const hasChangedEvents = comparison && comparison.changed && comparison.changed.length > 0;
     const hasDeletedEvents = comparison && comparison.deleted && comparison.deleted.length > 0;
     
-    // Check if there are unchanged events that need validation refresh
-    const hasUnchangedEvents = comparison && comparison.unchanged && comparison.unchanged.length > 0;
-
-    // Always proceed if there are events to refresh validation on
-    if (!forceUpdate && !hasNewEvents && !hasChangedEvents && !hasDeletedEvents && !hasUnchangedEvents) {
+    // If forceUpdate is enabled, we update all events regardless of change status
+    if (!forceUpdate && !hasNewEvents && !hasChangedEvents && !hasDeletedEvents) {
       return; // Nothing to sync
     }
 
@@ -478,11 +475,10 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
         }
       }
       
-      // Always refresh validation data on "unchanged" events
-      // Prices/rules can change between syncs, so validation_errors must be recalculated
+      // Force update: Also update "unchanged" events to refresh validation_errors
       let forceUpdatedCount = 0;
-      if (comparison && comparison.unchanged.length > 0) {
-        console.log(`🔄 Refreshing validation data on ${comparison.unchanged.length} unchanged events...`);
+      if (forceUpdate && comparison && comparison.unchanged.length > 0) {
+        console.log(`🔄 Force updating ${comparison.unchanged.length} unchanged events...`);
         const allExistingEvents = await eventsApi.getAll(null, null, true);
         
         for (const unchangedEvent of comparison.unchanged) {
