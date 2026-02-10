@@ -9,9 +9,6 @@ export default function AdminAuditErrorCard({
   dismissingError,
   statusFilter = 'active',
   selectedCategory = 'all',
-  selectedErrorType = 'all',
-  showGymName = false,
-  gymName = '',
 }) {
   // Track which error is being edited for notes
   const [editingNote, setEditingNote] = useState(null); // { message, verdict }
@@ -45,15 +42,9 @@ export default function AdminAuditErrorCard({
     });
   };
 
-  // Apply error type filter
-  const filterByErrorType = (errorList) => {
-    if (selectedErrorType === 'all') return errorList;
-    return errorList.filter(e => e.type === selectedErrorType);
-  };
-
-  const visibleDataErrors = filterByErrorType(filterByStatus(dataErrors));
-  const visibleFormattingErrors = filterByErrorType(filterByStatus(formattingErrors));
-  const visibleStatusErrors = filterByErrorType(filterByStatus(statusErrors));
+  const visibleDataErrors = filterByStatus(dataErrors);
+  const visibleFormattingErrors = filterByStatus(formattingErrors);
+  const visibleStatusErrors = filterByStatus(statusErrors);
 
   // For backwards compat with rendering
   const activeDataErrors = dataErrors.filter(e => !isErrorAcknowledged(acknowledged, e.message) && !isVerifiedAccurate(e.message) && !isMarkedBug(e.message));
@@ -279,12 +270,6 @@ export default function AdminAuditErrorCard({
         <div className="flex-1 min-w-0">
           <h4 className="font-semibold text-sm text-gray-900 truncate">{event.title}</h4>
           <div className="flex items-center gap-2 mt-0.5">
-            {showGymName && gymName && (
-              <>
-                <span className="text-xs font-medium text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">{gymName}</span>
-                <span className="text-xs text-gray-400">•</span>
-              </>
-            )}
             <span className="text-xs text-gray-500">{event.date || event.start_date}</span>
             <span className="text-xs text-gray-400">•</span>
             <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
