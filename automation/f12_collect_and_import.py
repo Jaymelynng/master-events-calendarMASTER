@@ -571,9 +571,11 @@ async def collect_events_via_f12(gym_id, camp_type):
         events_raw: list of event dicts (one per event)
         OR for "ALL": dict of { event_type: [events...] }
     """
-    # Reset gym_valid_values cache so freshly added rules are picked up
-    global GYM_VALID_VALUES
+    # Reset all pricing/rules caches so fresh data is always used
+    global GYM_VALID_VALUES, EVENT_PRICING, CAMP_PRICING
     GYM_VALID_VALUES = None
+    EVENT_PRICING = None
+    CAMP_PRICING = None
 
     if gym_id not in GYMS:
         print(f"Unknown gym ID: {gym_id}")
@@ -1103,56 +1105,83 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         
         if description:
             
-            # --- DATE/MONTH VALIDATION: Compare structured date to description ---
-            # Extract month from structured start_date AND end_date (for multi-day events)
+            # --- DATE VALIDATION: Cross-check iClassPro dates vs description ---
+            # SCANS the description to catch manager mistakes (wrong dates in descriptions)
+            # BUILT-IN RULES (universal - no per-gym setup needed):
+            #   - Camps spanning multiple months are NORMAL (June 28 - July 5)
+            #     All months between start and end are valid
+            #   - End date before start date = manager error
+            #   - Registration dates, promo references are ignored
             try:
                 event_date = datetime.strptime(start_date, "%Y-%m-%d")
-                event_month = event_date.strftime("%B").lower()  # e.g., "january"
+                event_month = event_date.strftime("%B").lower()
                 event_year = event_date.year
                 event_day = event_date.day
-                
-                # Get end_date month for multi-day events (e.g., June 30 - July 5)
+
                 end_date_str = ev.get("endDate") or start_date
                 end_date_obj = datetime.strptime(end_date_str, "%Y-%m-%d")
-                end_month = end_date_obj.strftime("%B").lower()
-                
-                # Valid months = start month AND end month (for events spanning months)
-                # Include both full names AND abbreviations
+
+                # BUILT-IN: End date before start date = manager error
+                if end_date_obj < event_date:
+                    validation_errors.append({
+                        "type": "date_mismatch",
+                        "severity": "error",
+                        "category": "data_error",
+                        "message": f"End date ({end_date_str}) is before start date ({start_date})"
+                    })
+                    print(f"    [!] DATE ERROR: End date {end_date_str} before start date {start_date}")
+
+                # Build valid months from iClassPro start_date and end_date
+                # BUILT-IN: Include ALL months between start and end
+                # So a camp from June 28 - August 1 won't flag July
                 import calendar
-                event_month_abbr = event_date.strftime("%b").lower()  # e.g., "jan"
+                event_month_abbr = event_date.strftime("%b").lower()
+                end_month = end_date_obj.strftime("%B").lower()
                 end_month_abbr = end_date_obj.strftime("%b").lower()
                 valid_months = {event_month, end_month, event_month_abbr, end_month_abbr}
-                
-                # Check if description mentions a DIFFERENT month
-                # Build dict of all months: full names AND abbreviations
+
+                # Add every month BETWEEN start and end
+                if event_date.month != end_date_obj.month:
+                    m = event_date.month
+                    while m != end_date_obj.month:
+                        m = m % 12 + 1
+                        valid_months.add(calendar.month_name[m].lower())
+                        valid_months.add(calendar.month_abbr[m].lower())
+
+                # Scan description for month mentions that DON'T match the event dates
                 all_months = {}
                 for i, full_name in enumerate(calendar.month_name):
-                    if full_name:  # Skip empty string at index 0
-                        all_months[full_name.lower()] = i  # january, february, etc.
+                    if full_name:
+                        all_months[full_name.lower()] = i
                 for i, abbr in enumerate(calendar.month_abbr):
-                    if abbr:  # Skip empty string at index 0
-                        all_months[abbr.lower()] = i  # jan, feb, etc.
-                
+                    if abbr:
+                        all_months[abbr.lower()] = i
+
                 for month_name, month_num in all_months.items():
-                    # Use word boundary check to avoid false matches (e.g., "march" in "marching")
-                    # For abbreviations, require them to be followed by space, number, or punctuation
                     if len(month_name) <= 3:
-                        # Abbreviation: check with word boundary (jan, feb, mar, etc.)
                         pattern = r'\b' + month_name + r'\b'
-                        if not re.search(pattern, description_lower):
+                        if not re.search(pattern, description_lower[:200]):
                             continue
                     else:
-                        # Full name: simple contains check
-                        if month_name not in description_lower:
+                        if month_name not in description_lower[:200]:
                             continue
-                    
+
                     if month_name not in valid_months:
-                        # Found a different month - check if it's prominent (in first 200 chars)
+                        # BUILT-IN: Skip registration/signup context
+                        # "Register by September 1" is not a date error
+                        skip_patterns = [
+                            r'(register|registration|sign\s*up|enroll|deadline|closes?|opens?|book\s*by|by)\s+\w*\s*' + month_name,
+                            r'(also|check out|see our|upcoming|next|other|more)\s+\w*\s*' + month_name,
+                        ]
+                        if any(re.search(p, description_lower[:300]) for p in skip_patterns):
+                            continue
+
+                        # Only flag if prominent (first 200 chars)
                         if len(month_name) <= 3:
                             in_first_200 = bool(re.search(r'\b' + month_name + r'\b', description_lower[:200]))
                         else:
                             in_first_200 = month_name in description_lower[:200]
-                        
+
                         if in_first_200:
                             validation_errors.append({
                                 "type": "date_mismatch",

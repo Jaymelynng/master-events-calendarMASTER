@@ -27,7 +27,7 @@ export const inferErrorCategory = (error) => {
   const dataErrorTypes = [
     'year_mismatch', 'date_mismatch', 'time_mismatch', 'age_mismatch',
     'day_mismatch', 'program_mismatch', 'skill_mismatch', 'price_mismatch',
-    'title_desc_mismatch', 'camp_price_mismatch'
+    'title_desc_mismatch', 'camp_price_mismatch', 'event_price_mismatch'
   ];
 
   const statusErrorTypes = ['registration_closed', 'registration_not_open', 'sold_out'];
@@ -39,13 +39,14 @@ export const inferErrorCategory = (error) => {
 
 // Check if an error type supports "Add as Rule"
 export const canAddAsRule = (errorType) => {
-  return errorType === 'camp_price_mismatch' || errorType === 'time_mismatch' ||
+  return errorType === 'camp_price_mismatch' || errorType === 'event_price_mismatch' ||
+         errorType === 'time_mismatch' ||
          errorType === 'program_mismatch' || errorType === 'missing_program_in_title';
 };
 
 // Extract rule value from an error object (price, time, or program synonym)
 export const extractRuleValue = (errorObj, event = null) => {
-  if (errorObj.type === 'camp_price_mismatch') {
+  if (errorObj.type === 'camp_price_mismatch' || errorObj.type === 'event_price_mismatch') {
     const priceMatch = errorObj.message.match(/\$(\d+(?:\.\d{2})?)/);
     return priceMatch ? { ruleType: 'price', value: priceMatch[1] } : null;
   } else if (errorObj.type === 'time_mismatch') {
@@ -145,6 +146,7 @@ export const getErrorLabel = (type) => {
     'skill_mismatch': '⭐ Skill Mismatch',
     'price_mismatch': '💰 Price Mismatch',
     'camp_price_mismatch': '💰 Camp Price Mismatch',
+    'event_price_mismatch': '💰 Event Price Mismatch',
     'title_desc_mismatch': '📝 Title/Description Mismatch',
     'camp_type_not_offered': '🏕️ Camp Type Not Offered',
     'registration_closed': '🔒 Registration Closed',

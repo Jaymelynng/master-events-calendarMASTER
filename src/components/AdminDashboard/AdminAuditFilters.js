@@ -133,10 +133,10 @@ export default function AdminAuditFilters({
             onChange={(e) => onStatusFilterChange(e.target.value)}
             className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-purple-400 focus:outline-none"
           >
-            <option value="active">Active (Needs Review)</option>
-            <option value="verified">✓ Verified Accurate</option>
-            <option value="bugs">✗ Invalid/Bugs (Code Fixes)</option>
-            <option value="resolved">Temp Overrides & Rules</option>
+            <option value="active">⚠️ Needs Review</option>
+            <option value="verified">✓ Confirmed Real Errors</option>
+            <option value="bugs">✗ Bugs (Code Needs Fix)</option>
+            <option value="resolved">✓ Dismissed (One-Time OK)</option>
             <option value="all">All</option>
           </select>
         </div>

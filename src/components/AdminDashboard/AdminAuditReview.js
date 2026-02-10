@@ -303,6 +303,40 @@ export default function AdminAuditReview({ gyms }) {
     }
   };
 
+  // Handle undo dismiss - remove from acknowledged_errors
+  const handleUndoDismiss = async (event, errorMessage) => {
+    try {
+      const { data: currentEvent, error: fetchError } = await supabase
+        .from('events')
+        .select('acknowledged_errors')
+        .eq('id', event.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentAcknowledged = currentEvent?.acknowledged_errors || [];
+      // Remove the acknowledgment for this error
+      const filtered = currentAcknowledged.filter(ack =>
+        typeof ack === 'string' ? ack !== errorMessage : ack.message !== errorMessage
+      );
+
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ acknowledged_errors: filtered })
+        .eq('id', event.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setEvents(prev => prev.map(e =>
+        e.id === event.id ? { ...e, acknowledged_errors: filtered } : e
+      ));
+    } catch (err) {
+      console.error('Error undoing dismiss:', err);
+      alert('Failed to undo. Please try again.');
+    }
+  };
+
   // Compute accuracy stats from pre-filtered events
   const accuracyStats = computeAccuracyStats(preFilteredEvents);
 
@@ -413,6 +447,7 @@ export default function AdminAuditReview({ gyms }) {
                         event={event}
                         onDismissError={handleDismissError}
                         onVerifyError={handleVerifyError}
+                        onUndoDismiss={handleUndoDismiss}
                         dismissingError={dismissingError}
                         statusFilter={statusFilter}
                         selectedCategory={selectedCategory}
@@ -431,6 +466,7 @@ export default function AdminAuditReview({ gyms }) {
                   event={event}
                   onDismissError={handleDismissError}
                   onVerifyError={handleVerifyError}
+                  onUndoDismiss={handleUndoDismiss}
                   dismissingError={dismissingError}
                   statusFilter={statusFilter}
                   selectedCategory={selectedCategory}
@@ -451,13 +487,13 @@ export default function AdminAuditReview({ gyms }) {
       {/* DismissRuleModal */}
       {dismissModalState && (
         <DismissRuleModal
-          isOpen={true}
-          onClose={() => setDismissModalState(null)}
           errorMessage={dismissModalState.errorMessage}
+          gymId={dismissModalState.gymId}
           ruleEligible={dismissModalState.ruleEligible}
           ruleInfo={dismissModalState.ruleInfo}
-          onAcceptException={handleAcceptException}
+          onDismiss={handleAcceptException}
           onDismissAndRule={handleDismissAndRule}
+          onCancel={() => setDismissModalState(null)}
         />
       )}
     </div>

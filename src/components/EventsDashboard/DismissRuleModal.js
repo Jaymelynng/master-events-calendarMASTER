@@ -40,7 +40,11 @@ export default function DismissRuleModal({
     : '';
 
   const handleAcceptException = () => {
-    onDismiss(note || null);
+    if (typeof onDismiss === 'function') {
+      onDismiss(note || null);
+    } else {
+      console.error('onDismiss is not a function:', onDismiss);
+    }
   };
 
   const handleMakeRuleClick = () => {
@@ -55,8 +59,14 @@ export default function DismissRuleModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-60">
-      <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl">
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-60"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -64,7 +74,7 @@ export default function DismissRuleModal({
           </h3>
           <button
             onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none"
+            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 text-xl font-bold leading-none w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"
           >
             ×
           </button>
@@ -137,10 +147,10 @@ export default function DismissRuleModal({
             {/* Always show Accept Exception */}
             <button
               onClick={handleAcceptException}
-              className="flex-1 px-4 py-3 bg-gray-100 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-200 hover:border-gray-400 transition-colors font-semibold text-sm"
+              className="flex-1 px-4 py-3 bg-green-100 border-2 border-green-400 text-green-800 rounded-lg hover:bg-green-200 hover:border-green-500 transition-colors font-semibold text-sm cursor-pointer"
             >
               Accept Exception
-              <span className="block text-xs font-normal text-gray-500 mt-0.5">
+              <span className="block text-xs font-normal text-green-600 mt-0.5">
                 Dismiss this one time
               </span>
             </button>

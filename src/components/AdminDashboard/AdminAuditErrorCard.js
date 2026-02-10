@@ -5,6 +5,7 @@ export default function AdminAuditErrorCard({
   event,
   onDismissError,
   onVerifyError,
+  onUndoDismiss,
   dismissingError,
   statusFilter = 'active',
   selectedCategory = 'all',
@@ -227,6 +228,16 @@ export default function AdminAuditErrorCard({
               title="Dismiss with optional note"
             >
               {isLoading ? '...' : '✓ OK'}
+            </button>
+          )}
+          {/* Undo button for dismissed errors */}
+          {isDismissed && onUndoDismiss && (
+            <button
+              onClick={() => onUndoDismiss(event, error.message)}
+              className="px-2 py-1 text-xs bg-gray-200 hover:bg-red-100 text-gray-600 hover:text-red-600 rounded transition-colors"
+              title="Undo dismissal"
+            >
+              ↩ Undo
             </button>
           )}
         </div>

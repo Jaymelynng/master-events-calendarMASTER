@@ -1,6 +1,6 @@
 # Validation Rules Architecture
 
-**Last Updated:** February 5, 2026  
+**Last Updated:** February 10, 2026  
 **Purpose:** Explains what's built into the software vs. what's configurable by users  
 **Audience:** Developers, administrators, and future customers
 
@@ -101,17 +101,48 @@ Multiple age formats are recognized:
 | Just range | `5-12` | ✅ |
 | Just plus | `5+` | ✅ |
 
-### 1.7 Multi-Day Event Handling
+### 1.7 Multi-Day & Multi-Month Event Handling
 
 **Events spanning multiple months are handled correctly.**
 
-For an event **June 30 - July 5**:
-- Both `June` and `July` are valid months
+For an event **June 28 - August 1**:
+- `June`, `July`, AND `August` are ALL valid months
+- Every month BETWEEN start and end is included — not just start and end
 - No false "date mismatch" error
 
-**Code:** Checks both `startDate` AND `endDate` months.
+For a camp **June 30 - July 5**:
+- Both `June` and `July` are valid months
+- Description mentioning either month is fine
 
-### 1.8 Price Pattern Recognition
+**Code:** Builds a set of ALL months from startDate through endDate.
+
+### 1.8 End Date Before Start Date Detection
+
+**If the end date is before the start date, it's always flagged as a manager error.**
+
+Example: Start date `2026-07-10`, End date `2026-06-28` → ERROR
+This is a universal rule — no gym needs to configure this.
+
+### 1.9 Registration/Promo Date Context Skipping
+
+**Months mentioned near registration or promotional language are NOT flagged.**
+
+These patterns are automatically skipped:
+- `"Register by September 1"` — registration context
+- `"Sign up before March"` — signup context
+- `"Also see our December camp"` — promotional context
+- `"Check out upcoming January events"` — promotional context
+
+This prevents false positives when descriptions reference other dates that aren't the event date.
+
+### 1.10 Camp Time Format Exception
+
+**Camps can use "Full Day" or "Half Day" instead of specific times.**
+
+- A clinic MUST have a specific time like `6:30 PM`
+- A camp can say `Full Day` or `Half Day` — that counts as valid time info
+
+### 1.11 Price Pattern Recognition
 
 Prices are extracted using pattern: `$XX` or `$XX.XX`
 
@@ -229,12 +260,21 @@ This section explains WHERE the "correct" data comes from for each field. This i
 
 **The Problem:**
 - iClass has pricing data in their system (what customers actually pay)
-- But their API does NOT expose this field
-- We cannot automatically verify if the price in the description matches what customers will be charged
+- But their public portal API does NOT expose pricing schedule data
+- Managers pick the wrong pricing schedule, enter wrong prices, or don't update after price increases
+- We cannot rely on managers having anything accurate
 
 **Our Solution:**
-- **For CAMPS:** We built our own `camp_pricing` table in Supabase with correct prices per gym
-- **For Other Events:** We can only compare title price vs description price (no source of truth)
+- **For CAMPS:** `camp_pricing` table in Supabase with correct prices per gym (full day/half day, daily/weekly)
+- **For CLINIC, KNO, OPEN GYM:** `event_pricing` table in Supabase with correct prices per gym per event type
+- Both tables support **date-based pricing** with `effective_date` and `end_date` columns so price increases are handled automatically
+- The scraper uses these tables as the **source of truth** and flags when the portal price doesn't match
+
+**How Price Validation Works:**
+1. Scraper pulls event from public portal (which shows the price the manager entered)
+2. Scraper looks up the CORRECT price from our pricing tables
+3. If they don't match → `event_price_mismatch` or `camp_price_mismatch` error
+4. Additional `gym_valid_values` rules can add extra valid prices per gym (sibling discounts, etc.)
 
 ### 3.3 Complete Source of Truth Table
 
@@ -246,8 +286,8 @@ This section explains WHERE the "correct" data comes from for each field. This i
 | **Time** | ✅ iClass API | `schedule.startTime` / `endTime` | YES - compare to title/description |
 | **Age** | ✅ iClass API | `minAge` / `maxAge` fields | YES - compare to title/description |
 | **Program Type** | ✅ iClass API | `link_type_id` field | YES - compare to title/description keywords |
-| **Price (CAMP)** | ✅ OUR Supabase table | `camp_pricing` + `gym_valid_values` | YES - compare description price to our table |
-| **Price (CLINIC, KNO, OPEN GYM)** | ❌ NO SOURCE | Parsed from text only | PARTIAL - can only check title vs description match |
+| **Price (CAMP)** | ✅ OUR Supabase table | `camp_pricing` + `gym_valid_values` | YES - compare description price to our table (±$2 tolerance) |
+| **Price (CLINIC, KNO, OPEN GYM)** | ✅ OUR Supabase table | `event_pricing` + `gym_valid_values` | YES - compare description price to our table (±$1 tolerance) |
 
 ### 3.4 Why This Matters
 
@@ -277,7 +317,46 @@ CREATE TABLE camp_pricing (
 );
 ```
 
-This table is the SOURCE OF TRUTH for camp prices. When validating camp events, description prices are compared against this table.
+This table is the SOURCE OF TRUTH for camp prices. When validating camp events, description prices are compared against this table. Tolerance: ±$2 to handle rounding.
+
+### 3.6 Event Pricing Table
+
+```sql
+CREATE TABLE event_pricing (
+  id UUID PRIMARY KEY,
+  gym_id VARCHAR NOT NULL,       -- e.g., "CCP", "HGA"
+  event_type VARCHAR NOT NULL,   -- "KIDS NIGHT OUT", "CLINIC", "OPEN GYM"
+  price NUMERIC NOT NULL,        -- e.g., 40.00
+  duration_hours NUMERIC,        -- optional: 1.0, 1.5 (for future use)
+  effective_date DATE NOT NULL,  -- when this price takes effect
+  end_date DATE,                 -- NULL = still active, or date when price expired
+  notes TEXT                     -- e.g., "Price increase Feb 10, 2026"
+);
+```
+
+This table is the SOURCE OF TRUTH for CLINIC, KNO, and OPEN GYM prices.
+
+**How date-based pricing works:**
+- The scraper queries for prices where `effective_date <= today` AND (`end_date IS NULL` OR `end_date >= today`)
+- When prices increase, add new rows with the new `effective_date` and set `end_date` on the old rows
+- This means price history is preserved and the correct price is always used automatically
+
+**Current confirmed prices (as of Feb 10, 2026):**
+
+| Gym | Clinic | KNO | Open Gym |
+|-----|--------|-----|----------|
+| CCP | $35 | $40 | $10 |
+| CPF | $30 | $40 | $10 |
+| CRR | $30 | $40 | $10 |
+| EST | $30 | $40 | $35 |
+| HGA | $30 | $45 | $20 |
+| OAS | $30 | $45 | $20 |
+| RBA | $30 | $40 | $20 |
+| RBK | $30 | $40 | $15 |
+| SGT | $30 | $45 | $30 |
+| TIG | $30 | $40 | $20 |
+
+Tolerance: ±$1 (exact match).
 
 ---
 
@@ -358,10 +437,11 @@ Something is **WRONG** - two sources don't match. These can confuse customers!
 | `age_mismatch` | iClass age vs title/description age | ✅ iClass API | iClass: 5+, Title: "Ages 4-12" |
 | `program_mismatch` | iClass program vs title/description keywords | ✅ iClass API | iClass: KNO, Title: "Clinic" |
 | `skill_mismatch` | Title skill vs description skill (clinics) | Title vs Desc | Title: "Tumbling", Desc: "Bars" |
-| `price_mismatch` | Title price vs description price | ❌ No source | Title: "$50", Desc: "$45" |
-| `camp_price_mismatch` | Description price vs camp_pricing table | ✅ YOUR Supabase table | Desc: "$150", Valid: $125 or $175 |
+| `price_mismatch` | Title price vs description price | Title vs Desc | Title: "$50", Desc: "$45" |
+| `camp_price_mismatch` | Description price vs `camp_pricing` table | ✅ YOUR Supabase table | Desc: "$150", Valid: $125 or $175 |
+| `event_price_mismatch` | Description price vs `event_pricing` table | ✅ YOUR Supabase table | Desc: "$30", Valid: $40 for this gym |
 
-**Key insight:** Most DATA errors compare against iClass API (the truth). But `price_mismatch` for non-camp events only compares title vs description because we have NO source of truth for those prices.
+**Key insight:** Most DATA errors compare against iClass API (the truth). Price validation compares against YOUR pricing tables in Supabase — these are YOUR source of truth that you maintain.
 
 ### 5.2 FORMAT Errors (Orange - Warning)
 
@@ -412,22 +492,32 @@ For a sellable product, customers should be able to:
 
 ## PART 7: QUICK REFERENCE
 
-### What's Automatic (No Setup Needed)
+### What's Automatic (No Setup Needed) — UNIVERSAL RULES
 
-- ✅ Case-insensitive matching
-- ✅ Apostrophe handling
-- ✅ Month abbreviations (Jan, Feb, etc.)
+These work for ALL gyms out of the box. No configuration needed. If you sell the app, every customer gets these for free.
+
+- ✅ Case-insensitive matching (all comparisons)
+- ✅ Apostrophe handling (Kid's, Kids', Kids all match)
+- ✅ Month abbreviations (Jan, Feb, etc.) with word-boundary matching
 - ✅ Common program keywords (KNO, clinic, open gym, camp)
-- ✅ Time format variations (6:30 PM, 6:30pm, 6:30 p.m.)
-- ✅ Age format variations (Ages 5+, 5-12, etc.)
-- ✅ Multi-day event date handling
+- ✅ Time format variations (6:30 PM, 6:30pm, 6:30 p.m., 6p)
+- ✅ Age format variations (Ages 5+, 5-12, Age 5, Students 5+)
+- ✅ Multi-month event handling (June-August camp includes July as valid)
+- ✅ End date before start date detection
+- ✅ Registration/promo context skipping ("Register by Sept" doesn't trigger date error)
+- ✅ Camp "Full Day"/"Half Day" counts as valid time info
+- ✅ Day-of-week validation skipped for CAMP events (camps span multiple days)
+- ✅ Day-range cleaning ("Monday-Friday" in description doesn't trigger day mismatch)
+- ✅ Price pattern cleaning (removes "$62 a day" and "Ages 4-13" before time matching to avoid false positives)
+- ✅ Date-based pricing (effective_date/end_date handles price increases automatically)
 
 ### What Needs Configuration (Per Gym)
 
-- ⚙️ Custom program synonyms (e.g., "Ninja Night" = KNO)
-- ⚙️ Price exceptions (e.g., Before Care $20)
-- ⚙️ Time exceptions (e.g., Early Dropoff 8:00am)
-- ⚙️ Camp pricing (full day/half day, daily/weekly)
+- ⚙️ Custom program synonyms (e.g., "Ninja Night" = KNO) — via Admin Dashboard > Gym Rules
+- ⚙️ Price exceptions (e.g., Before Care $20) — via Admin Dashboard > Gym Rules
+- ⚙️ Time exceptions (e.g., Early Dropoff 8:00am) — via Admin Dashboard > Gym Rules
+- ⚙️ Camp pricing (full day/half day, daily/weekly) — via `camp_pricing` table
+- ⚙️ Event pricing (CLINIC, KNO, OPEN GYM per gym) — via `event_pricing` table
 
 ---
 
@@ -438,3 +528,9 @@ For a sellable product, customers should be able to:
 | Feb 5, 2026 | Initial creation - documented precoded vs configurable rules |
 | Feb 5, 2026 | Added month abbreviation support |
 | Feb 5, 2026 | Fixed multi-day event date validation |
+| Feb 10, 2026 | Added `event_pricing` table as source of truth for CLINIC/KNO/OPEN GYM prices |
+| Feb 10, 2026 | Added multi-month camp support (all months between start and end are valid) |
+| Feb 10, 2026 | Added end-date-before-start-date detection |
+| Feb 10, 2026 | Added registration/promo context skipping for date validation |
+| Feb 10, 2026 | Expanded universal rules documentation for sellability |
+| Feb 10, 2026 | Updated confirmed pricing table for all 10 gyms |
