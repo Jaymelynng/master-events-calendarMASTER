@@ -72,9 +72,6 @@ export const eventsApi = {
     }
     
     try {
-      console.log('🔍 Checking for existing events...');
-      console.log('📊 Total events to import:', events.length);
-      
       // Get list of existing event URLs (including soft-deleted ones)
       const eventUrls = events.map(e => e.event_url);
       const { data: existingEvents, error: checkError } = await supabase
@@ -120,14 +117,10 @@ export const eventsApi = {
         }
       }
       
-      const duplicateCount = events.length - trulyNewEvents.length - eventsToRestore.length;
-      console.log(`📋 Found ${duplicateCount} active duplicates, ${eventsToRestore.length} to restore, ${trulyNewEvents.length} truly new`);
-      
       let importedEvents = [];
       
       // Restore soft-deleted events (update them with new data and clear deleted_at)
       if (eventsToRestore.length > 0) {
-        console.log(`🔄 Restoring ${eventsToRestore.length} previously deleted events...`);
         for (const event of eventsToRestore) {
           const { id, ...updateData } = event;
           const { data: restored, error: restoreError } = await supabase
@@ -140,15 +133,12 @@ export const eventsApi = {
             console.error(`❌ Error restoring event ${id}:`, restoreError);
           } else if (restored && restored.length > 0) {
             importedEvents.push(restored[0]);
-            console.log(`✅ Restored event: ${restored[0].title}`);
           }
         }
       }
       
       // Insert truly new events
       if (trulyNewEvents.length > 0) {
-        console.log('🚀 Inserting new events to Supabase:', trulyNewEvents);
-        
         const { data, error } = await supabase
           .from('events')
           .insert(trulyNewEvents)
@@ -160,13 +150,6 @@ export const eventsApi = {
         }
         
         importedEvents = [...importedEvents, ...(data || [])];
-        console.log(`✅ Successfully imported ${data?.length || 0} new events`);
-      }
-      
-      if (importedEvents.length === 0 && trulyNewEvents.length === 0 && eventsToRestore.length === 0) {
-        console.log('✅ All events already exist - no new events to import');
-      } else {
-        console.log(`✅ Total imported/restored: ${importedEvents.length} events`);
       }
       
       return importedEvents;

@@ -30,8 +30,6 @@ export const useRealtimeEvents = (onEventsChange) => {
 
   // Set up subscription ONCE (empty dependency array)
   useEffect(() => {
-    console.log('🔴 Setting up real-time subscription for events...');
-
     // Create a channel for events table
     const eventsChannel = supabase
       .channel('events-changes')
@@ -43,23 +41,18 @@ export const useRealtimeEvents = (onEventsChange) => {
           table: 'events'
         },
         (payload) => {
-          console.log('🔴 Real-time event detected:', payload.eventType, payload.new || payload.old);
-          
           // Call the latest callback via ref
           handlerRef.current?.(payload);
         }
       )
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active!');
-        } else if (status === 'CHANNEL_ERROR') {
+        if (status === 'CHANNEL_ERROR') {
           console.error('❌ Real-time subscription error:', status);
         }
       });
 
     // Cleanup: Unsubscribe when component unmounts
     return () => {
-      console.log('🔴 Cleaning up real-time subscription...');
       supabase.removeChannel(eventsChannel);
     };
   }, []); // Empty deps = subscribe once
@@ -79,8 +72,6 @@ export const useRealtimeGymLinks = (onGymLinksChange) => {
   }, [onGymLinksChange]);
 
   useEffect(() => {
-    console.log('🔴 Setting up real-time subscription for gym_links...');
-
     const gymLinksChannel = supabase
       .channel('gym-links-changes')
       .on(
@@ -91,13 +82,12 @@ export const useRealtimeGymLinks = (onGymLinksChange) => {
           table: 'gym_links'
         },
         (payload) => {
-          console.log('🔴 Real-time gym_links change:', payload.eventType);
           handlerRef.current?.(payload);
         }
       )
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Gym links real-time subscription active!');
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time gym_links subscription error:', status);
         }
       });
 
@@ -121,8 +111,6 @@ export const useRealtimeGyms = (onGymsChange) => {
   }, [onGymsChange]);
 
   useEffect(() => {
-    console.log('🔴 Setting up real-time subscription for gyms...');
-
     const gymsChannel = supabase
       .channel('gyms-changes')
       .on(
@@ -133,13 +121,12 @@ export const useRealtimeGyms = (onGymsChange) => {
           table: 'gyms'
         },
         (payload) => {
-          console.log('🔴 Real-time gyms change:', payload.eventType);
           handlerRef.current?.(payload);
         }
       )
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Gyms real-time subscription active!');
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time gyms subscription error:', status);
         }
       });
 
