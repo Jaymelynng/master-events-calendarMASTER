@@ -76,3 +76,7 @@ Thumbs.db
 # Claude temp files
 tmpclaude-*
 nul
+
+# Python cache
+__pycache__/
+*.pyc
