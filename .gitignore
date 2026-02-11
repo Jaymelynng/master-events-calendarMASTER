@@ -70,6 +70,18 @@ Thumbs.db
 *.temp
 .cache
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
 # Vercel
 .vercel
 

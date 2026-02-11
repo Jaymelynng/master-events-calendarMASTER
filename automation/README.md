@@ -212,3 +212,31 @@ See `TROUBLESHOOTING.md` for common issues.
 1. Is Railway service running? Check dashboard.
 2. Is API key set in both Vercel and Railway?
 3. Check Railway logs for errors.
+
+---
+
+## 📊 ANALYSIS SCRIPTS (Archive)
+
+This folder also contains several one-time analysis scripts used during development and debugging. These are **NOT** part of the production system:
+
+### Price Analysis Scripts (19 scripts)
+Scripts for analyzing price validation issues:
+- `check_description_pricing.py`, `check_prices_in_desc.py`, `check_prices_in_title.py`
+- `compare_prices.py`, `compare_pricing_sot.py`
+- `complete_price_audit_excel.py`, `export_price_audit_csv.py`
+- `full_price_audit_report.py`, `list_missing_price_events.py`
+- `price_mismatch_excel.py`, `price_mismatch_report.py`
+
+### Data Analysis Scripts
+- `analyze_jan_alerts.py` - Analyze validation alerts for January
+- `analyze_jan_events.py` - Analyze events for January
+- `analyze_supabase_for_issues.py` - General database issue analysis
+- `check_sgt_clinics.py` - Specific gym analysis
+- `compare_before_after.py` - Compare data before/after changes
+- `count_errors_by_month.py` - Count validation errors by month
+
+### Testing Scripts
+- `test_completeness_validation.py` - Test completeness validation rules
+- `test_price_validation.py` - Test price validation rules
+
+**Note:** These scripts can be archived/deleted if no longer needed for reference.
