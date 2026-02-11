@@ -80,14 +80,21 @@ const retryWithBackoff = async (fn, retries = MAX_RETRIES) => {
     } catch (error) {
       if (i === retries) throw error;
       
-      // Don't retry if it's a validation error or auth error
-      if (error.message.includes('Authentication') || 
-          error.message.includes('Invalid') ||
-          (error.status && (error.status === 400 || error.status === 401))) {
-        throw error;
+      // Don't retry if it's a validation error, auth error, or client error (4xx)
+      const isClientError = error.message.includes('Authentication') || 
+                           error.message.includes('Invalid') ||
+                           error.message.includes('Invalid response format');
+      
+      // Check status only if it exists (Response errors have status)
+      const hasErrorStatus = typeof error.status === 'number' && 
+                            error.status >= 400 && 
+                            error.status < 500;
+      
+      if (isClientError || hasErrorStatus) {
+        throw error; // Don't retry client errors
       }
       
-      // Exponential backoff
+      // Exponential backoff for network/server errors
       const delay = RETRY_DELAY_MS * Math.pow(2, i);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -116,7 +123,13 @@ export const syncEvents = async (gymId, eventType) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData = {};
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          errorData = { error: 'Invalid response format from server' };
+        }
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -169,7 +182,13 @@ export const importEvents = async (gymId, eventType, events) => {
       }, 60000); // 1 minute timeout for imports
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData = {};
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          errorData = { error: 'Invalid response format from server' };
+        }
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
