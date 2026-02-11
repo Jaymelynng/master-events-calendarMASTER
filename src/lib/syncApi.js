@@ -82,7 +82,6 @@ const retryWithBackoff = async (fn, retries = MAX_RETRIES) => {
       
       // Don't retry if it's a validation error, auth error, or client error (4xx)
       const isClientError = error.message.includes('Authentication') || 
-                           error.message.includes('Invalid') ||
                            error.message.includes('Invalid response format');
       
       // Check status only if it exists (Response errors have status)
