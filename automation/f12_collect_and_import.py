@@ -968,6 +968,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 txt = re.sub(r'\$\d+(?:\.\d{2})?\s*(?:a\s+day|a\s+week|/day|/week|per\s+day|per\s+week)', ' ', txt)
                 txt = re.sub(r'ages?\s*\d{1,2}\s*[-–to]+\s*\d{1,2}', ' ', txt)
                 txt = re.sub(r'\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:years?|yrs?)', ' ', txt)
+                # Catch-all: "$50 a" (price followed by "a") but NOT "$50 am" (legitimate time)
                 txt = re.sub(r'\$\d+(?:\.\d{2})?\s+a(?!\s*m)', ' ', txt)
                 
                 # Match many time formats:
