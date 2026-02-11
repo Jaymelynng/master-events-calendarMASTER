@@ -83,8 +83,7 @@ const retryWithBackoff = async (fn, retries = MAX_RETRIES) => {
       // Don't retry if it's a validation error or auth error
       if (error.message.includes('Authentication') || 
           error.message.includes('Invalid') ||
-          error.status === 400 || 
-          error.status === 401) {
+          (error.status && (error.status === 400 || error.status === 401))) {
         throw error;
       }
       

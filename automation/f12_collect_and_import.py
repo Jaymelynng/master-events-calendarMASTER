@@ -14,9 +14,11 @@ from urllib.request import Request, urlopen
 from playwright.async_api import async_playwright
 
 # Supabase configuration - load from environment variables
-SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://xftiwouxpefchwoxxgpf.supabase.co')
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY') or os.environ.get('SUPABASE_KEY')
 
+if not SUPABASE_URL:
+    raise ValueError("SUPABASE_URL environment variable must be set")
 if not SUPABASE_KEY:
     raise ValueError("SUPABASE_KEY or SUPABASE_ANON_KEY environment variable must be set")
 
