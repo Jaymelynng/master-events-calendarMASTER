@@ -1,7 +1,9 @@
 # 🚨 AI AGENT - READ THIS ENTIRE FILE FIRST - MANDATORY
 
-**Last Updated**: February 5, 2026  
+**Last Updated**: February 11, 2026  
 **Purpose**: This file contains EVERYTHING an AI needs to know about this system. Read it completely before doing ANYTHING.
+
+> **Quick Start:** Also see `CLAUDE.md` in the root for a condensed 2-minute onboarding guide with session workflow.
 
 ---
 
@@ -185,16 +187,20 @@ Per-gym customization:
 
 ## Current Gaps (As of Feb 2026)
 
-| Gap | Description | Priority |
-|-----|-------------|----------|
-| Wrong year in DESCRIPTION | Only checks title for wrong year, not description | Should fix |
-| `program_ignore` not built | Can't ignore "open gym" when it's a station in KNO | Medium |
-| No pricing for non-camps | Clinic/KNO/Open Gym have no price source of truth | Low |
-| Date ranges not validated | "Jan 15-17" not checked against actual dates | Low |
-| Flyer-only events | Can't validate anything if only image, no text | Known limitation |
+| Gap | Description | Priority | Status |
+|-----|-------------|----------|--------|
+| Wrong year in DESCRIPTION | Only checks title for wrong year, not description | Should fix | ❌ Open |
+| `program_ignore` not built | Can't ignore "open gym" when it's a station in KNO | Medium | ❌ Open |
+| Date ranges not validated | "Jan 15-17" not checked against actual dates | Low | ❌ Open |
+| Flyer-only events | Can't validate anything if only image, no text | Known limitation | ❌ Open |
 
-## Export Bug (UNFIXED)
-The Analytics and Missing Requirements sections of export do NOT respect event type filters. This is documented in `EXPORT_FEATURE_ANALYSIS.md`.
+## Fixed Issues
+| Issue | Fix Date | Details |
+|-------|----------|---------|
+| Export bug (analytics ignoring filters) | Feb 2026 | `ExportModal.js` now uses `filteredEvents` consistently |
+| No pricing for non-camps | Feb 2026 | `event_pricing` table with `effective_date` support |
+| Time regex false positives ("$62 a day", "Ages 4-13") | Feb 2026 | Pre-cleaning in `has_time_in_text()` and `check_times_in_text()` |
+| Day range false positives ("Monday-Friday") | Feb 2026 | Improved day range regex with "to/thru/through" support |
 
 ---
 
@@ -253,6 +259,7 @@ Before saying ANYTHING works:
 | Oct 2025 | Original rules created after verification failures |
 | Dec 28, 2025 | Updated with system status, documentation audit lesson |
 | Feb 5, 2026 | MAJOR REWRITE - Added complete system knowledge, source of truth, validation rules, gaps, architecture |
+| Feb 11, 2026 | Updated known gaps (marked fixed items), added CLAUDE.md quick-start reference |
 
 ---
 

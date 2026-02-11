@@ -16,6 +16,8 @@
 
 [➡️ Read the Protocol](OPERATIONS/AI_VERIFICATION_PROTOCOL.md)
 
+> **AI Quick Start:** See `CLAUDE.md` in the repo root for a 2-minute onboarding guide that covers project context, key files, known bugs, and session workflow.
+
 ---
 
 ## 🗂️ Documentation Structure
@@ -152,15 +154,22 @@ docs/
 
 ## 📊 Documentation Stats
 
-- **Total Documents:** 23 (updated Feb 5, 2026)
+- **Total Documents:** 24 (updated Feb 11, 2026)
 - **BUSINESS:** 2 documents
 - **TECHNICAL:** 6 documents  
 - **OPERATIONS:** 16 documents
-- **Last Major Update:** February 5, 2026 (Root cleanup, moved EXPORT_BUG_ANALYSIS)
+- **Root:** `CLAUDE.md` (AI quick-start guide)
+- **Last Major Update:** February 11, 2026
 
 ---
 
 ## 🔄 Recent Changes
+
+### February 11, 2026
+- **ADDED** `CLAUDE.md` — AI session quick-start guide for faster onboarding
+- **UPDATED** `AI_RULES_READ_FIRST.md` — Marked fixed bugs, added CLAUDE.md reference
+- **FIXED** Time regex false positives in `f12_collect_and_import.py` ("$62 a day", "Ages 4-13")
+- **FIXED** Day range false positives — added "to/thru/through" support
 
 ### February 5, 2026
 - **MOVED** `EXPORT_FEATURE_ANALYSIS.md` → `docs/TECHNICAL/EXPORT_BUG_ANALYSIS.md`
@@ -181,5 +190,5 @@ Code can be rewritten, but this knowledge is irreplaceable.
 
 ---
 
-**Last Updated:** February 5, 2026  
+**Last Updated:** February 11, 2026  
 **Maintained by:** Jayme

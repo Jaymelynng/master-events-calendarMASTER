@@ -962,6 +962,14 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 if not text:
                     return False
                 txt = text.lower()
+                
+                # PRE-CLEAN: Remove patterns that cause false positives
+                # "$62 a day" -> "62 a" matched as time, "Ages 4-13" -> "13 a" matched as time
+                txt = re.sub(r'\$\d+(?:\.\d{2})?\s*(?:a\s+day|a\s+week|/day|/week|per\s+day|per\s+week)', ' ', txt)
+                txt = re.sub(r'ages?\s*\d{1,2}\s*[-–to]+\s*\d{1,2}', ' ', txt)
+                txt = re.sub(r'\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:years?|yrs?)', ' ', txt)
+                txt = re.sub(r'\$\d+(?:\.\d{2})?\s+a(?!\s*m)', ' ', txt)
+                
                 # Match many time formats:
                 # - "6:30pm", "6:30 pm", "6pm", "6 pm", "6:30p", "6:30 p.m."
                 # - "6:30a", "6:30 a.m.", "6am", "6 am"  
@@ -1371,9 +1379,9 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 # Check first 200 chars for day mentions
                 desc_snippet = description_lower[:200]
                 
-                # PRE-CLEAN: Remove day ranges like "Monday-Friday", "Mon-Fri" before checking
+                # PRE-CLEAN: Remove day ranges like "Monday-Friday", "Mon-Fri", "Monday through Friday" before checking
                 # These describe schedules, not the specific event day
-                day_range_pattern = r'(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\s*[-–to]+\s*(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)'
+                day_range_pattern = r'(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\s*(?:[-–]|to|thru|through)\s*(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)'
                 desc_snippet_cleaned = re.sub(day_range_pattern, '', desc_snippet)
                 
                 # Also remove parenthetical day ranges like "(Monday-Friday)"
