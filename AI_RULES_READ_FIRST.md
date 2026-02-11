@@ -129,17 +129,21 @@ iClass does NOT provide price in their API. We built our own pricing tables:
 ### DATA Errors (Red - High Priority)
 Something is **WRONG** - mismatch between sources that could confuse customers.
 
+> **Full reference with examples:** `docs/OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md`
+
 | Error Type | What's Compared | Source of Truth |
 |------------|-----------------|-----------------|
 | `year_mismatch` | Title year vs actual event year | iClass `startDate` |
 | `date_mismatch` | Description month vs actual month | iClass `startDate`/`endDate` |
+| `day_mismatch` | Description day vs actual day | Calculated from `startDate` |
 | `time_mismatch` | Title/description time vs actual | iClass `schedule.startTime` |
 | `age_mismatch` | Title/description age vs actual | iClass `minAge`/`maxAge` |
-| `price_mismatch` | Title price vs description price | None (comparing text only) |
+| `program_mismatch` | Title/description keywords vs program type | iClass `link_type_id` |
+| `skill_mismatch` | Title skill word vs description skill word (clinics only) | Title vs Description |
+| `price_mismatch` | Title price vs description price | Title vs Description |
+| `title_desc_mismatch` | Title program keywords vs description program keywords | Title vs Description |
 | `camp_price_mismatch` | Description price vs `camp_pricing` | Supabase `camp_pricing` |
 | `event_price_mismatch` | Description price vs `event_pricing` | Supabase `event_pricing` (Clinic/KNO/Open Gym) |
-| `program_mismatch` | Title keywords vs program type | iClass `link_type_id` |
-| `day_mismatch` | Description day vs actual day | Calculated from `startDate` |
 
 ### FORMAT Errors (Orange - Warning)
 Something is **MISSING** - required info not found.
@@ -148,8 +152,12 @@ Something is **MISSING** - required info not found.
 |------------|----------------|
 | `missing_age_in_title` | No age range in title |
 | `missing_date_in_title` | No date in title |
-| `missing_price_in_description` | No price ($XX) in description |
+| `missing_program_in_title` | No program type keyword in title |
+| `missing_age_in_description` | No age range in description |
 | `missing_time_in_description` | No time in description |
+| `missing_datetime_in_description` | No date or time in description |
+| `missing_program_in_description` | No program type keyword in description |
+| `missing_price_in_description` | No price ($XX) in description |
 | `description_status: none` | No description at all |
 | `description_status: flyer_only` | Only flyer image, no text to validate |
 
@@ -260,6 +268,7 @@ Before saying ANYTHING works:
 | Dec 28, 2025 | Updated with system status, documentation audit lesson |
 | Feb 5, 2026 | MAJOR REWRITE - Added complete system knowledge, source of truth, validation rules, gaps, architecture |
 | Feb 11, 2026 | Updated known gaps (marked fixed items), added CLAUDE.md quick-start reference |
+| Feb 11, 2026 | Added missing error types (skill_mismatch, title_desc_mismatch), completed FORMAT errors list, added AUDIT_DATA_ERROR_REFERENCE.md link |
 
 ---
 

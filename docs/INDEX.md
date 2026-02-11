@@ -100,6 +100,7 @@ docs/
 | [AUTO_ARCHIVE_SYSTEM.md](OPERATIONS/AUTO_ARCHIVE_SYSTEM.md) | Automatic event archiving |
 | [AUDIT-SYSTEM.md](OPERATIONS/AUDIT-SYSTEM.md) | Change tracking / audit history |
 | [DATA_QUALITY_VALIDATION.md](OPERATIONS/DATA_QUALITY_VALIDATION.md) | Automatic data validation + per-gym rules |
+| **[AUDIT_DATA_ERROR_REFERENCE.md](OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md)** ⭐ | What gets compared for each DATA error — source of truth explained |
 
 ### Technical Operations
 
@@ -129,6 +130,7 @@ docs/
 | **Sell or present the project** | `BUSINESS/BOSS-PRESENTATION.md` |
 | **Understand how it works technically** | `TECHNICAL/TECHNICAL-REFERENCE.md` |
 | **Understand precoded vs configurable rules** | `TECHNICAL/VALIDATION_RULES_ARCHITECTURE.md` |
+| **See what each DATA error compares** | `OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md` |
 | **Learn how to use automated sync** | `OPERATIONS/AUTO-SYNC-GUIDE.md` |
 | **Quick sync reminder (non-technical)** | `OPERATIONS/SYNC-QUICK-REFERENCE.md` |
 | **Access admin/super admin features** | `OPERATIONS/SECRET_ADMIN_MODE.md` |
@@ -154,10 +156,10 @@ docs/
 
 ## 📊 Documentation Stats
 
-- **Total Documents:** 24 (updated Feb 11, 2026)
+- **Total Documents:** 25 (updated Feb 11, 2026)
 - **BUSINESS:** 2 documents
 - **TECHNICAL:** 6 documents  
-- **OPERATIONS:** 16 documents
+- **OPERATIONS:** 17 documents
 - **Root:** `CLAUDE.md` (AI quick-start guide)
 - **Last Major Update:** February 11, 2026
 
@@ -166,8 +168,9 @@ docs/
 ## 🔄 Recent Changes
 
 ### February 11, 2026
+- **ADDED** `AUDIT_DATA_ERROR_REFERENCE.md` — Clear reference showing what each DATA error compares (source of truth → what it checks)
+- **UPDATED** `AI_RULES_READ_FIRST.md` — Added missing error types (skill_mismatch, title_desc_mismatch), completed FORMAT errors list
 - **ADDED** `CLAUDE.md` — AI session quick-start guide for faster onboarding
-- **UPDATED** `AI_RULES_READ_FIRST.md` — Marked fixed bugs, added CLAUDE.md reference
 - **FIXED** Time regex false positives in `f12_collect_and_import.py` ("$62 a day", "Ages 4-13")
 - **FIXED** Day range false positives — added "to/thru/through" support
 

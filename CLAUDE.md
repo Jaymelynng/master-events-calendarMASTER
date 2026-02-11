@@ -50,6 +50,7 @@
 - **FORMAT errors** (orange) = something is MISSING (required info not found)
 - **Precoded rules** = hardcoded in Python (`f12_collect_and_import.py`)
 - **Configurable rules** = per-gym in `gym_valid_values` table in Supabase
+- **What gets compared:** See `docs/OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md` for the complete comparison table
 
 ### Pricing
 - iClass API does NOT provide prices
