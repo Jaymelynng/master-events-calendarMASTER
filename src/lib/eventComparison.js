@@ -16,11 +16,6 @@
  * - We should NOT mark past events as deleted just because they're not in the sync
  */
 export function compareEvents(newEvents, existingEvents) {
-  // DEBUG: Log what we're comparing
-  console.log('🔍 compareEvents called:');
-  console.log('  - newEvents count:', (newEvents || []).length);
-  console.log('  - existingEvents count:', (existingEvents || []).length);
-  
   // Get today's date for filtering "deleted" detection
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -36,10 +31,6 @@ export function compareEvents(newEvents, existingEvents) {
   (newEvents || []).forEach(ev => {
     newByUrl.set(ev.event_url, ev);
   });
-  
-  // DEBUG: Log first few URLs from each
-  console.log('  - First 3 existing URLs:', [...existingByUrl.keys()].slice(0, 3));
-  console.log('  - First 3 new URLs:', [...newByUrl.keys()].slice(0, 3));
 
   // Get all unique URLs
   const allUrls = new Set([
@@ -78,15 +69,6 @@ export function compareEvents(newEvents, existingEvents) {
       // Normalize date format: "2025-12-19T00:00:00.000Z" → "2025-12-19"
       const eventStartDate = rawStartDate ? String(rawStartDate).split('T')[0] : null;
       const hasNotStartedYet = eventStartDate && eventStartDate > todayStr;
-      
-      // DEBUG: Log why events are/aren't being marked as deleted
-      console.log(`🔍 Deleted check for "${(existing.title || '').substring(0, 40)}...":`, {
-        rawStartDate,
-        eventStartDate,
-        todayStr,
-        hasNotStartedYet,
-        willMarkDeleted: hasNotStartedYet
-      });
       
       if (hasNotStartedYet) {
         comparison.deleted.push({
@@ -166,11 +148,6 @@ function hasEventChanged(existing, incoming) {
   }
 
   if (changes.length > 0) {
-    // Debug log for troubleshooting - show all changes at once
-    console.log(`🔄 Event "${(incoming.title || '').substring(0, 40)}..." has ${changes.length} change(s):`);
-    changes.forEach(c => {
-      console.log(`   - ${c.field}: "${c.existing}" → "${c.incoming}"`);
-    });
     return true;
   }
 

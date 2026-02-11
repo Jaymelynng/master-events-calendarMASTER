@@ -8,13 +8,17 @@ import asyncio
 import json
 import re
 import html
+import os
 from datetime import datetime, date
 from urllib.request import Request, urlopen
 from playwright.async_api import async_playwright
 
-# Supabase configuration
-SUPABASE_URL = "https://xftiwouxpefchwoxxgpf.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdGl3b3V4cGVmY2h3b3h4Z3BmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2ODc1MjUsImV4cCI6MjA2NjI2MzUyNX0.jQReOgyjYxOaig_IoJv3jhhPzlfumUcn-vkS1yF9hY4"
+# Supabase configuration - load from environment variables
+SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://xftiwouxpefchwoxxgpf.supabase.co')
+SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY') or os.environ.get('SUPABASE_KEY')
+
+if not SUPABASE_KEY:
+    raise ValueError("SUPABASE_KEY or SUPABASE_ANON_KEY environment variable must be set")
 
 # Gym data
 GYMS = {
