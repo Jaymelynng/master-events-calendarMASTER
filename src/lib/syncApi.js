@@ -5,6 +5,11 @@
  * (either local or Railway-hosted) for automated event collection.
  */
 
+// Configuration
+const REQUEST_TIMEOUT_MS = 120000; // 2 minutes for sync operations
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
+
 /**
  * Get the API URL from environment or default to localhost
  */
@@ -36,6 +41,61 @@ const buildHeaders = () => {
 };
 
 /**
+ * Fetch with timeout
+ * @param {string} url - Request URL
+ * @param {object} options - Fetch options
+ * @param {number} timeout - Timeout in milliseconds
+ * @returns {Promise<Response>}
+ */
+const fetchWithTimeout = async (url, options = {}, timeout = REQUEST_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out');
+    }
+    throw error;
+  }
+};
+
+/**
+ * Retry a function with exponential backoff
+ * @param {Function} fn - Function to retry
+ * @param {number} retries - Number of retries
+ * @returns {Promise<any>}
+ */
+const retryWithBackoff = async (fn, retries = MAX_RETRIES) => {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (i === retries) throw error;
+      
+      // Don't retry if it's a validation error or auth error
+      if (error.message.includes('Authentication') || 
+          error.message.includes('Invalid') ||
+          error.status === 400 || 
+          error.status === 401) {
+        throw error;
+      }
+      
+      // Exponential backoff
+      const delay = RETRY_DELAY_MS * Math.pow(2, i);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+};
+
+/**
  * Sync events for a specific gym and event type
  * 
  * @param {string} gymId - The gym ID (e.g., 'RBA', 'CCP')
@@ -45,39 +105,45 @@ const buildHeaders = () => {
 export const syncEvents = async (gymId, eventType) => {
   const API_URL = getApiUrl();
   
-  try {
-    const response = await fetch(`${API_URL}/sync-events`, {
-      method: 'POST',
-      headers: buildHeaders(),
-      body: JSON.stringify({
-        gymId,
-        eventType
-      })
-    });
+  return retryWithBackoff(async () => {
+    try {
+      const response = await fetchWithTimeout(`${API_URL}/sync-events`, {
+        method: 'POST',
+        headers: buildHeaders(),
+        body: JSON.stringify({
+          gymId,
+          eventType
+        })
+      });
 
-    const data = await response.json();
-    
-    if (data.success && data.events) {
-      return {
-        success: true,
-        events: data.events,
-        eventsFound: data.eventsFound,
-        message: data.message
-      };
-    } else {
-      return {
-        success: false,
-        error: data.error || 'No events found',
-        events: []
-      };
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.events) {
+        return {
+          success: true,
+          events: data.events,
+          eventsFound: data.eventsFound,
+          message: data.message
+        };
+      } else {
+        return {
+          success: false,
+          error: data.error || 'No events found',
+          events: []
+        };
+      }
+    } catch (error) {
+      if (error.message === 'Request timed out') {
+        throw new Error(`Sync operation timed out after ${REQUEST_TIMEOUT_MS / 1000} seconds. The server may be busy or the request is taking too long.`);
+      }
+      throw new Error(`Failed to connect to API server at ${API_URL}: ${error.message}`);
     }
-  } catch (error) {
-    return {
-      success: false,
-      error: `Failed to connect to API server at ${API_URL}: ${error.message}`,
-      events: []
-    };
-  }
+  });
 };
 
 /**
@@ -91,25 +157,32 @@ export const syncEvents = async (gymId, eventType) => {
 export const importEvents = async (gymId, eventType, events) => {
   const API_URL = getApiUrl();
   
-  try {
-    const response = await fetch(`${API_URL}/import-events`, {
-      method: 'POST',
-      headers: buildHeaders(),
-      body: JSON.stringify({
-        gymId,
-        eventType,
-        events
-      })
-    });
+  return retryWithBackoff(async () => {
+    try {
+      const response = await fetchWithTimeout(`${API_URL}/import-events`, {
+        method: 'POST',
+        headers: buildHeaders(),
+        body: JSON.stringify({
+          gymId,
+          eventType,
+          events
+        })
+      }, 60000); // 1 minute timeout for imports
 
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    return {
-      success: false,
-      error: `Failed to import events: ${error.message}`
-    };
-  }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      if (error.message === 'Request timed out') {
+        throw new Error(`Import operation timed out. The server may be busy processing the events.`);
+      }
+      throw new Error(`Failed to import events: ${error.message}`);
+    }
+  });
 };
 
 /**
@@ -165,7 +238,7 @@ export const checkHealth = async () => {
   const API_URL = getApiUrl();
   
   try {
-    const response = await fetch(`${API_URL}/health`);
+    const response = await fetchWithTimeout(`${API_URL}/health`, {}, 5000); // 5 second timeout for health check
     const data = await response.json();
     return {
       ok: data.status === 'ok',
