@@ -1,22 +1,15 @@
 # 📚 Team Calendar - Documentation Index
 
 **Live URL:** https://teamcalendar.mygymtools.com  
-**Last Updated:** February 5, 2026  
-**Status:** ✅ FULLY DEPLOYED & VERIFIED  
+**Last Updated:** February 11, 2026  
 **Part of:** mygymtools.com suite  
 **Maintained by:** Jayme
 
 ---
 
-## 🚨 CRITICAL: AI VERIFICATION PROTOCOL
-
-**Before ANY technical verification, AI MUST read:** `docs/OPERATIONS/AI_VERIFICATION_PROTOCOL.md`
-
-**MANDATORY RULE:** Never assume code works without live testing.
-
-[➡️ Read the Protocol](OPERATIONS/AI_VERIFICATION_PROTOCOL.md)
-
-> **AI Quick Start:** See `CLAUDE.md` in the repo root for a 2-minute onboarding guide that covers project context, key files, known bugs, and session workflow.
+> **⚠️ When in doubt, trust the code.** Docs can lag behind. Key logic: `src/`, `automation/`, `database/`.
+>
+> **AI:** Read [AI_VERIFICATION_PROTOCOL.md](OPERATIONS/AI_VERIFICATION_PROTOCOL.md) before verifying — never assume without testing.
 
 ---
 
@@ -42,16 +35,6 @@ docs/
 
 ---
 
-## 🆕 START HERE
-
-### **[CURRENT_SYSTEM_STATUS.md](OPERATIONS/CURRENT_SYSTEM_STATUS.md)** ⭐ **READ FIRST**
-- Complete system status (FULLY DEPLOYED & WORKING!)
-- All 10 gyms, 500+ events
-- Verified 100% accuracy against live iClassPro data
-- What's working NOW
-
----
-
 ## 🏆 BUSINESS Documents
 
 **For:** Investors, stakeholders, executives, presentations
@@ -71,10 +54,9 @@ docs/
 |----------|---------|
 | **[TECHNICAL-REFERENCE.md](TECHNICAL/TECHNICAL-REFERENCE.md)** ⭐ | Complete system overview - START HERE for technical |
 | **[VALIDATION_RULES_ARCHITECTURE.md](TECHNICAL/VALIDATION_RULES_ARCHITECTURE.md)** ⭐ | Precoded vs configurable rules - CRITICAL for selling |
-| [DATABASE_COMPLETE_SCHEMA.md](TECHNICAL/DATABASE_COMPLETE_SCHEMA.md) | All 9 tables, views, design decisions, SQL commands |
-| [SCALABILITY-ROADMAP.md](TECHNICAL/SCALABILITY-ROADMAP.md) | Future scaling plan (not needed yet) |
-| [SYNC_SYSTEM_TECHNICAL.md](TECHNICAL/SYNC_SYSTEM_TECHNICAL.md) | Deep technical details of sync system |
-| [EXPORT_BUG_ANALYSIS.md](TECHNICAL/EXPORT_BUG_ANALYSIS.md) | ⚠️ Known bug - Analytics ignores event type filters |
+| [DATABASE_COMPLETE_SCHEMA.md](TECHNICAL/DATABASE_COMPLETE_SCHEMA.md) | Tables, views, design decisions, SQL commands |
+| [SCALABILITY-ROADMAP.md](TECHNICAL/SCALABILITY-ROADMAP.md) | Future scaling plan |
+| [SYNC_SYSTEM_TECHNICAL.md](TECHNICAL/SYNC_SYSTEM_TECHNICAL.md) | Sync system technical details |
 
 ---
 
@@ -95,7 +77,6 @@ docs/
 
 | Document | Purpose |
 |----------|---------|
-| [SYNC_PROGRESS_TRACKER.md](OPERATIONS/SYNC_PROGRESS_TRACKER.md) | Visual sync status grid |
 | **[EXPORT_DATA_GUIDE.md](OPERATIONS/EXPORT_DATA_GUIDE.md)** ⭐ | Export, reports, presets (CSV/JSON/HTML) |
 | [AUTO_ARCHIVE_SYSTEM.md](OPERATIONS/AUTO_ARCHIVE_SYSTEM.md) | Automatic event archiving |
 | [AUDIT-SYSTEM.md](OPERATIONS/AUDIT-SYSTEM.md) | Change tracking / audit history |
@@ -115,7 +96,6 @@ docs/
 
 | Document | Purpose |
 |----------|---------|
-| [CURRENT_SYSTEM_STATUS.md](OPERATIONS/CURRENT_SYSTEM_STATUS.md) | Current verified status |
 | [BULK-IMPORT-LEARNINGS.md](OPERATIONS/BULK-IMPORT-LEARNINGS.md) | Historical lessons learned |
 | [CAMP_COMPLEXITY_MASTER_GUIDE.md](OPERATIONS/CAMP_COMPLEXITY_MASTER_GUIDE.md) | Camp data structure variations |
 | [AI_VERIFICATION_PROTOCOL.md](OPERATIONS/AI_VERIFICATION_PROTOCOL.md) | Rules for AI testing |
@@ -126,7 +106,6 @@ docs/
 
 | I need to... | Read this |
 |--------------|-----------|
-| **Understand what's working RIGHT NOW** | `OPERATIONS/CURRENT_SYSTEM_STATUS.md` |
 | **Sell or present the project** | `BUSINESS/BOSS-PRESENTATION.md` |
 | **Understand how it works technically** | `TECHNICAL/TECHNICAL-REFERENCE.md` |
 | **Understand precoded vs configurable rules** | `TECHNICAL/VALIDATION_RULES_ARCHITECTURE.md` |
@@ -137,26 +116,24 @@ docs/
 | **Export data or generate reports** | `OPERATIONS/EXPORT_DATA_GUIDE.md` |
 | **Manage per-gym validation rules** | `OPERATIONS/DATA_QUALITY_VALIDATION.md` |
 | **Troubleshoot deployment issues** | `OPERATIONS/DEPLOYMENT_PLAN.md` |
-| **Understand the database** | `TECHNICAL/DATABASE_COMPLETE_SCHEMA.md` |
-| **See known export bug** | `TECHNICAL/EXPORT_BUG_ANALYSIS.md` |
+| **Understand the database** | `TECHNICAL/DATABASE_COMPLETE_SCHEMA.md` or `database/README.md` |
 
 ---
 
 ## 💎 The Crown Jewels (Most Valuable)
 
-1. **🆕 CURRENT_SYSTEM_STATUS.md** - Current truth (START HERE!)
-2. **🏆 BOSS-PRESENTATION.md** - Business value / ROI
-3. **🚀 AUTO-SYNC-GUIDE.md** - Main workflow
-4. **📋 SYNC-QUICK-REFERENCE.md** - Quick non-technical guide
-5. **🔐 SECRET_ADMIN_MODE.md** - Your hidden admin power
-6. **📤 EXPORT_DATA_GUIDE.md** - Reports, presets, email summaries
-7. **🔧 TECHNICAL-REFERENCE.md** - Complete system guide
+1. **🏆 BOSS-PRESENTATION.md** — Business value / ROI
+2. **🚀 AUTO-SYNC-GUIDE.md** — Main sync workflow
+3. **📋 SYNC-QUICK-REFERENCE.md** — Quick non-technical guide
+4. **🔐 SECRET_ADMIN_MODE.md** — Hidden admin (PIN: 1426)
+5. **📤 EXPORT_DATA_GUIDE.md** — Reports, presets, email summaries
+6. **🔧 TECHNICAL-REFERENCE.md** — Complete system guide
 
 ---
 
 ## 📊 Documentation Stats
 
-- **Total Documents:** 25 (updated Feb 11, 2026)
+- **Total Documents:** 22 (updated Feb 11, 2026)
 - **BUSINESS:** 2 documents
 - **TECHNICAL:** 6 documents  
 - **OPERATIONS:** 17 documents
@@ -168,7 +145,9 @@ docs/
 ## 🔄 Recent Changes
 
 ### February 11, 2026
-- **ADDED** `AUDIT_DATA_ERROR_REFERENCE.md` — Clear reference showing what each DATA error compares (source of truth → what it checks)
+- **DELETED** `CURRENT_SYSTEM_STATUS.md`, `SYNC_PROGRESS_TRACKER.md`, `EXPORT_BUG_ANALYSIS.md` — Outdated; trust code over docs
+- **UPDATED** `AUDIT_DATA_ERROR_REFERENCE.md` — Added acknowledged_patterns, temp override scopes
+- **UPDATED** `database/README.md` — Added acknowledged_patterns, gym_valid_values, event_pricing, camp_pricing
 - **UPDATED** `AI_RULES_READ_FIRST.md` — Added missing error types (skill_mismatch, title_desc_mismatch), completed FORMAT errors list
 - **ADDED** `CLAUDE.md` — AI session quick-start guide for faster onboarding
 - **FIXED** Time regex false positives in `f12_collect_and_import.py` ("$62 a day", "Ages 4-13")

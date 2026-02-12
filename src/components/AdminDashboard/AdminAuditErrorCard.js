@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { inferErrorCategory, isErrorAcknowledged, getAcknowledgmentDetails, getErrorLabel, isErrorVerified } from '../../lib/validationHelpers';
+import { inferErrorCategory, isErrorAcknowledged, matchesAcknowledgedPattern, getAcknowledgmentDetails, getErrorLabel, isErrorVerified } from '../../lib/validationHelpers';
 
 export default function AdminAuditErrorCard({
   event,
+  acknowledgedPatterns = [],
   onDismissError,
   onVerifyError,
   onUndoDismiss,
+  onUndoPattern,
   dismissingError,
   statusFilter = 'active',
   selectedCategory = 'all',
@@ -30,7 +32,8 @@ export default function AdminAuditErrorCard({
   // Filter errors based on status filter
   const filterByStatus = (errorList) => {
     return errorList.filter(e => {
-      const isDismissed = isErrorAcknowledged(acknowledged, e.message);
+      const patternMatch = matchesAcknowledgedPattern(acknowledgedPatterns, event.gym_id, event.type, e.message);
+      const isDismissed = isErrorAcknowledged(acknowledged, e.message, patternMatch);
       const isVerified = isVerifiedAccurate(e.message);
       const isBug = isMarkedBug(e.message);
 
@@ -46,13 +49,17 @@ export default function AdminAuditErrorCard({
   const visibleFormattingErrors = filterByStatus(formattingErrors);
   const visibleStatusErrors = filterByStatus(statusErrors);
 
+  const isDismissedForError = (e) => {
+    const pm = matchesAcknowledgedPattern(acknowledgedPatterns, event.gym_id, event.type, e.message);
+    return isErrorAcknowledged(acknowledged, e.message, pm);
+  };
   // For backwards compat with rendering
-  const activeDataErrors = dataErrors.filter(e => !isErrorAcknowledged(acknowledged, e.message) && !isVerifiedAccurate(e.message) && !isMarkedBug(e.message));
-  const activeFormattingErrors = formattingErrors.filter(e => !isErrorAcknowledged(acknowledged, e.message) && !isVerifiedAccurate(e.message) && !isMarkedBug(e.message));
-  const activeStatusErrors = statusErrors.filter(e => !isErrorAcknowledged(acknowledged, e.message) && !isVerifiedAccurate(e.message) && !isMarkedBug(e.message));
-  const dismissedDataErrors = dataErrors.filter(e => isErrorAcknowledged(acknowledged, e.message));
-  const dismissedFormattingErrors = formattingErrors.filter(e => isErrorAcknowledged(acknowledged, e.message));
-  const dismissedStatusErrors = statusErrors.filter(e => isErrorAcknowledged(acknowledged, e.message));
+  const activeDataErrors = dataErrors.filter(e => !isDismissedForError(e) && !isVerifiedAccurate(e.message) && !isMarkedBug(e.message));
+  const activeFormattingErrors = formattingErrors.filter(e => !isDismissedForError(e) && !isVerifiedAccurate(e.message) && !isMarkedBug(e.message));
+  const activeStatusErrors = statusErrors.filter(e => !isDismissedForError(e) && !isVerifiedAccurate(e.message) && !isMarkedBug(e.message));
+  const dismissedDataErrors = dataErrors.filter(e => isDismissedForError(e));
+  const dismissedFormattingErrors = formattingErrors.filter(e => isDismissedForError(e));
+  const dismissedStatusErrors = statusErrors.filter(e => isDismissedForError(e));
 
   const hasDescriptionIssue = event.description_status === 'none' || event.description_status === 'flyer_only';
   const descMsg = `description:${event.description_status}`;
@@ -76,9 +83,9 @@ export default function AdminAuditErrorCard({
     return null;
   }
 
-  const renderErrorRow = (error, isDismissed = false) => {
+  const renderErrorRow = (error, isDismissed = false, patternMatch = false) => {
     const isLoading = dismissingError === `${event.id}-${error.message}`;
-    const ackDetails = isDismissed ? getAcknowledgmentDetails(acknowledged, error.message) : null;
+    const ackDetails = isDismissed && !patternMatch ? getAcknowledgmentDetails(acknowledged, error.message) : patternMatch ? { note: 'All in program' } : null;
     const category = inferErrorCategory(error);
     const verifiedEntry = isErrorVerified(verified, error.message);
 
@@ -231,11 +238,13 @@ export default function AdminAuditErrorCard({
             </button>
           )}
           {/* Undo button for dismissed errors */}
-          {isDismissed && onUndoDismiss && (
+          {isDismissed && (patternMatch ? onUndoPattern : onUndoDismiss) && (
             <button
-              onClick={() => onUndoDismiss(event, error.message)}
+              onClick={() => patternMatch
+                ? onUndoPattern(event.gym_id, event.type, error.message)
+                : onUndoDismiss(event, error.message)}
               className="px-2 py-1 text-xs bg-gray-200 hover:bg-red-100 text-gray-600 hover:text-red-600 rounded transition-colors"
-              title="Undo dismissal"
+              title={patternMatch ? 'Undo program-wide override' : 'Undo dismissal'}
             >
               ↩ Undo
             </button>
@@ -255,8 +264,9 @@ export default function AdminAuditErrorCard({
         </div>
         <div className="space-y-1">
           {visibleErrors.map(error => {
-            const isDismissed = isErrorAcknowledged(acknowledged, error.message);
-            return renderErrorRow(error, isDismissed);
+            const isDismissed = isDismissedForError(error);
+            const patternMatch = matchesAcknowledgedPattern(acknowledgedPatterns, event.gym_id, event.type, error.message);
+            return renderErrorRow(error, isDismissed, patternMatch);
           })}
         </div>
       </div>
@@ -443,8 +453,9 @@ export default function AdminAuditErrorCard({
                   );
                 })()}
                 {visibleFormattingErrors.map(error => {
-                  const isDismissed = isErrorAcknowledged(acknowledged, error.message);
-                  return renderErrorRow(error, isDismissed);
+                  const isDismissed = isDismissedForError(error);
+                  const patternMatch = matchesAcknowledgedPattern(acknowledgedPatterns, event.gym_id, event.type, error.message);
+                  return renderErrorRow(error, isDismissed, patternMatch);
                 })}
               </div>
             </div>

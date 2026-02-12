@@ -476,3 +476,116 @@ export const gymValidValuesApi = {
     if (error) throw new Error(error.message);
   }
 };
+
+// Event Pricing API - base expected prices for Clinic, KNO, Open Gym (validates event_price_mismatch)
+export const eventPricingApi = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('event_pricing')
+      .select('*')
+      .order('gym_id')
+      .order('event_type');
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async create(row) {
+    const { data, error } = await supabase
+      .from('event_pricing')
+      .insert([{
+        gym_id: row.gym_id,
+        event_type: row.event_type,
+        price: parseFloat(row.price),
+        effective_date: row.effective_date || new Date().toISOString().slice(0, 10),
+        end_date: row.end_date || null,
+        notes: row.notes || null
+      }])
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('event_pricing')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('event_pricing')
+      .delete()
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+};
+
+// Camp Pricing API - base expected prices for Camp (full/half day daily/weekly)
+export const campPricingApi = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('camp_pricing')
+      .select('*')
+      .order('gym_id');
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async upsert(row) {
+    const { data, error } = await supabase
+      .from('camp_pricing')
+      .upsert({
+        gym_id: row.gym_id,
+        full_day_daily: row.full_day_daily != null ? parseFloat(row.full_day_daily) : null,
+        full_day_weekly: row.full_day_weekly != null ? parseFloat(row.full_day_weekly) : null,
+        half_day_daily: row.half_day_daily != null ? parseFloat(row.half_day_daily) : null,
+        half_day_weekly: row.half_day_weekly != null ? parseFloat(row.half_day_weekly) : null
+      }, { onConflict: 'gym_id' })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+};
+
+// Acknowledged patterns: temp overrides for "all events of this program at this gym"
+export const acknowledgedPatternsApi = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('acknowledged_patterns')
+      .select('*')
+      .order('gym_id')
+      .order('event_type');
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async create(row) {
+    const { data, error } = await supabase
+      .from('acknowledged_patterns')
+      .insert([{
+        gym_id: row.gym_id,
+        event_type: row.event_type,
+        error_message: row.error_message,
+        note: row.note || null
+      }])
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('acknowledged_patterns')
+      .delete()
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+};

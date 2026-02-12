@@ -186,7 +186,8 @@ def fetch_gym_valid_values():
                     values[gym_id][rule_type] = []
                 values[gym_id][rule_type].append({
                     'value': row.get('value', ''),
-                    'label': row.get('label', '')
+                    'label': row.get('label', ''),
+                    'event_type': row.get('event_type') or None  # CAMP, OPEN GYM, etc. or None/ALL for apply-to-all
                 })
 
         total_rules = sum(len(v) for gym in values.values() for v in gym.values())
@@ -204,14 +205,25 @@ def get_gym_valid_values():
         GYM_VALID_VALUES = fetch_gym_valid_values()
     return GYM_VALID_VALUES
 
-def get_rules_for_gym(gym_id):
-    """Get merged rules for a specific gym (gym-specific + ALL global rules)."""
+def get_rules_for_gym(gym_id, event_type=None):
+    """Get merged rules for a specific gym, optionally filtered by event type.
+    event_type: CAMP, CLINIC, KIDS NIGHT OUT, OPEN GYM. Rules apply only when:
+    - rule.event_type is None/empty (legacy = apply to all), or
+    - rule.event_type == 'ALL', or
+    - rule.event_type matches event_type
+    """
     all_values = get_gym_valid_values()
     gym_rules = {}
 
+    def matches_event_type(rule):
+        rt = rule.get('event_type')
+        if not rt or rt == 'ALL':
+            return True
+        return event_type and rt.upper() == event_type.upper()
+
     # Start with global 'ALL' rules
     for rule_type, rules_list in all_values.get('ALL', {}).items():
-        gym_rules[rule_type] = list(rules_list)
+        gym_rules[rule_type] = [r for r in rules_list if matches_event_type(r)]
 
     # Merge gym-specific rules (override/add to global)
     for rule_type, rules_list in all_values.get(gym_id, {}).items():
@@ -219,7 +231,7 @@ def get_rules_for_gym(gym_id):
             gym_rules[rule_type] = []
         existing_values = {r['value'] for r in gym_rules[rule_type]}
         for rule in rules_list:
-            if rule['value'] not in existing_values:
+            if rule['value'] not in existing_values and matches_event_type(rule):
                 gym_rules[rule_type].append(rule)
 
     return gym_rules
@@ -1013,7 +1025,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 txt_no_apos = txt.replace("'", "").replace("'", "")
 
                 # First check gym_valid_values for program_synonym rules for this gym
-                synonym_rules = get_rules_for_gym(gym_id).get('program_synonym', [])
+                synonym_rules = get_rules_for_gym(gym_id, event_type).get('program_synonym', [])
                 for rule in synonym_rules:
                     keyword = rule.get('value', '').lower()
                     target_type = rule.get('label', '').upper()
@@ -1281,7 +1293,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                         return None
                     
                     # Get extra valid times for this gym (e.g. "8:30 AM" for early dropoff)
-                    extra_time_rules = get_rules_for_gym(gym_id).get('time', [])
+                    extra_time_rules = get_rules_for_gym(gym_id, event_type).get('time', [])
                     extra_time_values = [t['value'].lower().strip() for t in extra_time_rules]
 
                     # Check times in TITLE
@@ -1408,7 +1420,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             clinic_title_keywords = ['clinic']
             open_gym_title_keywords = ['open gym']
             # Add program_synonym rules from gym_valid_values for dynamic keyword matching
-            synonym_rules = get_rules_for_gym(gym_id).get('program_synonym', [])
+            synonym_rules = get_rules_for_gym(gym_id, event_type).get('program_synonym', [])
             for rule in synonym_rules:
                 target = rule.get('label', '').upper()
                 keyword = rule.get('value', '').lower()
@@ -1591,7 +1603,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 )
                 # Also check program_synonym rules for this gym that map to OPEN GYM
                 if not has_open_gym:
-                    og_synonym_rules = get_rules_for_gym(gym_id).get('program_synonym', [])
+                    og_synonym_rules = get_rules_for_gym(gym_id, event_type).get('program_synonym', [])
                     for rule in og_synonym_rules:
                         if rule.get('label', '').upper() == 'OPEN GYM' and rule.get('value', '').lower() in description_lower:
                             has_open_gym = True
@@ -1688,7 +1700,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             title_has_open_gym = 'open gym' in title_lower
             # Also check program_synonym rules for this gym that map to OPEN GYM
             if not title_has_open_gym:
-                og_syn_rules = get_rules_for_gym(gym_id).get('program_synonym', [])
+                og_syn_rules = get_rules_for_gym(gym_id, event_type).get('program_synonym', [])
                 for rule in og_syn_rules:
                     if rule.get('label', '').upper() == 'OPEN GYM' and rule.get('value', '').lower() in title_lower:
                         title_has_open_gym = True
@@ -1823,7 +1835,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
 
                     # Also add any extra valid prices from gym_valid_values table
                     # (e.g. Before Care $20, After Care $20 - per-gym rules)
-                    extra_price_rules = get_rules_for_gym(gym_id).get('price', [])
+                    extra_price_rules = get_rules_for_gym(gym_id, event_type).get('price', [])
                     for ep in extra_price_rules:
                         try:
                             extra_price = float(ep['value'])
@@ -1863,7 +1875,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     valid_prices = event_pricing[gym_id][event_type]
                     
                     # Also add any extra valid prices from gym_valid_values table
-                    extra_price_rules = get_rules_for_gym(gym_id).get('price', [])
+                    extra_price_rules = get_rules_for_gym(gym_id, event_type).get('price', [])
                     for ep in extra_price_rules:
                         try:
                             extra_price = float(ep['value'])

@@ -172,8 +172,8 @@ The Admin Dashboard now includes an **Audit & Review** tab that provides a compr
 - Status filter: **Active Only** / **All (Active + Resolved)** / **Resolved Only**
 - Month and Program Type filters
 - Each event shows its errors grouped by category with dismiss buttons
-- **✓ OK** button dismisses a single error (one-time exception)
-- **+ Rule** button creates a permanent rule in `gym_valid_values`
+- **✓ OK** offers two choices: "This event only" (per-event) or "All [program] at [gym]" (program-wide pattern)
+- **+ Rule** button creates a permanent rule in `gym_valid_values` (scoped by event type)
 - Description issues (no description, flyer only) appear under FORMAT category
 
 ### Error Categories

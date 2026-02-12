@@ -3,12 +3,29 @@
  * Used by SyncModal, EventsDashboard, and AdminAuditReview
  */
 
-// Check if an error has been acknowledged/dismissed
-export const isErrorAcknowledged = (acknowledgedErrors, errorMessage) => {
+// Check if an error has been acknowledged/dismissed (per-event or by pattern for "all in program")
+export const isErrorAcknowledged = (acknowledgedErrors, errorMessage, patternMatch = false) => {
+  if (patternMatch) return true;
   if (!acknowledgedErrors || !Array.isArray(acknowledgedErrors)) return false;
   return acknowledgedErrors.some(ack =>
     typeof ack === 'string' ? ack === errorMessage : ack.message === errorMessage
   );
+};
+
+// One call: check if error is dismissed (per-event OR pattern) — use everywhere
+export const isErrorAcknowledgedAnywhere = (event, errorMessage, patterns = []) => {
+  const pm = matchesAcknowledgedPattern(patterns, event?.gym_id, event?.type, errorMessage);
+  return isErrorAcknowledged(event?.acknowledged_errors || [], errorMessage, pm);
+};
+
+// Check if an error matches an acknowledged pattern (gym + event_type + message)
+export const matchesAcknowledgedPattern = (patterns, gymId, eventType, errorMessage) => {
+  if (!patterns || !Array.isArray(patterns)) return false;
+  const et = (eventType || '').toUpperCase();
+  return patterns.some(p => {
+    const pt = (p.event_type || '').toUpperCase();
+    return p.gym_id === gymId && pt === et && p.error_message === errorMessage;
+  });
 };
 
 // Get the acknowledgment details for an error (note, timestamp)

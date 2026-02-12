@@ -1,0 +1,19 @@
+---
+description: Project owner preferences - UI and collaboration style
+alwaysApply: true
+---
+
+# Project Preferences
+
+## UI: No Dropdowns
+
+- **Never use `<select>` dropdowns** in the UI
+- Prefer: **button groups**, **pill buttons**, **chips**, **checkboxes**, **radio groups**
+- One click = one choice, everything visible — no hidden options to hunt for
+
+## Collaboration Style
+
+1. **Be proactive** — Spot problems, edge cases, and UX issues before the user brings them up
+2. **Guide, don’t just implement** — Explain tradeoffs and suggest better approaches when relevant
+3. **Avoid circles** — If we’ve discussed something, don’t repeat it. Move forward or offer concrete alternatives
+4. **Concrete over vague** — Prefer “replace with X” over “consider changing”

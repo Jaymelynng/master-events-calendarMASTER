@@ -15,18 +15,21 @@ import React, { useState } from 'react';
  *   gymId - which gym this is for (e.g. "RBA")
  *   ruleEligible - boolean, whether this error type can become a rule
  *   ruleInfo - { ruleType: 'price'|'time', value: '20' } or null
- *   onDismiss(note) - called when user wants to just dismiss (exception only)
+ *   onDismiss(note, scope) - called when user wants to dismiss; scope: 'event_only' | 'all_in_program'
  *   onDismissAndRule(note, label) - called when user wants to dismiss AND create a rule
  *   onCancel() - called when user cancels entirely
+ *   scopeOptions - 'both' = show "This event only" + "All in program"; 'event_only' = single Accept Exception button
  */
 export default function DismissRuleModal({
   errorMessage,
   gymId,
+  eventType,
   ruleEligible,
   ruleInfo,
   onDismiss,
   onDismissAndRule,
   onCancel,
+  scopeOptions = 'event_only',
 }) {
   const [note, setNote] = useState('');
   const [showLabelInput, setShowLabelInput] = useState(false);
@@ -39,9 +42,9 @@ export default function DismissRuleModal({
       : ruleInfo.value
     : '';
 
-  const handleAcceptException = () => {
+  const handleAcceptException = (scope) => {
     if (typeof onDismiss === 'function') {
-      onDismiss(note || null);
+      onDismiss(note || null, scope);
     } else {
       console.error('onDismiss is not a function:', onDismiss);
     }
@@ -55,7 +58,7 @@ export default function DismissRuleModal({
     if (!label.trim()) {
       return; // Don't save without a label
     }
-    onDismissAndRule(note || null, label.trim());
+    onDismissAndRule(note || null, label.trim(), eventType);
   };
 
   return (
@@ -99,7 +102,7 @@ export default function DismissRuleModal({
             autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !showLabelInput) {
-                handleAcceptException();
+                handleAcceptException('event_only');
               }
             }}
           />
@@ -136,7 +139,7 @@ export default function DismissRuleModal({
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
-              Save Rule for {gymId}
+              Save Rule for {gymId} ({eventType || 'CAMP'})
             </button>
           </div>
         )}
@@ -144,16 +147,38 @@ export default function DismissRuleModal({
         {/* Action buttons */}
         {!showLabelInput && (
           <div className={`flex gap-3 ${ruleEligible ? '' : ''}`}>
-            {/* Always show Accept Exception */}
-            <button
-              onClick={handleAcceptException}
-              className="flex-1 px-4 py-3 bg-green-100 border-2 border-green-400 text-green-800 rounded-lg hover:bg-green-200 hover:border-green-500 transition-colors font-semibold text-sm cursor-pointer"
-            >
-              Accept Exception
-              <span className="block text-xs font-normal text-green-600 mt-0.5">
-                Dismiss this one time
-              </span>
-            </button>
+            {scopeOptions === 'both' ? (
+              <>
+                <button
+                  onClick={() => handleAcceptException('event_only')}
+                  className="flex-1 px-3 py-2.5 bg-green-100 border-2 border-green-400 text-green-800 rounded-lg hover:bg-green-200 hover:border-green-500 transition-colors font-semibold text-sm cursor-pointer"
+                >
+                  This event only
+                  <span className="block text-xs font-normal text-green-600 mt-0.5">
+                    Dismiss for this one event
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleAcceptException('all_in_program')}
+                  className="flex-1 px-3 py-2.5 bg-teal-100 border-2 border-teal-400 text-teal-800 rounded-lg hover:bg-teal-200 hover:border-teal-500 transition-colors font-semibold text-sm cursor-pointer"
+                >
+                  All {eventType || 'events'} at {gymId}
+                  <span className="block text-xs font-normal text-teal-600 mt-0.5">
+                    Dismiss for this entire program at gym
+                  </span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => handleAcceptException('event_only')}
+                className="flex-1 px-4 py-3 bg-green-100 border-2 border-green-400 text-green-800 rounded-lg hover:bg-green-200 hover:border-green-500 transition-colors font-semibold text-sm cursor-pointer"
+              >
+                Accept Exception
+                <span className="block text-xs font-normal text-green-600 mt-0.5">
+                  Dismiss this one time
+                </span>
+              </button>
+            )}
 
             {/* Only show Make Permanent Rule for eligible errors */}
             {ruleEligible && ruleInfo && (

@@ -5,7 +5,7 @@ import React from 'react';
 import { MapPin, Calendar, Clock, DollarSign, Users, Copy, CheckCircle } from 'lucide-react';
 import { theme, getEventTypeColor, getErrorLabel } from './constants';
 import { parseYmdLocal, formatTime, formatTimeShort, parseCampOptionFromTitle } from './utils';
-import { isErrorAcknowledged, inferErrorCategory, canAddAsRule, extractRuleValue } from '../../lib/validationHelpers';
+import { isErrorAcknowledgedAnywhere, inferErrorCategory, canAddAsRule, extractRuleValue } from '../../lib/validationHelpers';
 
 export default function EventDetailPanel({
   event,
@@ -17,14 +17,15 @@ export default function EventDetailPanel({
   onEditEvent,
   onDismissError,
   onResetAcknowledgedErrors,
-  isMatchedByRule
+  isMatchedByRule,
+  acknowledgedPatterns = []
 }) {
   if (!event) return null;
 
-  // Get validation status
+  // Get validation status — rules apply everywhere (per-event + patterns)
   const acknowledgedErrors = event.acknowledged_errors || [];
   const activeErrors = (event.validation_errors || []).filter(
-    error => error.type !== 'sold_out' && !isErrorAcknowledged(acknowledgedErrors, error.message)
+    error => error.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(event, error.message, acknowledgedPatterns)
   );
   const hasDescriptionIssue = event.description_status === 'flyer_only' || event.description_status === 'none';
 

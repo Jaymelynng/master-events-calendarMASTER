@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { isErrorAcknowledgedAnywhere, inferErrorCategory } from '../../lib/validationHelpers';
 
-export default function ExportModal({ onClose, events, gyms, monthlyRequirements, currentMonth, currentYear }) {
+export default function ExportModal({ onClose, events, gyms, monthlyRequirements, currentMonth, currentYear, acknowledgedPatterns = [] }) {
   // NOTE: The 'events' prop is received but not used - component fetches its own data from database
   // based on the date range selector, which allows exporting any date range (not just current view)
   const [selectedGyms, setSelectedGyms] = useState(gyms.map(g => g.id)); // All selected by default
@@ -242,48 +243,22 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     selectedGyms.includes(e.gym_id) && selectedTypes.includes(e.type)
   );
 
-  // Helper: Check if an error message is acknowledged (supports both old string format and new object format)
-  const isErrorAcknowledged = (acknowledgedErrors, errorMessage) => {
-    if (!acknowledgedErrors || !Array.isArray(acknowledgedErrors)) return false;
-    return acknowledgedErrors.some(ack => 
-      typeof ack === 'string' ? ack === errorMessage : ack.message === errorMessage
-    );
-  };
-
-  // Helper: Infer category from error type (for legacy data that doesn't have category field)
-  const inferErrorCategory = (error) => {
-    if (error.category) return error.category;
-    const dataErrorTypes = [
-      'year_mismatch', 'date_mismatch', 'time_mismatch', 'age_mismatch',
-      'day_mismatch', 'program_mismatch', 'skill_mismatch', 'price_mismatch',
-      'title_desc_mismatch', 'camp_price_mismatch'
-    ];
-    const statusErrorTypes = ['registration_closed', 'registration_not_open', 'sold_out'];
-    if (dataErrorTypes.includes(error.type)) return 'data_error';
-    if (statusErrorTypes.includes(error.type)) return 'status';
-    return 'formatting';
-  };
-
   // Get events with audit check failures (validation errors, missing descriptions, etc.)
   // This matches the "Audit Check" column in the main dashboard table
   // NOTE: Sold out (type: 'sold_out') is excluded - it's informational, not a data quality issue
   const getAuditCheckIssues = () => {
     return filteredEvents.filter(e => {
       const errors = e.validation_errors || [];
-      const acknowledged = e.acknowledged_errors || [];
-      // Filter out sold_out type AND acknowledged errors (supports both formats)
-      const unacknowledged = errors.filter(err => 
-        err.type !== 'sold_out' && !isErrorAcknowledged(acknowledged, err.message)
+      const unacknowledged = errors.filter(err =>
+        err.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(e, err.message, acknowledgedPatterns)
       );
-      return unacknowledged.length > 0 || 
-             e.description_status === 'none' || 
+      return unacknowledged.length > 0 ||
+             e.description_status === 'none' ||
              e.description_status === 'flyer_only';
     }).map(e => {
       const errors = e.validation_errors || [];
-      const acknowledged = e.acknowledged_errors || [];
-      // Only include unacknowledged errors (not sold_out)
-      const unacknowledgedErrors = errors.filter(err => 
-        err.type !== 'sold_out' && !isErrorAcknowledged(acknowledged, err.message)
+      const unacknowledgedErrors = errors.filter(err =>
+        err.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(e, err.message, acknowledgedPatterns)
       );
       
       // Separate by category for better display

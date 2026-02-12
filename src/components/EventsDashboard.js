@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 // Import real API functions
-import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi, gymValidValuesApi } from '../lib/api';
+import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi, gymValidValuesApi, acknowledgedPatternsApi } from '../lib/api';
 import { gymLinksApi } from '../lib/gymLinksApi';
 import { cachedApi, cache } from '../lib/cache';
 import { supabase } from '../lib/supabase';
@@ -14,6 +14,7 @@ import AdminDashboard from './AdminDashboard/AdminDashboard';
 import SyncModal from './EventsDashboard/SyncModal';
 import ExportModal from './EventsDashboard/ExportModal';
 import DismissRuleModal from './EventsDashboard/DismissRuleModal';
+import { isErrorAcknowledgedAnywhere, inferErrorCategory } from '../lib/validationHelpers';
 
 // Exact Color Theme from user's specification
 const theme = {
@@ -302,6 +303,7 @@ const EventsDashboard = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [dismissModalState, setDismissModalState] = useState(null); // { eventId, errorMessage, errorObj, gymId }
   const [gymRules, setGymRules] = useState([]); // Loaded from gym_valid_values for badge display
+  const [acknowledgedPatterns, setAcknowledgedPatterns] = useState([]); // Program-wide dismissals — apply everywhere
   const [newEvent, setNewEvent] = useState({
     gym_id: '',
     title: '',
@@ -359,6 +361,23 @@ const EventsDashboard = () => {
     loadGymRules();
   }, []);
 
+  // Load acknowledged patterns (program-wide dismissals) — used everywhere for consistent rule matching
+  const loadAcknowledgedPatterns = useCallback(async () => {
+    try {
+      const data = await acknowledgedPatternsApi.getAll();
+      setAcknowledgedPatterns(data || []);
+    } catch (err) {
+      console.error('Error loading acknowledged patterns:', err);
+    }
+  }, []);
+
+  useEffect(() => { loadAcknowledgedPatterns(); }, [loadAcknowledgedPatterns]);
+
+  // Refresh patterns when returning from Admin (they may have added patterns there)
+  useEffect(() => {
+    if (!showAdminPortal) loadAcknowledgedPatterns();
+  }, [showAdminPortal, loadAcknowledgedPatterns]);
+
   // Helper: check if a dismissed error message matches an existing permanent rule for this gym
   const isMatchedByRule = (errorMessage, gymId) => {
     if (!gymRules.length || !gymId) return false;
@@ -415,35 +434,6 @@ const EventsDashboard = () => {
     });
     console.log(`Getting URLs for ${eventType} from Supabase:`, urls);
     return urls;
-  };
-
-  // Helper: Check if an error message is acknowledged (supports both old string format and new object format)
-  const isErrorAcknowledged = (acknowledgedErrors, errorMessage) => {
-    if (!acknowledgedErrors || !Array.isArray(acknowledgedErrors)) return false;
-    return acknowledgedErrors.some(ack => 
-      typeof ack === 'string' ? ack === errorMessage : ack.message === errorMessage
-    );
-  };
-
-  // Helper: Infer category from error type (for legacy data that doesn't have category field)
-  // DATA ERRORS = wrong information that affects customers
-  // FORMATTING = missing/incomplete information
-  const inferErrorCategory = (error) => {
-    if (error.category) return error.category; // Use existing category if present
-    
-    // Data errors - these are WRONG information (mismatches)
-    const dataErrorTypes = [
-      'year_mismatch', 'date_mismatch', 'time_mismatch', 'age_mismatch',
-      'day_mismatch', 'program_mismatch', 'skill_mismatch', 'price_mismatch',
-      'title_desc_mismatch', 'camp_price_mismatch', 'event_price_mismatch'
-    ];
-    
-    // Status errors - informational
-    const statusErrorTypes = ['registration_closed', 'registration_not_open', 'sold_out'];
-    
-    if (dataErrorTypes.includes(error.type)) return 'data_error';
-    if (statusErrorTypes.includes(error.type)) return 'status';
-    return 'formatting'; // Default to formatting for missing_* types
   };
 
   // Helper: Get the acknowledgment details for an error (note, timestamp)
@@ -1917,6 +1907,7 @@ The system will add new events and update any changed events automatically.`;
           onClose={() => setShowSyncModal(false)}
           onBack={() => setShowSyncModal(false)}
           gyms={gymsList}
+          acknowledgedPatterns={acknowledgedPatterns}
         />
       )}
 
@@ -1929,6 +1920,7 @@ The system will add new events and update any changed events automatically.`;
           monthlyRequirements={monthlyRequirements}
           currentMonth={currentMonth}
           currentYear={currentYear}
+          acknowledgedPatterns={acknowledgedPatterns}
         />
       )}
 
@@ -2724,12 +2716,11 @@ The system will add new events and update any changed events automatically.`;
                             
                             // Count issues only (not informational stuff) - respects dismissed warnings
                             // NOTE: sold_out type is excluded - it's informational, not an audit error
-                            const errors = gymEvents.filter(e => {
-                              const acknowledged = e.acknowledged_errors || [];
-                              return (e.validation_errors || []).some(err => 
-                                err.type !== 'sold_out' && !isErrorAcknowledged(acknowledged, err.message)
-                              );
-                            }).length;
+                            const errors = gymEvents.filter(e =>
+                              (e.validation_errors || []).some(err =>
+                                err.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(e, err.message, acknowledgedPatterns)
+                              )
+                            ).length;
                             const warnings = gymEvents.filter(e => e.description_status === 'flyer_only').length;
                             const missing = gymEvents.filter(e => e.description_status === 'none').length;
                             const soldOut = gymEvents.filter(e => e.has_openings === false).length;
@@ -3380,9 +3371,8 @@ The system will add new events and update any changed events automatically.`;
                                           {/* NOTE: sold_out type is excluded - it's informational, not an audit error */}
                                           {/* Color coding: RED dot = data error, ORANGE dot = formatting, BOTH = red+orange */}
                                           {(() => {
-                                            const acknowledged = event.acknowledged_errors || [];
                                             const activeErrors = (event.validation_errors || []).filter(
-                                              err => err.type !== 'sold_out' && !isErrorAcknowledged(acknowledged, err.message)
+                                              err => err.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(event, err.message, acknowledgedPatterns)
                                             );
                                             // Separate by category (using inferErrorCategory for legacy data without category field)
                                             const dataErrors = activeErrors.filter(err => inferErrorCategory(err) === 'data_error');
@@ -3682,7 +3672,7 @@ The system will add new events and update any changed events automatically.`;
                       // Filter out acknowledged errors AND sold_out type (it's info, not an error)
                       const acknowledgedErrors = selectedEventForPanel.acknowledged_errors || [];
                       const activeErrors = (selectedEventForPanel.validation_errors || []).filter(
-                        error => error.type !== 'sold_out' && !isErrorAcknowledged(acknowledgedErrors, error.message)
+                        error => error.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(selectedEventForPanel, error.message, acknowledgedPatterns)
                       );
                       const hasDescriptionIssue = selectedEventForPanel.description_status === 'flyer_only' || 
                                                   selectedEventForPanel.description_status === 'none';

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { gymValidValuesApi } from '../../lib/api';
-import { inferErrorCategory, isErrorAcknowledged, canAddAsRule, extractRuleValue, computeAccuracyStats } from '../../lib/validationHelpers';
+import { gymValidValuesApi, acknowledgedPatternsApi } from '../../lib/api';
+import { inferErrorCategory, isErrorAcknowledged, matchesAcknowledgedPattern, canAddAsRule, extractRuleValue, computeAccuracyStats } from '../../lib/validationHelpers';
 import AdminAuditFilters from './AdminAuditFilters';
 import AdminAuditErrorCard from './AdminAuditErrorCard';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
@@ -16,6 +16,22 @@ export default function AdminAuditReview({ gyms }) {
   const [dismissModalState, setDismissModalState] = useState(null);
   const [dismissingError, setDismissingError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('active');
+  const [acknowledgedPatterns, setAcknowledgedPatterns] = useState([]);
+
+  // Load acknowledged patterns (temp overrides for "all in program")
+  const loadAcknowledgedPatterns = useCallback(async () => {
+    try {
+      const data = await acknowledgedPatternsApi.getAll();
+      setAcknowledgedPatterns(data || []);
+    } catch (err) {
+      console.error('Error loading acknowledged patterns:', err);
+      setAcknowledgedPatterns([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAcknowledgedPatterns();
+  }, [loadAcknowledgedPatterns]);
 
   // Load events with validation errors for selected gyms
   const loadEvents = useCallback(async (gymIds) => {
@@ -73,12 +89,16 @@ export default function AdminAuditReview({ gyms }) {
     return true;
   });
 
+  const isDismissedForEvent = (event, errorMessage) => {
+    const pm = matchesAcknowledgedPattern(acknowledgedPatterns, event.gym_id, event.type, errorMessage);
+    return isErrorAcknowledged(event.acknowledged_errors || [], errorMessage, pm);
+  };
+
   // Count errors from pre-filtered events (so counts stay stable across category switches)
   const counts = preFilteredEvents.reduce((acc, event) => {
     const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
-    const acknowledged = event.acknowledged_errors || [];
     errors.forEach(e => {
-      if (isErrorAcknowledged(acknowledged, e.message)) return;
+      if (isDismissedForEvent(event, e.message)) return;
       const cat = inferErrorCategory(e);
       if (cat === 'data_error') acc.data++;
       else if (cat === 'formatting') acc.format++;
@@ -102,11 +122,15 @@ export default function AdminAuditReview({ gyms }) {
     const isVerifiedAccurate = (msg) => verified.some(v => v.message === msg && v.verdict === 'correct');
     const isMarkedBug = (msg) => verified.some(v => v.message === msg && v.verdict === 'incorrect');
 
-    // Active = not acknowledged AND not verified accurate (still needs review)
-    const hasActive = errors.some(e => matchCategory(e) && !isErrorAcknowledged(acknowledged, e.message) && !isVerifiedAccurate(e.message));
+    const dismissed = (e) => {
+      const pm = matchesAcknowledgedPattern(acknowledgedPatterns, event.gym_id, event.type, e.message);
+      return isErrorAcknowledged(acknowledged, e.message, pm);
+    };
+    // Active = not acknowledged, not verified, not marked bug — still needs review
+    const hasActive = errors.some(e => matchCategory(e) && !dismissed(e) && !isVerifiedAccurate(e.message) && !isMarkedBug(e.message));
 
     // Resolved = dismissed via temp override or permanent rule
-    const hasResolved = errors.some(e => matchCategory(e) && isErrorAcknowledged(acknowledged, e.message));
+    const hasResolved = errors.some(e => matchCategory(e) && dismissed(e));
 
     // Verified = marked as accurate (system caught real error)
     const hasVerified = errors.some(e => matchCategory(e) && isVerifiedAccurate(e.message));
@@ -148,45 +172,56 @@ export default function AdminAuditReview({ gyms }) {
     setDismissModalState({ event, eventId: event.id, errorMessage, errorObj, gymId, ruleEligible, ruleInfo });
   };
 
-  // Accept exception (dismiss once)
-  const handleAcceptException = async (note) => {
+  // Accept exception (dismiss once) - scope: 'event_only' | 'all_in_program'
+  const handleAcceptException = async (note, scope = 'event_only') => {
     if (!dismissModalState) return;
-    const { eventId, errorMessage } = dismissModalState;
+    const { eventId, errorMessage, gymId, event } = dismissModalState;
+    const eventType = event?.type || 'CAMP';
     setDismissingError(`${eventId}-${errorMessage}`);
 
     try {
-      const { data: currentEvent, error: fetchError } = await supabase
-        .from('events')
-        .select('acknowledged_errors')
-        .eq('id', eventId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      const currentAcknowledged = currentEvent?.acknowledged_errors || [];
-      const alreadyAcknowledged = currentAcknowledged.some(ack =>
-        typeof ack === 'string' ? ack === errorMessage : ack.message === errorMessage
-      );
-
-      if (!alreadyAcknowledged) {
-        const acknowledgment = {
-          message: errorMessage,
-          note: note || null,
-          dismissed_at: new Date().toISOString(),
-        };
-        const updatedAcknowledged = [...currentAcknowledged, acknowledgment];
-
-        const { error: updateError } = await supabase
+      if (scope === 'all_in_program') {
+        await acknowledgedPatternsApi.create({
+          gym_id: gymId,
+          event_type: (eventType || 'CAMP').toUpperCase(),
+          error_message: errorMessage,
+          note: note || null
+        });
+        const updated = await acknowledgedPatternsApi.getAll();
+        setAcknowledgedPatterns(updated);
+      } else {
+        const { data: currentEvent, error: fetchError } = await supabase
           .from('events')
-          .update({ acknowledged_errors: updatedAcknowledged })
-          .eq('id', eventId);
+          .select('acknowledged_errors')
+          .eq('id', eventId)
+          .single();
 
-        if (updateError) throw updateError;
+        if (fetchError) throw fetchError;
 
-        // Update local state
-        setEvents(prev => prev.map(e =>
-          e.id === eventId ? { ...e, acknowledged_errors: updatedAcknowledged } : e
-        ));
+        const currentAcknowledged = currentEvent?.acknowledged_errors || [];
+        const alreadyAcknowledged = currentAcknowledged.some(ack =>
+          typeof ack === 'string' ? ack === errorMessage : ack.message === errorMessage
+        );
+
+        if (!alreadyAcknowledged) {
+          const acknowledgment = {
+            message: errorMessage,
+            note: note || null,
+            dismissed_at: new Date().toISOString(),
+          };
+          const updatedAcknowledged = [...currentAcknowledged, acknowledgment];
+
+          const { error: updateError } = await supabase
+            .from('events')
+            .update({ acknowledged_errors: updatedAcknowledged })
+            .eq('id', eventId);
+
+          if (updateError) throw updateError;
+
+          setEvents(prev => prev.map(e =>
+            e.id === eventId ? { ...e, acknowledged_errors: updatedAcknowledged } : e
+          ));
+        }
       }
     } catch (err) {
       console.error('Error dismissing error:', err);
@@ -198,20 +233,21 @@ export default function AdminAuditReview({ gyms }) {
   };
 
   // Dismiss and create rule
-  const handleDismissAndRule = async (note, label) => {
+  const handleDismissAndRule = async (note, label, ruleEventType) => {
     if (!dismissModalState) return;
-    const { eventId, errorMessage, gymId, ruleInfo } = dismissModalState;
+    const { eventId, errorMessage, gymId, ruleInfo, event } = dismissModalState;
     setDismissingError(`${eventId}-${errorMessage}`);
 
     let ruleCreated = false;
     try {
       const isProgramSynonym = ruleInfo.ruleType === 'program_synonym';
+      const eventType = ruleEventType || event?.type || 'CAMP';
       await gymValidValuesApi.create({
         gym_id: gymId,
         rule_type: ruleInfo.ruleType,
         value: isProgramSynonym ? ruleInfo.value.toLowerCase() : ruleInfo.value,
         label: label,
-        event_type: isProgramSynonym ? label.toUpperCase() : 'CAMP'
+        event_type: isProgramSynonym ? label.toUpperCase() : eventType
       });
       ruleCreated = true;
 
@@ -300,6 +336,21 @@ export default function AdminAuditReview({ gyms }) {
       ));
     } catch (err) {
       console.error('Error verifying error:', err);
+    }
+  };
+
+  // Handle undo pattern - remove from acknowledged_patterns
+  const handleUndoPattern = async (gymId, eventType, errorMessage) => {
+    try {
+      const pattern = acknowledgedPatterns.find(
+        p => p.gym_id === gymId && p.event_type === eventType && p.error_message === errorMessage
+      );
+      if (!pattern) return;
+      await acknowledgedPatternsApi.delete(pattern.id);
+      setAcknowledgedPatterns(prev => prev.filter(p => p.id !== pattern.id));
+    } catch (err) {
+      console.error('Error undoing pattern:', err);
+      alert('Failed to undo. Please try again.');
     }
   };
 
@@ -411,7 +462,7 @@ export default function AdminAuditReview({ gyms }) {
         <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
           <div className="text-4xl mb-3">📋</div>
           <h3 className="text-lg font-semibold text-gray-700 mb-1">Select gyms to review</h3>
-          <p className="text-sm text-gray-500">Choose one or more gyms from the dropdown above to see all validation issues</p>
+          <p className="text-sm text-gray-500">Select one or more gyms above to see all validation issues</p>
         </div>
       )}
 
@@ -445,9 +496,11 @@ export default function AdminAuditReview({ gyms }) {
                       <AdminAuditErrorCard
                         key={event.id}
                         event={event}
+                        acknowledgedPatterns={acknowledgedPatterns}
                         onDismissError={handleDismissError}
                         onVerifyError={handleVerifyError}
                         onUndoDismiss={handleUndoDismiss}
+                        onUndoPattern={handleUndoPattern}
                         dismissingError={dismissingError}
                         statusFilter={statusFilter}
                         selectedCategory={selectedCategory}
@@ -464,9 +517,11 @@ export default function AdminAuditReview({ gyms }) {
                 <AdminAuditErrorCard
                   key={event.id}
                   event={event}
+                  acknowledgedPatterns={acknowledgedPatterns}
                   onDismissError={handleDismissError}
                   onVerifyError={handleVerifyError}
                   onUndoDismiss={handleUndoDismiss}
+                  onUndoPattern={handleUndoPattern}
                   dismissingError={dismissingError}
                   statusFilter={statusFilter}
                   selectedCategory={selectedCategory}
@@ -489,8 +544,10 @@ export default function AdminAuditReview({ gyms }) {
         <DismissRuleModal
           errorMessage={dismissModalState.errorMessage}
           gymId={dismissModalState.gymId}
+          eventType={dismissModalState.event?.type}
           ruleEligible={dismissModalState.ruleEligible}
           ruleInfo={dismissModalState.ruleInfo}
+          scopeOptions="both"
           onDismiss={handleAcceptException}
           onDismissAndRule={handleDismissAndRule}
           onCancel={() => setDismissModalState(null)}

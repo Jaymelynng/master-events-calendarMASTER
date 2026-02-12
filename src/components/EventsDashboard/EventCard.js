@@ -4,22 +4,22 @@
 import React from 'react';
 import { getEventTypeColor } from './constants';
 import { formatTimeShort } from './utils';
-import { isErrorAcknowledged, inferErrorCategory } from '../../lib/validationHelpers';
+import { isErrorAcknowledgedAnywhere, inferErrorCategory } from '../../lib/validationHelpers';
 
 export default function EventCard({
   event,
   eventTypes,
-  onClick
+  onClick,
+  acknowledgedPatterns = []
 }) {
   const eventTypeName = event.type || event.event_type;
   const eventTypeData = eventTypes.find(et => et.name === eventTypeName);
   const displayName = eventTypeData?.display_name || eventTypeName || 'Event';
 
-  // Get validation status indicators
+  // Get validation status indicators — rules apply everywhere (per-event + patterns)
   const getValidationIndicator = () => {
-    const acknowledged = event.acknowledged_errors || [];
     const activeErrors = (event.validation_errors || []).filter(
-      err => err.type !== 'sold_out' && !isErrorAcknowledged(acknowledged, err.message)
+      err => err.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(event, err.message, acknowledgedPatterns)
     );
 
     // Separate by category

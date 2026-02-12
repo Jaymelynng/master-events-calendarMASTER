@@ -4,7 +4,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { theme, getEventTypeColor } from './constants';
-import { isErrorAcknowledged } from '../../lib/validationHelpers';
+import { isErrorAcknowledgedAnywhere } from '../../lib/validationHelpers';
 
 export default function MonthlyRequirementsTable({
   currentMonth,
@@ -19,7 +19,8 @@ export default function MonthlyRequirementsTable({
   scrollToGym,
   getGymLinkUrl,
   handleMagicControlClick,
-  getEventCounts
+  getEventCounts,
+  acknowledgedPatterns = []
 }) {
   const counts = getEventCounts();
 
@@ -47,12 +48,11 @@ export default function MonthlyRequirementsTable({
              eventDate.getFullYear() === currentYear;
     });
 
-    const errors = gymEvents.filter(e => {
-      const acknowledged = e.acknowledged_errors || [];
-      return (e.validation_errors || []).some(err =>
-        err.type !== 'sold_out' && !isErrorAcknowledged(acknowledged, err.message)
-      );
-    }).length;
+    const errors = gymEvents.filter(e =>
+      (e.validation_errors || []).some(err =>
+        err.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(e, err.message, acknowledgedPatterns)
+      )
+    ).length;
 
     const warnings = gymEvents.filter(e => e.description_status === 'flyer_only').length;
     const missing = gymEvents.filter(e => e.description_status === 'none').length;

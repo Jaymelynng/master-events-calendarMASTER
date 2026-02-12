@@ -91,54 +91,68 @@ export default function AdminAuditFilters({
         </div>
       </div>
 
-      {/* Filters Row */}
-      <div className="flex flex-wrap gap-3 items-end pt-1 border-t border-gray-100">
-        {/* Month Filter */}
-        <div className="min-w-[180px]">
-          <label className="block text-xs font-semibold text-gray-600 mb-1">Month</label>
-          <select
-            value={selectedMonth}
-            onChange={(e) => onMonthChange(e.target.value)}
-            className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-purple-400 focus:outline-none"
-          >
-            <option value="all">All Months</option>
+      {/* Filters Row — button groups, no dropdowns */}
+      <div className="space-y-2 pt-1 border-t border-gray-100">
+        <div>
+          <span className="text-xs font-semibold text-gray-600">Month:</span>
+          <div className="flex flex-wrap gap-1 mt-1">
+            <button
+              onClick={() => onMonthChange('all')}
+              className={`px-2 py-1 rounded text-xs font-medium ${selectedMonth === 'all' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+            >
+              All
+            </button>
             {monthOptions.map(m => (
-              <option key={m.value} value={m.value}>{m.label}</option>
+              <button
+                key={m.value}
+                onClick={() => onMonthChange(m.value)}
+                className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${selectedMonth === m.value ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+              >
+                {m.label}
+              </button>
             ))}
-          </select>
+          </div>
         </div>
-
-        {/* Program Type Filter */}
-        <div className="min-w-[150px]">
-          <label className="block text-xs font-semibold text-gray-600 mb-1">Program</label>
-          <select
-            value={selectedProgramType}
-            onChange={(e) => onProgramTypeChange(e.target.value)}
-            className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-purple-400 focus:outline-none"
-          >
-            <option value="all">All Programs</option>
-            <option value="CAMP">CAMP</option>
-            <option value="CLINIC">CLINIC</option>
-            <option value="OPEN GYM">OPEN GYM</option>
-            <option value="KIDS NIGHT OUT">KIDS NIGHT OUT</option>
-            <option value="SPECIAL EVENT">SPECIAL EVENT</option>
-          </select>
+        <div>
+          <span className="text-xs font-semibold text-gray-600">Program:</span>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {[
+              { value: 'all', label: 'All' },
+              { value: 'CAMP', label: 'CAMP' },
+              { value: 'CLINIC', label: 'CLINIC' },
+              { value: 'OPEN GYM', label: 'OPEN GYM' },
+              { value: 'KIDS NIGHT OUT', label: 'KNO' },
+              { value: 'SPECIAL EVENT', label: 'Special' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => onProgramTypeChange(opt.value)}
+                className={`px-2 py-1 rounded text-xs font-medium ${selectedProgramType === opt.value ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
-
-        {/* Status Filter */}
-        <div className="min-w-[180px]">
-          <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-          <select
-            value={statusFilter}
-            onChange={(e) => onStatusFilterChange(e.target.value)}
-            className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-purple-400 focus:outline-none"
-          >
-            <option value="active">⚠️ Needs Review</option>
-            <option value="verified">✓ Confirmed Real Errors</option>
-            <option value="bugs">✗ Bugs (Code Needs Fix)</option>
-            <option value="resolved">✓ Dismissed (One-Time OK)</option>
-            <option value="all">All</option>
-          </select>
+        <div>
+          <span className="text-xs font-semibold text-gray-600">Status:</span>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {[
+              { value: 'active', label: '⚠️ Needs Review' },
+              { value: 'verified', label: '✓ Confirmed' },
+              { value: 'bugs', label: '✗ Bugs' },
+              { value: 'resolved', label: '✓ Dismissed' },
+              { value: 'all', label: 'All' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => onStatusFilterChange(opt.value)}
+                className={`px-2 py-1 rounded text-xs font-medium ${statusFilter === opt.value ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

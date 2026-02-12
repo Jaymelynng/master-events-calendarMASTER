@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Data Error Reference — Interactive</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-card: #1e293b;
+      --bg-hover: #334155;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --accent: #818cf8;
+      --accent-hover: #a5b4fc;
+      --border: #334155;
+      --success: #34d399;
+      --error: #f87171;
+      --warning: #fbbf24;
+    }
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-hover: #f1f5f9;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 0;
+      min-height: 100vh;
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      nav { position: relative !important; height: auto !important; }
+    }
+    nav {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      padding: 1rem;
+    }
+    nav h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    nav a {
+      display: block;
+      padding: 0.35rem 0.5rem;
+      color: var(--text);
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    nav a:hover { background: var(--bg-hover); color: var(--accent); }
+    nav a.active { background: var(--accent); color: white; }
+    main { padding: 1.5rem 2rem 3rem; max-width: 900px; }
+    .search-wrap {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg);
+      padding: 0.5rem 0 1rem 0;
+      margin-bottom: 1rem;
+    }
+    #search {
+      width: 100%;
+      padding: 0.6rem 1rem 0.6rem 2.5rem;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-card);
+      color: var(--text);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%2394a3b8' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: 0.6rem center;
+    }
+    #search::placeholder { color: var(--text-muted); }
+    .toolbar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .btn:hover { background: var(--bg-hover); }
+    .btn-theme { padding: 0.4rem 0.8rem; }
+    h1 { font-size: 1.75rem; margin: 0 0 1rem 0; }
+    h2 { font-size: 1.25rem; margin: 2rem 0 1rem 0; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+    h2:first-of-type { margin-top: 0; border-top: none; }
+    h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem 0; }
+    .meta { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      background: var(--bg-card);
+      border-bottom: 1px solid transparent;
+      transition: background 0.2s;
+    }
+    .card-header:hover { background: var(--bg-hover); }
+    .card-header::after {
+      content: '▼';
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+    .card.collapsed .card-header::after { transform: rotate(-90deg); }
+    .card.collapsed .card-body { display: none; }
+    .card-body { padding: 1rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 0.5rem 0;
+    }
+    th, td { padding: 0.4rem 0.6rem; text-align: left; border: 1px solid var(--border); }
+    th { background: var(--bg-hover); font-weight: 600; }
+    code {
+      background: var(--bg-hover);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.85em;
+    }
+    ul { margin: 0.5rem 0; padding-left: 1.5rem; }
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-data { background: #7f1d1d; color: #fecaca; }
+    .badge-format { background: #78350f; color: #fef3c7; }
+    .badge-status { background: #1e3a5f; color: #bfdbfe; }
+    .hidden { display: none !important; }
+    .no-results { text-align: center; padding: 2rem; color: var(--text-muted); }
+    .category-header {
+      font-size: 1.35rem;
+      margin: 2.5rem 0 0.5rem 0;
+      padding-top: 1rem;
+      border-top: 2px solid var(--accent);
+      color: var(--accent);
+    }
+    .category-header:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+    .category-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav>
+      <div class="search-wrap">
+        <input type="text" id="search" placeholder="Search errors, rules, fields...">
+      </div>
+      <h3>Categories</h3>
+      <a href="#category-1">1. Precoded / Embedded Rules</a>
+      <a href="#category-2">2. Temporary Overrides (✓ OK)</a>
+      <a href="#category-3">3. Permanent Rules (gym_valid_values)</a>
+      <h3>Category 1 — Embedded</h3>
+      <a href="#embedded-universal">Universal Rules</a>
+      <a href="#embedded-per-error">Per-Error Embedded Logic</a>
+      <h3>Category 2 — Temp (✓ OK)</h3>
+      <a href="#temp-how">How It Works</a>
+      <a href="#temp-which">Which Errors Support It</a>
+      <h3>Category 3 — Permanent</h3>
+      <a href="#permanent-rules">Rule Types (price, time, program_synonym)</a>
+      <a href="#permanent-which">Which Errors Support "+ Rule"</a>
+      <h3>App Behavior</h3>
+      <a href="#where-gyms-appear">Where CCP, HGA, RBA, RBK Appear</a>
+    </nav>
+
+    <main>
+      <div class="toolbar">
+        <button class="btn btn-theme" onclick="toggleTheme()">Toggle Light/Dark</button>
+        <button class="btn" onclick="expandAll()">Expand All</button>
+        <button class="btn" onclick="collapseAll()">Collapse All</button>
+      </div>
+
+      <h1>🔍 Audit Data Error Reference</h1>
+      <p class="meta">Last updated: February 11, 2026 · Organized by rule category</p>
+
+      <p style="margin-bottom: 2rem;">All validation controls fall into <strong>three categories</strong>:</p>
+
+      <!-- ========== CATEGORY 1: PRECODED / EMBEDDED RULES ========== -->
+      <h2 id="category-1" class="category-header">1. Precoded / Embedded Rules</h2>
+      <p class="category-desc">Hardcoded in Python. You have no control unless the code is edited and redeployed.</p>
+
+      <div id="embedded-universal" class="card" data-search="precoded embedded universal case apostrophe month time age">
+        <div class="card-header" onclick="toggleCard(this)">Universal Embedded Rules (apply to all gyms)</div>
+        <div class="card-body">
+          <ul>
+            <li><strong>Case handling</strong> — All text comparisons are case-insensitive</li>
+            <li><strong>Apostrophe handling</strong> — Kid's, Kids', Kids all normalized</li>
+            <li><strong>Month recognition</strong> — Jan, January, january, etc. with word-boundary for short forms</li>
+            <li><strong>Time format</strong> — 6:30 PM, 6:30pm, 6:30 p.m., 6p accepted</li>
+            <li><strong>Age format</strong> — Ages 5+, 5-12, Age 5, Students 5+</li>
+            <li><strong>Price pattern</strong> — <code>$XX</code> or <code>$XX.XX</code></li>
+            <li><strong>Multi-month events</strong> — June 28–Aug 1: June, July, August all valid</li>
+            <li><strong>End date &lt; start date</strong> → always error</li>
+            <li><strong>Registration/promo context</strong> — "Register by September" not flagged as date error</li>
+            <li><strong>CAMP "Full Day" / "Half Day"</strong> — counts as valid time (no specific clock time required)</li>
+            <li><strong>Day validation</strong> — SKIPPED for CAMP; day ranges (Mon–Fri) cleaned before check</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="embedded-per-error" class="card" data-search="embedded per error year date day time age program skill price">
+        <div class="card-header" onclick="toggleCard(this)">Per-Error Embedded Logic (what triggers each check)</div>
+        <div class="card-body">
+          <table>
+            <tr><th>Error</th><th>Embedded rules (no way to change)</th></tr>
+            <tr><td>year_mismatch</td><td>Regex <code>\b(20\d{2})\b</code>; exact year equality</td></tr>
+            <tr><td>date_mismatch</td><td>valid_months = start→end; skip registration/promo patterns; 200 char limit</td></tr>
+            <tr><td>day_mismatch</td><td>CAMP skipped; removes Mon–Fri ranges; all_days + abbrevs</td></tr>
+            <tr><td>time_mismatch</td><td>Pre-clean $XX a day, age ranges; time regex; 24hr conversion</td></tr>
+            <tr><td>age_mismatch</td><td>extract_min_age patterns; title 200, desc 300 char limit</td></tr>
+            <tr><td>program_mismatch</td><td>Default keywords: KNO, clinic, open gym, camp; branch logic</td></tr>
+            <tr><td>skill_mismatch</td><td>Fixed skills list (cartwheel, tumbling, bars, etc.); CLINIC only</td></tr>
+            <tr><td>price_mismatch</td><td>$1 tolerance; title vs desc only</td></tr>
+            <tr><td>camp_price_mismatch</td><td>$2 tolerance; camp_pricing table base</td></tr>
+            <tr><td>event_price_mismatch</td><td>$1 tolerance; event_pricing table base</td></tr>
+            <tr><td>missing_*</td><td>has_age_in_text, has_date_in_text, has_time_in_text regexes</td></tr>
+          </table>
+          <p><strong>When validation runs:</strong> Title completeness always; Description + DATA checks only when <code>description_status = full</code>.</p>
+        </div>
+      </div>
+
+      <!-- ========== CATEGORY 2: TEMPORARY OVERRIDES (✓ OK) ========== -->
+      <h2 id="category-2" class="category-header">2. Temporary Overrides (✓ OK)</h2>
+      <p class="category-desc">"Accept Exception" — dismiss this one time. Error stays in DB; UI hides it. Stored in <code>acknowledged_errors</code>.</p>
+
+      <div id="temp-how" class="card" data-search="temporary override accept exception acknowledged_errors">
+        <div class="card-header" onclick="toggleCard(this)">How Temporary Overrides Work</div>
+        <div class="card-body">
+          <ul>
+            <li><strong>Where to click:</strong> ✓ OK or "Accept Exception" on any error (Event panel, Admin Audit Review)</li>
+            <li><strong>Effect:</strong> Adds <code>{ message, note, dismissed_at }</code> to <code>events.acknowledged_errors</code></li>
+            <li><strong>Python never sees it</strong> — validation still adds the error on every sync</li>
+            <li><strong>Frontend only:</strong> <code>isErrorAcknowledged(acknowledged, message)</code> returns true → UI hides the error</li>
+            <li><strong>Undo:</strong> "Undo dismiss" removes from acknowledged_errors</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="temp-which" class="card" data-search="which errors temp override support">
+        <div class="card-header" onclick="toggleCard(this)">Which Errors Support ✓ OK (Temporary Override)</div>
+        <div class="card-body">
+          <p><strong>All errors</strong> support temporary override. Every validation error can be dismissed with "Accept Exception" — one-time hide for that event.</p>
+          <table>
+            <tr><th>Category</th><th>Errors</th></tr>
+            <tr><td>DATA</td><td>year_mismatch, date_mismatch, day_mismatch, time_mismatch, age_mismatch, program_mismatch, skill_mismatch, price_mismatch, camp_price_mismatch, event_price_mismatch, title_desc_mismatch</td></tr>
+            <tr><td>FORMAT</td><td>missing_age_in_title, missing_date_in_title, missing_program_in_title, missing_age_in_description, missing_datetime_in_description, missing_time_in_description, missing_program_in_description, clinic_missing_skill, missing_price_in_description</td></tr>
+            <tr><td>STATUS</td><td>registration_closed, registration_not_open</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- ========== CATEGORY 3: PERMANENT RULES (gym_valid_values) ========== -->
+      <h2 id="category-3" class="category-header">3. Permanent Rules (gym_valid_values)</h2>
+      <p class="category-desc">"Make Permanent Rule" or Gym Rules tab. Stored in Supabase <code>gym_valid_values</code>. Next sync may NOT add that error.</p>
+
+      <div id="permanent-rules" class="card" data-search="permanent gym_valid_values rule type price time program_synonym">
+        <div class="card-header" onclick="toggleCard(this)">Rule Types and What They Do</div>
+        <div class="card-body">
+          <table>
+            <tr><th>rule_type</th><th>Used by</th><th>Purpose</th><th>Example</th></tr>
+            <tr><td><code>price</code></td><td>camp_price_mismatch, event_price_mismatch</td><td>Add extra valid price</td><td>RBA: $20 = Before Care</td></tr>
+            <tr><td><code>time</code></td><td>time_mismatch</td><td>Add extra valid time</td><td>CCP: 8:00am = Early Dropoff</td></tr>
+            <tr><td><code>program_synonym</code></td><td>has_program_type_in_text, program checks, title_desc</td><td>Map keyword → program type</td><td>ninja night → KIDS NIGHT OUT</td></tr>
+          </table>
+          <p><strong>Where to add:</strong> Admin Dashboard → Gym Rules tab, or "Make Permanent Rule" when dismissing an eligible error.</p>
+          <p><strong>Merge logic:</strong> gym_id='ALL' = global; gym-specific rules merge in. Duplicate values deduped.</p>
+        </div>
+      </div>
+
+      <div id="permanent-which" class="card" data-search="canAddAsRule which errors permanent make rule">
+        <div class="card-header" onclick="toggleCard(this)">Which Errors Support "+ Rule" (Make Permanent Rule)</div>
+        <div class="card-body">
+          <p>Only these 5 error types show the "Make Permanent Rule" button when you dismiss:</p>
+          <table>
+            <tr><th>Error Type</th><th>Rule Created</th><th>extractRuleValue source</th></tr>
+            <tr><td>camp_price_mismatch</td><td>price</td><td>First $XX from message</td></tr>
+            <tr><td>event_price_mismatch</td><td>price</td><td>First $XX from message</td></tr>
+            <tr><td>time_mismatch</td><td>time</td><td>"description says X" or "title says X"</td></tr>
+            <tr><td>program_mismatch</td><td>program_synonym</td><td>Full event.title</td></tr>
+            <tr><td>missing_program_in_title</td><td>program_synonym</td><td>Full event.title</td></tr>
+          </table>
+          <p><strong>All other errors</strong> — no permanent rule option. Use ✓ OK (temp override) only.</p>
+        </div>
+      </div>
+
+      <div class="card" data-search="which errors use gym_valid_values permanent">
+        <div class="card-header" onclick="toggleCard(this)">Which Errors Use gym_valid_values During Validation</div>
+        <div class="card-body">
+          <table>
+            <tr><th>Uses gym_valid_values?</th><th>Error types</th></tr>
+            <tr><td>YES (price)</td><td>camp_price_mismatch, event_price_mismatch</td></tr>
+            <tr><td>YES (time)</td><td>time_mismatch</td></tr>
+            <tr><td>YES (program_synonym)</td><td>missing_program_in_title, missing_program_in_description, program_mismatch, title_desc_mismatch, OPEN GYM checks</td></tr>
+            <tr><td>NO</td><td>year_mismatch, date_mismatch, day_mismatch, age_mismatch, skill_mismatch, price_mismatch, all other missing_*, registration_closed, registration_not_open</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Quick reference -->
+      <h2>Quick Reference — By Error Type</h2>
+      <div class="card" data-search="quick reference error type embedded temp permanent">
+        <div class="card-header" onclick="toggleCard(this)">For Each Error: What Can You Control?</div>
+        <div class="card-body">
+          <table>
+            <tr><th>Error</th><th>1. Embedded</th><th>2. Temp (✓ OK)</th><th>3. Permanent</th></tr>
+            <tr><td>year_mismatch</td><td>Yes (regex, equality)</td><td>Yes</td><td>No</td></tr>
+            <tr><td>date_mismatch</td><td>Yes (months, skip patterns)</td><td>Yes</td><td>No</td></tr>
+            <tr><td>day_mismatch</td><td>Yes (CAMP skip, day clean)</td><td>Yes</td><td>No</td></tr>
+            <tr><td>time_mismatch</td><td>Yes (regex, pre-clean)</td><td>Yes</td><td>Yes (time rule)</td></tr>
+            <tr><td>age_mismatch</td><td>Yes (extract patterns)</td><td>Yes</td><td>No</td></tr>
+            <tr><td>program_mismatch</td><td>Yes (keywords, branches)</td><td>Yes</td><td>Yes (program_synonym)</td></tr>
+            <tr><td>skill_mismatch</td><td>Yes (skills list)</td><td>Yes</td><td>No</td></tr>
+            <tr><td>price_mismatch</td><td>Yes ($1 tolerance)</td><td>Yes</td><td>No</td></tr>
+            <tr><td>camp_price_mismatch</td><td>Yes ($2, camp_pricing)</td><td>Yes</td><td>Yes (price rule)</td></tr>
+            <tr><td>event_price_mismatch</td><td>Yes ($1, event_pricing)</td><td>Yes</td><td>Yes (price rule)</td></tr>
+            <tr><td>title_desc_mismatch</td><td>Yes (branch logic)</td><td>Yes</td><td>Yes (program_synonym)</td></tr>
+            <tr><td>missing_program_in_title</td><td>Yes (keywords)</td><td>Yes</td><td>Yes (program_synonym)</td></tr>
+            <tr><td>All other missing_*</td><td>Yes</td><td>Yes</td><td>No (except missing_program_in_desc)</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <h2 id="where-gyms-appear" class="category-header">Where CCP, HGA, RBA, RBK Appear in the App</h2>
+      <p class="category-desc">If you see CCP/HGA and think &quot;only RBA/RBK have rules&quot; — both can be true. Here is where each gym appears and why.</p>
+      <div id="where-gyms-appear-card" class="card" data-search="CCP HGA RBA RBK gym rules add new rule audit filter">
+        <div class="card-header" onclick="toggleCard(this)">Where Each Gym Appears</div>
+        <div class="card-body">
+          <table>
+            <tr><th>Location</th><th>What you see</th><th>Why</th></tr>
+            <tr><td><strong>Gym Rules → All Gym Rules</strong></td><td>Only gyms with rows in <code>gym_valid_values</code> (e.g. RBA, RBK)</td><td>Built from rules table. CCP/HGA do not appear unless you add rules for them.</td></tr>
+            <tr><td><strong>Gym Rules → Add New Rule dropdown</strong></td><td>ALL gyms: CCP, HGA, RBA, RBK, CPF, CRR, etc.</td><td>You pick which gym to add a rule for. All gyms listed so you can add rules for CCP or HGA when needed.</td></tr>
+            <tr><td><strong>Audit &amp; Review → Gym filter</strong></td><td>ALL gyms as checkboxes</td><td>You choose which gyms' events to review. CCP/HGA are options to review their validation issues.</td></tr>
+            <tr><td><strong>Audit &amp; Review → Event groups</strong></td><td>Section headers per gym that has events with issues</td><td>If you select CCP + HGA + RBA and each has events with errors, you see three sections. CCP/HGA appear because you chose them in the filter.</td></tr>
+          </table>
+          <p><strong>Summary:</strong> Permanent rules (gym_valid_values) — run <code>python automation/list_gym_rules.py</code> to see exactly which gyms have rules in your DB. CCP/HGA in dropdowns/filters = expected; they are in the gyms table; the UI shows all gyms.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function toggleCard(header) {
+      header.closest('.card').classList.toggle('collapsed');
+    }
+    function expandAll() {
+      document.querySelectorAll('.card').forEach(c => c.classList.remove('collapsed'));
+    }
+    function collapseAll() {
+      document.querySelectorAll('.card').forEach(c => c.classList.add('collapsed'));
+    }
+    function toggleTheme() {
+      const root = document.documentElement;
+      root.dataset.theme = root.dataset.theme === 'light' ? '' : 'light';
+    }
+
+    // Search
+    const search = document.getElementById('search');
+    const cards = document.querySelectorAll('.card');
+    search.addEventListener('input', () => {
+      const q = search.value.toLowerCase().trim();
+      let visible = 0;
+      cards.forEach(card => {
+        const meta = (card.getAttribute('data-error') || card.getAttribute('data-search') || '') + ' ';
+        const text = meta + card.textContent.toLowerCase();
+        const match = !q || text.includes(q);
+        card.classList.toggle('hidden', !match);
+        if (match) visible++;
+      });
+      document.querySelector('.no-results')?.remove();
+      if (q && visible === 0) {
+        const n = document.createElement('div');
+        n.className = 'no-results';
+        n.textContent = 'No matches for "' + q + '"';
+        document.querySelector('main').appendChild(n);
+      }
+    });
+
+    // Nav active state on scroll
+    const sections = document.querySelectorAll('[id]');
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(s => {
+        const top = s.offsetTop;
+        if (scrollY >= top - 100) current = s.id;
+      });
+      document.querySelectorAll('nav a[href^="#"]').forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -35,6 +35,7 @@ These document schema changes over time:
 | `ADD_DESCRIPTION_COLUMN.sql` | Event descriptions |
 | `ADD_HALF_DAY_CAMP_LINKS.sql` | Half-day camp URL patterns |
 | `ADD_UNIQUE_CONSTRAINT_EVENT_URL.sql` | Prevent duplicate event URLs |
+| `CREATE_ACKNOWLEDGED_PATTERNS.sql` | Program-wide temp overrides (gym + event_type + error_message) |
 
 ### Utility Queries:
 | File | Purpose |
@@ -78,6 +79,10 @@ Use `FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql` - it has the complete, current view d
 | `event_types` | Event type definitions |
 | `link_types` | Link type definitions |
 | `monthly_requirements` | Compliance tracking |
+| `gym_valid_values` | Permanent validation rules (price, time, program synonyms) |
+| `event_pricing` | Base prices for CLINIC, KNO, OPEN GYM |
+| `camp_pricing` | Base prices for CAMP |
+| `acknowledged_patterns` | Temp overrides: "dismiss for all events of this program at this gym" |
 
 ---
 

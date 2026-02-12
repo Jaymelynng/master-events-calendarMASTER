@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import { eventsApi, syncLogApi, auditLogApi, gymValidValuesApi } from '../../lib/api';
+import { isErrorAcknowledgedAnywhere, inferErrorCategory } from '../../lib/validationHelpers';
 import { compareEvents } from '../../lib/eventComparison';
 import { supabase } from '../../lib/supabase';
 import DismissRuleModal from './DismissRuleModal';
 
-export default function SyncModal({ theme, onClose, onBack, gyms }) {
+export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPatterns = [] }) {
   const [selectedGym, setSelectedGym] = useState('');
   const [selectedEventType, setSelectedEventType] = useState('');
   const [syncing, setSyncing] = useState(false);
@@ -68,14 +69,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
     'SPECIAL EVENT'
   ];
 
-  // Helper: Check if an error message is acknowledged (supports both old string format and new object format)
-  const isErrorAcknowledged = (acknowledgedErrors, errorMessage) => {
-    if (!acknowledgedErrors || !Array.isArray(acknowledgedErrors)) return false;
-    return acknowledgedErrors.some(ack => 
-      typeof ack === 'string' ? ack === errorMessage : ack.message === errorMessage
-    );
-  };
-
   // Get events with validation issues from the sync results
   const getEventsWithValidationIssues = () => {
     if (!editableEvents || editableEvents.length === 0) return [];
@@ -89,11 +82,13 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
              event.description_status === 'flyer_only';
     }).map(event => {
       const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
+      // Filter out acknowledged (per-event or pattern) — rules apply everywhere
+      const activeErrors = errors.filter(e => !isErrorAcknowledgedAnywhere(event, e.message, acknowledgedPatterns));
       // Separate by category
-      const dataErrors = errors.filter(e => e.category === 'data_error');
-      const formattingErrors = errors.filter(e => e.category === 'formatting');
-      const statusErrors = errors.filter(e => e.category === 'status');
-      const otherErrors = errors.filter(e => !e.category);
+      const dataErrors = activeErrors.filter(e => (e.category || inferErrorCategory(e)) === 'data_error');
+      const formattingErrors = activeErrors.filter(e => (e.category || inferErrorCategory(e)) === 'formatting');
+      const statusErrors = activeErrors.filter(e => (e.category || inferErrorCategory(e)) === 'status');
+      const otherErrors = activeErrors.filter(e => !e.category && !inferErrorCategory(e));
       
       return {
         ...event,
@@ -101,10 +96,10 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
         formattingErrors,
         statusErrors,
         otherErrors,
-        totalErrors: errors.length,
+        totalErrors: activeErrors.length,
         hasDescriptionIssue: event.description_status === 'none' || event.description_status === 'flyer_only'
       };
-    });
+    }).filter(e => e.dataErrors.length + e.formattingErrors.length + e.statusErrors.length + e.otherErrors.length > 0 || e.hasDescriptionIssue);
   };
 
   // Check if an error type supports "Add as Rule"
@@ -157,7 +152,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
 
       const currentAcknowledged = existingEvent.acknowledged_errors || [];
 
-      if (!isErrorAcknowledged(currentAcknowledged, errorMessage)) {
+      if (!isErrorAcknowledgedAnywhere(existingEvent, errorMessage, acknowledgedPatterns)) {
         const acknowledgment = {
           message: errorMessage,
           note: note || null,
