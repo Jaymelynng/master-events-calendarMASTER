@@ -1778,18 +1778,20 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 })
                 print(f"    ❌ MISSING PRICE: No $ found in description")
             
-            # Rule: If price in BOTH title and description, they must match
+            # Rule: If price in BOTH title and description, title price must appear somewhere in description
             elif title_prices and desc_prices:
                 title_price = float(title_prices[0])
-                desc_price = float(desc_prices[0])
-                if title_price != desc_price:
+                desc_price_floats = [float(p) for p in desc_prices]
+                # Title price is valid if it matches ANY price in the description (within $1 tolerance)
+                title_price_found = any(abs(title_price - dp) <= 1 for dp in desc_price_floats)
+                if not title_price_found:
                     validation_errors.append({
                         "type": "price_mismatch",
                         "severity": "error",
                         "category": "data_error",
-                        "message": f"Title says ${title_price:.0f} but description says ${desc_price:.0f}"
+                        "message": f"Title says ${title_price:.0f} but description prices are {', '.join(['$' + p for p in desc_prices])}"
                     })
-                    print(f"    ❌ PRICE MISMATCH: Title ${title_price:.0f} vs Desc ${desc_price:.0f}")
+                    print(f"    ❌ PRICE MISMATCH: Title ${title_price:.0f} not found in description prices: {', '.join(['$' + p for p in desc_prices])}")
             
             # --- CAMP PRICE VALIDATION (Full Day + Half Day, Daily + Weekly) ---
             # Checks if price in title OR description matches ANY valid camp price for this gym
@@ -1850,10 +1852,13 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                                 break  # Only flag once per event
             
             # --- EVENT PRICE VALIDATION (Clinic, KNO, Open Gym) ---
-            # Checks if price in title OR description matches the correct price from event_pricing table
+            # Checks if the expected price from event_pricing table appears ANYWHERE in the description/title
             # Uses effective_date to automatically use correct price (handles price increases)
+            # Approach: Instead of extracting one price and comparing, check if ANY valid price
+            # from Supabase appears in the text. This avoids false positives when descriptions
+            # have multiple prices (e.g., "$45 for 1 child, $40 for siblings").
             all_event_prices = list(set(title_prices + desc_prices))  # Combine and dedupe
-            if event_type in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'] and all_event_prices:
+            if event_type in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'] and desc_prices:
                 event_pricing = get_event_pricing()
                 if gym_id in event_pricing and event_type in event_pricing[gym_id]:
                     valid_prices = event_pricing[gym_id][event_type]
@@ -1869,21 +1874,23 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                             pass
                     
                     if valid_prices:
-                        # Check the first/primary price found in title or description
-                        event_price = float(all_event_prices[0])
+                        # Check if ANY valid price appears in ANY of the prices found in text
+                        all_found_prices = [float(p) for p in all_event_prices]
+                        expected_price_found = any(
+                            any(abs(found - vp) <= 1 for found in all_found_prices)
+                            for vp in valid_prices
+                        )
                         
-                        # Check if price matches any valid price (exact match)
-                        is_valid = any(abs(event_price - vp) <= 1 for vp in valid_prices)
-                        
-                        if not is_valid:
+                        if not expected_price_found:
                             valid_str = ', '.join([f'${p:.0f}' for p in valid_prices])
+                            found_str = ', '.join([f'${p}' for p in all_event_prices])
                             validation_errors.append({
                                 "type": "event_price_mismatch",
                                 "severity": "error",
                                 "category": "data_error",
-                                "message": f"{event_type} price ${event_price:.0f} doesn't match expected price for {gym_id}. Valid: {valid_str}"
+                                "message": f"{event_type} expected price ({valid_str}) not found in description for {gym_id}. Found: {found_str}"
                             })
-                            print(f"    ❌ {event_type} PRICE: ${event_price:.0f} not valid for {gym_id}. Expected: {valid_str}")
+                            print(f"    ❌ {event_type} PRICE: Expected {valid_str} not found for {gym_id}. Found in text: {found_str}")
         
         # ========== AVAILABILITY INFO ==========
         # NOTE: Sold out is NOT a validation error - it's informational status
