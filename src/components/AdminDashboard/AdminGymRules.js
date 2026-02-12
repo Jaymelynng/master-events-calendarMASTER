@@ -345,7 +345,7 @@ export default function AdminGymRules({ gyms }) {
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                   <input type="number" value={newEventPrice} onChange={(e) => setNewEventPrice(e.target.value)} placeholder="Price" className="w-20 px-2 py-1.5 border rounded text-sm" />
-                <button
+                  <button
                   onClick={async () => {
                     if (!newEventGym || !newEventPrice) { alert('Gym and price required.'); return; }
                     try {
@@ -356,8 +356,9 @@ export default function AdminGymRules({ gyms }) {
                   }}
                   className="px-3 py-1.5 bg-amber-600 text-white rounded text-sm font-medium hover:bg-amber-700"
                 >
-                  Add
-                </button>
+                    Add
+                  </button>
+                </div>
               </div>
             </div>
             </>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback, Suspense, lazy } from 'react';
 import { 
   Calendar, Clock, DollarSign, MapPin, Filter, Search, Grid, List, Plus, 
   ChevronUp, ChevronLeft, ChevronRight, AlertCircle, Loader, Copy, CheckCircle, Users
