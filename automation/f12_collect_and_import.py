@@ -1956,6 +1956,37 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "registration_end_date": registration_end_date,
         })
     
+    # ========== VALIDATION SUMMARY ==========
+    # Print a summary of all validation errors found across all events
+    if processed:
+        all_errors = []
+        for ev in processed:
+            all_errors.extend(ev.get("validation_errors", []))
+        
+        if all_errors:
+            # Count by type
+            error_counts = {}
+            for err in all_errors:
+                err_type = err.get("type", "unknown")
+                error_counts[err_type] = error_counts.get(err_type, 0) + 1
+            
+            # Count by category
+            data_errors = sum(1 for e in all_errors if e.get("category") == "data_error")
+            format_errors = sum(1 for e in all_errors if e.get("category") == "formatting")
+            status_errors = sum(1 for e in all_errors if e.get("category") == "status")
+            
+            print(f"\n{'='*60}")
+            print(f"📊 VALIDATION SUMMARY: {len(processed)} events checked, {len(all_errors)} total errors found")
+            print(f"   🚨 DATA errors (wrong info): {data_errors}")
+            print(f"   ⚠️  FORMAT errors (missing info): {format_errors}")
+            print(f"   ℹ️  STATUS errors: {status_errors}")
+            print(f"   Breakdown by type:")
+            for err_type, count in sorted(error_counts.items(), key=lambda x: -x[1]):
+                print(f"     - {err_type}: {count}")
+            print(f"{'='*60}\n")
+        else:
+            print(f"\n✅ VALIDATION SUMMARY: {len(processed)} events checked, 0 errors found\n")
+    
     return processed
 
 # For backward compatibility
