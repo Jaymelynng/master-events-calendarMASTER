@@ -962,6 +962,15 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 if not text:
                     return False
                 txt = text.lower()
+                
+                # PRE-CLEAN: Remove patterns that cause false positives
+                # "$62 a day" -> "62 a" matched as time, "Ages 4-13" -> "13 a" matched as time
+                txt = re.sub(r'\$\d+(?:\.\d{2})?\s*(?:a\s+day|a\s+week|/day|/week|per\s+day|per\s+week)', ' ', txt)
+                txt = re.sub(r'ages?\s*\d{1,2}\s*[-–to]+\s*\d{1,2}', ' ', txt)
+                txt = re.sub(r'\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:years?|yrs?)', ' ', txt)
+                # Catch-all: "$50 a" (price followed by "a") but NOT "$50 am" (legitimate time)
+                txt = re.sub(r'\$\d+(?:\.\d{2})?\s+a(?!\s*m)', ' ', txt)
+                
                 # Match many time formats:
                 # - "6:30pm", "6:30 pm", "6pm", "6 pm", "6:30p", "6:30 p.m."
                 # - "6:30a", "6:30 a.m.", "6am", "6 am"  
@@ -1371,9 +1380,9 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 # Check first 200 chars for day mentions
                 desc_snippet = description_lower[:200]
                 
-                # PRE-CLEAN: Remove day ranges like "Monday-Friday", "Mon-Fri" before checking
+                # PRE-CLEAN: Remove day ranges like "Monday-Friday", "Mon-Fri", "Monday through Friday" before checking
                 # These describe schedules, not the specific event day
-                day_range_pattern = r'(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\s*[-–to]+\s*(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)'
+                day_range_pattern = r'(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\s*(?:[-–]|to|thru|through)\s*(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)'
                 desc_snippet_cleaned = re.sub(day_range_pattern, '', desc_snippet)
                 
                 # Also remove parenthetical day ranges like "(Monday-Friday)"
@@ -1769,18 +1778,20 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 })
                 print(f"    ❌ MISSING PRICE: No $ found in description")
             
-            # Rule: If price in BOTH title and description, they must match
+            # Rule: If price in BOTH title and description, title price must appear somewhere in description
             elif title_prices and desc_prices:
                 title_price = float(title_prices[0])
-                desc_price = float(desc_prices[0])
-                if title_price != desc_price:
+                desc_price_floats = [float(p) for p in desc_prices]
+                # Title price is valid if it matches ANY price in the description (within $1 tolerance)
+                title_price_found = any(abs(title_price - dp) <= 1 for dp in desc_price_floats)
+                if not title_price_found:
                     validation_errors.append({
                         "type": "price_mismatch",
                         "severity": "error",
                         "category": "data_error",
-                        "message": f"Title says ${title_price:.0f} but description says ${desc_price:.0f}"
+                        "message": f"Title says ${title_price:.0f} but description prices are {', '.join(['$' + p for p in desc_prices])}"
                     })
-                    print(f"    ❌ PRICE MISMATCH: Title ${title_price:.0f} vs Desc ${desc_price:.0f}")
+                    print(f"    ❌ PRICE MISMATCH: Title ${title_price:.0f} not found in description prices: {', '.join(['$' + p for p in desc_prices])}")
             
             # --- CAMP PRICE VALIDATION (Full Day + Half Day, Daily + Weekly) ---
             # Checks if price in title OR description matches ANY valid camp price for this gym
@@ -1841,10 +1852,12 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                                 break  # Only flag once per event
             
             # --- EVENT PRICE VALIDATION (Clinic, KNO, Open Gym) ---
-            # Checks if price in title OR description matches the correct price from event_pricing table
+            # Checks if the expected price from event_pricing table appears ANYWHERE in the description/title
             # Uses effective_date to automatically use correct price (handles price increases)
-            all_event_prices = list(set(title_prices + desc_prices))  # Combine and dedupe
-            if event_type in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'] and all_event_prices:
+            # Approach: Instead of extracting one price and comparing, check if ANY valid price
+            # from Supabase appears in the text. This avoids false positives when descriptions
+            # have multiple prices (e.g., "$45 for 1 child, $40 for siblings").
+            if event_type in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'] and desc_prices:
                 event_pricing = get_event_pricing()
                 if gym_id in event_pricing and event_type in event_pricing[gym_id]:
                     valid_prices = event_pricing[gym_id][event_type]
@@ -1860,21 +1873,24 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                             pass
                     
                     if valid_prices:
-                        # Check the first/primary price found in title or description
-                        event_price = float(all_event_prices[0])
+                        # Check if ANY valid price appears in ANY of the prices found in text
+                        all_event_prices = list(set(title_prices + desc_prices))
+                        all_found_prices = set(float(p) for p in all_event_prices)
+                        expected_price_found = any(
+                            any(abs(found - vp) <= 1 for found in all_found_prices)
+                            for vp in valid_prices
+                        )
                         
-                        # Check if price matches any valid price (exact match)
-                        is_valid = any(abs(event_price - vp) <= 1 for vp in valid_prices)
-                        
-                        if not is_valid:
+                        if not expected_price_found:
                             valid_str = ', '.join([f'${p:.0f}' for p in valid_prices])
+                            found_str = ', '.join([f'${p}' for p in all_event_prices])
                             validation_errors.append({
                                 "type": "event_price_mismatch",
                                 "severity": "error",
                                 "category": "data_error",
-                                "message": f"{event_type} price ${event_price:.0f} doesn't match expected price for {gym_id}. Valid: {valid_str}"
+                                "message": f"{event_type} expected price ({valid_str}) not found in description for {gym_id}. Found: {found_str}"
                             })
-                            print(f"    ❌ {event_type} PRICE: ${event_price:.0f} not valid for {gym_id}. Expected: {valid_str}")
+                            print(f"    ❌ {event_type} PRICE: Expected {valid_str} not found for {gym_id}. Found in text: {found_str}")
         
         # ========== AVAILABILITY INFO ==========
         # NOTE: Sold out is NOT a validation error - it's informational status
@@ -1946,6 +1962,37 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "registration_start_date": registration_start_date,
             "registration_end_date": registration_end_date,
         })
+    
+    # ========== VALIDATION SUMMARY ==========
+    # Print a summary of all validation errors found across all events
+    if processed:
+        all_errors = []
+        for ev in processed:
+            all_errors.extend(ev.get("validation_errors", []))
+        
+        if all_errors:
+            # Count by type
+            error_counts = {}
+            for err in all_errors:
+                err_type = err.get("type", "unknown")
+                error_counts[err_type] = error_counts.get(err_type, 0) + 1
+            
+            # Count by category
+            data_errors = sum(1 for e in all_errors if e.get("category") == "data_error")
+            format_errors = sum(1 for e in all_errors if e.get("category") == "formatting")
+            status_errors = sum(1 for e in all_errors if e.get("category") == "status")
+            
+            print(f"\n{'='*60}")
+            print(f"📊 VALIDATION SUMMARY: {len(processed)} events checked, {len(all_errors)} total errors found")
+            print(f"   🚨 DATA errors (wrong info): {data_errors}")
+            print(f"   ⚠️  FORMAT errors (missing info): {format_errors}")
+            print(f"   ℹ️  STATUS errors: {status_errors}")
+            print(f"   Breakdown by type:")
+            for err_type, count in sorted(error_counts.items(), key=lambda x: -x[1]):
+                print(f"     - {err_type}: {count}")
+            print(f"{'='*60}\n")
+        else:
+            print(f"\n✅ VALIDATION SUMMARY: {len(processed)} events checked, 0 errors found\n")
     
     return processed
 

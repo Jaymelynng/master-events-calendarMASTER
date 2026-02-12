@@ -1,8 +1,10 @@
-# 🚨 EXPORT FEATURE ANALYSIS - MAJOR ISSUES FOUND
+# 🚨 EXPORT FEATURE ANALYSIS - ISSUES FOUND & FIXED
+
+> **Status:** ✅ FIXED (February 2026) — `getAnalytics()` now uses `filteredEvents` instead of `activeEvents`. The `events` prop is documented as intentionally unused (component fetches its own data for date range flexibility).
 
 ## 📋 EXECUTIVE SUMMARY
 
-The export feature has **critical logic inconsistencies** that cause confusing behavior. Some exports respect your selections (gyms + event types), while others ignore event type selections entirely.
+The export feature had **critical logic inconsistencies** that caused confusing behavior. Some exports respected your selections (gyms + event types), while others ignored event type selections entirely. **These issues have been fixed.**
 
 ---
 

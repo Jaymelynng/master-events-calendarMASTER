@@ -373,13 +373,14 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
       return;
     }
     
-    // Check if there's actually anything to do (new, changed, or deleted)
+    // Check if there's actually anything to do (new, changed, deleted, or unchanged to refresh)
     const hasNewEvents = editableEvents.length > 0;
     const hasChangedEvents = comparison && comparison.changed && comparison.changed.length > 0;
     const hasDeletedEvents = comparison && comparison.deleted && comparison.deleted.length > 0;
+    const hasUnchangedEvents = comparison && comparison.unchanged && comparison.unchanged.length > 0;
     
-    // If forceUpdate is enabled, we update all events regardless of change status
-    if (!forceUpdate && !hasNewEvents && !hasChangedEvents && !hasDeletedEvents) {
+    // Always proceed if there are events to process — validation always needs refreshing
+    if (!hasNewEvents && !hasChangedEvents && !hasDeletedEvents && !hasUnchangedEvents) {
       return; // Nothing to sync
     }
 
@@ -475,10 +476,13 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
         }
       }
       
-      // Force update: Also update "unchanged" events to refresh validation_errors
+      // ALWAYS refresh validation_errors for "unchanged" events
+      // Validation rules evolve over time, so even if the event data hasn't changed,
+      // the validation_errors need to be recalculated with the latest rules.
+      // Also refreshes availability tracking (has_openings, registration dates).
       let forceUpdatedCount = 0;
-      if (forceUpdate && comparison && comparison.unchanged.length > 0) {
-        console.log(`🔄 Force updating ${comparison.unchanged.length} unchanged events...`);
+      if (comparison && comparison.unchanged.length > 0) {
+        console.log(`🔄 Refreshing validation for ${comparison.unchanged.length} unchanged events...`);
         const allExistingEvents = await eventsApi.getAll(null, null, true);
         
         for (const unchangedEvent of comparison.unchanged) {
@@ -492,7 +496,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
             
             // Update with fresh validation data
             await eventsApi.update(existingEvent.id, {
-              // Data quality validation fields - these are what we're updating
+              // Data quality validation fields - always refresh with latest rules
               has_flyer: incomingEvent.has_flyer || false,
               flyer_url: incomingEvent.flyer_url || null,
               description_status: incomingEvent.description_status || 'unknown',
@@ -507,7 +511,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
             console.error('Error force-updating event:', err);
           }
         }
-        console.log(`✅ Force updated ${forceUpdatedCount} events with fresh validation data`);
+        console.log(`✅ Refreshed validation for ${forceUpdatedCount} unchanged events`);
       }
       
       // Mark deleted events (in DB but not in portal) as deleted
@@ -1349,43 +1353,36 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
             const hasChanges = newCount > 0 || changedCount > 0;
             
             if (!hasChanges) {
-              // All events are unchanged - show informational message with navigation buttons
+              // All events are unchanged - but validation still gets refreshed
+              const unchangedCount = comparison?.unchanged?.length || 0;
               return (
                 <div className="mb-4">
                   <div className="w-full px-4 py-3 bg-green-50 text-green-700 rounded-lg border-2 border-green-300 text-center mb-3">
-                    ✅ All {editableEvents.length} events are already up-to-date in the database
+                    ✅ All {editableEvents.length} events match the database — no content changes
                   </div>
                   
-                  {/* Force Re-import option - useful for updating validation errors */}
-                  <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={forceUpdate}
-                        onChange={(e) => setForceUpdate(e.target.checked)}
-                        className="w-4 h-4 text-amber-600 rounded"
-                      />
-                      <span className="text-sm text-amber-800">
-                        <strong>Force Re-import All</strong> - Update validation & audit data even if events look the same
-                      </span>
-                    </label>
-                    {forceUpdate && (
+                  {/* Always allow import to refresh validation */}
+                  {unchangedCount > 0 && (
+                    <div className="mb-3">
                       <button
                         onClick={handleImport}
                         disabled={importing}
-                        className="w-full mt-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-semibold disabled:bg-gray-400 flex items-center justify-center gap-2"
+                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:bg-gray-400 flex items-center justify-center gap-2"
                       >
                         {importing ? (
                           <>
                             <Loader className="w-4 h-4 animate-spin" />
-                            Re-importing...
+                            Refreshing validation...
                           </>
                         ) : (
-                          <>🔄 Force Re-import {editableEvents.length} Events</>
+                          <>🔄 Refresh Validation for {unchangedCount} Events</>
                         )}
                       </button>
-                    )}
-                  </div>
+                      <p className="text-xs text-blue-600 mt-1 text-center">
+                        Updates audit errors, availability status, and description checks with latest rules
+                      </p>
+                    </div>
+                  )}
                   
                   <div className="flex gap-3">
                     <button
@@ -1440,25 +1437,12 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                   )}
                 </button>
                 
-                {/* Force Re-import option for unchanged events */}
+                {/* Info about validation refresh for unchanged events */}
                 {unchangedCount > 0 && (
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={forceUpdate}
-                        onChange={(e) => setForceUpdate(e.target.checked)}
-                        className="w-4 h-4 text-amber-600 rounded"
-                      />
-                      <span className="text-sm text-amber-800">
-                        <strong>Also re-validate {unchangedCount} unchanged events</strong> - Apply new validation rules
-                      </span>
-                    </label>
-                    {forceUpdate && (
-                      <p className="text-xs text-amber-600 mt-1 ml-6">
-                        ✓ Will import {newCount + changedCount} + force re-validate {unchangedCount} = {newCount + changedCount + unchangedCount} total events
-                      </p>
-                    )}
+                  <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-xs text-blue-700">
+                      ✓ Will also refresh validation for {unchangedCount} unchanged events with latest rules
+                    </p>
                   </div>
                 )}
               </div>
@@ -1490,7 +1474,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms }) {
                       <span> • 🔄 Updated <strong>{importResult.updated}</strong> changed events</span>
                     )}
                     {importResult.forceUpdated > 0 && (
-                      <span> • 🔄 Force-refreshed <strong>{importResult.forceUpdated}</strong> validation data</span>
+                      <span> • 🔄 Refreshed validation on <strong>{importResult.forceUpdated}</strong> unchanged events</span>
                     )}
                     {importResult.deleted > 0 && (
                       <span> • 🗑️ Marked <strong>{importResult.deleted}</strong> events as deleted</span>
