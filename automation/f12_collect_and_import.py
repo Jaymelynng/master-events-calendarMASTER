@@ -1857,7 +1857,6 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             # Approach: Instead of extracting one price and comparing, check if ANY valid price
             # from Supabase appears in the text. This avoids false positives when descriptions
             # have multiple prices (e.g., "$45 for 1 child, $40 for siblings").
-            all_event_prices = list(set(title_prices + desc_prices))  # Combine and dedupe
             if event_type in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'] and desc_prices:
                 event_pricing = get_event_pricing()
                 if gym_id in event_pricing and event_type in event_pricing[gym_id]:
@@ -1875,7 +1874,8 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     
                     if valid_prices:
                         # Check if ANY valid price appears in ANY of the prices found in text
-                        all_found_prices = [float(p) for p in all_event_prices]
+                        all_event_prices = list(set(title_prices + desc_prices))
+                        all_found_prices = set(float(p) for p in all_event_prices)
                         expected_price_found = any(
                             any(abs(found - vp) <= 1 for found in all_found_prices)
                             for vp in valid_prices
