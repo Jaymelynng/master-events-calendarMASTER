@@ -1,6 +1,6 @@
 # Validation Rules Architecture
 
-**Last Updated:** February 10, 2026  
+**Last Updated:** February 17, 2026  
 **Purpose:** Explains what's built into the software vs. what's configurable by users  
 **Audience:** Developers, administrators, and future customers
 
@@ -301,9 +301,10 @@ This section explains WHERE the "correct" data comes from for each field. This i
 - Requires YOU to maintain the pricing table
 
 **For other event prices (Clinic, KNO, Open Gym):**
-- NO source of truth exists
-- We can ONLY check: "Does title price match description price?"
-- We CANNOT verify if the price is actually correct in iClass
+- We built our own source of truth (`event_pricing` table, added Feb 2026)
+- We can catch: "Description says $25 but this gym's Clinic price is $30"
+- Requires YOU to maintain the pricing table
+- Checks title AND description prices (fixed Feb 17, 2026 — previously only checked description)
 
 ### 3.5 Camp Pricing Table
 
@@ -521,6 +522,82 @@ These work for ALL gyms out of the box. No configuration needed. If you sell the
 
 ---
 
+## PART 8: NEW GYM SETUP GUIDE (For Selling)
+
+This section documents what a NEW gym customer needs to do to get their events validated. Use this as a setup checklist.
+
+### 8.1 Architecture Overview (Why It's SaaS-Ready)
+
+The validation system is designed with two layers:
+
+| Layer | What | Who Maintains | How Many Rules |
+|-------|------|---------------|----------------|
+| **Universal** | Built into the code | Us (developers) | 15+ patterns that work for ALL gyms |
+| **Per-Gym** | Stored in Supabase tables | The gym owner (via Admin UI) | 3-8 config entries per gym |
+
+A new gym gets ALL universal rules for free. They only need to add their specific config.
+
+### 8.2 Required Setup (Must Do)
+
+These are the minimum steps to get a new gym validated:
+
+| Step | What | Where | Why |
+|------|------|-------|-----|
+| 1 | Add gym to `gyms` table | Supabase | Creates the gym identity (ID, name, location) |
+| 2 | Set `iclass_slug` on the gym | Supabase `gyms.iclass_slug` | Maps to their iClassPro portal URL |
+| 3 | Add portal URLs | Supabase `gym_links` table | Tells the scraper which pages to visit for each event type |
+| 4 | Set event prices | Admin > Pricing tab | Source of truth for CLINIC, KNO, OPEN GYM prices |
+| 5 | Set camp prices (if applicable) | Admin > Pricing tab | Source of truth for camp prices (FD/HD, daily/weekly) |
+
+**After these 5 steps, the gym is fully operational.** Universal rules handle everything else.
+
+### 8.3 Optional Setup (As Needed)
+
+These only need to be added when the gym has non-standard names or pricing:
+
+| What | When Needed | Where to Add |
+|------|-------------|--------------|
+| Program synonyms | Gym calls KNO "Ninja Night" or "Parent's Night Out" | Admin > Gym Rules → program_synonym |
+| Price exceptions | Gym has add-on prices like "Before Care $20" or "Sibling $35" | Admin > Gym Rules → price |
+| Time exceptions | Gym has non-standard times like "Early Dropoff 8:00am" | Admin > Gym Rules → time |
+
+**Pro tip:** You often discover these AFTER the first sync. The audit page will show errors, and you can click "+ Rule" to add a permanent rule right from the error card.
+
+### 8.4 How to Find the iClass Slug
+
+The `iclass_slug` is the part of the URL after `portal.iclasspro.com/`. For example:
+- `https://portal.iclasspro.com/capgymavery/camps/123` → slug is `capgymavery`
+- `https://portal.iclasspro.com/houstongymnastics/camps/456` → slug is `houstongymnastics`
+
+Have the gym owner share any link from their iClassPro portal and extract the slug.
+
+### 8.5 Current Gym Slugs (Reference)
+
+| Gym ID | Name | iClass Slug |
+|--------|------|-------------|
+| CCP | Capital Gymnastics Cedar Park | capgymavery |
+| CPF | Capital Gymnastics Pflugerville | capgymhp |
+| CRR | Capital Gymnastics Round Rock | capgymroundrock |
+| EST | Estrella Gymnastics | estrellagymnastics |
+| HGA | Houston Gymnastics Academy | houstongymnastics |
+| OAS | Oasis Gymnastics | oasisgymnastics |
+| RBA | Rowland Ballard Atascocita | rbatascocita |
+| RBK | Rowland Ballard Kingwood | rbkingwood |
+| SGT | Scottsdale Gymnastics | scottsdalegymnastics |
+| TIG | Tigar Gymnastics | tigar |
+
+### 8.6 Future: Setup Wizard (Planned)
+
+A 4-step guided form in the Admin Dashboard that writes to all the tables above:
+1. **Basic Info** → `gyms` table (name, ID, slug)
+2. **Portal Links** → `gym_links` table (URLs per event type)
+3. **Pricing** → `event_pricing` + `camp_pricing` tables
+4. **Custom Rules** (optional) → `gym_valid_values` table
+
+All 4 steps just write to existing tables. No new backend code needed.
+
+---
+
 ## Document History
 
 | Date | Change |
@@ -534,3 +611,7 @@ These work for ALL gyms out of the box. No configuration needed. If you sell the
 | Feb 10, 2026 | Added registration/promo context skipping for date validation |
 | Feb 10, 2026 | Expanded universal rules documentation for sellability |
 | Feb 10, 2026 | Updated confirmed pricing table for all 10 gyms |
+| Feb 17, 2026 | Fixed price validation bug — now checks title+description (not just description) |
+| Feb 17, 2026 | Made GYMS dict database-driven (loads from Supabase with fallback) |
+| Feb 17, 2026 | Added Part 8: New Gym Setup Guide for sellability |
+| Feb 17, 2026 | Updated Part 3.4 — event_pricing IS now source of truth (was outdated) |

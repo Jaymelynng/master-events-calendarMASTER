@@ -16,8 +16,8 @@ from playwright.async_api import async_playwright
 SUPABASE_URL = "https://xftiwouxpefchwoxxgpf.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdGl3b3V4cGVmY2h3b3h4Z3BmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2ODc1MjUsImV4cCI6MjA2NjI2MzUyNX0.jQReOgyjYxOaig_IoJv3jhhPzlfumUcn-vkS1yF9hY4"
 
-# Gym data
-GYMS = {
+# Gym data — loaded from Supabase, with hardcoded fallback for safety
+_GYMS_FALLBACK = {
     'CCP': {'name': 'Capital Gymnastics Cedar Park', 'slug': 'capgymavery'},
     'CPF': {'name': 'Capital Gymnastics Pflugerville', 'slug': 'capgymhp'},
     'CRR': {'name': 'Capital Gymnastics Round Rock', 'slug': 'capgymroundrock'},
@@ -29,6 +29,42 @@ GYMS = {
     'SGT': {'name': 'Scottsdale Gymnastics', 'slug': 'scottsdalegymnastics'},
     'TIG': {'name': 'Tigar Gymnastics', 'slug': 'tigar'}
 }
+
+def fetch_gyms_from_db():
+    """Fetch gym data from Supabase gyms table (database-driven for sellability).
+    Returns dict matching GYMS format: {gym_id: {'name': ..., 'slug': ...}}
+    Requires 'iclass_slug' column in gyms table (added Feb 2026).
+    Falls back to hardcoded _GYMS_FALLBACK if fetch fails."""
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/gyms?select=id,name,iclass_slug"
+        req = Request(url)
+        req.add_header("apikey", SUPABASE_KEY)
+        req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
+
+        with urlopen(req) as response:
+            rows = json.loads(response.read().decode())
+
+        gyms = {}
+        for row in rows:
+            gym_id = row.get('id')
+            slug = row.get('iclass_slug')
+            if gym_id and slug:
+                gyms[gym_id] = {
+                    'name': row.get('name', ''),
+                    'slug': slug
+                }
+
+        if gyms:
+            print(f"[INFO] Loaded {len(gyms)} gyms from Supabase database")
+            return gyms
+        else:
+            print(f"[WARN] Supabase returned {len(rows)} gyms but none had iclass_slug set. Using fallback.")
+            return {}
+    except Exception as e:
+        print(f"[WARN] Could not fetch gyms from database: {e}. Using fallback.")
+        return {}
+
+GYMS = fetch_gyms_from_db() or _GYMS_FALLBACK
 
 # Map link_type_id to event type name
 LINK_TYPE_TO_EVENT_TYPE = {
@@ -1864,16 +1900,18 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                                 break  # Only flag once per event
             
             # --- EVENT PRICE VALIDATION (Clinic, KNO, Open Gym) ---
-            # Checks if the expected price from event_pricing table appears ANYWHERE in the description/title
+            # Checks if the expected price from event_pricing table appears ANYWHERE in the title OR description
             # Uses effective_date to automatically use correct price (handles price increases)
             # Approach: Instead of extracting one price and comparing, check if ANY valid price
             # from Supabase appears in the text. This avoids false positives when descriptions
             # have multiple prices (e.g., "$45 for 1 child, $40 for siblings").
-            if event_type in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'] and desc_prices:
+            # NOTE: Checks title+description combined (not just description) so gyms that only
+            # put prices in titles (like CCP, CPF) still get validated.
+            if event_type in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']:
                 event_pricing = get_event_pricing()
                 if gym_id in event_pricing and event_type in event_pricing[gym_id]:
                     valid_prices = event_pricing[gym_id][event_type]
-                    
+
                     # Also add any extra valid prices from gym_valid_values table
                     extra_price_rules = get_rules_for_gym(gym_id, event_type).get('price', [])
                     for ep in extra_price_rules:
@@ -1883,26 +1921,33 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                                 valid_prices.append(extra_price)
                         except (ValueError, TypeError):
                             pass
-                    
+
                     if valid_prices:
-                        # Check if ANY valid price appears in ANY of the prices found in text
+                        # Combine prices from BOTH title and description (not just description)
+                        # This fixes a bug where gyms that only put prices in titles
+                        # (like CCP, CPF) were never getting price-validated
                         all_event_prices = list(set(title_prices + desc_prices))
-                        all_found_prices = set(float(p) for p in all_event_prices)
-                        expected_price_found = any(
-                            any(abs(found - vp) <= 1 for found in all_found_prices)
-                            for vp in valid_prices
-                        )
-                        
-                        if not expected_price_found:
-                            valid_str = ', '.join([f'${p:.0f}' for p in valid_prices])
-                            found_str = ', '.join([f'${p}' for p in all_event_prices])
-                            validation_errors.append({
-                                "type": "event_price_mismatch",
-                                "severity": "error",
-                                "category": "data_error",
-                                "message": f"{event_type} expected price ({valid_str}) not found in description for {gym_id}. Found: {found_str}"
-                            })
-                            print(f"    ❌ {event_type} PRICE: Expected {valid_str} not found for {gym_id}. Found in text: {found_str}")
+
+                        if all_event_prices:
+                            # Prices found in text — check if any match expected
+                            all_found_prices = set(float(p) for p in all_event_prices)
+                            expected_price_found = any(
+                                any(abs(found - vp) <= 1 for found in all_found_prices)
+                                for vp in valid_prices
+                            )
+
+                            if not expected_price_found:
+                                valid_str = ', '.join([f'${p:.0f}' for p in valid_prices])
+                                found_str = ', '.join([f'${p}' for p in all_event_prices])
+                                validation_errors.append({
+                                    "type": "event_price_mismatch",
+                                    "severity": "error",
+                                    "category": "data_error",
+                                    "message": f"{event_type} price {found_str} doesn't match expected price for {gym_id}. Valid: {valid_str}"
+                                })
+                                print(f"    ❌ {event_type} PRICE: Expected {valid_str} not found for {gym_id}. Found in text: {found_str}")
+                        # else: No prices found in text at all — already caught by
+                        # missing_price_in_description (FORMAT error). No need to double-flag.
         
         # ========== AVAILABILITY INFO ==========
         # NOTE: Sold out is NOT a validation error - it's informational status
