@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import AdminAuditReview from './AdminAuditReview';
 import AdminGymRules from './AdminGymRules';
+import AdminPricing from './AdminPricing';
 import AdminQuickActions from './AdminQuickActions';
 
 export default function AdminDashboard({
   gyms,
+  initialCalendarMonth,
   onClose,
   onOpenSyncModal,
   onOpenBulkImport,
@@ -48,12 +50,13 @@ export default function AdminDashboard({
 
   const tabs = [
     { id: 'audit', label: '📋 Audit & Review', alwaysShow: true },
+    { id: 'pricing', label: '💰 Pricing', alwaysShow: true },
     { id: 'rules', label: '📏 Gym Rules', alwaysShow: true },
     { id: 'actions', label: '⚡ Quick Actions', alwaysShow: true },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-50">
+    <div className="min-h-screen bg-slate-50">
       {/* PIN Modal */}
       {showPinModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-70">
@@ -90,7 +93,7 @@ export default function AdminDashboard({
       )}
 
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+      <div className="bg-white border-b border-gray-200 shadow-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Left: Back button + Title */}
@@ -133,16 +136,16 @@ export default function AdminDashboard({
             </div>
           </div>
 
-          {/* Tab Bar */}
-          <div className="flex gap-1 -mb-px">
+          {/* Tab Bar — all 4 tabs visible, scroll on small screens */}
+          <div className="flex gap-0.5 -mb-px overflow-x-auto">
             {tabs.filter(t => t.alwaysShow).map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors border-b-2 ${
+                className={`flex-shrink-0 px-3 py-2.5 text-sm font-medium rounded-t-lg transition-colors border-b-2 whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'border-purple-600 text-purple-700 bg-purple-50'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-purple-600 text-purple-700 bg-purple-50 shadow-sm'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300'
                 }`}
               >
                 {tab.label}
@@ -155,11 +158,15 @@ export default function AdminDashboard({
       {/* Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'audit' && (
-          <AdminAuditReview gyms={gyms} />
+          <AdminAuditReview gyms={gyms} initialMonth={initialCalendarMonth} />
         )}
 
         {activeTab === 'rules' && (
           <AdminGymRules gyms={gyms} />
+        )}
+
+        {activeTab === 'pricing' && (
+          <AdminPricing gyms={gyms} />
         )}
 
         {activeTab === 'actions' && (

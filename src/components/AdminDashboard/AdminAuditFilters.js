@@ -14,7 +14,8 @@ export default function AdminAuditFilters({
   onStatusFilterChange,
   counts,
 }) {
-  // Generate month options: current month ± 6 months
+  // Month options: 3 months back, 6 months forward from today (shifts automatically as time passes)
+  // When opened from calendar, initialMonth is pre-selected to match the calendar view
   const monthOptions = [];
   const now = new Date();
   for (let i = -3; i <= 6; i++) {
@@ -52,17 +53,17 @@ export default function AdminAuditFilters({
   ];
 
   return (
-    <div className="bg-white rounded-xl border-2 border-gray-200 p-4 space-y-3">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-md p-5 space-y-4">
       {/* Gym Checkboxes - always visible */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">Gyms</label>
-          <span className="text-xs text-gray-400">{selectedGyms.length} of {gymList.length} selected</span>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Gyms</label>
+          <span className="text-xs text-gray-400 tabular-nums">{selectedGyms.length} of {gymList.length} selected</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
           {/* All Gyms checkbox */}
-          <label className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-            allSelected ? 'bg-purple-100 border border-purple-300' : 'bg-gray-50 border border-transparent hover:bg-gray-100'
+          <label className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors border ${
+            allSelected ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-gray-50/80 border-gray-100 hover:bg-gray-100'
           }`}>
             <input
               type="checkbox"
@@ -76,7 +77,7 @@ export default function AdminAuditFilters({
             const isSelected = selectedGyms.includes(g.id);
             return (
               <label key={g.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                isSelected ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50 border border-transparent hover:bg-gray-100'
+                isSelected ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50/80 border border-gray-100 hover:bg-gray-100'
               }`}>
                 <input
                   type="checkbox"

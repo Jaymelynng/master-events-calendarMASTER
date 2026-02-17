@@ -54,6 +54,7 @@ docs/
 |----------|---------|
 | **[TECHNICAL-REFERENCE.md](TECHNICAL/TECHNICAL-REFERENCE.md)** ⭐ | Complete system overview - START HERE for technical |
 | **[VALIDATION_RULES_ARCHITECTURE.md](TECHNICAL/VALIDATION_RULES_ARCHITECTURE.md)** ⭐ | Precoded vs configurable rules - CRITICAL for selling |
+| **[DESIGN_COLOR_SCHEME.md](TECHNICAL/DESIGN_COLOR_SCHEME.md)** | Event-type colors, shadows, Admin styling — use across all UI |
 | [DATABASE_COMPLETE_SCHEMA.md](TECHNICAL/DATABASE_COMPLETE_SCHEMA.md) | Tables, views, design decisions, SQL commands |
 | [SCALABILITY-ROADMAP.md](TECHNICAL/SCALABILITY-ROADMAP.md) | Future scaling plan |
 | [SYNC_SYSTEM_TECHNICAL.md](TECHNICAL/SYNC_SYSTEM_TECHNICAL.md) | Sync system technical details |

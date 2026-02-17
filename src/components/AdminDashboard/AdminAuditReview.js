@@ -6,9 +6,9 @@ import AdminAuditFilters from './AdminAuditFilters';
 import AdminAuditErrorCard from './AdminAuditErrorCard';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
 
-export default function AdminAuditReview({ gyms }) {
+export default function AdminAuditReview({ gyms, initialMonth }) {
   const [selectedGyms, setSelectedGyms] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth || 'all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedProgramType, setSelectedProgramType] = useState('all');
   const [events, setEvents] = useState([]);
@@ -392,7 +392,7 @@ export default function AdminAuditReview({ gyms }) {
   const accuracyStats = computeAccuracyStats(preFilteredEvents);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Filters */}
       <AdminAuditFilters
         gyms={gyms}
@@ -459,10 +459,10 @@ export default function AdminAuditReview({ gyms }) {
 
       {/* No Gym Selected */}
       {selectedGyms.length === 0 && !loading && (
-        <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-          <div className="text-4xl mb-3">📋</div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-1">Select gyms to review</h3>
-          <p className="text-sm text-gray-500">Select one or more gyms above to see all validation issues</p>
+        <div className="text-center py-20 px-6 bg-white/60 backdrop-blur rounded-2xl border border-gray-200 shadow-inner">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-purple-100 flex items-center justify-center text-2xl">📋</div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">Select gyms to review</h3>
+          <p className="text-sm text-gray-500 max-w-sm mx-auto">Choose one or more gyms above to load validation issues for review</p>
         </div>
       )}
 

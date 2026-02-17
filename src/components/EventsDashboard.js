@@ -1822,6 +1822,7 @@ The system will add new events and update any changed events automatically.`;
     return (
       <AdminDashboard
         gyms={gymsList}
+        initialCalendarMonth={`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`}
         onClose={() => setShowAdminPortal(false)}
         onOpenSyncModal={() => {
           setShowAdminPortal(false);

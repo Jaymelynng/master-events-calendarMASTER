@@ -19,7 +19,9 @@
     "start": "react-scripts start",
     "build": "CI=false react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "db:dump": "python automation/dump_supabase_source_of_truth.py",
+    "db:rules": "python automation/list_gym_rules.py"
   },
   "eslintConfig": {
     "extends": [

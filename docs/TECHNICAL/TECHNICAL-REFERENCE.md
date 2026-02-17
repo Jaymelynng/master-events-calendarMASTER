@@ -72,8 +72,11 @@ Your Master Events Calendar is a **production-deployed event management platform
 ### **Admin Features (Jayme - Level 2):**
 - ✅ **Full-Page Admin Dashboard** - Replaces old modal with tabbed full-page interface
 - ✅ **Audit & Review Tab** - See ALL validation errors across gyms, filter by category/month/program/status
+- ✅ **Pricing Tab** - Event pricing (Clinic, KNO, Open Gym) + Camp pricing — base expected prices for validation
 - ✅ **Gym Rules Tab** - View, add, delete per-gym validation rules
 - ✅ **Quick Actions Tab** - Automated Sync, JSON Import (Super Admin required for some)
+
+**Design:** Event-type colors, shadows, and styling — see [DESIGN_COLOR_SCHEME.md](TECHNICAL/DESIGN_COLOR_SCHEME.md)
 - ✅ **JSON Import (F12)** - Bulk import via copy/paste
 - ✅ **Automated Sync** - One-click iClassPro collection
 - ✅ **Sync Progress Tracker** - See what's synced, what needs sync

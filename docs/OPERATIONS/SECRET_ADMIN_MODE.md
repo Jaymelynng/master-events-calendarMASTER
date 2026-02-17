@@ -38,9 +38,10 @@ The Master Events Calendar has a **hidden admin system** with three levels of ac
 **How to access:** **Shift+Click** the 🪄 wand icon in the stats table header
 **What you see:**
 
-A **full-page Admin Dashboard** replaces the calendar with **3 tabs**:
+A **full-page Admin Dashboard** replaces the calendar with **4 tabs**:
 
-- ✅ **Audit & Review** (default tab) - See ALL validation errors across selected gyms, filter by category (DATA/FORMAT), month, program type, status (Active/Resolved). Dismiss errors or create permanent rules.
+- ✅ **Audit & Review** (default tab) - See ALL validation errors across selected gyms, filter by category (DATA/FORMAT), month (synced with calendar view), program type, status (Active/Resolved). Dismiss errors or create permanent rules.
+- ✅ **Pricing** - Event pricing (Clinic, KNO, Open Gym) and Camp pricing. Base expected prices for validation. View, add, or delete.
 - ✅ **Gym Rules** - View, add, delete per-gym validation rules (price, time, program_synonym). Rules grouped by gym.
 - ✅ **Quick Actions** - Automated Sync and JSON Import buttons. Super Admin tools require PIN.
 - ✅ **"Back to Calendar"** button returns to normal view
@@ -85,7 +86,7 @@ Step 1: Go to your calendar
 Step 2: Find the 🪄 wand icon in the stats table header
 Step 3: Hold Shift and click the wand
 Step 4: Full-page Admin Dashboard opens (replaces calendar)
-Step 5: Use tabs: Audit & Review | Gym Rules | Quick Actions
+Step 5: Use tabs: Audit & Review | Pricing | Gym Rules | Quick Actions
 Step 6: Click "Back to Calendar" when done
 ```
 
@@ -136,7 +137,7 @@ Step 6: Super Admin badge appears, Quick Actions tab unlocks all tools
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  ← Back to Calendar │ 🪄 Admin Dashboard [Admin] 🔐    │
-│  [Audit & Review] [Gym Rules] [Quick Actions]           │
+│  [Audit & Review] [Pricing] [Gym Rules] [Quick Actions] │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  AUDIT & REVIEW TAB (default):                          │
@@ -277,6 +278,16 @@ A: Because this is faster and simpler for a single-user admin scenario. Real aut
 
 ---
 
+## ⚠️ NOT SEEING THE PRICING TAB OR LATEST CHANGES?
+
+**If you don't see the Pricing tab or recent UI updates:**
+
+1. **Local dev:** Run `npm start` and do a hard refresh (Ctrl+Shift+R or Cmd+Shift+R).
+2. **Deployed (Vercel):** Push your changes to git and wait for Vercel to redeploy. The live site only updates after a new deployment.
+3. **Cache:** Clear your browser cache or try an incognito/private window.
+
+---
+
 ## 📜 ACCESS METHOD
 
 ### Shift+Click Wand (Primary Method)
@@ -305,7 +316,9 @@ The 🪄 wand icon in the stats table header opens the full-page Admin Dashboard
 
 | Date | Change |
 |------|--------|
-| Feb 2, 2026 | **MAJOR** Replaced AdminPortalModal with full-page AdminDashboard (3 tabs) |
+| Feb 11, 2026 | **NEW** Pricing tab — Event & Camp pricing, event-type colors, synced month filter |
+| Feb 11, 2026 | Month filter in Audit now defaults to calendar's displayed month when opening Admin |
+| Feb 2, 2026 | **MAJOR** Replaced AdminPortalModal with full-page AdminDashboard (4 tabs) |
 | Feb 2, 2026 | **NEW** Audit & Review tab — see all validation errors across gyms with filters |
 | Feb 2, 2026 | **NEW** Gym Rules tab — view/add/delete per-gym validation rules |
 | Feb 2, 2026 | **NEW** Quick Actions tab — Sync, Import, Super Admin tools |
