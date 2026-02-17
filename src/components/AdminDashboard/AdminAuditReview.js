@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { gymValidValuesApi, acknowledgedPatternsApi } from '../../lib/api';
-import { inferErrorCategory, isErrorAcknowledged, matchesAcknowledgedPattern, canAddAsRule, extractRuleValue, computeAccuracyStats } from '../../lib/validationHelpers';
+import { inferErrorCategory, isErrorAcknowledged, matchesAcknowledgedPattern, canAddAsRule, extractRuleValue, computeAccuracyStats, matchesErrorTypeFilter } from '../../lib/validationHelpers';
 import AdminAuditFilters from './AdminAuditFilters';
 import AdminAuditErrorCard from './AdminAuditErrorCard';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
@@ -16,6 +16,8 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
   const [dismissModalState, setDismissModalState] = useState(null);
   const [dismissingError, setDismissingError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('active');
+  const [errorTypeFilter, setErrorTypeFilter] = useState('all');
+  const [hidePrices, setHidePrices] = useState(false);
   const [acknowledgedPatterns, setAcknowledgedPatterns] = useState([]);
 
   // Load acknowledged patterns (temp overrides for "all in program")
@@ -115,8 +117,14 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
     const acknowledged = event.acknowledged_errors || [];
     const verified = event.verified_errors || [];
 
-    // Check if event has active or resolved errors (respecting category filter)
-    const matchCategory = (e) => selectedCategory === 'all' || inferErrorCategory(e) === selectedCategory;
+    // Check if event has active or resolved errors (respecting category + error type filters)
+    const matchFilters = (e) => {
+      if (selectedCategory !== 'all' && inferErrorCategory(e) !== selectedCategory) return false;
+      if (!matchesErrorTypeFilter(e.type, errorTypeFilter, hidePrices)) return false;
+      return true;
+    };
+    // Keep matchCategory for backwards compat (desc issue checks)
+    const matchCategory = matchFilters;
 
     // Helper to check if an error is verified as accurate or marked as bug
     const isVerifiedAccurate = (msg) => verified.some(v => v.message === msg && v.verdict === 'correct');
@@ -138,8 +146,9 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
     // Bugs = marked as invalid/bug (needs code fix)
     const hasBugs = errors.some(e => matchCategory(e) && isMarkedBug(e.message));
 
-    // Description issues
+    // Description issues (only show when error type filter is 'all' or 'format')
     const hasDescIssue = (selectedCategory === 'all' || selectedCategory === 'formatting') &&
+      (errorTypeFilter === 'all' || errorTypeFilter === 'format') &&
       (event.description_status === 'none' || event.description_status === 'flyer_only');
     const descMsg = `description:${event.description_status}`;
     const descVerifiedAccurate = isVerifiedAccurate(descMsg);
@@ -406,6 +415,10 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
         onProgramTypeChange={setSelectedProgramType}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
+        errorTypeFilter={errorTypeFilter}
+        onErrorTypeFilterChange={setErrorTypeFilter}
+        hidePrices={hidePrices}
+        onHidePricesChange={setHidePrices}
         counts={counts}
       />
 
@@ -504,6 +517,8 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
                         dismissingError={dismissingError}
                         statusFilter={statusFilter}
                         selectedCategory={selectedCategory}
+                        errorTypeFilter={errorTypeFilter}
+                        hidePrices={hidePrices}
                       />
                     ))}
                   </div>

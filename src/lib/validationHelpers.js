@@ -171,3 +171,31 @@ export const getErrorLabel = (type) => {
   };
   return labels[type] || type;
 };
+
+// Error type filter groups for audit page
+const PRICE_TYPES = ['price_mismatch', 'camp_price_mismatch', 'event_price_mismatch'];
+const TIME_TYPES = ['time_mismatch'];
+const AGE_TYPES = ['age_mismatch'];
+const DATE_TYPES = ['date_mismatch', 'day_mismatch', 'year_mismatch'];
+const PROGRAM_TYPES = ['program_mismatch', 'missing_program_in_title'];
+const FORMAT_TYPES = [
+  'missing_age_in_description', 'missing_age_in_title',
+  'missing_time_in_description', 'missing_price_in_description',
+  'missing_program_in_description', 'missing_datetime_in_description',
+  'missing_date_in_title', 'clinic_missing_skill', 'title_desc_mismatch',
+];
+
+// Check if an error matches the error type filter + hidePrices toggle
+export const matchesErrorTypeFilter = (errorType, filterValue, hidePrices = false) => {
+  // Always hide prices when toggle is on
+  if (hidePrices && PRICE_TYPES.includes(errorType)) return false;
+
+  if (filterValue === 'all') return true;
+  if (filterValue === 'price') return PRICE_TYPES.includes(errorType);
+  if (filterValue === 'time') return TIME_TYPES.includes(errorType);
+  if (filterValue === 'age') return AGE_TYPES.includes(errorType);
+  if (filterValue === 'date') return DATE_TYPES.includes(errorType);
+  if (filterValue === 'program') return PROGRAM_TYPES.includes(errorType);
+  if (filterValue === 'format') return FORMAT_TYPES.includes(errorType);
+  return true;
+};

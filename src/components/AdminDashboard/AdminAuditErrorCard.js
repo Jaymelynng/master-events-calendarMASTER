@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { inferErrorCategory, isErrorAcknowledged, matchesAcknowledgedPattern, getAcknowledgmentDetails, getErrorLabel, isErrorVerified } from '../../lib/validationHelpers';
+import { inferErrorCategory, isErrorAcknowledged, matchesAcknowledgedPattern, getAcknowledgmentDetails, getErrorLabel, isErrorVerified, matchesErrorTypeFilter } from '../../lib/validationHelpers';
 
 export default function AdminAuditErrorCard({
   event,
@@ -11,6 +11,8 @@ export default function AdminAuditErrorCard({
   dismissingError,
   statusFilter = 'active',
   selectedCategory = 'all',
+  errorTypeFilter = 'all',
+  hidePrices = false,
 }) {
   // Track which error is being edited for notes
   const [editingNote, setEditingNote] = useState(null); // { message, verdict }
@@ -29,9 +31,12 @@ export default function AdminAuditErrorCard({
   const formattingErrors = errors.filter(e => inferErrorCategory(e) === 'formatting');
   const statusErrors = errors.filter(e => inferErrorCategory(e) === 'status');
 
-  // Filter errors based on status filter
+  // Filter errors based on status filter + error type filter
   const filterByStatus = (errorList) => {
     return errorList.filter(e => {
+      // Apply error type filter first
+      if (!matchesErrorTypeFilter(e.type, errorTypeFilter, hidePrices)) return false;
+
       const patternMatch = matchesAcknowledgedPattern(acknowledgedPatterns, event.gym_id, event.type, e.message);
       const isDismissed = isErrorAcknowledged(acknowledged, e.message, patternMatch);
       const isVerified = isVerifiedAccurate(e.message);
@@ -72,7 +77,7 @@ export default function AdminAuditErrorCard({
 
   // Check if anything is visible based on status filter
   const totalVisible = visibleDataErrors.length + visibleFormattingErrors.length + visibleStatusErrors.length;
-  const showDescIssue = hasDescriptionIssue && (
+  const showDescIssue = hasDescriptionIssue && (errorTypeFilter === 'all' || errorTypeFilter === 'format') && (
     (statusFilter === 'active' && !descVerified && !descBug) ||
     (statusFilter === 'verified' && descVerified) ||
     (statusFilter === 'bugs' && descBug) ||
