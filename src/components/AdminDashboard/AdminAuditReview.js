@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { gymValidValuesApi, acknowledgedPatternsApi } from '../../lib/api';
+import { gymValidValuesApi, acknowledgedPatternsApi, eventPricingApi, campPricingApi } from '../../lib/api';
 import { inferErrorCategory, isErrorAcknowledged, matchesAcknowledgedPattern, canAddAsRule, extractRuleValue, computeAccuracyStats, matchesErrorTypeFilter } from '../../lib/validationHelpers';
 import AdminAuditFilters from './AdminAuditFilters';
 import AdminAuditErrorCard from './AdminAuditErrorCard';
@@ -397,6 +397,96 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
     }
   };
 
+  // Handle updating event pricing from audit page (for event_price_mismatch)
+  const handleUpdateEventPrice = async (event, errorObj, newPrice) => {
+    const gymId = event.gym_id;
+    const eventType = event.type;
+    try {
+      // End-date the current pricing row and create new one
+      const allPricing = await eventPricingApi.getAll();
+      const today = new Date().toISOString().slice(0, 10);
+      const current = allPricing.find(r =>
+        r.gym_id === gymId && r.event_type === eventType &&
+        (!r.end_date || r.end_date >= today) && (r.effective_date || '') <= today
+      );
+      if (current) {
+        await eventPricingApi.update(current.id, { end_date: today });
+      }
+      await eventPricingApi.create({
+        gym_id: gymId,
+        event_type: eventType,
+        price: newPrice,
+        effective_date: today,
+        notes: `Updated from audit page (was $${current?.price || '?'})`,
+      });
+
+      // Auto-dismiss the error
+      const { data: currentEvent } = await supabase
+        .from('events')
+        .select('acknowledged_errors')
+        .eq('id', event.id)
+        .single();
+      const currentAcknowledged = currentEvent?.acknowledged_errors || [];
+      const acknowledgment = {
+        message: errorObj.message,
+        note: `Price updated to $${newPrice}`,
+        dismissed_at: new Date().toISOString(),
+      };
+      const updatedAcknowledged = [...currentAcknowledged, acknowledgment];
+      await supabase
+        .from('events')
+        .update({ acknowledged_errors: updatedAcknowledged })
+        .eq('id', event.id);
+      setEvents(prev => prev.map(e =>
+        e.id === event.id ? { ...e, acknowledged_errors: updatedAcknowledged } : e
+      ));
+
+      alert(`Updated ${eventType} price to $${newPrice} for ${gymId}. Will take effect on next sync.`);
+    } catch (err) {
+      console.error('Error updating event price:', err);
+      alert('Failed to update price: ' + err.message);
+    }
+  };
+
+  // Handle adding a camp price from audit page (for camp_price_mismatch)
+  const handleAddCampPrice = async (event, errorObj, newPrice, column) => {
+    const gymId = event.gym_id;
+    try {
+      // Fetch current camp pricing row to merge
+      const allCamp = await campPricingApi.getAll();
+      const existing = allCamp.find(r => r.gym_id === gymId) || { gym_id: gymId };
+      const updated = { ...existing, [column]: parseFloat(newPrice) };
+      await campPricingApi.upsert(updated);
+
+      // Auto-dismiss the error
+      const { data: currentEvent } = await supabase
+        .from('events')
+        .select('acknowledged_errors')
+        .eq('id', event.id)
+        .single();
+      const currentAcknowledged = currentEvent?.acknowledged_errors || [];
+      const colLabel = column.replace(/_/g, ' ');
+      const acknowledgment = {
+        message: errorObj.message,
+        note: `Camp ${colLabel} set to $${newPrice}`,
+        dismissed_at: new Date().toISOString(),
+      };
+      const updatedAcknowledged = [...currentAcknowledged, acknowledgment];
+      await supabase
+        .from('events')
+        .update({ acknowledged_errors: updatedAcknowledged })
+        .eq('id', event.id);
+      setEvents(prev => prev.map(e =>
+        e.id === event.id ? { ...e, acknowledged_errors: updatedAcknowledged } : e
+      ));
+
+      alert(`Added $${newPrice} as ${colLabel} for ${gymId}. Will take effect on next sync.`);
+    } catch (err) {
+      console.error('Error updating camp price:', err);
+      alert('Failed to update camp price: ' + err.message);
+    }
+  };
+
   // Compute accuracy stats from pre-filtered events
   const accuracyStats = computeAccuracyStats(preFilteredEvents);
 
@@ -519,6 +609,8 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
                         selectedCategory={selectedCategory}
                         errorTypeFilter={errorTypeFilter}
                         hidePrices={hidePrices}
+                        onUpdateEventPrice={handleUpdateEventPrice}
+                        onAddCampPrice={handleAddCampPrice}
                       />
                     ))}
                   </div>

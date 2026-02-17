@@ -199,3 +199,40 @@ export const matchesErrorTypeFilter = (errorType, filterValue, hidePrices = fals
   if (filterValue === 'format') return FORMAT_TYPES.includes(errorType);
   return true;
 };
+
+// Parse price details from an error message for the "Update Price" button
+// Returns: { foundPrice, validPrices, eventType, gymId } or null
+export const parsePriceErrorDetails = (errorObj, event) => {
+  if (!errorObj || !errorObj.message) return null;
+  const msg = errorObj.message;
+
+  if (errorObj.type === 'event_price_mismatch') {
+    // "KIDS NIGHT OUT price $40 doesn't match expected price for HGA. Valid: $45"
+    const match = msg.match(/price \$(\d+(?:\.\d{2})?)\s+doesn't match.*?for (\w+)\.\s*Valid:\s*(.+)/);
+    if (match) {
+      return {
+        foundPrice: match[1],
+        gymId: match[2],
+        validPrices: match[3].split(',').map(s => s.trim().replace('$', '')),
+        eventType: event?.type || '',
+        errorType: 'event_price_mismatch',
+      };
+    }
+  }
+
+  if (errorObj.type === 'camp_price_mismatch') {
+    // "Camp price $360 doesn't match any valid price for HGA. Valid: Full Day Daily $90, Full Day Weekly $400"
+    const match = msg.match(/Camp price \$(\d+(?:\.\d{2})?)\s+doesn't match.*?for (\w+)\.\s*Valid:\s*(.+)/);
+    if (match) {
+      return {
+        foundPrice: match[1],
+        gymId: match[2],
+        validPricesRaw: match[3],
+        eventType: 'CAMP',
+        errorType: 'camp_price_mismatch',
+      };
+    }
+  }
+
+  return null;
+};

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { inferErrorCategory, isErrorAcknowledged, matchesAcknowledgedPattern, getAcknowledgmentDetails, getErrorLabel, isErrorVerified, matchesErrorTypeFilter } from '../../lib/validationHelpers';
+import { inferErrorCategory, isErrorAcknowledged, matchesAcknowledgedPattern, getAcknowledgmentDetails, getErrorLabel, isErrorVerified, matchesErrorTypeFilter, parsePriceErrorDetails } from '../../lib/validationHelpers';
 
 export default function AdminAuditErrorCard({
   event,
@@ -13,10 +13,13 @@ export default function AdminAuditErrorCard({
   selectedCategory = 'all',
   errorTypeFilter = 'all',
   hidePrices = false,
+  onUpdateEventPrice,
+  onAddCampPrice,
 }) {
   // Track which error is being edited for notes
   const [editingNote, setEditingNote] = useState(null); // { message, verdict }
   const [noteText, setNoteText] = useState('');
+  const [campPricePicker, setCampPricePicker] = useState(null); // { errorObj, foundPrice }
 
   const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
   const acknowledged = event.acknowledged_errors || [];
@@ -231,6 +234,37 @@ export default function AdminAuditErrorCard({
               <span className="text-sm font-bold">✗</span>
             </button>
           )}
+          {/* Update Price button for price mismatch errors */}
+          {!isDismissed && error.type === 'event_price_mismatch' && onUpdateEventPrice && (() => {
+            const priceDetails = parsePriceErrorDetails(error, event);
+            if (!priceDetails) return null;
+            return (
+              <button
+                onClick={() => {
+                  if (window.confirm(`Update ${event.type} price to $${priceDetails.foundPrice} for ${event.gym_id}?\n\nThis will end-date the current price and create a new entry.`)) {
+                    onUpdateEventPrice(event, error, priceDetails.foundPrice);
+                  }
+                }}
+                className="px-2 py-1.5 text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg transition-colors font-medium border border-amber-300"
+                title={`Update ${event.type} price to $${priceDetails.foundPrice} in the pricing table`}
+              >
+                Update to ${priceDetails.foundPrice}
+              </button>
+            );
+          })()}
+          {!isDismissed && error.type === 'camp_price_mismatch' && onAddCampPrice && (() => {
+            const priceDetails = parsePriceErrorDetails(error, event);
+            if (!priceDetails) return null;
+            return (
+              <button
+                onClick={() => setCampPricePicker({ errorObj: error, foundPrice: priceDetails.foundPrice })}
+                className="px-2 py-1.5 text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg transition-colors font-medium border border-amber-300"
+                title={`Add $${priceDetails.foundPrice} as valid camp price for ${event.gym_id}`}
+              >
+                Add ${priceDetails.foundPrice}
+              </button>
+            );
+          })()}
           {/* Dismiss button */}
           {!isDismissed && (
             <button
@@ -470,6 +504,40 @@ export default function AdminAuditErrorCard({
         {/* Status Errors */}
         {(selectedCategory === 'all' || selectedCategory === 'status') &&
           renderSection('Status:', 'INFO', visibleStatusErrors, 'bg-blue-500', 'text-blue-700')}
+
+        {/* Camp Price Picker - shown when user clicks "Add $XX" on a camp_price_mismatch */}
+        {campPricePicker && (
+          <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="text-xs font-semibold text-amber-800 mb-2">
+              What is ${campPricePicker.foundPrice}? Pick a camp price type for {event.gym_id}:
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { col: 'full_day_daily', label: 'Full Day Daily' },
+                { col: 'full_day_weekly', label: 'Full Day Weekly' },
+                { col: 'half_day_daily', label: 'Half Day Daily' },
+                { col: 'half_day_weekly', label: 'Half Day Weekly' },
+              ].map(opt => (
+                <button
+                  key={opt.col}
+                  onClick={() => {
+                    onAddCampPrice(event, campPricePicker.errorObj, campPricePicker.foundPrice, opt.col);
+                    setCampPricePicker(null);
+                  }}
+                  className="px-3 py-1.5 text-xs bg-amber-200 hover:bg-amber-300 text-amber-900 rounded font-medium transition-colors"
+                >
+                  {opt.label}
+                </button>
+              ))}
+              <button
+                onClick={() => setCampPricePicker(null)}
+                className="px-3 py-1.5 text-xs bg-gray-200 hover:bg-gray-300 text-gray-600 rounded transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
