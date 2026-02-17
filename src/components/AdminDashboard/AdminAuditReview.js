@@ -570,13 +570,54 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
       )}
 
       {/* No Issues */}
-      {selectedGyms.length > 0 && !loading && filteredEvents.length === 0 && (
-        <div className="text-center py-12 bg-green-50 rounded-xl border-2 border-green-200">
-          <div className="text-4xl mb-3">✅</div>
-          <h3 className="text-lg font-semibold text-green-700 mb-1">All clear!</h3>
-          <p className="text-sm text-green-600">No validation issues found for the selected filters</p>
-        </div>
-      )}
+      {selectedGyms.length > 0 && !loading && filteredEvents.length === 0 && (() => {
+        // Check if there ARE errors but they're hidden by filters
+        const totalPreFiltered = preFilteredEvents.length;
+        const hasHiddenErrors = totalPreFiltered > 0;
+        const isFiltered = selectedCategory !== 'all' || errorTypeFilter !== 'all' || hidePrices || statusFilter !== 'all';
+
+        if (hasHiddenErrors && isFiltered) {
+          return (
+            <div className="text-center py-10 bg-amber-50 rounded-xl border-2 border-amber-200">
+              <div className="text-3xl mb-3">🔍</div>
+              <h3 className="text-lg font-semibold text-amber-700 mb-1">No matches for current filters</h3>
+              <p className="text-sm text-amber-600 mb-3">
+                {totalPreFiltered} event{totalPreFiltered !== 1 ? 's' : ''} with issues exist, but none match your filter combination
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {selectedCategory !== 'all' && (
+                  <button onClick={() => setSelectedCategory('all')} className="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-800 rounded-lg text-xs font-medium">
+                    Show all categories
+                  </button>
+                )}
+                {errorTypeFilter !== 'all' && (
+                  <button onClick={() => setErrorTypeFilter('all')} className="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-800 rounded-lg text-xs font-medium">
+                    Show all error types
+                  </button>
+                )}
+                {hidePrices && (
+                  <button onClick={() => setHidePrices(false)} className="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-800 rounded-lg text-xs font-medium">
+                    Show prices
+                  </button>
+                )}
+                {statusFilter !== 'all' && (
+                  <button onClick={() => setStatusFilter('all')} className="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-800 rounded-lg text-xs font-medium">
+                    Show all statuses
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="text-center py-12 bg-green-50 rounded-xl border-2 border-green-200">
+            <div className="text-4xl mb-3">✅</div>
+            <h3 className="text-lg font-semibold text-green-700 mb-1">All clear!</h3>
+            <p className="text-sm text-green-600">No validation issues found for the selected filters</p>
+          </div>
+        );
+      })()}
 
       {/* Event Error Cards - grouped by gym when multiple selected */}
       {selectedGyms.length > 0 && !loading && filteredEvents.length > 0 && (
