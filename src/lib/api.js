@@ -556,6 +556,7 @@ export const rulesApi = {
       .from('rules')
       .insert([{
         is_permanent: rule.is_permanent !== false,
+        start_date: rule.start_date || null,
         end_date: rule.end_date || null,
         gym_ids: rule.gym_ids || ['ALL'],
         program: rule.program || 'ALL',

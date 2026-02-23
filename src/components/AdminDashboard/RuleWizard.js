@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
   const [step, setStep] = useState(1);
   const [isPermanent, setIsPermanent] = useState(prefill.is_permanent !== false);
+  const [startDate, setStartDate] = useState(prefill.start_date || '');
   const [endDate, setEndDate] = useState(prefill.end_date || '');
   const [selectedGyms, setSelectedGyms] = useState(prefill.gym_ids || ['ALL']);
   const [program, setProgram] = useState(prefill.program || 'ALL');
@@ -41,6 +42,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
   const handleSave = () => {
     onSave({
       is_permanent: isPermanent,
+      start_date: isPermanent ? null : startDate || null,
       end_date: isPermanent ? null : endDate || null,
       gym_ids: selectedGyms,
       program,
@@ -70,7 +72,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
 
   const getSummary = () => {
     const parts = [];
-    parts.push(isPermanent ? 'Permanent rule' : `Temporary (ends ${endDate || '?'})`);
+    parts.push(isPermanent ? 'Permanent rule' : `Temporary (${startDate || '?'} to ${endDate || '?'})`);
     parts.push(selectedGyms.includes('ALL') ? 'All gyms' : selectedGyms.join(', '));
     parts.push(program === 'ALL' ? 'All programs' : program);
     if (scope === 'keyword') parts.push(`Title contains "${keyword}"`);
@@ -116,9 +118,36 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
               </button>
             </div>
             {!isPermanent && (
-              <div className="mt-4">
-                <label className="text-sm text-gray-600 block mb-1">End date:</label>
-                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg w-full" />
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="text-sm text-gray-600 block mb-1">Start date:</label>
+                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg w-full" />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600 block mb-1">End date:</label>
+                  <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg w-full" />
+                </div>
+                <div className="flex gap-2">
+                  {(() => {
+                    const now = new Date();
+                    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                    const nextMonthStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}`;
+                    return [
+                      { label: 'This Month', start: `${thisMonth}-01`, end: new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0] },
+                      { label: 'Next Month', start: `${nextMonthStr}-01`, end: new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).toISOString().split('T')[0] },
+                    ].map(preset => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => { setStartDate(preset.start); setEndDate(preset.end); }}
+                        className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 font-medium"
+                      >
+                        {preset.label}
+                      </button>
+                    ));
+                  })()}
+                </div>
               </div>
             )}
           </div>
