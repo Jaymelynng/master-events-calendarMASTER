@@ -1,44 +1,57 @@
 -- ============================================================================
 -- ARCHIVE SOFT-DELETED EVENTS
 -- ============================================================================
--- Run this in Supabase SQL Editor to update your pg_cron archive job.
--- Currently the midnight job only archives past events (date < today).
--- This adds: also archive soft-deleted events regardless of date.
+-- Run in Supabase SQL Editor to clean up soft-deleted events.
+--
+-- The events table has `date` as VARCHAR but events_archive has it as DATE,
+-- so we must cast explicitly — SELECT * won't work across the type mismatch.
 --
 -- Created: February 23, 2026
 -- ============================================================================
 
--- Option A: Run this ONE TIME to clean up existing soft-deleted events right now
+-- Step 1: Move soft-deleted events to archive (with date cast)
 INSERT INTO events_archive
-SELECT * FROM events WHERE deleted_at IS NOT NULL;
+SELECT 
+  id, gym_id, title, 
+  date::date,
+  time, price, type, event_url, day_of_week,
+  start_date, end_date, description, age_min, age_max, 
+  deleted_at, created_at, updated_at,
+  availability_status, has_flyer, flyer_url,
+  description_status, validation_errors, acknowledged_errors,
+  verified_errors, has_openings, registration_start_date, registration_end_date
+FROM events 
+WHERE deleted_at IS NOT NULL;
 
+-- Step 2: Remove them from the active table
 DELETE FROM events WHERE deleted_at IS NOT NULL;
 
--- Option B: Update the pg_cron job to also handle soft-deletes every midnight
--- Find your existing cron job first:
---   SELECT * FROM cron.job;
--- Then update it. Replace YOUR_JOB_ID with the actual job id:
---
--- SELECT cron.alter_job(
---   YOUR_JOB_ID,
---   command := $$
---     -- Archive past events (original behavior)
---     INSERT INTO events_archive
---     SELECT * FROM events WHERE date < CURRENT_DATE AND deleted_at IS NULL;
---     DELETE FROM events WHERE date < CURRENT_DATE AND deleted_at IS NULL;
---
---     -- Archive soft-deleted events (new behavior)
---     INSERT INTO events_archive
---     SELECT * FROM events WHERE deleted_at IS NOT NULL;
---     DELETE FROM events WHERE deleted_at IS NOT NULL;
---   $$
--- );
-
 -- ============================================================================
--- VERIFICATION: Run after to confirm no soft-deleted events remain
+-- VERIFICATION: Should return 0
 -- ============================================================================
 -- SELECT count(*) AS remaining_soft_deleted
 -- FROM events
 -- WHERE deleted_at IS NOT NULL;
--- (Should return 0)
 -- ============================================================================
+
+-- ============================================================================
+-- OPTIONAL: Update pg_cron job to handle soft-deletes every midnight
+-- First find your job id:   SELECT * FROM cron.job;
+-- Then uncomment and run with your actual job id:
+-- ============================================================================
+-- SELECT cron.alter_job(
+--   YOUR_JOB_ID,
+--   command := $$
+--     INSERT INTO events_archive
+--     SELECT id, gym_id, title, date::date, time, price, type, event_url,
+--            day_of_week, start_date, end_date, description, age_min, age_max,
+--            deleted_at, created_at, updated_at, availability_status, has_flyer,
+--            flyer_url, description_status, validation_errors, acknowledged_errors,
+--            verified_errors, has_openings, registration_start_date, registration_end_date
+--     FROM events
+--     WHERE date::date < CURRENT_DATE OR deleted_at IS NOT NULL;
+--
+--     DELETE FROM events
+--     WHERE date::date < CURRENT_DATE OR deleted_at IS NOT NULL;
+--   $$
+-- );
