@@ -1,7 +1,7 @@
 # 🗄️ AUTO-ARCHIVE SYSTEM
 ## Automatic Event Archiving for Master Events Calendar
 
-**Last Updated:** December 28, 2025  
+**Last Updated:** February 23, 2026  
 **Status:** ✅ Active & Running  
 **Location:** Supabase pg_cron (runs automatically at midnight)
 
@@ -16,6 +16,54 @@ The auto-archive system automatically moves past events from the `events` table 
 - ✅ **Stats/analytics still work** - includes all archived events
 - ✅ **Runs automatically** - no manual intervention needed
 - ✅ **Safe operation** - events are copied before deleted
+
+---
+
+## 🗑️ EVENT DELETION LIFECYCLE
+
+When a manager removes an event from iClassPro, here's exactly what happens:
+
+| Step | What Happens | Where |
+|------|-------------|-------|
+| 1. Manager deletes event | Event disappears from iClassPro portal | iClassPro |
+| 2. Next sync runs | Sync detects event is gone from portal but still in database | Your app |
+| 3. Soft-delete | System sets `deleted_at` timestamp on the row. Event stays in `events` table. | `events` table |
+| 4. UI hides it | The `events_with_gym` view filters `WHERE deleted_at IS NULL`, so it disappears from your calendar | Calendar UI |
+| 5. Manual cleanup | Run the cleanup SQL to move soft-deleted events to `events_archive` | SQL Editor |
+
+### ⚠️ CURRENT GAP
+The midnight pg_cron job only archives events where `date < today` (past events). It does **NOT** automatically archive soft-deleted future events. This means deleted future events stay in the `events` table (hidden from UI but still there) until either:
+- Their date passes and the midnight job picks them up
+- You manually run the cleanup SQL in `database/ARCHIVE_SOFT_DELETED_EVENTS.sql`
+
+### Cleanup SQL (run periodically in Supabase SQL Editor)
+```sql
+INSERT INTO events_archive (
+  id, gym_id, title, date, time, price, type, event_url, day_of_week,
+  start_date, end_date, description, age_min, age_max,
+  deleted_at, created_at, updated_at,
+  availability_status, has_flyer, flyer_url,
+  description_status, validation_errors, acknowledged_errors,
+  verified_errors, has_openings, registration_start_date, registration_end_date
+)
+SELECT
+  id, gym_id, title, date::date, time, price, type, event_url, day_of_week,
+  start_date, end_date, description, age_min, age_max,
+  deleted_at, created_at, updated_at,
+  availability_status, has_flyer, flyer_url,
+  description_status, validation_errors, acknowledged_errors,
+  verified_errors, has_openings, registration_start_date, registration_end_date
+FROM events
+WHERE deleted_at IS NOT NULL;
+
+DELETE FROM events WHERE deleted_at IS NOT NULL;
+```
+
+### Check for lingering soft-deleted events
+```sql
+SELECT count(*) FROM events WHERE deleted_at IS NOT NULL;
+-- Should return 0 after cleanup
+```
 
 ---
 
