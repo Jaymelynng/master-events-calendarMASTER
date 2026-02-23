@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 // Import real API functions
-import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi, gymValidValuesApi, acknowledgedPatternsApi } from '../lib/api';
+import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi, gymValidValuesApi, acknowledgedPatternsApi, rulesApi } from '../lib/api';
 import { gymLinksApi } from '../lib/gymLinksApi';
 import { cachedApi, cache } from '../lib/cache';
 import { supabase } from '../lib/supabase';
@@ -357,6 +357,20 @@ const EventsDashboard = () => {
       }
     };
     loadGymRules();
+  }, []);
+
+  // Load unified rules (for requirement exceptions on dashboard)
+  useEffect(() => {
+    const loadRules = async () => {
+      try {
+        const data = await rulesApi.getAll();
+        window.__activeRules = data || [];
+      } catch (err) {
+        console.error('Error loading rules:', err);
+        window.__activeRules = [];
+      }
+    };
+    loadRules();
   }, []);
 
   // Load acknowledged patterns (program-wide dismissals) — used everywhere for consistent rule matching
@@ -2542,11 +2556,50 @@ The system will add new events and update any changed events automatically.`;
                                 </span>
                               );
                             } else {
-                              return (
-                                <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white" style={{ backgroundColor: '#c27878' }}>
-                                  {missingItems.join(' • ')}
-                                </span>
-                              );
+                              // Check if missing items have requirement exceptions in rules
+                              const gymId = gymsList.find(g => g.name === gym)?.id;
+                              const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+                              const excusedItems = [];
+                              const stillMissing = [];
+                              
+                              missingItems.forEach(item => {
+                                const programName = item.replace(/^\+\d+ /, '');
+                                const fullProgram = programName === 'KNO' ? 'KIDS NIGHT OUT' : programName;
+                                const hasException = (window.__activeRules || []).some(r => 
+                                  r.rule_type === 'requirement_exception' &&
+                                  (r.gym_ids.includes('ALL') || r.gym_ids.includes(gymId)) &&
+                                  (r.program === 'ALL' || r.program === fullProgram) &&
+                                  (!r.end_date || r.end_date >= monthStr + '-01') &&
+                                  (r.is_permanent || !r.end_date || r.end_date >= monthStr + '-01')
+                                );
+                                if (hasException) excusedItems.push(programName);
+                                else stillMissing.push(item);
+                              });
+
+                              if (stillMissing.length === 0 && excusedItems.length > 0) {
+                                return (
+                                  <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white" style={{ backgroundColor: '#8b9eb8' }} title={`Excused: ${excusedItems.join(', ')}`}>
+                                    ✓ Excused
+                                  </span>
+                                );
+                              } else if (stillMissing.length > 0 && excusedItems.length > 0) {
+                                return (
+                                  <span className="flex items-center gap-1">
+                                    <span className="font-bold px-2 py-1 rounded-lg shadow-sm text-white text-xs" style={{ backgroundColor: '#c27878' }}>
+                                      {stillMissing.join(' • ')}
+                                    </span>
+                                    <span className="font-bold px-2 py-1 rounded-lg shadow-sm text-white text-xs" style={{ backgroundColor: '#8b9eb8' }} title={`Excused: ${excusedItems.join(', ')}`}>
+                                      ⓔ {excusedItems.join(', ')}
+                                    </span>
+                                  </span>
+                                );
+                              } else {
+                                return (
+                                  <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white" style={{ backgroundColor: '#c27878' }}>
+                                    {missingItems.join(' • ')}
+                                  </span>
+                                );
+                              }
                             }
                           })()}
                         </td>

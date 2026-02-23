@@ -22,6 +22,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
     { value: 'sibling_price', label: 'Sibling Pricing', desc: 'Different prices per kid (1st, 2nd, 3rd)' },
     { value: 'valid_time', label: 'Valid Time', desc: 'This time is correct (e.g., before care at 8:30 AM)' },
     { value: 'program_synonym', label: 'Program Name', desc: 'This name means a specific program (e.g., "Gym Fun Friday" = KNO)' },
+    { value: 'requirement_exception', label: 'Requirement Exception', desc: 'This gym is excused from this monthly requirement (e.g., internal clinic, staff shortage)' },
     { value: 'exception', label: 'Exception', desc: 'This specific situation is OK, don\'t flag it' },
   ];
 
@@ -279,6 +280,13 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {ruleType === 'requirement_exception' && (
+              <div>
+                <label className="text-sm text-gray-600 block mb-1">Why is this gym excused?</label>
+                <input type="text" value={value} onChange={e => setValue(e.target.value)} placeholder="e.g., Internal competitive clinic - students sign up directly" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" autoFocus />
               </div>
             )}
 

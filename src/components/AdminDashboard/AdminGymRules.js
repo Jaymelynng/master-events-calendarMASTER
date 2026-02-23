@@ -71,6 +71,7 @@ export default function AdminGymRules({ gyms }) {
     if (type === 'sibling_price') return 'bg-emerald-100 text-emerald-700';
     if (type === 'valid_time' || type === 'time') return 'bg-purple-100 text-purple-700';
     if (type === 'program_synonym') return 'bg-orange-100 text-orange-700';
+    if (type === 'requirement_exception') return 'bg-slate-100 text-slate-700';
     if (type === 'exception') return 'bg-yellow-100 text-yellow-700';
     return 'bg-gray-100 text-gray-700';
   };
@@ -80,6 +81,7 @@ export default function AdminGymRules({ gyms }) {
     if (type === 'sibling_price') return 'Sibling Pricing';
     if (type === 'valid_time' || type === 'time') return 'Time';
     if (type === 'program_synonym') return 'Program Name';
+    if (type === 'requirement_exception') return 'Requirement Excused';
     if (type === 'exception') return 'Exception';
     return type;
   };
