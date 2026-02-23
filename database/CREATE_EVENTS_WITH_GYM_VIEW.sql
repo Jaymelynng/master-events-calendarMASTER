@@ -1,19 +1,20 @@
 -- ============================================================================
--- CREATE EVENTS_WITH_GYM VIEW
+-- CREATE EVENTS_WITH_GYM VIEW (CANONICAL - This is the source of truth)
 -- ============================================================================
--- This view combines events and events_archive tables with gym information
--- Used by the dashboard to display all events (active and archived)
--- 
--- Last Updated: December 28, 2025
--- Note: For the most up-to-date version, see FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql
+-- This view combines events and events_archive tables with gym information.
+-- Used by the dashboard to display all events (active and archived).
+--
+-- IMPORTANT: This file must include ALL columns from both tables.
+-- If you add a column to `events`, also add it to `events_archive`
+-- and update BOTH SELECT blocks below to include it.
+--
+-- Last Updated: February 23, 2026
 -- ============================================================================
 
--- Drop existing view if it exists
 DROP VIEW IF EXISTS events_with_gym;
 
--- Create the complete view with ALL columns
 CREATE VIEW events_with_gym AS
-SELECT 
+SELECT
   e.id,
   e.gym_id,
   e.title,
@@ -38,6 +39,7 @@ SELECT
   e.description_status,
   e.validation_errors,
   e.acknowledged_errors,
+  e.verified_errors,
   -- Availability columns
   e.has_openings,
   e.registration_start_date,
@@ -47,11 +49,11 @@ SELECT
   g.id AS gym_code
 FROM events e
 LEFT JOIN gyms g ON e.gym_id = g.id
-WHERE e.deleted_at IS NULL  -- Exclude soft-deleted events
+WHERE e.deleted_at IS NULL
 
 UNION ALL
 
-SELECT 
+SELECT
   a.id,
   a.gym_id,
   a.title,
@@ -76,6 +78,7 @@ SELECT
   a.description_status,
   a.validation_errors,
   a.acknowledged_errors,
+  a.verified_errors,
   -- Availability columns
   a.has_openings,
   a.registration_start_date,
@@ -86,14 +89,13 @@ SELECT
 FROM events_archive a
 LEFT JOIN gyms g ON a.gym_id = g.id;
 
--- Grant access to the view
 GRANT SELECT ON events_with_gym TO anon, authenticated;
 
 -- ============================================================================
--- VERIFICATION QUERY
--- Run this to confirm the view was created with all columns:
+-- VERIFICATION: Run this after creating the view to confirm all columns exist:
 -- ============================================================================
--- SELECT column_name, data_type 
--- FROM information_schema.columns 
+-- SELECT column_name, data_type
+-- FROM information_schema.columns
 -- WHERE table_name = 'events_with_gym'
 -- ORDER BY ordinal_position;
+-- ============================================================================

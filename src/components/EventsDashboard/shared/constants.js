@@ -54,7 +54,7 @@ export const getEventTypeColor = (type) => {
 export const defaultMonthlyRequirements = {
   'CLINIC': 1,
   'KIDS NIGHT OUT': 2,
-  'OPEN GYM': 4
+  'OPEN GYM': 1
 };
 
 // Event types that can span multiple days (only camps)

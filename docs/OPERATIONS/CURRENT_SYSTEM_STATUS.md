@@ -1,6 +1,6 @@
 # Current System Status
 
-**Last Updated:** February 17, 2026
+**Last Updated:** February 23, 2026
 
 ---
 
@@ -36,14 +36,14 @@
 - **Precoded rules** — Hardcoded in Python (`f12_collect_and_import.py`)
 - **Configurable rules** — Per-gym in `gym_valid_values` table (program synonyms, price exceptions, time exceptions)
 
-### Admin Dashboard Tabs
+### Admin Dashboard Tabs (5 tabs)
 | Tab | What It Does |
 |-----|-------------|
-| **Audit & Review** | View validation errors by gym, filter by error type, dismiss/acknowledge errors, add rules |
+| **Audit & Review** | View validation errors by gym, filter by error type/month/program, dismiss/acknowledge errors, verify accuracy, update prices |
+| **Pricing** | Manage event_pricing (Clinic/KNO/Open Gym with effective dates) and view camp_pricing |
 | **Gym Rules** | Manage per-gym validation rules (program synonyms, valid prices, time exceptions) |
-| **Pricing** | Manage camp_pricing and event_pricing tables |
 | **Change History** | View all CREATE/UPDATE/DELETE audit entries with gym and action filters, pagination, CSV export |
-| **Quick Actions** | Sync, super admin tools, links to other tabs |
+| **Quick Actions** | Automated Sync, JSON Import, super admin links to Supabase/Railway dashboards |
 
 ### Export System
 - CSV and JSON export from calendar view
@@ -99,9 +99,13 @@
 |-------|--------|---------|
 | Wrong year in DESCRIPTION | ❌ Not fixed | Validation only checks title for wrong year, not description |
 | `program_ignore` rule type | ❌ Not built | Can't ignore "open gym" when it's a station name in KNO events |
-| EventsDashboard.js monolithic | ❌ Not migrated | Refactored version exists (519 lines) but `App.js` still imports old 4000+ line file |
+| EventsDashboard.js monolithic | ❌ Not migrated | Refactored version exists (519 lines) but `App.js` still imports old 4000+ line file. Refactored version has several bugs that must be fixed before activation (see Feb 23 audit). |
 | Flyer-only events | ⚠️ Limitation | Can't validate events that only have an image flyer, no text |
 | Sync All Gyms speed | ⚠️ Slow | Takes ~50-60 min for all 10 gyms (Playwright scraping bottleneck, not app issue) |
+| Database view conflicts | ⚠️ Fixed Feb 23 | 4 different SQL files had conflicting view definitions. `CREATE_EVENTS_WITH_GYM_VIEW.sql` is now the canonical source of truth with ALL columns. |
+| Schema doc incomplete | ⚠️ Outdated | `DATABASE_COMPLETE_SCHEMA.md` missing 3 tables: `event_pricing`, `camp_pricing`, `acknowledged_patterns` |
+| Day abbreviations not checked | ❌ Not fixed | Validation checks full day names but `day_abbrevs` variable is defined and never used in Python |
+| CORS wide open on backend | ⚠️ Risk | `CORS(app)` allows all origins. Should restrict to Vercel domain. |
 
 ---
 
@@ -117,6 +121,13 @@
 | GYMS dict made database-driven (sellability) | ✅ Done |
 | Change History tab in Admin Dashboard | ✅ Added |
 | Sync All Gyms button | ✅ Added |
+| **Export CSV now shows Start Date + End Date** | ✅ Fixed Feb 23 |
+| **Sync All: cross-type false deletion bug** | ✅ Fixed Feb 23 |
+| **Sync All: failed types no longer count as "checked"** | ✅ Fixed Feb 23 |
+| **Admin pricing/rules: stale closure state bugs** | ✅ Fixed Feb 23 |
+| **Admin audit: missing props in single-gym view** | ✅ Fixed Feb 23 |
+| **Change History: pagination out-of-bounds** | ✅ Fixed Feb 23 |
+| **Canonical DB view file updated with ALL columns** | ✅ Fixed Feb 23 |
 
 ---
 

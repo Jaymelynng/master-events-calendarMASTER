@@ -31,7 +31,7 @@ export default function AdminGymRules({ gyms }) {
     if (!window.confirm('Delete this rule? The validation check will start flagging this value again on next sync.')) return;
     try {
       await gymValidValuesApi.delete(id);
-      setRules(rules.filter(r => r.id !== id));
+      setRules(prev => prev.filter(r => r.id !== id));
     } catch (err) {
       console.error('Error deleting rule:', err);
       alert('Failed to delete rule.');
@@ -52,7 +52,7 @@ export default function AdminGymRules({ gyms }) {
         label: newRuleLabel.trim(),
         event_type: eventType
       });
-      setRules([...rules, created]);
+      setRules(prev => [...prev, created]);
       setNewRuleValue('');
       setNewRuleLabel('');
     } catch (err) {
