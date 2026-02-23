@@ -177,19 +177,17 @@ export const eventsApi = {
   },
 
   async getAll(startDate, endDate, includeDeleted = false) {
-    // For multi-day events, we need to fetch:
-    // 1. Events that START within the date range (date >= startDate AND date <= endDate)
-    // 2. Events that SPAN into the date range (start_date < startDate AND end_date >= startDate)
+    // The events_with_gym view already filters WHERE deleted_at IS NULL,
+    // so when we need soft-deleted events (for sync comparison), we must
+    // query the events table directly and join gym info manually.
+    const tableName = includeDeleted ? 'events' : 'events_with_gym';
     
     let query = supabase
-      .from('events_with_gym')
-      .select('*')
+      .from(tableName)
+      .select(includeDeleted ? '*, gyms(name)' : '*')
       .order('date', { ascending: true })
     
     if (startDate && endDate) {
-      // Use OR to get both:
-      // - Events starting in range: date >= startDate AND date <= endDate
-      // - Multi-day events spanning into range: start_date < startDate AND end_date >= startDate
       query = query.or(`and(date.gte.${startDate},date.lte.${endDate}),and(start_date.lt.${startDate},end_date.gte.${startDate})`)
     } else if (startDate) {
       query = query.gte('date', startDate)
@@ -197,7 +195,6 @@ export const eventsApi = {
       query = query.lte('date', endDate)
     }
     
-    // Filter out deleted events unless explicitly requested
     if (!includeDeleted) {
       query = query.is('deleted_at', null)
     }
@@ -205,6 +202,16 @@ export const eventsApi = {
     const { data, error } = await query
     
     if (error) throw new Error(error.message)
+    
+    if (includeDeleted && data) {
+      return data.map(row => ({
+        ...row,
+        gym_name: row.gyms?.name || null,
+        gym_code: row.gym_id,
+        gyms: undefined
+      }));
+    }
+    
     return data
   },
 
