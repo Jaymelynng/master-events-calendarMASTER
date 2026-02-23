@@ -1814,6 +1814,10 @@ The system will add new events and update any changed events automatically.`;
     return (
       <AdminDashboard
         gyms={gymsList}
+        events={events}
+        monthlyRequirements={monthlyRequirements}
+        currentMonth={currentMonth}
+        currentYear={currentYear}
         initialCalendarMonth={`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`}
         initialTab={adminInitialTab}
         onClose={() => { setShowAdminPortal(false); setAdminInitialTab('audit'); }}

@@ -506,6 +506,60 @@ def get_event_types():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/send-email', methods=['POST'])
+def send_email():
+    """Send an email to a gym manager via Resend API"""
+    if not check_api_key():
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    data = request.get_json() or {}
+    to_email = data.get('to')
+    to_name = data.get('to_name', '')
+    subject = data.get('subject', '')
+    html_body = data.get('html_body', '')
+    from_email = data.get('from_email', 'jgibson@powersgym.com')
+    from_name = data.get('from_name', 'Jayme Gibson')
+    cc = data.get('cc', None)
+
+    if not to_email or not subject or not html_body:
+        return jsonify({"success": False, "error": "Missing required fields: to, subject, html_body"}), 400
+
+    resend_api_key = os.environ.get('RESEND_API_KEY', '')
+    if not resend_api_key:
+        return jsonify({"success": False, "error": "RESEND_API_KEY not configured on server"}), 500
+
+    import urllib.request
+    import urllib.error
+
+    payload = {
+        "from": f"{from_name} <{from_email}>",
+        "to": [to_email],
+        "subject": subject,
+        "html": html_body,
+    }
+    if cc:
+        payload["cc"] = [cc] if isinstance(cc, str) else cc
+
+    try:
+        req = urllib.request.Request(
+            'https://api.resend.com/emails',
+            data=json.dumps(payload).encode('utf-8'),
+            headers={
+                'Authorization': f'Bearer {resend_api_key}',
+                'Content-Type': 'application/json',
+            },
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            result = json.loads(resp.read().decode())
+            return jsonify({"success": True, "id": result.get("id"), "message": f"Email sent to {to_email}"})
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode() if e.fp else str(e)
+        return jsonify({"success": False, "error": f"Resend API error: {error_body}"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Failed to send email: {str(e)}"}), 500
+
+
 if __name__ == '__main__':
     import os
     

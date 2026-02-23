@@ -4,15 +4,21 @@ import AdminGymRules from './AdminGymRules';
 import AdminPricing from './AdminPricing';
 import AdminQuickActions from './AdminQuickActions';
 import AdminChangeHistory from './AdminChangeHistory';
+import EmailComposer from './EmailComposer';
 
 export default function AdminDashboard({
   gyms,
+  events,
+  monthlyRequirements,
+  currentMonth,
+  currentYear,
   initialCalendarMonth,
   initialTab,
   onClose,
   onOpenSyncModal,
   onOpenBulkImport,
 }) {
+  const [showEmailComposer, setShowEmailComposer] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab || 'audit');
   const [superAdminMode, setSuperAdminMode] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
@@ -117,8 +123,14 @@ export default function AdminDashboard({
               </h1>
             </div>
 
-            {/* Right: Super Admin toggle */}
+            {/* Right: Email + Super Admin */}
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowEmailComposer(true)}
+                className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-1"
+              >
+                ✉️ Email Managers
+              </button>
               {superAdminMode ? (
                 <button
                   onClick={() => setSuperAdminMode(false)}
@@ -184,6 +196,17 @@ export default function AdminDashboard({
           />
         )}
       </div>
+
+      {showEmailComposer && (
+        <EmailComposer
+          gyms={gyms}
+          events={events}
+          monthlyRequirements={monthlyRequirements}
+          currentMonth={currentMonth}
+          currentYear={currentYear}
+          onClose={() => setShowEmailComposer(false)}
+        />
+      )}
     </div>
   );
 }
