@@ -3,7 +3,7 @@
 // ============================================================================
 import React from 'react';
 import { theme, getEventTypeColor } from './constants';
-import { formatTime } from './utils';
+import { formatTime, parseYmdLocal } from './utils';
 
 export default function TableView({
   filteredEvents
@@ -43,7 +43,10 @@ export default function TableView({
               filteredEvents.map((event) => (
                 <tr key={event.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(event.date).toLocaleDateString()}
+                    {parseYmdLocal(event.date).toLocaleDateString()}
+                    {event.end_date && event.end_date !== event.start_date && event.end_date !== event.date && (
+                      <span className="text-gray-400 ml-1">– {parseYmdLocal(event.end_date).toLocaleDateString()}</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     <div className="font-medium">{event.title || 'Untitled Event'}</div>
@@ -66,7 +69,7 @@ export default function TableView({
                     {formatTime(event.time || event.event_time)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {event.price ? `$${event.price}` : <span className="text-gray-500 italic">Price not in title</span>}
+                    {event.price ? `$${event.price}` : <span className="text-gray-500 italic">No price set</span>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-2">

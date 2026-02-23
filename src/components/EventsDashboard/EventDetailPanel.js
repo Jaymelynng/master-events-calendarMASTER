@@ -103,12 +103,22 @@ export default function EventDetailPanel({
             <div>
               <div className="font-semibold text-xs text-gray-500 uppercase mb-1">Date</div>
               <div>
-                {parseYmdLocal(event.date).toLocaleDateString('en-US', {
+                {parseYmdLocal(event.start_date || event.date).toLocaleDateString('en-US', {
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric'
                 })}
+                {event.end_date && event.end_date !== (event.start_date || event.date) && (
+                  <span className="text-gray-500">
+                    {' – '}
+                    {parseYmdLocal(event.end_date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </span>
+                )}
               </div>
             </div>
           </div>
