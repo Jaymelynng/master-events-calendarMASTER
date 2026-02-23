@@ -271,17 +271,42 @@ export const eventsApi = {
     if (error) throw new Error(error.message)
   },
 
-  // Soft delete - marks event as deleted without removing from database
+  // Archive a deleted event: copy to events_archive, then remove from events
   async markAsDeleted(id) {
-    const { data, error } = await supabase
+    const now = new Date().toISOString()
+    
+    // Step 1: Set deleted_at on the event
+    const { data: event, error: updateError } = await supabase
       .from('events')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: now })
       .eq('id', id)
       .select()
       .single()
     
-    if (error) throw new Error(error.message)
-    return data
+    if (updateError) throw new Error(updateError.message)
+    
+    // Step 2: Copy to events_archive via RPC (handles the date type cast)
+    try {
+      const { error: archiveError } = await supabase.rpc('archive_single_event', { event_id: id })
+      if (archiveError) {
+        console.warn('Archive RPC not available, event stays soft-deleted in events table:', archiveError.message)
+        return event
+      }
+      
+      // Step 3: Remove from events table
+      const { error: deleteError } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', id)
+      
+      if (deleteError) {
+        console.warn('Failed to remove archived event from events table:', deleteError.message)
+      }
+    } catch (rpcErr) {
+      console.warn('Archive failed, falling back to soft-delete only:', rpcErr.message)
+    }
+    
+    return event
   },
 
   // Restore a soft-deleted event
