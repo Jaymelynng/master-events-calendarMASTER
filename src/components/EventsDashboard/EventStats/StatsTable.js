@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
+import { parseYmdLocal } from '../utils';
 
 // Extracted statistics table component
 export const StatsTable = ({ 
@@ -15,11 +16,12 @@ export const StatsTable = ({
 }) => {
   // Calculate statistics for each gym
   const calculateGymStats = (gymName) => {
-    const gymEvents = events.filter(event => 
-      event.gym_name === gymName &&
-      new Date(event.date).getMonth() === currentMonth &&
-      new Date(event.date).getFullYear() === currentYear
-    );
+    const gymEvents = events.filter(event => {
+      const d = parseYmdLocal(event.date);
+      return event.gym_name === gymName &&
+        d.getMonth() === currentMonth &&
+        d.getFullYear() === currentYear;
+    });
 
     const stats = {};
     eventTypes.forEach(type => {
@@ -50,11 +52,12 @@ export const StatsTable = ({
 
   // Calculate totals
   const totalsByType = eventTypes.reduce((acc, type) => {
-    acc[type.name] = events.filter(e => 
-      e.type === type.name &&
-      new Date(e.date).getMonth() === currentMonth &&
-      new Date(e.date).getFullYear() === currentYear
-    ).length;
+    acc[type.name] = events.filter(e => {
+      const d = parseYmdLocal(e.date);
+      return e.type === type.name &&
+        d.getMonth() === currentMonth &&
+        d.getFullYear() === currentYear;
+    }).length;
     return acc;
   }, {});
 

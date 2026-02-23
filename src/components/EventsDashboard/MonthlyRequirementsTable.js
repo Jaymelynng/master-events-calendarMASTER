@@ -4,6 +4,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { theme, getEventTypeColor } from './constants';
+import { parseYmdLocal } from './utils';
 import { isErrorAcknowledgedAnywhere } from '../../lib/validationHelpers';
 
 export default function MonthlyRequirementsTable({
@@ -42,7 +43,7 @@ export default function MonthlyRequirementsTable({
   // Count quality issues for a gym
   const getQualityIssues = (gym) => {
     const gymEvents = events.filter(e => {
-      const eventDate = new Date(e.date);
+      const eventDate = parseYmdLocal(e.date);
       return e.gym_name === gym &&
              eventDate.getMonth() === currentMonth &&
              eventDate.getFullYear() === currentYear;

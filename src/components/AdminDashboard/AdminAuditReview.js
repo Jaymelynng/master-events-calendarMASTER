@@ -733,6 +733,10 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
                   dismissingError={dismissingError}
                   statusFilter={statusFilter}
                   selectedCategory={selectedCategory}
+                  errorTypeFilter={errorTypeFilter}
+                  hidePrices={hidePrices}
+                  onUpdateEventPrice={handleUpdateEventPrice}
+                  onAddCampPrice={handleAddCampPrice}
                 />
               ))}
             </div>

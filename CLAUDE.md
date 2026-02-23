@@ -71,6 +71,8 @@
 | Export bug (analytics ignoring filters) | ✅ FIXED | `ExportModal.js` now uses `filteredEvents` consistently |
 | Time regex false positives | ✅ FIXED | Pre-cleaning for "$62 a day", "Ages 4-13" patterns |
 | Day range false positives | ✅ FIXED | "Monday-Friday", "Monday through Friday" now handled |
+| Export showed single Date column | ✅ FIXED | CSV export now includes Start Date and End Date columns for multi-day events |
+| Sync All cross-type false deletions | ✅ FIXED | Comparison now filters existing events by checkedTypes to prevent cross-type false deletions |
 | Wrong year in DESCRIPTION | ❌ Not fixed | Only checks title for wrong year, not description |
 | `program_ignore` rule type | ❌ Not built | Can't ignore "open gym" when it's a station name in KNO |
 | `EventsDashboard.js` monolithic | ❌ Not migrated | Refactored version exists but `App.js` still imports the monolithic file |
@@ -147,4 +149,4 @@ docs/
 
 ---
 
-**Last Updated:** February 11, 2026
+**Last Updated:** February 23, 2026

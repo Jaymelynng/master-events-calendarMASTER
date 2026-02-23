@@ -290,14 +290,13 @@ export default function AdminChangeHistory({ gyms }) {
             </button>
             <div className="flex gap-1">
               {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                // Show first pages, current area, and last page
                 let pageNum;
                 if (totalPages <= 7) {
                   pageNum = i;
                 } else if (page < 3) {
                   pageNum = i < 5 ? i : i === 5 ? totalPages - 2 : totalPages - 1;
                 } else if (page > totalPages - 4) {
-                  pageNum = i < 2 ? i : totalPages - 5 + i;
+                  pageNum = i < 2 ? i : totalPages - 7 + i;
                 } else {
                   pageNum = i < 1 ? 0 : i === 1 ? page - 1 : i === 2 ? page : i === 3 ? page + 1 : i === 4 ? page + 2 : i === 5 ? totalPages - 2 : totalPages - 1;
                 }

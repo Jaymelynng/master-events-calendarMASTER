@@ -38,11 +38,12 @@ The Master Events Calendar has a **hidden admin system** with three levels of ac
 **How to access:** **Shift+Click** the 🪄 wand icon in the stats table header
 **What you see:**
 
-A **full-page Admin Dashboard** replaces the calendar with **4 tabs**:
+A **full-page Admin Dashboard** replaces the calendar with **5 tabs**:
 
 - ✅ **Audit & Review** (default tab) - See ALL validation errors across selected gyms, filter by category (DATA/FORMAT), month (synced with calendar view), program type, status (Active/Resolved). Dismiss errors or create permanent rules.
 - ✅ **Pricing** - Event pricing (Clinic, KNO, Open Gym) and Camp pricing. Base expected prices for validation. View, add, or delete.
 - ✅ **Gym Rules** - View, add, delete per-gym validation rules (price, time, program_synonym). Rules grouped by gym.
+- ✅ **Change History** - Shows CREATE/UPDATE/DELETE audit entries from `event_audit_log`. Filter by gym and action type, with pagination and CSV export.
 - ✅ **Quick Actions** - Automated Sync and JSON Import buttons. Super Admin tools require PIN.
 - ✅ **"Back to Calendar"** button returns to normal view
 
@@ -86,7 +87,7 @@ Step 1: Go to your calendar
 Step 2: Find the 🪄 wand icon in the stats table header
 Step 3: Hold Shift and click the wand
 Step 4: Full-page Admin Dashboard opens (replaces calendar)
-Step 5: Use tabs: Audit & Review | Pricing | Gym Rules | Quick Actions
+Step 5: Use tabs: Audit & Review | Pricing | Gym Rules | Change History | Quick Actions
 Step 6: Click "Back to Calendar" when done
 ```
 
@@ -137,7 +138,7 @@ Step 6: Super Admin badge appears, Quick Actions tab unlocks all tools
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  ← Back to Calendar │ 🪄 Admin Dashboard [Admin] 🔐    │
-│  [Audit & Review] [Pricing] [Gym Rules] [Quick Actions] │
+│  [Audit & Review] [Pricing] [Gym Rules] [Change History] [Quick Actions] │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  AUDIT & REVIEW TAB (default):                          │
@@ -223,7 +224,9 @@ useEffect(() => {
 | Tab | Component | When Visible |
 |-----|-----------|-------------|
 | Audit & Review | `AdminAuditReview` | Always (default tab) |
+| Pricing | `AdminPricing` | Always |
 | Gym Rules | `AdminGymRules` | Always |
+| Change History | `AdminChangeHistory` | Always (CREATE/UPDATE/DELETE audit log with gym/action filters, pagination, CSV export) |
 | Quick Actions | `AdminQuickActions` | Always (Super Admin tools hidden behind PIN) |
 
 ### Super Admin Tools URLs
@@ -318,7 +321,7 @@ The 🪄 wand icon in the stats table header opens the full-page Admin Dashboard
 |------|--------|
 | Feb 11, 2026 | **NEW** Pricing tab — Event & Camp pricing, event-type colors, synced month filter |
 | Feb 11, 2026 | Month filter in Audit now defaults to calendar's displayed month when opening Admin |
-| Feb 2, 2026 | **MAJOR** Replaced AdminPortalModal with full-page AdminDashboard (4 tabs) |
+| Feb 2, 2026 | **MAJOR** Replaced AdminPortalModal with full-page AdminDashboard (5 tabs) |
 | Feb 2, 2026 | **NEW** Audit & Review tab — see all validation errors across gyms with filters |
 | Feb 2, 2026 | **NEW** Gym Rules tab — view/add/delete per-gym validation rules |
 | Feb 2, 2026 | **NEW** Quick Actions tab — Sync, Import, Super Admin tools |

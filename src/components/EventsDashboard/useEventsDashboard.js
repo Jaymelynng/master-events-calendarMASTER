@@ -76,17 +76,14 @@ export default function useEventsDashboard() {
   const gymRefs = useRef({});
   const monthNavRef = useRef(null);
 
-  // ==================== REAL-TIME SUBSCRIPTIONS ====================
-
-  const gymLinks = useRealtimeGymLinks();
-  useRealtimeGyms(setGymsList);
-  useRealtimeEvents(currentMonth, currentYear, setEvents, gymsList);
-
   // ==================== DATA FETCHING ====================
 
   const fetchEvents = useCallback(async () => {
     try {
-      const data = await eventsApi.getAll(currentMonth + 1, currentYear);
+      const startDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+      const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const endDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      const data = await eventsApi.getAll(startDate, endDate);
       setEvents(data || []);
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -97,6 +94,21 @@ export default function useEventsDashboard() {
     cache.clear('events');
     await fetchEvents();
   }, [fetchEvents]);
+
+  // ==================== REAL-TIME SUBSCRIPTIONS ====================
+
+  const [gymLinks, setGymLinks] = useState([]);
+  useRealtimeGymLinks(() => {
+    import('../../lib/gymLinksApi').then(({ gymLinksApi }) => {
+      gymLinksApi.getAllLinksDetailed().then(setGymLinks);
+    });
+  });
+  useRealtimeGyms(() => {
+    gymsApi.getAll().then(data => setGymsList(data || []));
+  });
+  useRealtimeEvents(() => {
+    refetchEvents();
+  });
 
   // Initial data load
   useEffect(() => {

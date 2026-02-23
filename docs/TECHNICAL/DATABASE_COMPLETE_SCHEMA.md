@@ -11,7 +11,7 @@
 
 | Category | Count |
 |----------|-------|
-| **Tables** | 10 |
+| **Tables** | 13 |
 | **Views** | 2 |
 | **Total Events** | ~500+ (active + archived) |
 | **Gyms** | 10 |
@@ -37,7 +37,10 @@
 8. [event_audit_log](#8-event_audit_log-table) - Change tracking (11 columns)
 9. [sync_log](#9-sync_log-table) - Sync progress (6 columns)
 10. [gym_valid_values](#10-gym_valid_values-table) - Per-gym validation rules (7 columns)
-11. [Views](#views) - events_with_gym, gym_links_detailed
+11. [event_pricing](#11-event_pricing-table) - Non-camp event prices with effective_date support (8 columns)
+12. [camp_pricing](#12-camp_pricing-table) - Camp price lookup by gym (8 columns)
+13. [acknowledged_patterns](#13-acknowledged_patterns-table) - Bulk dismiss patterns per gym/event type (7 columns)
+14. [Views](#views) - events_with_gym, gym_links_detailed
 
 ---
 
@@ -78,6 +81,7 @@ events (
   description_status TEXT DEFAULT 'unknown',  -- none, flyer_only, full, unknown
   validation_errors JSONB DEFAULT '[]',       -- Array of validation issues
   acknowledged_errors JSONB DEFAULT '[]',     -- Array of dismissed errors
+  verified_errors JSONB DEFAULT '[]',         -- Array of admin-verified errors
   
   -- Availability Tracking
   has_openings BOOLEAN DEFAULT TRUE,          -- From iClassPro hasOpenings
@@ -400,6 +404,74 @@ gym_valid_values (
 
 ---
 
+## 11. EVENT_PRICING TABLE
+
+**Purpose:** Source of truth for non-camp event prices (CLINIC, KNO, OPEN GYM) with effective_date support  
+**Row Count:** Varies  
+**Column Count:** 8
+
+```sql
+event_pricing (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id VARCHAR NOT NULL,              -- FK to gyms.id (CCP, EST, etc.)
+  event_type VARCHAR NOT NULL,          -- CLINIC, KIDS NIGHT OUT, OPEN GYM
+  price NUMERIC NOT NULL,               -- e.g., 40.00
+  effective_date DATE NOT NULL,         -- When this price takes effect
+  end_date DATE,                        -- NULL = still active, or date when price expired
+  notes TEXT,                           -- e.g., "Price increase Feb 10, 2026"
+  created_at TIMESTAMPTZ DEFAULT NOW()
+)
+```
+
+**Usage:** During sync, the scraper looks up the correct price for a gym/event_type where `effective_date <= today` and (`end_date IS NULL` or `end_date >= today`). If the portal price doesn't match, an `event_price_mismatch` error is generated.
+
+---
+
+## 12. CAMP_PRICING TABLE
+
+**Purpose:** Source of truth for camp prices per gym (full day/half day, daily/weekly)  
+**Row Count:** 10 (one per gym)  
+**Column Count:** 8
+
+```sql
+camp_pricing (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id VARCHAR NOT NULL,              -- FK to gyms.id
+  full_day_daily NUMERIC,               -- Full day single-day price
+  full_day_weekly NUMERIC,              -- Full day weekly price
+  half_day_daily NUMERIC,               -- Half day single-day price
+  half_day_weekly NUMERIC,              -- Half day weekly price
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+)
+```
+
+**Usage:** During camp validation, description prices are compared against this table. Tolerance: ±$2.
+
+---
+
+## 13. ACKNOWLEDGED_PATTERNS TABLE
+
+**Purpose:** Bulk dismiss patterns per gym/event type for recurring false positives  
+**Row Count:** Varies  
+**Column Count:** 7
+
+```sql
+acknowledged_patterns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id VARCHAR NOT NULL,              -- FK to gyms.id
+  event_type VARCHAR NOT NULL,          -- CLINIC, KIDS NIGHT OUT, etc.
+  error_message TEXT NOT NULL,          -- The validation error message to match
+  note TEXT,                            -- Optional reason for dismissing
+  dismissed_at TIMESTAMPTZ DEFAULT NOW(),
+  -- Additional columns may exist
+)
+```
+
+**Usage:** When a validation error matches a pattern in this table (same gym_id, event_type, and error_message), it is automatically dismissed during sync.
+
+---
+
 ## VIEWS
 
 ### events_with_gym
@@ -415,7 +487,7 @@ SELECT
   e.description, e.age_min, e.age_max, e.deleted_at,
   e.created_at, e.updated_at, e.availability_status,
   e.has_flyer, e.flyer_url, e.description_status,
-  e.validation_errors, e.acknowledged_errors,
+  e.validation_errors, e.acknowledged_errors, e.verified_errors,
   g.name AS gym_name, g.id AS gym_code
 FROM events e
 LEFT JOIN gyms g ON e.gym_id = g.id
@@ -430,7 +502,7 @@ SELECT
   a.description, a.age_min, a.age_max, a.deleted_at,
   a.created_at, a.updated_at, a.availability_status,
   a.has_flyer, a.flyer_url, a.description_status,
-  a.validation_errors, a.acknowledged_errors,
+  a.validation_errors, a.acknowledged_errors, a.verified_errors,
   g.name AS gym_name, g.id AS gym_code
 FROM events_archive a
 LEFT JOIN gyms g ON a.gym_id = g.id;
@@ -487,6 +559,15 @@ gyms (10 rows)
         └── gym_id → gyms.id
   │
   └──< gym_valid_values
+        └── gym_id → gyms.id
+  │
+  ├──< event_pricing
+  │     └── gym_id → gyms.id
+  │
+  ├──< camp_pricing
+  │     └── gym_id → gyms.id
+  │
+  └──< acknowledged_patterns
         └── gym_id → gyms.id
 
 link_types (10 rows)
@@ -688,6 +769,9 @@ SELECT
 | Dec 2025 | Added availability columns |
 | Feb 2, 2026 | Added program_synonym rule type and ALL (global) gym support |
 | Feb 2, 2026 | Created gym_valid_values table for per-gym validation rules |
+| Feb 2026 | Created event_pricing table for Clinic/KNO/Open Gym prices |
+| Feb 2026 | Created acknowledged_patterns table for bulk dismiss |
+| Feb 2026 | Added verified_errors column to events table |
 | Dec 28, 2025 | Full schema audit - documented all 30 columns |
 
 ---

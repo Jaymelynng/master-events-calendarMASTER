@@ -270,9 +270,13 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
             if (data.success && data.events && data.events.length > 0) {
               eventsByTypeMap[eventType] = data.events;
             }
-            checkedTypes.push(eventType);
+            if (data.success) {
+              checkedTypes.push(eventType);
+            }
             gymResults[i].typeResults[eventType] = {
-              status: 'done', count: data.events?.length || 0
+              status: data.success ? 'done' : 'error',
+              count: data.events?.length || 0,
+              error: data.success ? undefined : (data.error || 'Unknown error')
             };
           } catch (typeErr) {
             console.error(`Failed ${eventType} for ${gym.name}:`, typeErr.message);
@@ -318,7 +322,10 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
         setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
 
         const existingEvents = await eventsApi.getAll(null, null, true);
-        const gymExisting = existingEvents.filter(ev => ev.gym_id === gym.id);
+        const checkedTypesSet = new Set(checkedTypes);
+        const gymExisting = existingEvents.filter(ev =>
+          ev.gym_id === gym.id && checkedTypesSet.has(ev.type)
+        );
         const comp = compareEvents(allIncoming, gymExisting);
 
         // SAFETY CHECK: suspicious mass deletions
@@ -533,12 +540,14 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
         // IMPORTANT: Fetch ALL events (no date filter) to properly compare
         // The sync may include past events that are already in the database
         try {
-          const existingEvents = await eventsApi.getAll(null, null, true); // No date filter, include deleted
-          const gymExistingEvents = existingEvents.filter(ev => ev.gym_id === selectedGym);
+          const existingEvents = await eventsApi.getAll(null, null, true);
+          const allCheckedTypes = new Set(data.checkedTypes || Object.keys(eventsByTypeMap));
+          const gymExistingEvents = existingEvents.filter(ev =>
+            ev.gym_id === selectedGym && allCheckedTypes.has(ev.type)
+          );
           
-          console.log('🔍 Comparison: incoming=', allEvents.length, 'existing=', gymExistingEvents.length);
+          console.log('🔍 Comparison: incoming=', allEvents.length, 'existing=', gymExistingEvents.length, 'checkedTypes=', [...allCheckedTypes]);
           
-          // Compare all incoming events vs existing
           const comparisonResult = compareEvents(allEvents, gymExistingEvents);
           setComparison(comparisonResult);
         } catch (err) {

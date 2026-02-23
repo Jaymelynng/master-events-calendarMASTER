@@ -89,7 +89,7 @@ export default function AdminPricing({ gyms }) {
                         if (!window.confirm('Delete this pricing row?')) return;
                         try {
                           await eventPricingApi.delete(row.id);
-                          setEventPricing(eventPricing.filter(r => r.id !== row.id));
+                          setEventPricing(prev => prev.filter(r => r.id !== row.id));
                         } catch (e) {
                           alert('Failed to delete.');
                         }
@@ -140,7 +140,7 @@ export default function AdminPricing({ gyms }) {
                         if (!newEventGym || !newEventPrice) { alert('Gym and price required.'); return; }
                         try {
                           const created = await eventPricingApi.create({ gym_id: newEventGym, event_type: newEventType, price: newEventPrice });
-                          setEventPricing([...eventPricing, created]);
+                          setEventPricing(prev => [...prev, created]);
                           setNewEventPrice('');
                         } catch (e) { alert('Failed to add.'); }
                       }}

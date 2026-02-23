@@ -2,9 +2,10 @@
 -- Run these in your Supabase SQL editor immediately
 
 -- 1. Primary query optimization (most used)
-CREATE INDEX CONCURRENTLY idx_events_date_range 
-ON events(date, gym_id, type) 
-WHERE date >= CURRENT_DATE - INTERVAL '6 months';
+-- NOTE: No partial date filter — a static CURRENT_DATE in a partial index
+-- is evaluated once at creation time and never updates. Use a full index instead.
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_date_range 
+ON events(date, gym_id, type);
 
 -- 2. Stats calculation optimization
 CREATE INDEX CONCURRENTLY idx_events_monthly_stats 
