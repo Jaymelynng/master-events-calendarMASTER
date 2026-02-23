@@ -3,16 +3,17 @@ import AdminAuditReview from './AdminAuditReview';
 import AdminGymRules from './AdminGymRules';
 import AdminPricing from './AdminPricing';
 import AdminQuickActions from './AdminQuickActions';
+import AdminChangeHistory from './AdminChangeHistory';
 
 export default function AdminDashboard({
   gyms,
   initialCalendarMonth,
+  initialTab,
   onClose,
   onOpenSyncModal,
   onOpenBulkImport,
-  onOpenAuditHistory,
 }) {
-  const [activeTab, setActiveTab] = useState('audit');
+  const [activeTab, setActiveTab] = useState(initialTab || 'audit');
   const [superAdminMode, setSuperAdminMode] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinInput, setPinInput] = useState('');
@@ -52,6 +53,7 @@ export default function AdminDashboard({
     { id: 'audit', label: '📋 Audit & Review', alwaysShow: true },
     { id: 'pricing', label: '💰 Pricing', alwaysShow: true },
     { id: 'rules', label: '📏 Gym Rules', alwaysShow: true },
+    { id: 'history', label: '📜 Change History', alwaysShow: true },
     { id: 'actions', label: '⚡ Quick Actions', alwaysShow: true },
   ];
 
@@ -169,12 +171,16 @@ export default function AdminDashboard({
           <AdminPricing gyms={gyms} />
         )}
 
+        {activeTab === 'history' && (
+          <AdminChangeHistory gyms={gyms} />
+        )}
+
         {activeTab === 'actions' && (
           <AdminQuickActions
             superAdminMode={superAdminMode}
             onOpenSyncModal={onOpenSyncModal}
             onOpenBulkImport={onOpenBulkImport}
-            onOpenAuditHistory={onOpenAuditHistory}
+            onViewChangeHistory={() => setActiveTab('history')}
           />
         )}
       </div>

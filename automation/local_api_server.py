@@ -437,15 +437,36 @@ def import_events():
                 raise RuntimeError(update_response.error.message)
             updated_count += len(update_response.data or [])
 
+        # Soft-delete: mark events that are in Supabase but NOT in scraped results
+        deleted_count = 0
+        scraped_urls = set(ev.get('event_url') for ev in events if ev.get('event_url'))
+        if scraped_urls:  # Only delete if we actually got events (prevents wiping on scraper failure)
+            stale_events = [
+                ev for ev in existing_events
+                if ev.get('event_url')
+                and ev['event_url'] not in scraped_urls
+                and not ev.get('deleted_at')  # Don't re-delete
+            ]
+            if stale_events:
+                stale_ids = [ev['id'] for ev in stale_events]
+                now_str = datetime.utcnow().isoformat()
+                for stale_id in stale_ids:
+                    client.table('events').update({
+                        'deleted_at': now_str
+                    }).eq('id', stale_id).execute()
+                deleted_count = len(stale_ids)
+                for ev in stale_events:
+                    print(f"  [SOFT-DELETE] {ev.get('title', 'unknown')} (URL: {ev.get('event_url')})")
+
         return jsonify({
             "success": True,
             "imported": inserted_count,
             "updated": updated_count,
             "restored": restored,
-            "deleted": 0,  # Soft delete logic intentionally disabled for now
+            "deleted": deleted_count,
             "skipped": skipped,
             "totalProcessed": len(events),
-            "message": f"Imported {inserted_count} new / updated {updated_count} events"
+            "message": f"Imported {inserted_count} new / updated {updated_count} / deleted {deleted_count} events"
         })
 
     except Exception as e:

@@ -4,7 +4,7 @@ export default function AdminQuickActions({
   superAdminMode,
   onOpenSyncModal,
   onOpenBulkImport,
-  onOpenAuditHistory,
+  onViewChangeHistory,
 }) {
   return (
     <div className="space-y-6">
@@ -33,10 +33,10 @@ export default function AdminQuickActions({
               🚂 Railway
             </a>
             <button
-              onClick={onOpenAuditHistory}
+              onClick={onViewChangeHistory}
               className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all font-semibold"
             >
-              🔍 Audit History
+              📜 Change History
             </button>
           </div>
         </div>

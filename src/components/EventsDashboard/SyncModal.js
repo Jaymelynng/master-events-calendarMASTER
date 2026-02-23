@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import { eventsApi, syncLogApi, auditLogApi, gymValidValuesApi } from '../../lib/api';
 import { isErrorAcknowledgedAnywhere, inferErrorCategory } from '../../lib/validationHelpers';
@@ -21,6 +21,12 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
   const [showAuditPanel, setShowAuditPanel] = useState(false); // Show validation errors panel
   const [dismissingError, setDismissingError] = useState(null); // Track which error is being dismissed
   const [dismissModalState, setDismissModalState] = useState(null); // { event, errorMessage, errorObj, gymId }
+
+  // Sync All Gyms state
+  const [syncAllMode, setSyncAllMode] = useState(false);
+  const [syncAllProgress, setSyncAllProgress] = useState(null);
+  const [syncAllComplete, setSyncAllComplete] = useState(false);
+  const abortRef = useRef(false);
 
   // Load sync log on mount
   useEffect(() => {
@@ -181,6 +187,292 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
 
   // All sync option (includes ALL event types at once)
   const ALL_PROGRAMS = 'ALL';
+
+  // ==========================================
+  // SYNC ALL GYMS — auto sync + import all gyms
+  // Uses per-event-type requests (~15-30s each) instead of ALL (~3-5min)
+  // to avoid Railway gateway timeouts
+  // ==========================================
+  const handleSyncAllGyms = async () => {
+    abortRef.current = false;
+    setSyncAllMode(true);
+    setSyncAllComplete(false);
+
+    const gymList = [...gyms].sort((a, b) => a.name.localeCompare(b.name));
+    const totalGyms = gymList.length;
+
+    const gymResults = gymList.map(g => ({
+      gymId: g.id, gymName: g.name, status: 'pending',
+      summary: null, error: null, paused: false,
+      currentType: null, typeResults: {}, completedTypes: 0
+    }));
+
+    setSyncAllProgress({ currentGymIndex: 0, totalGyms, gymResults: [...gymResults] });
+
+    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const API_KEY = process.env.REACT_APP_API_KEY || '';
+    const headers = { 'Content-Type': 'application/json' };
+    if (API_KEY) headers['X-API-Key'] = API_KEY;
+
+    // Helper: fetch one event type with timeout + retry
+    const fetchEventType = async (gymId, eventType) => {
+      const doFetch = async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s timeout
+        try {
+          const response = await fetch(`${API_URL}/sync-events`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ gymId, eventType }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          return await response.json();
+        } catch (err) {
+          clearTimeout(timeoutId);
+          throw err;
+        }
+      };
+
+      try {
+        return await doFetch();
+      } catch (firstErr) {
+        // Retry once on failure
+        console.log(`⚠️ Retrying ${eventType} for ${gymId}...`);
+        return await doFetch();
+      }
+    };
+
+    for (let i = 0; i < totalGyms; i++) {
+      if (abortRef.current) break;
+      const gym = gymList[i];
+
+      gymResults[i].status = 'syncing';
+      gymResults[i].completedTypes = 0;
+      setSyncAllProgress(prev => ({ ...prev, currentGymIndex: i, gymResults: [...gymResults] }));
+
+      try {
+        // PHASE 1: Sync each event type individually (avoids Railway timeout)
+        const eventsByTypeMap = {};
+        const checkedTypes = [];
+
+        for (let t = 0; t < eventTypes.length; t++) {
+          if (abortRef.current) break;
+          const eventType = eventTypes[t];
+
+          // Update progress to show current type
+          gymResults[i].currentType = eventType;
+          gymResults[i].completedTypes = t;
+          setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
+
+          try {
+            const data = await fetchEventType(gym.id, eventType);
+
+            if (data.success && data.events && data.events.length > 0) {
+              eventsByTypeMap[eventType] = data.events;
+            }
+            checkedTypes.push(eventType);
+            gymResults[i].typeResults[eventType] = {
+              status: 'done', count: data.events?.length || 0
+            };
+          } catch (typeErr) {
+            console.error(`Failed ${eventType} for ${gym.name}:`, typeErr.message);
+            gymResults[i].typeResults[eventType] = {
+              status: 'error', count: 0,
+              error: typeErr.name === 'AbortError' ? 'Timeout' : typeErr.message
+            };
+          }
+
+          setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
+        }
+
+        gymResults[i].currentType = null;
+        gymResults[i].completedTypes = eventTypes.length;
+
+        // Check if ALL types failed
+        const failedTypes = Object.entries(gymResults[i].typeResults).filter(([_, r]) => r.status === 'error');
+        const succeededTypes = Object.entries(gymResults[i].typeResults).filter(([_, r]) => r.status === 'done');
+
+        if (succeededTypes.length === 0 && failedTypes.length > 0) {
+          gymResults[i].status = 'error';
+          gymResults[i].error = `All types failed: ${failedTypes.map(([t]) => t).join(', ')}`;
+          setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
+          continue;
+        }
+
+        // Build allIncoming from accumulated per-type results
+        const allIncoming = [];
+        for (const [type, events] of Object.entries(eventsByTypeMap)) {
+          for (const ev of events) allIncoming.push({ ...ev, _eventType: type });
+        }
+
+        if (allIncoming.length === 0) {
+          gymResults[i].status = 'done';
+          gymResults[i].summary = { eventsFound: 0, new: 0, changed: 0, deleted: 0, unchanged: 0 };
+          for (const type of checkedTypes) await syncLogApi.log(gym.id, type, 0, 0);
+          setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
+          continue;
+        }
+
+        // PHASE 2: Compare
+        gymResults[i].status = 'importing';
+        setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
+
+        const existingEvents = await eventsApi.getAll(null, null, true);
+        const gymExisting = existingEvents.filter(ev => ev.gym_id === gym.id);
+        const comp = compareEvents(allIncoming, gymExisting);
+
+        // SAFETY CHECK: suspicious mass deletions
+        const deletedCount = comp.deleted.length;
+        const activeCount = gymExisting.filter(e => !e.deleted_at).length;
+        const ratio = activeCount > 0 ? deletedCount / activeCount : 0;
+
+        if (deletedCount > 5 && ratio > 0.5) {
+          gymResults[i].status = 'paused';
+          gymResults[i].paused = true;
+          gymResults[i].summary = {
+            eventsFound: allIncoming.length, new: comp.new.length,
+            changed: comp.changed.length, deleted: deletedCount,
+            unchanged: comp.unchanged.length,
+            pauseReason: `${deletedCount} of ${activeCount} events would be deleted (${Math.round(ratio * 100)}%)`
+          };
+          setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
+          continue;
+        }
+
+        // PHASE 3: Auto-import
+        const eventsToImport = allIncoming.map(({ _index, _eventType, ...ev }) => ev);
+        const newUrls = new Set(comp.new.map(e => e.event_url));
+        const trulyNew = eventsToImport.filter(e => newUrls.has(e.event_url));
+
+        let importedCount = 0;
+        let updatedCount = 0;
+        let softDeletedCount = 0;
+        let forceUpdatedCount = 0;
+
+        // Insert new events
+        if (trulyNew.length > 0) {
+          const imported = await eventsApi.bulkImport(trulyNew);
+          importedCount = imported.length;
+          for (const ne of imported) {
+            try {
+              await auditLogApi.log(ne.id, ne.gym_id, 'CREATE', 'all', null,
+                JSON.stringify({ title: ne.title, date: ne.date, price: ne.price }),
+                ne.title, ne.date, 'Sync All Import');
+            } catch (e) { /* continue */ }
+          }
+        }
+
+        // Update changed events
+        if (comp.changed.length > 0) {
+          const allExisting = await eventsApi.getAll(null, null, true);
+          for (const changed of comp.changed) {
+            try {
+              const ex = allExisting.find(e => e.event_url === changed.incoming.event_url);
+              if (!ex) continue;
+              await eventsApi.update(ex.id, {
+                title: changed.incoming.title, date: changed.incoming.date,
+                start_date: changed.incoming.start_date, end_date: changed.incoming.end_date,
+                time: changed.incoming.time, price: changed.incoming.price,
+                age_min: changed.incoming.age_min, age_max: changed.incoming.age_max,
+                description: changed.incoming.description,
+                has_flyer: changed.incoming.has_flyer || false,
+                flyer_url: changed.incoming.flyer_url || null,
+                description_status: changed.incoming.description_status || 'unknown',
+                validation_errors: changed.incoming.validation_errors || [],
+                has_openings: changed.incoming.has_openings !== undefined ? changed.incoming.has_openings : true,
+                registration_start_date: changed.incoming.registration_start_date || null,
+                registration_end_date: changed.incoming.registration_end_date || null,
+                deleted_at: null
+              });
+              if (changed._changes) {
+                for (const fc of changed._changes) {
+                  try {
+                    await auditLogApi.log(ex.id, ex.gym_id, 'UPDATE', fc.field,
+                      String(fc.old), String(fc.new), changed.incoming.title,
+                      changed.incoming.date, 'Sync All Import');
+                  } catch (e) { /* continue */ }
+                }
+              }
+              updatedCount++;
+            } catch (e) { console.error('Error updating:', e); }
+          }
+        }
+
+        // Refresh validation for unchanged
+        if (comp.unchanged.length > 0) {
+          const allExisting = await eventsApi.getAll(null, null, true);
+          for (const ue of comp.unchanged) {
+            try {
+              const incoming = allIncoming.find(e => e.event_url === ue.event_url);
+              const existing = allExisting.find(e => e.event_url === ue.event_url);
+              if (!incoming || !existing) continue;
+              await eventsApi.update(existing.id, {
+                has_flyer: incoming.has_flyer || false,
+                flyer_url: incoming.flyer_url || null,
+                description_status: incoming.description_status || 'unknown',
+                validation_errors: incoming.validation_errors || [],
+                has_openings: incoming.has_openings !== undefined ? incoming.has_openings : true,
+                registration_start_date: incoming.registration_start_date || null,
+                registration_end_date: incoming.registration_end_date || null
+              });
+              forceUpdatedCount++;
+            } catch (e) { /* continue */ }
+          }
+        }
+
+        // Soft-delete removed events (only future ones)
+        if (comp.deleted.length > 0) {
+          const today = new Date(); today.setHours(0, 0, 0, 0);
+          const todayStr = today.toISOString().split('T')[0];
+          for (const de of comp.deleted) {
+            try {
+              const startDate = (de.start_date || de.date || '').split('T')[0];
+              if (startDate && startDate > todayStr) {
+                await eventsApi.markAsDeleted(de.id);
+                softDeletedCount++;
+                try {
+                  await auditLogApi.log(de.id, de.gym_id, 'DELETE', 'all',
+                    de.title, null, de.title, de.date, 'Sync All Import');
+                } catch (e) { /* continue */ }
+              }
+            } catch (e) { /* continue */ }
+          }
+        }
+
+        // Log sync per type
+        for (const type of checkedTypes) {
+          const events = eventsByTypeMap[type] || [];
+          await syncLogApi.log(gym.id, type, events.length, events.length);
+        }
+
+        gymResults[i].status = 'done';
+        gymResults[i].summary = {
+          eventsFound: allIncoming.length, new: importedCount, changed: updatedCount,
+          deleted: softDeletedCount, unchanged: comp.unchanged.length,
+          refreshed: forceUpdatedCount,
+          failedTypes: failedTypes.length > 0 ? failedTypes.map(([t]) => t) : null
+        };
+
+      } catch (err) {
+        gymResults[i].status = 'error';
+        gymResults[i].error = err.message;
+      }
+
+      setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
+    }
+
+    setSyncAllComplete(true);
+    // Refresh sync log
+    try {
+      const updatedLog = await syncLogApi.getAll();
+      setSyncLog(updatedLog);
+    } catch (e) { /* continue */ }
+    // Invalidate cache
+    try {
+      const { cache } = await import('../../lib/cache');
+      cache.invalidate('events');
+    } catch (e) { /* continue */ }
+  };
 
 
   const handleSyncForType = async (eventType) => {
@@ -714,6 +1006,228 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* ========== SYNC ALL GYMS MODE ========== */}
+        {syncAllMode && syncAllProgress && (
+          <div className="space-y-4">
+            {/* Overall progress */}
+            <div className="p-4 bg-purple-50 border-2 border-purple-300 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-bold text-purple-800 text-lg">
+                  {syncAllComplete ? '✅ Sync Complete!' : `🔄 Syncing All Gyms...`}
+                </h3>
+                <span className="text-sm font-medium text-purple-600">
+                  {syncAllProgress.gymResults.filter(g => g.status === 'done' || g.status === 'error' || g.status === 'paused').length} / {syncAllProgress.totalGyms} gyms
+                </span>
+              </div>
+              <div className="w-full bg-purple-200 rounded-full h-3 overflow-hidden">
+                {(() => {
+                  const totalSteps = syncAllProgress.totalGyms * (eventTypes.length + 1);
+                  const completedSteps = syncAllProgress.gymResults.reduce((sum, g) => {
+                    if (g.status === 'done' || g.status === 'error' || g.status === 'paused') return sum + eventTypes.length + 1;
+                    if (g.status === 'syncing') return sum + (g.completedTypes || 0);
+                    if (g.status === 'importing') return sum + eventTypes.length;
+                    return sum;
+                  }, 0);
+                  return (
+                    <div
+                      className="bg-purple-600 h-3 rounded-full transition-all duration-700 ease-out"
+                      style={{ width: `${totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0}%` }}
+                    />
+                  );
+                })()}
+              </div>
+              {!syncAllComplete && (
+                <p className="text-xs text-purple-600 mt-2">
+                  {(() => {
+                    const current = syncAllProgress.gymResults[syncAllProgress.currentGymIndex];
+                    if (!current) return 'Preparing...';
+                    if (current.status === 'syncing') {
+                      const typeName = current.currentType === 'KIDS NIGHT OUT' ? 'KNO' :
+                        current.currentType === 'OPEN GYM' ? 'OG' :
+                        current.currentType === 'SPECIAL EVENT' ? 'SE' :
+                        current.currentType || '...';
+                      return `Collecting ${typeName} from ${current.gymName}... (${current.completedTypes || 0}/${eventTypes.length} types)`;
+                    }
+                    if (current.status === 'importing') return `Importing events for ${current.gymName}...`;
+                    return 'Preparing...';
+                  })()}
+                </p>
+              )}
+            </div>
+
+            {/* Per-gym results */}
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {syncAllProgress.gymResults.map((gym) => (
+                <div key={gym.gymId} className={`p-3 rounded-lg border-2 transition-all ${
+                  gym.status === 'done' ? 'bg-green-50 border-green-300' :
+                  gym.status === 'syncing' ? 'bg-blue-50 border-blue-300' :
+                  gym.status === 'importing' ? 'bg-indigo-50 border-indigo-300' :
+                  gym.status === 'error' ? 'bg-red-50 border-red-300' :
+                  gym.status === 'paused' ? 'bg-orange-50 border-orange-300' :
+                  'bg-gray-50 border-gray-200'
+                }`}>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-sm">{gym.gymId} — {gym.gymName}</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      gym.status === 'pending' ? 'bg-gray-200 text-gray-600' :
+                      gym.status === 'syncing' ? 'bg-blue-200 text-blue-700' :
+                      gym.status === 'importing' ? 'bg-indigo-200 text-indigo-700' :
+                      gym.status === 'done' ? 'bg-green-200 text-green-700' :
+                      gym.status === 'error' ? 'bg-red-200 text-red-700' :
+                      'bg-orange-200 text-orange-700'
+                    }`}>
+                      {gym.status === 'pending' && '⏳ Waiting'}
+                      {gym.status === 'syncing' && '🔄 Syncing...'}
+                      {gym.status === 'importing' && '📥 Importing...'}
+                      {gym.status === 'done' && '✅ Done'}
+                      {gym.status === 'error' && '❌ Error'}
+                      {gym.status === 'paused' && '⚠️ Review Needed'}
+                    </span>
+                  </div>
+                  {/* Per-type badges while syncing */}
+                  {(gym.status === 'syncing' || gym.status === 'importing') && (
+                    <div className="flex gap-1 mt-1.5">
+                      {eventTypes.map(type => {
+                        const shortName = type === 'KIDS NIGHT OUT' ? 'KNO' :
+                                          type === 'OPEN GYM' ? 'OG' :
+                                          type === 'SPECIAL EVENT' ? 'SE' :
+                                          type;
+                        const typeResult = gym.typeResults?.[type];
+                        const isCurrent = gym.currentType === type;
+                        return (
+                          <span key={type} className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                            typeResult?.status === 'done' ? (typeResult.count > 0 ? 'bg-green-200 text-green-700' : 'bg-gray-200 text-gray-500') :
+                            typeResult?.status === 'error' ? 'bg-red-200 text-red-700' :
+                            isCurrent ? 'bg-blue-200 text-blue-700 animate-pulse' :
+                            'bg-gray-100 text-gray-400'
+                          }`}>
+                            {shortName}{typeResult?.status === 'done' ? `:${typeResult.count}` : ''}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* Summary when done */}
+                  {gym.summary && gym.status === 'done' && (
+                    <div className="text-xs mt-1">
+                      <div className="flex gap-3 text-gray-600">
+                        <span>{gym.summary.eventsFound} events</span>
+                        {gym.summary.new > 0 && <span className="text-green-700 font-medium">+{gym.summary.new} new</span>}
+                        {gym.summary.changed > 0 && <span className="text-blue-700 font-medium">{gym.summary.changed} updated</span>}
+                        {gym.summary.deleted > 0 && <span className="text-red-700 font-medium">{gym.summary.deleted} removed</span>}
+                        {gym.summary.new === 0 && gym.summary.changed === 0 && gym.summary.deleted === 0 && (
+                          <span className="text-gray-400">No changes</span>
+                        )}
+                      </div>
+                      {/* Per-type breakdown when done */}
+                      {gym.typeResults && Object.keys(gym.typeResults).length > 0 && (
+                        <div className="flex gap-1 mt-1">
+                          {Object.entries(gym.typeResults).map(([type, result]) => {
+                            const shortName = type === 'KIDS NIGHT OUT' ? 'KNO' :
+                                              type === 'OPEN GYM' ? 'OG' :
+                                              type === 'SPECIAL EVENT' ? 'SE' :
+                                              type;
+                            return (
+                              <span key={type} className={`text-[10px] px-1 rounded ${
+                                result.status === 'error' ? 'bg-red-100 text-red-600' :
+                                result.count > 0 ? 'bg-green-100 text-green-700' :
+                                'bg-gray-100 text-gray-400'
+                              }`}>
+                                {shortName}:{result.status === 'error' ? '!' : result.count}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {gym.summary.failedTypes && (
+                        <div className="text-orange-600 mt-1 font-medium">
+                          ⚠️ Failed to sync: {gym.summary.failedTypes.join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {gym.error && <div className="text-xs text-red-600 mt-1">{gym.error}</div>}
+                  {gym.paused && gym.summary?.pauseReason && (
+                    <div className="text-xs text-orange-700 mt-1 font-medium">
+                      ⚠️ {gym.summary.pauseReason} — sync this gym manually to review
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Summary when complete */}
+            {syncAllComplete && (() => {
+              const results = syncAllProgress.gymResults;
+              const doneGyms = results.filter(g => g.status === 'done');
+              const totalNew = doneGyms.reduce((sum, g) => sum + (g.summary?.new || 0), 0);
+              const totalChanged = doneGyms.reduce((sum, g) => sum + (g.summary?.changed || 0), 0);
+              const totalDeleted = doneGyms.reduce((sum, g) => sum + (g.summary?.deleted || 0), 0);
+              const totalEvents = doneGyms.reduce((sum, g) => sum + (g.summary?.eventsFound || 0), 0);
+              const errorGyms = results.filter(g => g.status === 'error').length;
+              const pausedGyms = results.filter(g => g.status === 'paused').length;
+              return (
+                <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                  <h3 className="font-bold text-green-800 mb-2">📊 Summary</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="text-gray-700">{doneGyms.length} gyms synced successfully</div>
+                    <div className="text-gray-700">{totalEvents} total events</div>
+                    {totalNew > 0 && <div className="text-green-700 font-medium">+{totalNew} new events added</div>}
+                    {totalChanged > 0 && <div className="text-blue-700 font-medium">{totalChanged} events updated</div>}
+                    {totalDeleted > 0 && <div className="text-red-700 font-medium">{totalDeleted} events removed</div>}
+                    {errorGyms > 0 && <div className="text-red-600 font-medium">{errorGyms} gym(s) had errors</div>}
+                    {pausedGyms > 0 && <div className="text-orange-600 font-medium">{pausedGyms} gym(s) need manual review</div>}
+                    {totalNew === 0 && totalChanged === 0 && totalDeleted === 0 && (
+                      <div className="text-gray-500 col-span-2">Everything is up to date — no changes needed</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              {syncAllComplete ? (
+                <button
+                  onClick={() => { setSyncAllMode(false); setSyncAllProgress(null); setSyncAllComplete(false); }}
+                  className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition-colors"
+                >
+                  Done
+                </button>
+              ) : (
+                <button
+                  onClick={() => { abortRef.current = true; }}
+                  className="flex-1 px-4 py-3 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition-colors"
+                >
+                  Stop After Current Gym
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ========== NORMAL SINGLE-GYM FLOW ========== */}
+        {!syncAllMode && (
+        <>
+
+        {/* Sync All Gyms button - show when no gym selected and no results */}
+        {!result && !selectedGym && (
+          <div className="mb-4">
+            <button
+              onClick={handleSyncAllGyms}
+              disabled={syncing}
+              className="w-full px-4 py-4 rounded-lg font-bold transition-all bg-gradient-to-r from-red-500 to-orange-500 text-white hover:from-red-600 hover:to-orange-600 shadow-lg flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              <span className="text-xl">🌐</span>
+              <span className="text-lg">SYNC ALL GYMS</span>
+              <span className="text-xs bg-white/20 px-2 py-1 rounded">All {gyms.length} gyms, auto-import</span>
+            </button>
+            <p className="text-xs text-gray-500 mt-1 text-center">
+              Syncs all {gyms.length} gyms (5 program types each) and auto-imports all changes
+            </p>
           </div>
         )}
 
@@ -1549,6 +2063,11 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
             )}
           </div>
         )}
+
+      </>
+      )}
+      {/* End of !syncAllMode wrapper */}
+
       </div>
       {/* Dismiss/Rule Modal for validation errors */}
       {dismissModalState && (

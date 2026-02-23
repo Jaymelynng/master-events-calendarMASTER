@@ -432,6 +432,26 @@ export const auditLogApi = {
       .limit(limit);
     if (error) throw new Error(error.message);
     return data || [];
+  },
+
+  async getFiltered({ gymIds = [], actions = [], limit = 50, offset = 0 } = {}) {
+    let query = supabase
+      .from('event_audit_log')
+      .select('*', { count: 'exact' })
+      .order('changed_at', { ascending: false });
+
+    if (gymIds.length > 0) {
+      query = query.in('gym_id', gymIds);
+    }
+    if (actions.length > 0) {
+      query = query.in('action', actions);
+    }
+
+    query = query.range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
+    if (error) throw new Error(error.message);
+    return { data: data || [], count: count || 0 };
   }
 };
 

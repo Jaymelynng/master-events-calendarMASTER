@@ -540,10 +540,13 @@ async def collect_all_programs_for_gym(gym_id):
 async def _collect_events_from_url(gym_id, url):
     """
     Internal function to collect events from a single URL.
+    Now handles pagination — detects totalRecords from listing response
+    and clicks through pages if needed.
     """
     captured_events = []
     seen_ids = set()
-    
+    total_records = [0]  # Use list to allow mutation in nested function
+
     async def handle_response(response):
         nonlocal captured_events, seen_ids
         try:
@@ -551,27 +554,38 @@ async def _collect_events_from_url(gym_id, url):
             content_type = response.headers.get("content-type", "")
         except Exception:
             return
-        
+
         if "application/json" not in content_type:
             return
-        
+
+        # ALSO intercept the listing response (has ? in URL) to get totalRecords
+        if "/camps?" in response_url:
+            try:
+                body = await response.json()
+                if isinstance(body, dict) and "totalRecords" in body:
+                    total_records[0] = body["totalRecords"]
+                    print(f"    [PAGINATION] Listing response: totalRecords={total_records[0]}")
+            except Exception:
+                pass
+            return
+
         if "/camps/" in response_url and "?" not in response_url:
             try:
                 body = await response.json()
             except Exception:
                 return
-            
+
             if not isinstance(body, dict):
                 return
-            
+
             data = body.get("data")
             if not isinstance(data, dict):
                 return
-            
+
             event_id = data.get("id")
             if event_id is None or event_id in seen_ids:
                 return
-            
+
             seen_ids.add(event_id)
             captured_events.append(data)
             print(f"    [CAPTURED] Event {event_id}: {data.get('name', 'Unknown')[:50]}...")
@@ -586,25 +600,75 @@ async def _collect_events_from_url(gym_id, url):
             # Log all keys on first event to see full API response structure
             if len(captured_events) == 1:
                 print(f"      [RAW API] ALL FIELDS IN API RESPONSE: {list(data.keys())}")
-    
+
     print(f"  [BROWSER] Opening: {url}")
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
-        
+
         page.on("response", handle_response)
-        
+
         print(f"  [BROWSER] Loading page...")
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
         print(f"  [BROWSER] Reloading for network idle...")
         await page.reload(wait_until="networkidle", timeout=30000)
         print(f"  [BROWSER] Waiting for async responses (5s)...")
-        await page.wait_for_timeout(5000)  # Increased from 3000
-        await asyncio.sleep(2)  # Increased from 1
-        
+        await page.wait_for_timeout(5000)
+        await asyncio.sleep(2)
+
+        # PAGINATION: If totalRecords > captured, click through pages
+        page_num = 1
+        max_pages = 10  # Safety limit
+        while total_records[0] > len(captured_events) and page_num < max_pages:
+            page_num += 1
+            print(f"  [PAGINATION] Have {len(captured_events)}/{total_records[0]} events — loading page {page_num}...")
+
+            # Try clicking the "next page" button
+            try:
+                next_btn = await page.query_selector('button.page-link >> text=">"')
+                if not next_btn:
+                    next_btn = await page.query_selector('a.page-link >> text=">"')
+                if not next_btn:
+                    # Try generic next/arrow selectors
+                    next_btn = await page.query_selector('[aria-label="Next"]')
+                if not next_btn:
+                    next_btn = await page.query_selector('.pagination .next')
+                if not next_btn:
+                    # Try finding page number link
+                    next_btn = await page.query_selector(f'a.page-link >> text="{page_num}"')
+                if not next_btn:
+                    next_btn = await page.query_selector(f'button.page-link >> text="{page_num}"')
+
+                if next_btn:
+                    await next_btn.click()
+                    print(f"  [PAGINATION] Clicked page {page_num}, waiting for events...")
+                    await page.wait_for_load_state("networkidle", timeout=15000)
+                    await page.wait_for_timeout(5000)
+                    await asyncio.sleep(2)
+                else:
+                    print(f"  [PAGINATION] No next page button found — may need scroll pagination")
+                    # Try scrolling to bottom to trigger lazy load
+                    await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                    await page.wait_for_timeout(3000)
+                    await asyncio.sleep(1)
+                    # If no new events loaded, break
+                    if len(captured_events) <= len(seen_ids) - 1:
+                        print(f"  [PAGINATION] Scrolling didn't load new events, stopping")
+                        break
+            except Exception as e:
+                print(f"  [PAGINATION] Error navigating to page {page_num}: {e}")
+                break
+
+        # Log final pagination status
+        if total_records[0] > 0:
+            if len(captured_events) >= total_records[0]:
+                print(f"  [PAGINATION] ✅ ALL events captured: {len(captured_events)}/{total_records[0]}")
+            else:
+                print(f"  [PAGINATION] ⚠️ MISSING EVENTS: captured {len(captured_events)}/{total_records[0]}")
+
         print(f"  [BROWSER] Captured {len(captured_events)} events, closing browser...")
         await browser.close()
-    
+
     return captured_events
 
 async def collect_events_via_f12(gym_id, camp_type):
@@ -657,17 +721,18 @@ async def collect_events_via_f12(gym_id, camp_type):
     captured_events = []
     seen_ids = set()
     all_responses = []  # Debug: track all responses
-    
+    total_records = [0]  # Track total from listing response for pagination
+
     async def handle_response(response):
-        """Intercept /camps/{id} detail calls (NOT search calls)"""
+        """Intercept /camps/{id} detail calls AND listing calls for totalRecords"""
         nonlocal captured_events, seen_ids, all_responses
         try:
             response_url = response.url
             content_type = response.headers.get("content-type", "")
             status = response.status
-            
+
             # Debug: track all /camps/ responses
-            if "/camps/" in response_url:
+            if "/camps/" in response_url or "/camps?" in response_url:
                 all_responses.append({
                     "url": response_url,
                     "status": status,
@@ -678,62 +743,119 @@ async def collect_events_via_f12(gym_id, camp_type):
         except Exception as e:
             print(f"[DEBUG] Error getting response info: {e}")
             return
-        
+
         # Only care about JSON
         if "application/json" not in content_type:
             return
-        
+
+        # ALSO intercept the listing response (has ? in URL) to get totalRecords
+        if "/camps?" in response_url:
+            try:
+                body = await response.json()
+                if isinstance(body, dict) and "totalRecords" in body:
+                    total_records[0] = body["totalRecords"]
+                    print(f"[PAGINATION] Listing response: totalRecords={total_records[0]}")
+            except Exception:
+                pass
+            return
+
         # We want detail calls like /camps/2106, NOT the ? query
-        # So require "/camps/" and NO "?" in the URL.
         if "/camps/" in response_url and "?" not in response_url:
             print(f"[DEBUG] Processing detail call: {response_url}")
             try:
-                body = await response.json()  # FIX: await the async call
+                body = await response.json()
             except Exception as e:
                 print(f"[DEBUG] Error parsing JSON: {e}")
                 return
-            
+
             if not isinstance(body, dict):
                 print(f"[DEBUG] Body is not a dict: {type(body)}")
                 return
-            
+
             data = body.get("data")
             if not isinstance(data, dict):
                 print(f"[DEBUG] data is not a dict: {type(data)}")
                 return
-            
+
             event_id = data.get("id")
             if event_id is None:
                 print(f"[DEBUG] No event ID in data")
                 return
-            
+
             if event_id in seen_ids:
                 print(f"[DEBUG] Event {event_id} already seen")
                 return
-            
+
             seen_ids.add(event_id)
             captured_events.append(data)
             print(f"[INFO] ✅ Captured event {event_id} from: {response_url}")
-    
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
-        
+
         page.on("response", handle_response)
-        
+
         print(f"[INFO] Loading page: {url}")
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
         print(f"[INFO] Page loaded, waiting for network...")
         await page.reload(wait_until="networkidle", timeout=30000)
         print(f"[INFO] Network idle, waiting additional 3s for all responses...")
-        await page.wait_for_timeout(3000)  # Wait longer for async handlers to complete
-        
+        await page.wait_for_timeout(3000)
+
         # Give async handlers time to finish processing
         import asyncio
         await asyncio.sleep(1)
-        
+
+        # PAGINATION: If totalRecords > captured, click through pages
+        page_num = 1
+        max_pages = 10  # Safety limit
+        while total_records[0] > len(captured_events) and page_num < max_pages:
+            page_num += 1
+            print(f"[PAGINATION] Have {len(captured_events)}/{total_records[0]} events — loading page {page_num}...")
+
+            try:
+                # Try clicking the "next page" button (various selectors for iClassPro Angular app)
+                next_btn = await page.query_selector('button.page-link >> text=">"')
+                if not next_btn:
+                    next_btn = await page.query_selector('a.page-link >> text=">"')
+                if not next_btn:
+                    next_btn = await page.query_selector('[aria-label="Next"]')
+                if not next_btn:
+                    next_btn = await page.query_selector('.pagination .next')
+                if not next_btn:
+                    next_btn = await page.query_selector(f'a.page-link >> text="{page_num}"')
+                if not next_btn:
+                    next_btn = await page.query_selector(f'button.page-link >> text="{page_num}"')
+
+                if next_btn:
+                    await next_btn.click()
+                    print(f"[PAGINATION] Clicked page {page_num}, waiting for events...")
+                    await page.wait_for_load_state("networkidle", timeout=15000)
+                    await page.wait_for_timeout(5000)
+                    await asyncio.sleep(2)
+                else:
+                    print(f"[PAGINATION] No next page button found — trying scroll...")
+                    await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                    await page.wait_for_timeout(3000)
+                    await asyncio.sleep(1)
+                    prev_count = len(captured_events)
+                    if len(captured_events) == prev_count:
+                        print(f"[PAGINATION] Scrolling didn't load new events, stopping")
+                        break
+            except Exception as e:
+                print(f"[PAGINATION] Error navigating to page {page_num}: {e}")
+                break
+
+        # Log final pagination status
+        if total_records[0] > 0:
+            if len(captured_events) >= total_records[0]:
+                print(f"[PAGINATION] ✅ ALL events captured: {len(captured_events)}/{total_records[0]}")
+            else:
+                print(f"[PAGINATION] ⚠️ MISSING EVENTS: captured {len(captured_events)}/{total_records[0]}")
+
         await browser.close()
-    
+
     print(f"\n[INFO] Total raw events captured (detail JSON): {len(captured_events)}")
     print(f"[DEBUG] Total /camps/ responses found: {len(all_responses)}")
     if all_responses:
@@ -741,7 +863,7 @@ async def collect_events_via_f12(gym_id, camp_type):
         for resp in all_responses[:10]:  # Show first 10
             print(f"  - {resp['url']} (status: {resp['status']}, query: {resp['has_query']})")
     print()
-    
+
     return captured_events
 
 def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):

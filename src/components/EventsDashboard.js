@@ -293,11 +293,9 @@ const EventsDashboard = () => {
   const [validationResults, setValidationResults] = useState(null);
   // Admin timing metrics for benchmarking the workflow
   const [importTiming, setImportTiming] = useState({ convertMs: null, importMs: null, totalMs: null });
-  const [showAuditHistory, setShowAuditHistory] = useState(false);
-  const [auditHistory, setAuditHistory] = useState([]);
-  const [loadingAudit, setLoadingAudit] = useState(false);
+  const [adminInitialTab, setAdminInitialTab] = useState('audit');
   const [selectedGymId, setSelectedGymId] = useState('');
-  
+
   // New Admin Portal State (safe addition)
   const [showAdminPortal, setShowAdminPortal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -1257,26 +1255,6 @@ const EventsDashboard = () => {
     }
   };
 
-  // Load audit history
-  const loadAuditHistory = async () => {
-    setLoadingAudit(true);
-    try {
-      const { data, error } = await supabase
-        .from('event_audit_log')
-        .select('*')
-        .order('changed_at', { ascending: false })
-        .limit(100);
-      
-      if (error) throw error;
-      setAuditHistory(data || []);
-    } catch (error) {
-      console.error('Error loading audit history:', error);
-      alert('Error loading audit history');
-    } finally {
-      setLoadingAudit(false);
-    }
-  };
-
   // Log event changes to audit table
   const logEventChange = async (eventId, gymId, action, fieldChanged, oldValue, newValue, eventTitle, eventDate) => {
     try {
@@ -1823,7 +1801,8 @@ The system will add new events and update any changed events automatically.`;
       <AdminDashboard
         gyms={gymsList}
         initialCalendarMonth={`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`}
-        onClose={() => setShowAdminPortal(false)}
+        initialTab={adminInitialTab}
+        onClose={() => { setShowAdminPortal(false); setAdminInitialTab('audit'); }}
         onOpenSyncModal={() => {
           setShowAdminPortal(false);
           setTimeout(() => setShowSyncModal(true), 100);
@@ -1831,13 +1810,6 @@ The system will add new events and update any changed events automatically.`;
         onOpenBulkImport={() => {
           setShowAdminPortal(false);
           setTimeout(() => setShowBulkImportModal(true), 100);
-        }}
-        onOpenAuditHistory={() => {
-          setShowAdminPortal(false);
-          setTimeout(() => {
-            loadAuditHistory();
-            setShowAuditHistory(true);
-          }, 100);
         }}
       />
     );
@@ -1964,132 +1936,6 @@ The system will add new events and update any changed events automatically.`;
         />
       )}
 
-      {/* Audit History Modal - Secret Feature */}
-      {showAuditHistory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-800">
-                🔍 Event Change History
-              </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    // Download audit history as CSV
-                    if (auditHistory.length === 0) return;
-                    const headers = ['Date/Time', 'Action', 'Event Title', 'Gym', 'Event Date', 'Field Changed', 'Old Value', 'New Value', 'Changed By'];
-                    const rows = auditHistory.map(audit => [
-                      new Date(audit.changed_at).toLocaleString(),
-                      audit.action,
-                      audit.event_title || '',
-                      audit.gym_id || '',
-                      audit.event_date || '',
-                      audit.field_changed || '',
-                      audit.old_value || '',
-                      audit.new_value || '',
-                      audit.changed_by || ''
-                    ]);
-                    const csvContent = [headers, ...rows]
-                      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-                      .join('\n');
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `event-change-history-${new Date().toISOString().split('T')[0]}.csv`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                  }}
-                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-1"
-                  title="Download as CSV"
-                >
-                  📥 Download CSV
-                </button>
-                <button
-                  onClick={() => setShowAuditHistory(false)}
-                  className="text-gray-500 hover:text-gray-700 text-xl"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-            
-            {loadingAudit ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader className="w-8 h-8 animate-spin text-gray-500" />
-              </div>
-            ) : auditHistory.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                No change history found
-              </div>
-            ) : (
-              <div className="overflow-y-auto flex-1">
-                {auditHistory.map((audit, idx) => (
-                  <div key={idx} className="mb-6 pb-6 border-b last:border-b-0">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="text-sm text-gray-500">
-                        {new Date(audit.changed_at).toLocaleString('en-US', {
-                          month: 'long',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </div>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        audit.action === 'CREATE' ? 'bg-green-100 text-green-800' :
-                        audit.action === 'UPDATE' ? 'bg-blue-100 text-blue-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {audit.action}
-                      </span>
-                    </div>
-                    
-                    <div className="font-medium text-gray-800 mb-1">
-                      {audit.event_title || 'Unknown Event'}
-                    </div>
-                    
-                    <div className="text-sm text-gray-600">
-                      {audit.gym_id} • {audit.event_date}
-                    </div>
-                    
-                    {audit.field_changed && audit.field_changed !== 'all' && (
-                      <div className="mt-2 text-sm">
-                        <span className="font-medium">{audit.field_changed}:</span>{' '}
-                        <span className="text-red-600 line-through">{audit.old_value}</span>
-                        {' → '}
-                        <span className="text-green-600">{audit.new_value}</span>
-                      </div>
-                    )}
-                    
-                    {audit.action === 'DELETE' && (
-                      <div className="mt-2 text-sm text-red-600">
-                        Event was deleted from the system
-                      </div>
-                    )}
-                    
-                    <div className="text-xs text-gray-400 mt-1">
-                      Changed by: {audit.changed_by}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => setShowAuditHistory(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
       <div ref={topRef} className="relative z-10 w-full">
         <div className="w-full">
           {/* Dashboard Header - Redesigned with dark background */}
@@ -2108,11 +1954,11 @@ The system will add new events and update any changed events automatically.`;
               onClick={(e) => {
                 if (e.ctrlKey || e.metaKey) {
                   e.preventDefault();
-                  loadAuditHistory();
-                  setShowAuditHistory(true);
+                  setAdminInitialTab('history');
+                  setShowAdminPortal(true);
                 }
               }}
-              title="Ctrl+Click for secret features"
+              title="Ctrl+Click for change history"
             >
               {new Date().toLocaleString('en-US', { 
                 weekday: 'long', 

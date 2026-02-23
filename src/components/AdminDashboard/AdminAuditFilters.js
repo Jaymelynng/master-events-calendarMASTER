@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function AdminAuditFilters({
   gyms,
@@ -29,6 +29,7 @@ export default function AdminAuditFilters({
     monthOptions.push({ value, label });
   }
 
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const gymList = (gyms || []).map(g => ({ id: g.id, name: g.name })).sort((a, b) => a.name.localeCompare(b.name));
 
   const allSelected = gymList.length > 0 && selectedGyms.length === gymList.length;
@@ -139,60 +140,72 @@ export default function AdminAuditFilters({
             ))}
           </div>
         </div>
+        {/* Advanced Filters Toggle */}
         <div>
-          <span className="text-xs font-semibold text-gray-600">Status:</span>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {[
-              { value: 'active', label: '⚠️ Needs Review' },
-              { value: 'verified', label: '✓ Confirmed' },
-              { value: 'bugs', label: '✗ Bugs' },
-              { value: 'resolved', label: '✓ Dismissed' },
-              { value: 'all', label: 'All' },
-            ].map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => onStatusFilterChange(opt.value)}
-                className={`px-2 py-1 rounded text-xs font-medium ${statusFilter === opt.value ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="text-xs text-gray-400 hover:text-gray-600 font-medium"
+          >
+            {showAdvanced ? '▾ Hide advanced filters' : '▸ More filters (status, error type...)'}
+          </button>
         </div>
-        {/* Error Type filter */}
-        <div>
-          <span className="text-xs font-semibold text-gray-600">Error Type:</span>
-          <div className="flex flex-wrap gap-1 mt-1 items-center">
-            {[
-              { value: 'all', label: 'All' },
-              { value: 'price', label: 'Price' },
-              { value: 'time', label: 'Time' },
-              { value: 'age', label: 'Age' },
-              { value: 'date', label: 'Date' },
-              { value: 'program', label: 'Program' },
-              { value: 'format', label: 'Missing Info' },
-            ].map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => onErrorTypeFilterChange(opt.value)}
-                className={`px-2 py-1 rounded text-xs font-medium ${errorTypeFilter === opt.value ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-              >
-                {opt.label}
-              </button>
-            ))}
-            <span className="mx-1 text-gray-300">|</span>
-            <button
-              onClick={() => onHidePricesChange(!hidePrices)}
-              className={`px-2 py-1 rounded text-xs font-medium border ${
-                hidePrices
-                  ? 'bg-red-100 border-red-300 text-red-700'
-                  : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200'
-              }`}
-            >
-              {hidePrices ? 'Prices Hidden' : 'Hide Prices'}
-            </button>
-          </div>
-        </div>
+        {showAdvanced && (
+          <>
+            <div>
+              <span className="text-xs font-semibold text-gray-600">Status:</span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {[
+                  { value: 'active', label: 'Needs Review' },
+                  { value: 'verified', label: 'Confirmed' },
+                  { value: 'bugs', label: 'Bugs' },
+                  { value: 'resolved', label: 'Dismissed' },
+                  { value: 'all', label: 'All' },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => onStatusFilterChange(opt.value)}
+                    className={`px-2 py-1 rounded text-xs font-medium ${statusFilter === opt.value ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-gray-600">Error Type:</span>
+              <div className="flex flex-wrap gap-1 mt-1 items-center">
+                {[
+                  { value: 'all', label: 'All' },
+                  { value: 'price', label: 'Price' },
+                  { value: 'time', label: 'Time' },
+                  { value: 'age', label: 'Age' },
+                  { value: 'date', label: 'Date' },
+                  { value: 'program', label: 'Program' },
+                  { value: 'format', label: 'Missing Info' },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => onErrorTypeFilterChange(opt.value)}
+                    className={`px-2 py-1 rounded text-xs font-medium ${errorTypeFilter === opt.value ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+                <span className="mx-1 text-gray-300">|</span>
+                <button
+                  onClick={() => onHidePricesChange(!hidePrices)}
+                  className={`px-2 py-1 rounded text-xs font-medium border ${
+                    hidePrices
+                      ? 'bg-red-100 border-red-300 text-red-700'
+                      : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {hidePrices ? 'Prices Hidden' : 'Hide Prices'}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Category Toggle Buttons */}

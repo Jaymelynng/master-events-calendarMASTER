@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { gymValidValuesApi, acknowledgedPatternsApi, eventPricingApi, campPricingApi } from '../../lib/api';
-import { inferErrorCategory, isErrorAcknowledged, matchesAcknowledgedPattern, canAddAsRule, extractRuleValue, computeAccuracyStats, matchesErrorTypeFilter } from '../../lib/validationHelpers';
+import { inferErrorCategory, isErrorAcknowledged, matchesAcknowledgedPattern, canAddAsRule, extractRuleValue, matchesErrorTypeFilter } from '../../lib/validationHelpers';
 import AdminAuditFilters from './AdminAuditFilters';
 import AdminAuditErrorCard from './AdminAuditErrorCard';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
@@ -9,7 +9,7 @@ import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
 export default function AdminAuditReview({ gyms, initialMonth }) {
   const [selectedGyms, setSelectedGyms] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(initialMonth || 'all');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('data_error');
   const [selectedProgramType, setSelectedProgramType] = useState('all');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -19,6 +19,7 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
   const [errorTypeFilter, setErrorTypeFilter] = useState('all');
   const [hidePrices, setHidePrices] = useState(false);
   const [acknowledgedPatterns, setAcknowledgedPatterns] = useState([]);
+  const [autoLoaded, setAutoLoaded] = useState(false);
 
   // Load acknowledged patterns (temp overrides for "all in program")
   const loadAcknowledgedPatterns = useCallback(async () => {
@@ -70,6 +71,14 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
     setLoading(false);
   }, []);
 
+  // Auto-select all gyms on first load
+  useEffect(() => {
+    if (!autoLoaded && gyms && gyms.length > 0) {
+      setSelectedGyms(gyms.map(g => g.id));
+      setAutoLoaded(true);
+    }
+  }, [gyms, autoLoaded]);
+
   // Reload when selected gyms change
   useEffect(() => {
     loadEvents(selectedGyms);
@@ -95,6 +104,21 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
     const pm = matchesAcknowledgedPattern(acknowledgedPatterns, event.gym_id, event.type, errorMessage);
     return isErrorAcknowledged(event.acknowledged_errors || [], errorMessage, pm);
   };
+
+  // Per-gym error summary for dashboard cards (uses ALL events, not filtered)
+  const gymErrorSummary = {};
+  events.forEach(event => {
+    const gymId = event.gym_id;
+    if (!gymErrorSummary[gymId]) gymErrorSummary[gymId] = { data: 0, format: 0, eventCount: 0 };
+    gymErrorSummary[gymId].eventCount++;
+    const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
+    errors.forEach(e => {
+      if (isDismissedForEvent(event, e.message)) return;
+      const cat = inferErrorCategory(e);
+      if (cat === 'data_error') gymErrorSummary[gymId].data++;
+      else if (cat === 'formatting') gymErrorSummary[gymId].format++;
+    });
+  });
 
   // Count errors from pre-filtered events (so counts stay stable across category switches)
   const counts = preFilteredEvents.reduce((acc, event) => {
@@ -487,9 +511,6 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
     }
   };
 
-  // Compute accuracy stats from pre-filtered events
-  const accuracyStats = computeAccuracyStats(preFilteredEvents);
-
   return (
     <div className="space-y-5">
       {/* Filters */}
@@ -512,8 +533,61 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
         counts={counts}
       />
 
-      {/* Results Header */}
+      {/* Per-Gym Summary Cards */}
       {selectedGyms.length > 0 && !loading && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              {selectedCategory === 'data_error' ? 'Data Errors by Gym' : selectedCategory === 'formatting' ? 'Format Issues by Gym' : 'All Issues by Gym'}
+            </span>
+            <span className="text-xs text-gray-400">
+              Click a gym to focus on it
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {(gyms || []).filter(g => selectedGyms.includes(g.id) || selectedGyms.length === gyms.length).sort((a, b) => {
+              const aErrors = (selectedCategory === 'formatting' ? gymErrorSummary[a.id]?.format : gymErrorSummary[a.id]?.data) || 0;
+              const bErrors = (selectedCategory === 'formatting' ? gymErrorSummary[b.id]?.format : gymErrorSummary[b.id]?.data) || 0;
+              return bErrors - aErrors;
+            }).map(gym => {
+              const summary = gymErrorSummary[gym.id] || { data: 0, format: 0, eventCount: 0 };
+              const errorCount = selectedCategory === 'formatting' ? summary.format : selectedCategory === 'all' ? summary.data + summary.format : summary.data;
+              const hasErrors = errorCount > 0;
+              const isOnlyGymSelected = selectedGyms.length === 1 && selectedGyms[0] === gym.id;
+              return (
+                <button
+                  key={gym.id}
+                  onClick={() => {
+                    if (isOnlyGymSelected) {
+                      setSelectedGyms(gyms.map(g => g.id));
+                    } else {
+                      setSelectedGyms([gym.id]);
+                    }
+                  }}
+                  className={`p-2.5 rounded-lg border-2 text-left transition-all ${
+                    isOnlyGymSelected
+                      ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200'
+                      : hasErrors
+                        ? 'border-red-200 bg-red-50 hover:border-red-400 hover:shadow-sm'
+                        : 'border-green-200 bg-green-50 hover:border-green-400 hover:shadow-sm'
+                  }`}
+                >
+                  <div className="font-bold text-xs text-gray-700 truncate">{gym.name}</div>
+                  <div className={`text-lg font-bold ${hasErrors ? 'text-red-600' : 'text-green-600'}`}>
+                    {hasErrors ? errorCount : '0'}
+                  </div>
+                  <div className="text-[10px] text-gray-400">
+                    {hasErrors ? `error${errorCount !== 1 ? 's' : ''}` : 'clean'} ({summary.eventCount} events)
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Results Header */}
+      {selectedGyms.length > 0 && !loading && filteredEvents.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm text-gray-500">
             {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} with issues
@@ -529,26 +603,6 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
               )}
             </div>
           )}
-          {/* Accuracy Score */}
-          {accuracyStats.total > 0 && (
-            <div className="flex items-center gap-2 ml-auto bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
-              <span className="text-xs text-gray-500">📊 Accuracy:</span>
-              {accuracyStats.total >= 5 ? (
-                <>
-                  <div className="w-16 bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${accuracyStats.accuracyPct >= 80 ? 'bg-green-500' : accuracyStats.accuracyPct >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                      style={{ width: `${accuracyStats.accuracyPct}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-xs font-bold text-gray-700">{accuracyStats.accuracyPct}%</span>
-                  <span className="text-[10px] text-gray-400">({accuracyStats.verified}✓ / {accuracyStats.incorrect}✗ of {accuracyStats.total} rated)</span>
-                </>
-              ) : (
-                <span className="text-[10px] text-gray-400">{accuracyStats.total}/5 rated — keep going!</span>
-              )}
-            </div>
-          )}
         </div>
       )}
 
@@ -560,12 +614,18 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
         </div>
       )}
 
-      {/* No Gym Selected */}
+      {/* No Gym Selected (fallback — normally auto-loads all) */}
       {selectedGyms.length === 0 && !loading && (
-        <div className="text-center py-20 px-6 bg-white/60 backdrop-blur rounded-2xl border border-gray-200 shadow-inner">
+        <div className="text-center py-12 px-6 bg-white/60 backdrop-blur rounded-2xl border border-gray-200 shadow-inner">
           <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-purple-100 flex items-center justify-center text-2xl">📋</div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-1">Select gyms to review</h3>
-          <p className="text-sm text-gray-500 max-w-sm mx-auto">Choose one or more gyms above to load validation issues for review</p>
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">No gyms selected</h3>
+          <p className="text-sm text-gray-500 max-w-sm mx-auto mb-3">Check one or more gyms above, or click below to load all</p>
+          <button
+            onClick={() => setSelectedGyms((gyms || []).map(g => g.id))}
+            className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            Load All Gyms
+          </button>
         </div>
       )}
 
