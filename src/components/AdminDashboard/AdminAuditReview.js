@@ -105,9 +105,9 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
     return isErrorAcknowledged(event.acknowledged_errors || [], errorMessage, pm);
   };
 
-  // Per-gym error summary for dashboard cards (uses ALL events, not filtered)
+  // Per-gym error summary for dashboard cards (respects month + program filters)
   const gymErrorSummary = {};
-  events.forEach(event => {
+  preFilteredEvents.forEach(event => {
     const gymId = event.gym_id;
     if (!gymErrorSummary[gymId]) gymErrorSummary[gymId] = { data: 0, format: 0, eventCount: 0 };
     gymErrorSummary[gymId].eventCount++;
