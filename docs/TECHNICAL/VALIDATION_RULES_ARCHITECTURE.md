@@ -172,7 +172,7 @@ These rules are stored in the `gym_valid_values` table and can be managed via Ad
 ```sql
 CREATE TABLE gym_valid_values (
   id UUID PRIMARY KEY,
-  gym_id TEXT NOT NULL,        -- e.g., "RBA", "CCP", or "*" for global
+  gym_id TEXT NOT NULL,        -- e.g., "RBA", "CCP", or "ALL" for global
   rule_type TEXT NOT NULL,     -- "program_synonym", "price", "time"
   value TEXT NOT NULL,         -- The keyword/value to match
   label TEXT,                  -- Human-readable label or target type
@@ -188,7 +188,7 @@ CREATE TABLE gym_valid_values (
 |--------|-----------|-------|-------|
 | RBA | program_synonym | ninja night | KIDS NIGHT OUT |
 | CCP | program_synonym | parents night out | KIDS NIGHT OUT |
-| * | program_synonym | pno | KIDS NIGHT OUT |
+| ALL | program_synonym | pno | KIDS NIGHT OUT |
 
 **Price Exceptions:**
 | gym_id | rule_type | value | label |

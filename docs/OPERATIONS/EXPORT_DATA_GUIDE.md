@@ -73,7 +73,8 @@ Full list of all events in the selected date range.
 - Gym name (and ID)
 - Event title
 - Event type (CLINIC, KNO, etc.)
-- Date and Day of Week
+- Start Date and End Date (multi-day events like camps show their full date range)
+- Day of Week
 - Time
 - Price
 - Age range (formatted as "5-12" or "6+")
@@ -171,8 +172,8 @@ Track when each gym/event type was last synced.
 **CSV Structure:**
 ```
 EVENTS - 2025-12-01 to 2025-12-31
-Gym,Gym ID,Title,Type,Date,Day,Time,Price,Ages,Description Status,Has Openings,URL
-"Capital Gymnastics Cedar Park",CCP,"Vault Clinic",CLINIC,2025-12-07,Saturday,1:00 PM,35,6+,full,Available,https://...
+Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Price,Ages,Description Status,Has Openings,URL
+"Capital Gymnastics Cedar Park",CCP,"Vault Clinic",CLINIC,2025-12-07,2025-12-07,Saturday,1:00 PM,35,6+,full,Available,https://...
 
 ANALYTICS - 2025-12-01 to 2025-12-31
 Gym,Gym ID,Clinics,Clinics Req,KNO,KNO Req,Open Gym,Open Gym Req,Camps,Special Events,Total,Meets Requirements,Missing
@@ -395,6 +396,7 @@ A: Not currently. The sync history is exported from the database on demand.
 
 | Date | Change |
 |------|--------|
+| Feb 23, 2026 | CSV export now includes Start Date and End Date columns (replaces single Date column) so multi-day events like camps show their full date range |
 | Dec 28, 2025 | **MAJOR UPDATE** - Added Quick Presets (5 one-click configurations) |
 | Dec 28, 2025 | Added HTML Report format with visual charts and email summary |
 | Dec 28, 2025 | Added Data Quality Issues export |

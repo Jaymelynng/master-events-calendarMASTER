@@ -43,6 +43,7 @@ For each event_url:
 - `event_url` exists in database
 - `event_url` does NOT exist in new sync
 - **⚠️ IMPORTANT:** Only **FUTURE events** (start_date > today) are marked as deleted
+- **⚠️ IMPORTANT (Feb 23 fix):** Existing events are now filtered by `checkedTypes` before comparison, so a Sync All that syncs CLINIC events won't falsely mark KNO events as deleted (and vice versa). This prevents cross-type false deletions.
 - **Action:** Soft-delete (set `deleted_at` timestamp)
 
 **Why only future events?**
@@ -228,6 +229,7 @@ compareEvents(newEvents, existingEvents)
 | Dec 2025 | Added volatile field exclusion to prevent false "CHANGED" alerts |
 | Dec 2025 | Added "future events only" logic for deleted detection |
 | Dec 2025 | Added `_wasDeleted` flag for restored events |
+| Feb 23, 2026 | Fixed cross-type false deletions during Sync All — comparison now filters existing events by checkedTypes |
 
 
 

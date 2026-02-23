@@ -1,6 +1,6 @@
 # 🚨 AI AGENT - READ THIS ENTIRE FILE FIRST - MANDATORY
 
-**Last Updated**: February 11, 2026  
+**Last Updated**: February 23, 2026  
 **Purpose**: This file contains EVERYTHING an AI needs to know about this system. Read it completely before doing ANYTHING.
 
 > **Quick Start:** Also see `CLAUDE.md` in the root for a condensed 2-minute onboarding guide with session workflow.
@@ -209,6 +209,10 @@ Per-gym customization:
 | No pricing for non-camps | Feb 2026 | `event_pricing` table with `effective_date` support |
 | Time regex false positives ("$62 a day", "Ages 4-13") | Feb 2026 | Pre-cleaning in `has_time_in_text()` and `check_times_in_text()` |
 | Day range false positives ("Monday-Friday") | Feb 2026 | Improved day range regex with "to/thru/through" support |
+| Export single Date column | Feb 23, 2026 | CSV export now includes Start Date and End Date columns for multi-day events |
+| Sync All cross-type false deletions | Feb 23, 2026 | Comparison filters existing events by checkedTypes to prevent cross-type false deletions |
+| includeDeleted flag missing | Feb 23, 2026 | Added includeDeleted parameter to prevent deleted events from reappearing |
+| CORS restriction on Railway | Feb 23, 2026 | Restricted CORS to production origin only |
 
 ---
 
@@ -269,6 +273,7 @@ Before saying ANYTHING works:
 | Feb 5, 2026 | MAJOR REWRITE - Added complete system knowledge, source of truth, validation rules, gaps, architecture |
 | Feb 11, 2026 | Updated known gaps (marked fixed items), added CLAUDE.md quick-start reference |
 | Feb 11, 2026 | Added missing error types (skill_mismatch, title_desc_mismatch), completed FORMAT errors list, added AUDIT_DATA_ERROR_REFERENCE.md link |
+| Feb 23, 2026 | Added Feb 23 fixes: export start/end date, sync all cross-type deletion, includeDeleted flag, CORS restriction. Fixed outdated event_pricing reference. |
 
 ---
 
@@ -279,7 +284,7 @@ Before saying ANYTHING works:
 
 ## When Jayme asks about prices:
 → CAMP prices: `camp_pricing` table in Supabase
-→ Other prices: NO source of truth, only title vs description comparison
+→ Other prices: `event_pricing` table with `effective_date` support (Clinic, KNO, Open Gym)
 
 ## When Jayme asks about errors:
 → DATA error = something is WRONG (mismatch)

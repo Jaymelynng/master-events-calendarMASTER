@@ -27,16 +27,16 @@ This section defines EXACTLY what data is considered "correct" and what gets com
 | **Age** | iClass API `minAge` / `maxAge` | The age restriction fields managers set in iClass |
 | **Program Type** | iClass API `link_type_id` | Which section the event is listed under (camps, skill_clinics, kids_night_out, open_gym) |
 | **Price (CAMP)** | ✅ Supabase `camp_pricing` table | YOUR manually-maintained pricing table per gym |
-| **Price (Other)** | ❌ NO SOURCE - parsed from text | Extracted from `$XX` patterns in title/description |
+| **Price (CLINIC, KNO, OPEN GYM)** | ✅ Supabase `event_pricing` table | Prices per gym with `effective_date`/`end_date` support |
 
 ### Price Source of Truth by Event Type
 
 | Event Type | Price Source of Truth | What Gets Compared |
 |------------|----------------------|-------------------|
 | **CAMP** | ✅ `camp_pricing` table (full_day_daily, full_day_weekly, half_day_daily, half_day_weekly) + `gym_valid_values` exceptions | Description price vs your Supabase pricing table |
-| **CLINIC** | ❌ None | Title price vs Description price only |
-| **KIDS NIGHT OUT** | ❌ None | Title price vs Description price only |
-| **OPEN GYM** | ❌ None | Title price vs Description price only |
+| **CLINIC** | ✅ `event_pricing` table (per gym, with effective_date) | Description/title price vs your Supabase pricing table |
+| **KIDS NIGHT OUT** | ✅ `event_pricing` table (per gym, with effective_date) | Description/title price vs your Supabase pricing table |
+| **OPEN GYM** | ✅ `event_pricing` table (per gym, with effective_date) | Description/title price vs your Supabase pricing table |
 
 ### What Gets Compared to What
 
@@ -58,8 +58,9 @@ This section defines EXACTLY what data is considered "correct" and what gets com
 └─────────────────────────────────────────────────────────────────────┘
                               ↓ compared to ↓
 ┌─────────────────────────────────────────────────────────────────────┐
-│               SUPABASE PRICING TABLES (CAMP only)                   │
-│  camp_pricing: full_day_daily, full_day_weekly, etc.                │
+│                  SUPABASE PRICING TABLES                             │
+│  camp_pricing: full_day_daily, full_day_weekly, etc. (CAMP)         │
+│  event_pricing: per gym/type with effective_date (CLINIC/KNO/OG)    │
 │  gym_valid_values: custom exceptions (Before Care $20, etc.)        │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -378,6 +379,7 @@ flowchart TD
 | No description at all | ❌ | (existing - `description_status = 'none'`) |
 | No $ in description | ❌ | `missing_price_in_description` |
 | Price in title ≠ description | ❌ | `price_mismatch` |
+| Price ≠ `event_pricing` table | ❌ | `event_price_mismatch` |
 | Price in description only | ✅ | (no error) |
 | Price matches in both | ✅ | (no error) |
 
@@ -389,7 +391,7 @@ flowchart TD
 - Title: "Kids Night Out | $35" / Description: "...$40 per child..."
   - ❌ Flag: "Title says $35 but description says $40"
 
-**Why CAMP is skipped:** Camp pricing is complex (varies by day, week, half-day vs full-day). Price validation for camps will be added later with confirmed pricing data.
+**Note:** CAMP price validation uses a separate flow (see section 7b) since camp pricing is more complex (daily/weekly, full/half day).
 
 #### 7b. Camp Price Validation (CAMP Only)
 Compares prices found in camp description against **two sources of truth**:
