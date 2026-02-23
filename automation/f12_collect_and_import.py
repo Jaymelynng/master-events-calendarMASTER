@@ -896,8 +896,8 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         # 3) build URL from ID (your source of truth)
         event_url = f"https://portal.iclasspro.com/{portal_slug}/camp-details/{event_id}"
         
-        # 4) time from schedule
-        time_str = "10:00 AM - 11:30 AM"  # default
+        # 4) time from schedule (None if no schedule data — skips time validation)
+        time_str = None
         schedule_list = ev.get("schedule") or []
         if schedule_list:
             sched = schedule_list[0]
@@ -1558,17 +1558,24 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 # Also remove parenthetical day ranges like "(Monday-Friday)"
                 desc_snippet_cleaned = re.sub(r'\([^)]*(?:monday|mon)[-–][^)]*(?:friday|fri)[^)]*\)', '', desc_snippet_cleaned)
                 
-                for check_day in all_days:
-                    if check_day in desc_snippet_cleaned and check_day != day_lower:
-                        # Found a different day mentioned prominently
+                day_abbrev_lower = day_lower[:3]  # e.g. "friday" → "fri"
+                day_found = False
+                for full, abbr in zip(all_days, day_abbrevs):
+                    if full == day_lower or abbr == day_abbrev_lower:
+                        continue
+                    # Check full name first, then abbreviation with word boundary
+                    if full in desc_snippet_cleaned or re.search(r'\b' + abbr + r'\b', desc_snippet_cleaned):
                         validation_errors.append({
                             "type": "day_mismatch",
                             "severity": "warning",
                             "category": "data_error",
-                            "message": f"Event is on {day_of_week} but description says '{check_day.title()}'"
+                            "message": f"Event is on {day_of_week} but description says '{full.title()}'"
                         })
-                        print(f"    ⚠️ DAY MISMATCH: Event is {day_of_week}, description says {check_day.title()}")
+                        print(f"    ⚠️ DAY MISMATCH: Event is {day_of_week}, description says {full.title()}")
+                        day_found = True
                         break
+                if day_found:
+                    pass
             
             # --- PROGRAM TYPE VALIDATION ---
             
@@ -1942,7 +1949,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             if not desc_prices:
                 validation_errors.append({
                     "type": "missing_price_in_description",
-                    "severity": "error",
+                    "severity": "warning",
                     "category": "formatting",
                     "message": "Price not found in description"
                 })
