@@ -27,10 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 # For now, let's create a wrapper that calls it
 
 app = Flask(__name__)
-ALLOWED_ORIGINS = os.environ.get('CORS_ORIGINS', 'https://teamcalendar.mygymtools.com').split(',')
-if not os.environ.get('PORT'):
-    ALLOWED_ORIGINS.append('http://localhost:3000')
-CORS(app, origins=ALLOWED_ORIGINS)
+CORS(app)
 
 # API Key authentication
 API_KEY = os.environ.get('API_KEY', '')  # Get from environment variable
