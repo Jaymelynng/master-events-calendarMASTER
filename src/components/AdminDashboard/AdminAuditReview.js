@@ -105,7 +105,15 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
     return isErrorAcknowledged(event.acknowledged_errors || [], errorMessage, pm);
   };
 
-  // Per-gym error summary for dashboard cards (respects month + program filters)
+  // Helper: check if an error is still "active" (not dismissed, not verified, not marked bug)
+  const isActiveError = (event, e) => {
+    if (isDismissedForEvent(event, e.message)) return false;
+    const verified = event.verified_errors || [];
+    if (verified.some(v => v.message === e.message)) return false;
+    return true;
+  };
+
+  // Per-gym error summary for dashboard cards (only counts active errors)
   const gymErrorSummary = {};
   preFilteredEvents.forEach(event => {
     const gymId = event.gym_id;
@@ -113,18 +121,18 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
     gymErrorSummary[gymId].eventCount++;
     const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
     errors.forEach(e => {
-      if (isDismissedForEvent(event, e.message)) return;
+      if (!isActiveError(event, e)) return;
       const cat = inferErrorCategory(e);
       if (cat === 'data_error') gymErrorSummary[gymId].data++;
       else if (cat === 'formatting') gymErrorSummary[gymId].format++;
     });
   });
 
-  // Count errors from pre-filtered events (so counts stay stable across category switches)
+  // Count active errors for DATA/FORMAT badges
   const counts = preFilteredEvents.reduce((acc, event) => {
     const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
     errors.forEach(e => {
-      if (isDismissedForEvent(event, e.message)) return;
+      if (!isActiveError(event, e)) return;
       const cat = inferErrorCategory(e);
       if (cat === 'data_error') acc.data++;
       else if (cat === 'formatting') acc.format++;
