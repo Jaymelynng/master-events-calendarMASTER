@@ -1102,10 +1102,11 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         title_lower = title.lower()
         description_lower = description.lower() if description else ''
         
-        # ========== COMPLETENESS CHECKS (ALL event types including CAMP) ==========
+        # ========== COMPLETENESS CHECKS (CAMP, KNO, CLINIC, OPEN GYM) ==========
         # These check if REQUIRED fields EXIST (not just if they're accurate)
+        # SPECIAL EVENT excluded — one-off events with varying formats
         
-        if True:  # Now includes ALL event types (CAMP, KNO, CLINIC, OPEN GYM)
+        if event_type != 'SPECIAL EVENT':
             
             # --- TITLE COMPLETENESS ---
             
@@ -1280,9 +1281,10 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         
         # ========== ACCURACY CHECKS (Compare values across sources) ==========
         # These check if values MATCH when they exist in multiple places
-        # Now includes ALL event types (CAMP, KNO, CLINIC, OPEN GYM)
+        # Covers: CAMP, KNO, CLINIC, OPEN GYM
+        # SPECIAL EVENT is excluded — one-off events with no standard pricing or format
         
-        if description:
+        if description and event_type != 'SPECIAL EVENT':
             
             # --- DATE VALIDATION: Cross-check iClassPro dates vs description ---
             # SCANS the description to catch manager mistakes (wrong dates in descriptions)
