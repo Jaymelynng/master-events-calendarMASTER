@@ -529,6 +529,96 @@ export const gymValidValuesApi = {
   }
 };
 
+// Rules API - unified validation rules system (replaces gym_valid_values)
+export const rulesApi = {
+  async getAll() {
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabase
+      .from('rules')
+      .select('*')
+      .or(`is_permanent.eq.true,end_date.gte.${today}`)
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async getAllIncludeExpired() {
+    const { data, error } = await supabase
+      .from('rules')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async create(rule) {
+    const { data, error } = await supabase
+      .from('rules')
+      .insert([{
+        is_permanent: rule.is_permanent !== false,
+        end_date: rule.end_date || null,
+        gym_ids: rule.gym_ids || ['ALL'],
+        program: rule.program || 'ALL',
+        camp_season: rule.camp_season || null,
+        scope: rule.scope || 'all_events',
+        keyword: rule.keyword || null,
+        event_id: rule.event_id || null,
+        rule_type: rule.rule_type,
+        value: rule.value,
+        value_kid2: rule.value_kid2 || null,
+        value_kid3: rule.value_kid3 || null,
+        label: rule.label || null,
+        note: rule.note || null,
+        created_by: rule.created_by || 'manual'
+      }])
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('rules')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('rules')
+      .delete()
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  async getForGym(gymId) {
+    const { data, error } = await supabase
+      .from('rules')
+      .select('*')
+      .or(`gym_ids.cs.{${gymId}},gym_ids.cs.{ALL}`);
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  matchesEvent(rule, event) {
+    if (!rule || !event) return false;
+    const today = new Date().toISOString().split('T')[0];
+    if (!rule.is_permanent && rule.end_date && rule.end_date < today) return false;
+    if (!rule.gym_ids.includes('ALL') && !rule.gym_ids.includes(event.gym_id)) return false;
+    if (rule.program !== 'ALL' && rule.program !== event.type) return false;
+    if (rule.scope === 'keyword' && rule.keyword) {
+      if (!(event.title || '').toLowerCase().includes(rule.keyword.toLowerCase())) return false;
+    }
+    if (rule.scope === 'single_event' && rule.event_id !== event.id) return false;
+    return true;
+  }
+};
+
 // Event Pricing API - base expected prices for Clinic, KNO, Open Gym (validates event_price_mismatch)
 export const eventPricingApi = {
   async getAll() {
