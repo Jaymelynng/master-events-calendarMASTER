@@ -270,9 +270,13 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
             if (data.success && data.events && data.events.length > 0) {
               eventsByTypeMap[eventType] = data.events;
             }
-            checkedTypes.push(eventType);
+            if (data.success) {
+              checkedTypes.push(eventType);
+            }
             gymResults[i].typeResults[eventType] = {
-              status: 'done', count: data.events?.length || 0
+              status: data.success ? 'done' : 'error',
+              count: data.events?.length || 0,
+              error: data.success ? undefined : (data.error || 'Unknown error')
             };
           } catch (typeErr) {
             console.error(`Failed ${eventType} for ${gym.name}:`, typeErr.message);
