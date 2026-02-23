@@ -270,11 +270,11 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         gym_name: e.gym_name || e.gym_id,
         title: e.title,
         date: e.date,
+        start_date: e.start_date,
+        end_date: e.end_date,
         type: e.type,
-        // Categorized issue counts
         data_error_count: dataErrors.length,
         formatting_error_count: formattingErrors.length,
-        // All issues as formatted strings
         issues: [
           ...dataErrors.map(err => `[DATA ERROR] ${err.message}`),
           ...formattingErrors.map(err => `[FORMATTING] ${err.message}`),
@@ -300,6 +300,8 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         gym_name: e.gym_name || e.gym_id,
         title: e.title,
         date: e.date,
+        start_date: e.start_date,
+        end_date: e.end_date,
         type: e.type,
         event_url: e.event_url,
         dismissed_count: acknowledged.length,
@@ -389,16 +391,13 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     // Events section
     if (includeEvents && filteredEvents.length > 0) {
       csvContent += `EVENTS - ${monthName}\n`;
-      csvContent += 'Gym,Gym ID,Title,Type,Date,Day,Time,Full Day Daily,Full Day Weekly,Half Day Daily,Half Day Weekly,Ages,Description Status,Has Openings,URL\n';
+      csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Full Day Daily,Full Day Weekly,Half Day Daily,Half Day Weekly,Ages,Description Status,Has Openings,URL\n';
       filteredEvents.forEach(event => {
         const gym = gyms.find(g => g.id === event.gym_id);
-        // Format ages with "Ages " prefix to prevent Excel from converting to date
-        // e.g., "Ages 5-12" instead of "5-12" (which Excel reads as May 12th)
         const ageDisplay = event.age_min && event.age_max
           ? `"Ages ${event.age_min}-${event.age_max}"`
           : (event.age_min ? `"Ages ${event.age_min}+"` : '');
 
-        // Get camp pricing from source of truth table for CAMP events
         let fdDaily = '', fdWeekly = '', hdDaily = '', hdWeekly = '';
         if (event.type === 'CAMP' && campPricing[event.gym_id]) {
           const pricing = campPricing[event.gym_id];
@@ -407,16 +406,20 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
           hdDaily = pricing.half_day_daily ? `$${pricing.half_day_daily}` : '';
           hdWeekly = pricing.half_day_weekly ? `$${pricing.half_day_weekly}` : '';
         } else if (event.price) {
-          // For non-CAMP events, just show the event price in first column
           fdDaily = `$${event.price}`;
         }
+
+        const startDate = (event.start_date || event.date || '').split('T')[0];
+        const endDate = (event.end_date || event.start_date || event.date || '').split('T')[0];
+        const isMultiDay = startDate !== endDate;
 
         csvContent += [
           `"${(gym?.name || event.gym_id).replace(/"/g, '""')}"`,
           event.gym_id || '',
           `"${(event.title || '').replace(/"/g, '""')}"`,
           event.type || '',
-          event.date || '',
+          startDate,
+          isMultiDay ? endDate : '',
           event.day_of_week || '',
           event.time || '',
           fdDaily,
@@ -485,12 +488,16 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       csvContent += `Data Errors (wrong info): ${totalDataErrors} | Formatting Issues (missing info): ${totalFormattingErrors}\n\n`;
       
       if (issues.length > 0) {
-        csvContent += 'Gym,Title,Date,Type,Data Errors,Formatting Issues,All Issues,Event URL\n';
+        csvContent += 'Gym,Title,Start Date,End Date,Type,Data Errors,Formatting Issues,All Issues,Event URL\n';
         issues.forEach(issue => {
+          const iStartDate = (issue.start_date || issue.date || '').split('T')[0];
+          const iEndDate = (issue.end_date || issue.start_date || issue.date || '').split('T')[0];
+          const iIsMultiDay = iStartDate !== iEndDate;
           csvContent += [
             `"${issue.gym_name}"`,
             `"${(issue.title || '').replace(/"/g, '""')}"`,
-            issue.date,
+            iStartDate,
+            iIsMultiDay ? iEndDate : '',
             issue.type,
             issue.data_error_count,
             issue.formatting_error_count,
@@ -526,13 +533,17 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       const dismissed = getDismissedWarnings();
       csvContent += `DISMISSED WARNINGS (EXCEPTIONS) - ${monthName}\n`;
       if (dismissed.length > 0) {
-        csvContent += 'Gym,Title,Date,Type,Dismissed Warning,Note,Dismissed Date,Event URL\n';
+        csvContent += 'Gym,Title,Start Date,End Date,Type,Dismissed Warning,Note,Dismissed Date,Event URL\n';
         dismissed.forEach(event => {
+          const dStartDate = (event.start_date || event.date || '').split('T')[0];
+          const dEndDate = (event.end_date || event.start_date || event.date || '').split('T')[0];
+          const dIsMultiDay = dStartDate !== dEndDate;
           event.dismissed_warnings.forEach(warning => {
             csvContent += [
               `"${event.gym_name}"`,
               `"${(event.title || '').replace(/"/g, '""')}"`,
-              event.date,
+              dStartDate,
+              dIsMultiDay ? dEndDate : '',
               event.type,
               `"${(warning.message || '').replace(/"/g, '""')}"`,
               `"${(warning.note || '').replace(/"/g, '""')}"`,
