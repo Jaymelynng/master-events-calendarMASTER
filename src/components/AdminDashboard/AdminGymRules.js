@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { gymValidValuesApi } from '../../lib/api';
+import { rulesApi } from '../../lib/api';
+import RuleWizard from './RuleWizard';
 
 export default function AdminGymRules({ gyms }) {
   const [rules, setRules] = useState([]);
   const [loadingRules, setLoadingRules] = useState(false);
-  const [newRuleGym, setNewRuleGym] = useState('');
-  const [newRuleType, setNewRuleType] = useState('price');
-  const [newRuleEventType, setNewRuleEventType] = useState('CAMP');
-  const [newRuleValue, setNewRuleValue] = useState('');
-  const [newRuleLabel, setNewRuleLabel] = useState('');
-
-  const gymList = (gyms || []).map(g => ({ id: g.id, name: g.name })).sort((a, b) => a.id.localeCompare(b.id));
+  const [showWizard, setShowWizard] = useState(false);
+  const [editingRule, setEditingRule] = useState(null);
+  const [filter, setFilter] = useState('all');
 
   const loadRules = async () => {
     setLoadingRules(true);
     try {
-      const data = await gymValidValuesApi.getAll();
+      const data = await rulesApi.getAllIncludeExpired();
       setRules(data);
     } catch (err) {
       console.error('Error loading rules:', err);
@@ -23,14 +20,12 @@ export default function AdminGymRules({ gyms }) {
     setLoadingRules(false);
   };
 
-  useEffect(() => {
-    loadRules();
-  }, []);
+  useEffect(() => { loadRules(); }, []);
 
   const handleDeleteRule = async (id) => {
-    if (!window.confirm('Delete this rule? The validation check will start flagging this value again on next sync.')) return;
+    if (!window.confirm('Delete this rule? Validation will start flagging this again on next sync.')) return;
     try {
-      await gymValidValuesApi.delete(id);
+      await rulesApi.delete(id);
       setRules(prev => prev.filter(r => r.id !== id));
     } catch (err) {
       console.error('Error deleting rule:', err);
@@ -38,203 +33,213 @@ export default function AdminGymRules({ gyms }) {
     }
   };
 
-  const handleAddRule = async () => {
-    if (!newRuleGym || !newRuleValue.trim() || !newRuleLabel.trim()) {
-      alert('Please fill in gym, value, and label.');
-      return;
-    }
+  const handleSaveRule = async (ruleData) => {
     try {
-      const eventType = newRuleType === 'program_synonym' ? newRuleLabel.trim().toUpperCase() : newRuleEventType;
-      const created = await gymValidValuesApi.create({
-        gym_id: newRuleGym,
-        rule_type: newRuleType,
-        value: newRuleValue.trim().toLowerCase(),
-        label: newRuleLabel.trim(),
-        event_type: eventType
-      });
-      setRules(prev => [...prev, created]);
-      setNewRuleValue('');
-      setNewRuleLabel('');
+      if (editingRule) {
+        const updated = await rulesApi.update(editingRule.id, ruleData);
+        setRules(prev => prev.map(r => r.id === editingRule.id ? updated : r));
+      } else {
+        const created = await rulesApi.create(ruleData);
+        setRules(prev => [created, ...prev]);
+      }
+      setShowWizard(false);
+      setEditingRule(null);
     } catch (err) {
-      console.error('Error adding rule:', err);
-      alert('Failed to add rule. It may already exist.');
+      console.error('Error saving rule:', err);
+      alert('Failed to save rule.');
     }
   };
 
-  // Group rules by gym
-  const rulesByGym = rules.reduce((acc, rule) => {
-    const key = rule.gym_id;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(rule);
-    return acc;
-  }, {});
+  const today = new Date().toISOString().split('T')[0];
+  const isExpired = (rule) => !rule.is_permanent && rule.end_date && rule.end_date < today;
 
-  const gymOrder = Object.keys(rulesByGym).sort((a, b) => {
-    if (a === 'ALL') return -1;
-    if (b === 'ALL') return 1;
-    return a.localeCompare(b);
+  const filteredRules = rules.filter(r => {
+    if (filter === 'permanent') return r.is_permanent;
+    if (filter === 'temporary') return !r.is_permanent && !isExpired(r);
+    if (filter === 'exceptions') return r.rule_type === 'exception';
+    if (filter === 'expired') return isExpired(r);
+    return true;
   });
 
-  return (
-    <div className="space-y-6">
-      {/* Existing Rules */}
-      <div className="bg-white rounded-xl border-2 border-blue-200 overflow-hidden">
-        <div className="px-5 py-4 bg-blue-50 border-b border-blue-200">
-          <h3 className="font-bold text-blue-800 flex items-center gap-2">
-            📋 All Gym Rules
-            <span className="text-xs font-normal text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">{rules.length} rules</span>
-          </h3>
-          <p className="text-xs text-blue-600 mt-1">Prices, times, and program synonyms per gym. Rules suppress validation errors during sync.</p>
-          {gymOrder.length > 0 && (
-            <p className="text-xs font-medium text-blue-700 mt-2">
-              Gyms with rules: {gymOrder.join(', ')} — others (CCP, HGA, etc.) only appear in the “Add New Rule” dropdown if you want to add a rule for them.
-            </p>
+  const permanentRules = filteredRules.filter(r => r.is_permanent && r.rule_type !== 'exception');
+  const tempRules = filteredRules.filter(r => !r.is_permanent && !isExpired(r) && r.rule_type !== 'exception');
+  const exceptions = filteredRules.filter(r => r.rule_type === 'exception' && !isExpired(r));
+  const expiredRules = filteredRules.filter(r => isExpired(r));
+
+  const ruleTypeColor = (type) => {
+    if (type === 'valid_price' || type === 'price') return 'bg-green-100 text-green-700';
+    if (type === 'sibling_price') return 'bg-emerald-100 text-emerald-700';
+    if (type === 'valid_time' || type === 'time') return 'bg-purple-100 text-purple-700';
+    if (type === 'program_synonym') return 'bg-orange-100 text-orange-700';
+    if (type === 'exception') return 'bg-yellow-100 text-yellow-700';
+    return 'bg-gray-100 text-gray-700';
+  };
+
+  const ruleTypeLabel = (type) => {
+    if (type === 'valid_price' || type === 'price') return 'Price';
+    if (type === 'sibling_price') return 'Sibling Pricing';
+    if (type === 'valid_time' || type === 'time') return 'Time';
+    if (type === 'program_synonym') return 'Program Name';
+    if (type === 'exception') return 'Exception';
+    return type;
+  };
+
+  const formatGyms = (gymIds) => {
+    if (!gymIds || gymIds.length === 0) return 'Unknown';
+    if (gymIds.includes('ALL')) return 'All Gyms';
+    return gymIds.join(', ');
+  };
+
+  const formatScope = (rule) => {
+    if (rule.scope === 'keyword' && rule.keyword) return `Title contains "${rule.keyword}"`;
+    if (rule.scope === 'single_event') return 'Single event';
+    return 'All events';
+  };
+
+  const RuleCard = ({ rule }) => (
+    <div className={`flex items-start justify-between gap-3 p-3 rounded-lg border text-sm transition-colors ${isExpired(rule) ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-200 hover:border-purple-300'}`}>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${ruleTypeColor(rule.rule_type)}`}>
+            {ruleTypeLabel(rule.rule_type)}
+          </span>
+          <span className="text-xs font-medium text-gray-500">{formatGyms(rule.gym_ids)}</span>
+          <span className="text-xs text-gray-400">•</span>
+          <span className="text-xs text-gray-500">{rule.program || 'ALL'}</span>
+          {rule.scope === 'keyword' && (
+            <>
+              <span className="text-xs text-gray-400">•</span>
+              <span className="text-xs text-blue-600 font-medium">"{rule.keyword}"</span>
+            </>
+          )}
+          {rule.scope === 'single_event' && (
+            <>
+              <span className="text-xs text-gray-400">•</span>
+              <span className="text-xs text-amber-600 font-medium">Single event</span>
+            </>
+          )}
+          {!rule.is_permanent && rule.end_date && (
+            <>
+              <span className="text-xs text-gray-400">•</span>
+              <span className={`text-xs font-medium ${isExpired(rule) ? 'text-red-500' : 'text-blue-600'}`}>
+                {isExpired(rule) ? `Expired ${rule.end_date}` : `Ends ${rule.end_date}`}
+              </span>
+            </>
           )}
         </div>
-
-        <div className="p-4">
-          {loadingRules ? (
-            <p className="text-sm text-blue-600 py-4 text-center">Loading rules...</p>
-          ) : rules.length === 0 ? (
-            <p className="text-sm text-gray-500 py-4 text-center">No rules yet. Add rules here or click "+ Rule" on validation errors during sync.</p>
+        <div className="text-sm text-gray-800">
+          {rule.rule_type === 'sibling_price' ? (
+            <span>Kid 1: <strong>${rule.value}</strong> • Kid 2: <strong>${rule.value_kid2}</strong> • Kid 3: <strong>${rule.value_kid3}</strong></span>
+          ) : rule.rule_type === 'valid_price' || rule.rule_type === 'price' ? (
+            <span><strong>${rule.value}</strong> is valid</span>
+          ) : rule.rule_type === 'program_synonym' ? (
+            <span>"{rule.value}" = <strong>{rule.label}</strong></span>
           ) : (
-            <div className="space-y-4">
-              {gymOrder.map(gymId => (
-                <div key={gymId}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-bold text-sm text-gray-800 bg-gray-100 px-2 py-0.5 rounded">
-                      {gymId === 'ALL' ? '🌐 ALL (Global)' : gymId}
-                    </span>
-                    <span className="text-xs text-gray-400">{rulesByGym[gymId].length} rule{rulesByGym[gymId].length !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="space-y-1 ml-2">
-                    {rulesByGym[gymId].map(rule => (
-                      <div key={rule.id} className="flex items-center justify-between gap-2 p-2.5 bg-gray-50 rounded-lg border text-sm hover:bg-gray-100 transition-colors">
-                        <span className="flex items-center gap-2 flex-wrap">
-                          <span className={`font-medium ${
-                            rule.rule_type === 'price' ? 'text-green-700' :
-                            rule.rule_type === 'program_synonym' ? 'text-orange-700' :
-                            'text-purple-700'
-                          }`}>
-                            {rule.rule_type === 'price' ? `$${rule.value}` : rule.value}
-                          </span>
-                          <span className="text-gray-400">=</span>
-                          <span className="text-gray-700">"{rule.label}"</span>
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                            rule.rule_type === 'price' ? 'bg-green-100 text-green-600' :
-                            rule.rule_type === 'program_synonym' ? 'bg-orange-100 text-orange-600' :
-                            'bg-purple-100 text-purple-600'
-                          }`}>
-                            {rule.rule_type === 'program_synonym' ? 'synonym' : rule.rule_type}
-                          </span>
-                          <span className="text-gray-400 text-[10px]">({rule.event_type})</span>
-                        </span>
-                        <button
-                          onClick={() => handleDeleteRule(rule.id)}
-                          className="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors text-sm"
-                          title="Delete this rule"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <span>{rule.value}</span>
           )}
         </div>
+        {rule.label && rule.rule_type !== 'program_synonym' && (
+          <div className="text-xs text-gray-500 mt-0.5">{rule.label}</div>
+        )}
+        {rule.note && (
+          <div className="text-xs text-gray-400 mt-0.5 italic">Note: {rule.note}</div>
+        )}
+      </div>
+      <div className="flex gap-1 flex-shrink-0">
+        <button
+          onClick={() => { setEditingRule(rule); setShowWizard(true); }}
+          className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded text-xs font-medium transition-colors"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => handleDeleteRule(rule.id)}
+          className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded text-xs font-medium transition-colors"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+
+  const Section = ({ title, icon, count, color, children }) => (
+    count > 0 && (
+      <div className={`bg-white rounded-xl border-2 ${color} overflow-hidden`}>
+        <div className={`px-5 py-3 ${color.replace('border', 'bg').replace('-200', '-50')} border-b ${color}`}>
+          <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm">
+            {icon} {title}
+            <span className="text-xs font-normal text-gray-500 bg-white px-2 py-0.5 rounded-full">{count}</span>
+          </h3>
+        </div>
+        <div className="p-3 space-y-2">{children}</div>
+      </div>
+    )
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { v: 'all', l: 'All', c: rules.length },
+            { v: 'permanent', l: 'Permanent', c: rules.filter(r => r.is_permanent).length },
+            { v: 'temporary', l: 'Temporary', c: rules.filter(r => !r.is_permanent && !isExpired(r)).length },
+            { v: 'exceptions', l: 'Exceptions', c: rules.filter(r => r.rule_type === 'exception').length },
+            { v: 'expired', l: 'Expired', c: rules.filter(r => isExpired(r)).length },
+          ].map(f => (
+            <button
+              key={f.v}
+              onClick={() => setFilter(f.v)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filter === f.v ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              {f.l} ({f.c})
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => { setEditingRule(null); setShowWizard(true); }}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-1"
+        >
+          + New Rule
+        </button>
       </div>
 
-      {/* Add New Rule Form */}
-      <div className="bg-white rounded-xl border-2 border-green-200 overflow-hidden">
-        <div className="px-5 py-4 bg-green-50 border-b border-green-200">
-          <h3 className="font-bold text-green-800 flex items-center gap-2">
-            ➕ Add New Rule
-          </h3>
-          <p className="text-xs text-green-600 mt-1">Manually add a validation rule. You can also add rules from the Audit & Review tab.</p>
+      {loadingRules ? (
+        <p className="text-sm text-gray-500 py-8 text-center">Loading rules...</p>
+      ) : rules.length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+          <div className="text-4xl mb-3">📋</div>
+          <div className="text-gray-600 font-medium">No rules yet</div>
+          <div className="text-sm text-gray-400 mt-1">Click "+ New Rule" to create your first validation rule</div>
         </div>
-        <div className="p-5 space-y-4">
-          <div>
-            <span className="text-xs font-semibold text-gray-600 block mb-1">Gym</span>
-            <div className="flex flex-wrap gap-1">
-              <button
-                onClick={() => setNewRuleGym('ALL')}
-                className={`px-2 py-1 rounded text-xs font-medium ${newRuleGym === 'ALL' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-              >
-                ALL (Global)
-              </button>
-              {gymList.map(g => (
-                <button
-                  key={g.id}
-                  onClick={() => setNewRuleGym(g.id)}
-                  className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${newRuleGym === g.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-                >
-                  {g.id}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <span className="text-xs font-semibold text-gray-600 block mb-1">Rule type</span>
-            <div className="flex gap-1">
-              {['price', 'time', 'program_synonym'].map(t => (
-                <button
-                  key={t}
-                  onClick={() => setNewRuleType(t)}
-                  className={`px-3 py-1.5 rounded text-xs font-medium ${newRuleType === t ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-                >
-                  {t === 'program_synonym' ? 'Program Synonym' : t.charAt(0).toUpperCase() + t.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-          {newRuleType !== 'program_synonym' && (
-            <div>
-              <span className="text-xs font-semibold text-gray-600 block mb-1">Program</span>
-              <div className="flex flex-wrap gap-1">
-                {[
-                  { value: 'CAMP', label: 'CAMP' },
-                  { value: 'CLINIC', label: 'CLINIC' },
-                  { value: 'KIDS NIGHT OUT', label: 'KNO' },
-                  { value: 'OPEN GYM', label: 'OPEN GYM' },
-                  { value: 'ALL', label: 'ALL' },
-                ].map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setNewRuleEventType(opt.value)}
-                    className={`px-2 py-1 rounded text-xs font-medium ${newRuleEventType === opt.value ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <input
-              type="text"
-              value={newRuleValue}
-              onChange={(e) => setNewRuleValue(e.target.value)}
-              placeholder={newRuleType === 'price' ? '20' : newRuleType === 'program_synonym' ? 'Gym Fun Friday' : '8:30 AM'}
-              className="px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:outline-none"
-            />
-            <input
-              type="text"
-              value={newRuleLabel}
-              onChange={(e) => setNewRuleLabel(e.target.value)}
-              placeholder={newRuleType === 'program_synonym' ? 'OPEN GYM' : 'Before Care'}
-              className="px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:outline-none"
-            />
-            <button
-              onClick={handleAddRule}
-              className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
-            >
-              + Add Rule
-            </button>
-          </div>
+      ) : (
+        <div className="space-y-4">
+          <Section title="Permanent Rules" icon="🔒" count={permanentRules.length} color="border-blue-200">
+            {permanentRules.map(r => <RuleCard key={r.id} rule={r} />)}
+          </Section>
+
+          <Section title="Temporary Rules" icon="⏱️" count={tempRules.length} color="border-amber-200">
+            {tempRules.map(r => <RuleCard key={r.id} rule={r} />)}
+          </Section>
+
+          <Section title="Event Exceptions" icon="✓" count={exceptions.length} color="border-green-200">
+            {exceptions.map(r => <RuleCard key={r.id} rule={r} />)}
+          </Section>
+
+          <Section title="Expired" icon="📦" count={expiredRules.length} color="border-gray-200">
+            {expiredRules.map(r => <RuleCard key={r.id} rule={r} />)}
+          </Section>
         </div>
-      </div>
+      )}
+
+      {showWizard && (
+        <RuleWizard
+          gyms={gyms}
+          prefill={editingRule || {}}
+          onSave={handleSaveRule}
+          onCancel={() => { setShowWizard(false); setEditingRule(null); }}
+        />
+      )}
     </div>
   );
 }
