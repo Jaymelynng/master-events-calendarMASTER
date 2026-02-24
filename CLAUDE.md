@@ -34,6 +34,8 @@
 | Refactored UI | `src/components/EventsDashboard_REFACTORED.js` (519 lines, modular - NOT yet active) |
 | Sub-components | `src/components/EventsDashboard/` folder |
 | Admin Dashboard | `src/components/AdminDashboard/AdminDashboard.js` |
+| Rule Wizard | `src/components/AdminDashboard/RuleWizard.js` |
+| Email Composer | `src/components/AdminDashboard/EmailComposer.js` |
 | API functions | `src/lib/api.js` |
 | Event comparison | `src/lib/eventComparison.js` |
 | Validation helpers | `src/lib/validationHelpers.js` |
@@ -56,6 +58,19 @@
 - iClass API does NOT provide prices
 - **Camp prices:** `camp_pricing` table (we built this)
 - **Other prices:** `event_pricing` table with `effective_date` support (we built this Feb 2026)
+- **Raw pricing data:** `data/gym-pricing-raw/` has iClassPro enterprise pricing for EST + CCP (all 10 gyms collected)
+
+### Rules System (NEW Feb 23, 2026)
+- **Unified `rules` table** replaces `gym_valid_values`
+- **Rule Wizard** in Gym Rules tab — two flows: Requirement Exception (3 steps) or Validation Rule (5 steps)
+- **Rule types:** valid_price, sibling_price, valid_time, program_synonym, requirement_exception, exception
+- **Requirement status notes** — click missing status on dashboard to track (In Progress / Late / Excused)
+
+### Email System (NEW Feb 23, 2026)
+- **Email Composer** in Admin Dashboard — generate emails for missing events and/or data errors
+- **Open in Outlook** — pre-fills To, CC, Subject, Body in Outlook web compose
+- **Manager contacts** stored in `gyms` table (manager_name, manager_email)
+- Auto-send via Resend or Power Automate planned but not yet configured
 
 ### Admin Access
 - Level 1: Everyone sees calendar
@@ -76,6 +91,10 @@
 | Wrong year in DESCRIPTION | ❌ Not fixed | Only checks title for wrong year, not description |
 | `program_ignore` rule type | ❌ Not built | Can't ignore "open gym" when it's a station name in KNO |
 | `EventsDashboard.js` monolithic | ❌ Not migrated | Refactored version exists but `App.js` still imports the monolithic file |
+| Special Events | ✅ Skipped | All validation skipped for SPECIAL EVENT type |
+| Deleted events auto-archive | ✅ FIXED | `archive_single_event()` function moves to archive on detection |
+| includeDeleted flag broken | ✅ FIXED | Now queries events table directly instead of view |
+| Audit card counts mismatch | ✅ FIXED | Cards now only count active errors matching current filters |
 
 ---
 
@@ -149,4 +168,4 @@ docs/
 
 ---
 
-**Last Updated:** February 23, 2026
+**Last Updated:** February 24, 2026

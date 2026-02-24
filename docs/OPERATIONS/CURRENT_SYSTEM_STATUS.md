@@ -1,6 +1,6 @@
 # Current System Status
 
-**Last Updated:** February 23, 2026
+**Last Updated:** February 24, 2026
 
 ---
 
@@ -36,14 +36,20 @@
 - **Precoded rules** — Hardcoded in Python (`f12_collect_and_import.py`)
 - **Configurable rules** — Per-gym in `gym_valid_values` table (program synonyms, price exceptions, time exceptions)
 
-### Admin Dashboard Tabs (5 tabs)
+### Admin Dashboard Tabs (5 tabs) + Email Button
 | Tab | What It Does |
 |-----|-------------|
 | **Audit & Review** | View validation errors by gym, filter by error type/month/program, dismiss/acknowledge errors, verify accuracy, update prices |
 | **Pricing** | Manage event_pricing (Clinic/KNO/Open Gym with effective dates) and view camp_pricing |
-| **Gym Rules** | Manage per-gym validation rules (program synonyms, valid prices, time exceptions) |
+| **Gym Rules** | Unified rules system: permanent/temporary rules, keyword pricing, sibling pricing, program synonyms, requirement exceptions. 5-step Rule Wizard. |
 | **Change History** | View all CREATE/UPDATE/DELETE audit entries with gym and action filters, pagination, CSV export |
 | **Quick Actions** | Automated Sync, JSON Import, super admin links to Supabase/Railway dashboards |
+| **Email Managers** (button) | Generate emails for managers about missing events and/or data errors. Preview per gym, open directly in Outlook. |
+
+### Main Dashboard Features
+- **Requirement status tracking** — Click any red "Missing" badge to add a status note (In Progress / Late / Excused) with manager response
+- **Requirement exceptions** — Excused gyms show blue "Excused" status instead of red "Missing"
+- **Status notes** — Yellow badges indicate acknowledged missing items with notes visible on hover
 
 ### Export System
 - CSV and JSON export from calendar view
@@ -78,8 +84,12 @@
 | `event_pricing` | Non-camp price lookup (with effective_date) | Per gym/type |
 | `event_audit_log` | All CREATE/UPDATE/DELETE changes | Growing |
 | `sync_log` | Sync progress tracking per gym/type | ~50 |
+| `rules` | Unified validation rules (replaces gym_valid_values) | Variable |
+| `requirement_notes` | Status tracking for missing requirements | Variable |
 
 **Views:** `events_with_gym` (UNION ALL of events + archive), `gym_links_detailed`
+
+**Functions:** `archive_single_event(UUID)` — auto-archives deleted events on detection
 
 ---
 
@@ -128,6 +138,16 @@
 | **Admin audit: missing props in single-gym view** | ✅ Fixed Feb 23 |
 | **Change History: pagination out-of-bounds** | ✅ Fixed Feb 23 |
 | **Canonical DB view file updated with ALL columns** | ✅ Fixed Feb 23 |
+| **Special Events skip all validation** | ✅ Added Feb 23 |
+| **Deleted events auto-archive on detection** | ✅ Added Feb 23 |
+| **Unified rules system (replaces gym_valid_values)** | ✅ Added Feb 23 |
+| **Rule Wizard (permanent/temp, per-gym, keyword, sibling pricing)** | ✅ Added Feb 23 |
+| **Requirement exceptions (excused from monthly requirements)** | ✅ Added Feb 23 |
+| **Requirement status notes (In Progress/Late/Excused)** | ✅ Added Feb 23 |
+| **Email composer (generate + Open in Outlook)** | ✅ Added Feb 23 |
+| **Manager contacts stored in gyms table** | ✅ Added Feb 23 |
+| **iClassPro direct API fully mapped** | ✅ Documented Feb 23 |
+| **Gym pricing data collection started (EST, CCP)** | ✅ Started Feb 23 |
 
 ---
 
@@ -147,12 +167,44 @@ These columns are **never touched by sync/import code**, so markings persist eve
 |------|------|
 | Main UI | `src/components/EventsDashboard.js` (4000+ lines) |
 | Admin Dashboard | `src/components/AdminDashboard/AdminDashboard.js` |
+| Audit & Review | `src/components/AdminDashboard/AdminAuditReview.js` |
+| Gym Rules (unified) | `src/components/AdminDashboard/AdminGymRules.js` |
+| Rule Wizard | `src/components/AdminDashboard/RuleWizard.js` |
+| Email Composer | `src/components/AdminDashboard/EmailComposer.js` |
 | Change History | `src/components/AdminDashboard/AdminChangeHistory.js` |
 | Sync Modal | `src/components/EventsDashboard/SyncModal.js` |
+| Export Modal | `src/components/EventsDashboard/ExportModal.js` |
 | API functions | `src/lib/api.js` |
 | Event comparison | `src/lib/eventComparison.js` |
 | Validation helpers | `src/lib/validationHelpers.js` |
 | Python automation | `automation/f12_collect_and_import.py` |
 | Flask API server | `automation/local_api_server.py` |
 | Auto-archive docs | `docs/OPERATIONS/AUTO_ARCHIVE_SYSTEM.md` |
+| iClassPro API map | `docs/TECHNICAL/ICLASS_DIRECT_API_REFERENCE.md` |
+| Pricing raw data | `data/gym-pricing-raw/` |
 | Full schema | `docs/TECHNICAL/DATABASE_COMPLETE_SCHEMA.md` |
+
+## Rules System
+
+The unified rules system (`rules` table) replaces the old `gym_valid_values` table. All rules are managed through the Rule Wizard in the Gym Rules tab.
+
+**Rule Types:**
+| Type | What it does |
+|------|-------------|
+| `valid_price` | This price is valid for this program at this gym |
+| `sibling_price` | Per-kid pricing (kid 1, kid 2, kid 3) |
+| `valid_time` | This time is valid (e.g., before care at 8:30 AM) |
+| `program_synonym` | This name means a specific program (e.g., "Gym Fun Friday" = KNO) |
+| `requirement_exception` | Gym is excused from a monthly requirement |
+| `exception` | One-time exception for a specific event |
+
+**Rule Wizard asks 2 questions for requirement exceptions:**
+1. Which gym + which requirement?
+2. What month + why?
+
+**Rule Wizard asks 5 questions for validation rules:**
+1. Permanent or temporary?
+2. Which gym(s)?
+3. Which program?
+4. All events or keyword match?
+5. What's the rule?

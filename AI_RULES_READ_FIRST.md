@@ -1,6 +1,6 @@
 # 🚨 AI AGENT - READ THIS ENTIRE FILE FIRST - MANDATORY
 
-**Last Updated**: February 23, 2026  
+**Last Updated**: February 24, 2026  
 **Purpose**: This file contains EVERYTHING an AI needs to know about this system. Read it completely before doing ANYTHING.
 
 > **Quick Start:** Also see `CLAUDE.md` in the root for a condensed 2-minute onboarding guide with session workflow.
@@ -60,24 +60,30 @@
 ## Key Files
 | File | Purpose |
 |------|---------|
-| `src/components/EventsDashboard.js` | Main dashboard UI, modals, buttons |
+| `src/components/EventsDashboard.js` | Main dashboard UI, modals, buttons, requirement status notes |
 | `src/components/AdminDashboard/AdminDashboard.js` | Admin panel (Shift+Click magic wand) |
+| `src/components/AdminDashboard/RuleWizard.js` | Unified rule creation wizard (validation rules + requirement exceptions) |
+| `src/components/AdminDashboard/EmailComposer.js` | Email generation for managers (missing events + data errors) |
 | `automation/f12_collect_and_import.py` | Core Python script - collects events, runs validation |
 | `src/lib/supabase.js` | Supabase client config |
-| `src/lib/api.js` | API functions for database |
+| `src/lib/api.js` | API functions for database (includes rulesApi, requirementNotesApi) |
 | `src/lib/validationHelpers.js` | Error category logic |
 
 ## Database Tables (Supabase)
 | Table | Purpose |
 |-------|---------|
 | `events` | All events (KNO, Clinic, Open Gym, Camp, Special Event) |
-| `gyms` | 10 gymnastics facilities |
+| `events_archive` | Archived/past events + soft-deleted events |
+| `gyms` | 10 gymnastics facilities (includes manager_name, manager_email) |
 | `gym_links` | URLs for each gym's iClassPro pages |
-| `gym_valid_values` | Per-gym validation rules (synonyms, exceptions) |
+| `rules` | Unified validation rules (replaces gym_valid_values) |
+| `gym_valid_values` | Legacy per-gym rules (migrated to rules table) |
 | `camp_pricing` | Source of truth for CAMP prices |
 | `event_pricing` | Source of truth for Clinic, KNO, Open Gym prices (with effective dates) |
 | `event_audit_log` | History of all changes |
 | `sync_log` | Sync progress tracking |
+| `requirement_notes` | Status tracking for missing monthly requirements |
+| `acknowledged_patterns` | Bulk dismiss patterns per gym/event type |
 
 ---
 
