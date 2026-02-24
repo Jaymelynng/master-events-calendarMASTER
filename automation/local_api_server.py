@@ -27,7 +27,18 @@ sys.path.insert(0, str(Path(__file__).parent))
 # For now, let's create a wrapper that calls it
 
 app = Flask(__name__)
-CORS(app)
+
+# CORS: In production (Railway), only allow requests from your calendar app.
+# Locally, allow everything so development isn't annoying.
+ALLOWED_ORIGINS = os.environ.get(
+    'CORS_ORIGINS',
+    'https://teamcalendar.mygymtools.com'
+).split(',')
+
+if os.environ.get('RAILWAY_ENVIRONMENT'):
+    CORS(app, origins=ALLOWED_ORIGINS)
+else:
+    CORS(app)  # Local dev — allow all
 
 # API Key authentication
 API_KEY = os.environ.get('API_KEY', '')  # Get from environment variable
