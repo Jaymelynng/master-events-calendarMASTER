@@ -2308,6 +2308,22 @@ The system will add new events and update any changed events automatically.`;
                   setShowAdminPortal(true);
                 }
               }}
+              onTouchStart={(e) => {
+                const timer = setTimeout(() => {
+                  setShowAdminPortal(true);
+                }, 1500);
+                e.target._longPressTimer = timer;
+              }}
+              onTouchEnd={(e) => {
+                if (e.target._longPressTimer) {
+                  clearTimeout(e.target._longPressTimer);
+                }
+              }}
+              onTouchMove={(e) => {
+                if (e.target._longPressTimer) {
+                  clearTimeout(e.target._longPressTimer);
+                }
+              }}
               style={{
                 background: 'linear-gradient(180deg, #9b7bb8 0%, #8a6ba8 100%)',
                 color: '#ffffff',
@@ -2316,7 +2332,9 @@ The system will add new events and update any changed events automatically.`;
                 borderTopColor: '#b89bd0',
                 borderBottomColor: '#6a4b88',
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                WebkitTouchCallout: 'none',
+                WebkitUserSelect: 'none',
               }}
               className="flex items-center justify-center px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
               title=""
