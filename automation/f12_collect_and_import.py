@@ -6,15 +6,25 @@ Uses Playwright to intercept /camps/{id} detail calls (like the working script)
 
 import asyncio
 import json
+import os
 import re
 import html
 from datetime import datetime, date
 from urllib.request import Request, urlopen
 from playwright.async_api import async_playwright
 
-# Supabase configuration
-SUPABASE_URL = "https://xftiwouxpefchwoxxgpf.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdGl3b3V4cGVmY2h3b3h4Z3BmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2ODc1MjUsImV4cCI6MjA2NjI2MzUyNX0.jQReOgyjYxOaig_IoJv3jhhPzlfumUcn-vkS1yF9hY4"
+# Supabase configuration — read from environment variables (set in Railway / .env)
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_KEY = (
+    os.environ.get('SUPABASE_SERVICE_KEY')
+    or os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+    or os.environ.get('SUPABASE_ANON_KEY')
+)
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("⚠️  WARNING: SUPABASE_URL and/or SUPABASE_SERVICE_KEY not set in environment.")
+    print("   Set them via Railway env vars, or create a .env file in the automation/ folder.")
+    print("   See .env.example in the project root for details.")
 
 # Gym data — loaded from Supabase, with hardcoded fallback for safety
 _GYMS_FALLBACK = {
