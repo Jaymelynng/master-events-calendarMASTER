@@ -99,7 +99,14 @@ export default function AdminGymRules({ gyms }) {
   };
 
   const RuleCard = ({ rule }) => (
-    <div className={`flex items-start justify-between gap-3 p-3 rounded-lg border text-sm transition-colors ${isExpired(rule) ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-200 hover:border-purple-300'}`}>
+    <div 
+      className={`flex items-start justify-between gap-3 p-3.5 rounded-lg text-sm transition-all ${isExpired(rule) ? 'opacity-50' : 'hover:translate-y-[-1px]'}`}
+      style={{ 
+        background: isExpired(rule) ? '#fafafa' : 'white', 
+        boxShadow: isExpired(rule) ? 'none' : '0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+        border: '1px solid rgba(0,0,0,0.06)'
+      }}
+    >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap mb-1">
           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${ruleTypeColor(rule.rule_type)}`}>
@@ -166,11 +173,11 @@ export default function AdminGymRules({ gyms }) {
 
   const Section = ({ title, icon, count, color, children }) => (
     count > 0 && (
-      <div className={`bg-white rounded-xl border-2 ${color} overflow-hidden`}>
-        <div className={`px-5 py-3 ${color.replace('border', 'bg').replace('-200', '-50')} border-b ${color}`}>
+      <div className="rounded-xl overflow-hidden" style={{ background: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div className={`px-5 py-3.5 border-b ${color}`} style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,245,245,0.9))' }}>
           <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm">
             {icon} {title}
-            <span className="text-xs font-normal text-gray-500 bg-white px-2 py-0.5 rounded-full">{count}</span>
+            <span className="text-xs font-normal text-gray-500 px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(0,0,0,0.05)' }}>{count}</span>
           </h3>
         </div>
         <div className="p-3 space-y-2">{children}</div>
@@ -192,7 +199,8 @@ export default function AdminGymRules({ gyms }) {
             <button
               key={f.v}
               onClick={() => setFilter(f.v)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filter === f.v ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filter === f.v ? 'text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+              style={filter === f.v ? { background: 'linear-gradient(135deg, #8b6f6f, #b48f8f)', boxShadow: '0 2px 8px rgba(139,111,111,0.3)' } : { background: 'rgba(0,0,0,0.04)' }}
             >
               {f.l} ({f.c})
             </button>
@@ -200,7 +208,8 @@ export default function AdminGymRules({ gyms }) {
         </div>
         <button
           onClick={() => { setEditingRule(null); setShowWizard(true); }}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-1"
+              className="px-4 py-2 text-white rounded-lg text-sm font-semibold transition-all flex items-center gap-1 hover:translate-y-[-1px]"
+              style={{ background: 'linear-gradient(135deg, #5a9a5a, #6b8e6b)', boxShadow: '0 2px 10px rgba(90,154,90,0.3)' }}
         >
           + New Rule
         </button>

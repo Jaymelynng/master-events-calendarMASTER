@@ -64,7 +64,7 @@ export default function AdminDashboard({
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(180deg, #f8f5f5 0%, #f0ecec 100%)' }}>
       {/* PIN Modal */}
       {showPinModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-70">
@@ -101,66 +101,63 @@ export default function AdminDashboard({
       )}
 
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-md sticky top-0 z-40">
+      <div className="sticky top-0 z-40" style={{ background: 'linear-gradient(135deg, #8b6f6f 0%, #a08080 50%, #b48f8f 100%)', boxShadow: '0 4px 20px rgba(139, 111, 111, 0.3)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Left: Back button + Title */}
             <div className="flex items-center gap-4">
               <button
                 onClick={onClose}
-                className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1"
+                className="px-3 py-1.5 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all flex items-center gap-1"
               >
                 ← Back to Calendar
               </button>
-              <div className="h-6 w-px bg-gray-300"></div>
-              <h1 className="text-xl font-bold text-purple-800 flex items-center gap-2">
+              <div className="h-6 w-px bg-white/20"></div>
+              <h1 className="text-xl font-bold text-white flex items-center gap-2" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
                 🪄 Admin Dashboard
                 {superAdminMode ? (
-                  <span className="text-xs bg-red-100 text-red-700 px-2.5 py-1 rounded-full font-semibold">🔐 Super Admin</span>
+                  <span className="text-xs bg-red-500/20 text-red-100 px-2.5 py-1 rounded-full font-semibold border border-red-400/30">🔐 Super Admin</span>
                 ) : (
-                  <span className="text-xs bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full font-semibold">Admin</span>
+                  <span className="text-xs bg-white/15 text-white/80 px-2.5 py-1 rounded-full font-semibold border border-white/20">Admin</span>
                 )}
               </h1>
             </div>
 
-            {/* Right: Email + Super Admin */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowEmailComposer(true)}
-                className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-1"
+                className="px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5"
+                style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.25)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                onMouseEnter={e => { e.target.style.background = 'rgba(255,255,255,0.25)'; }}
+                onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.15)'; }}
               >
                 ✉️ Email Managers
               </button>
               {superAdminMode ? (
-                <button
-                  onClick={() => setSuperAdminMode(false)}
-                  className="text-red-500 hover:text-red-700 text-sm font-medium px-3 py-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                >
+                <button onClick={() => setSuperAdminMode(false)} className="text-red-200 hover:text-white text-sm font-medium px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors">
                   Exit Super Admin
                 </button>
               ) : (
-                <button
-                  onClick={() => { setShowPinModal(true); setPinInput(''); }}
-                  className="text-gray-400 hover:text-purple-600 text-xl px-2 py-1 hover:bg-purple-50 rounded-lg transition-colors"
-                  title="Super Admin Access (or press *)"
-                >
+                <button onClick={() => { setShowPinModal(true); setPinInput(''); }} className="text-white/50 hover:text-white text-xl px-2 py-1 hover:bg-white/10 rounded-lg transition-colors" title="Super Admin Access (or press *)">
                   🔐
                 </button>
               )}
             </div>
           </div>
 
-          {/* Tab Bar — all 4 tabs visible, scroll on small screens */}
-          <div className="flex gap-0.5 -mb-px overflow-x-auto">
+          <div className="flex gap-1 -mb-px overflow-x-auto pb-0">
             {tabs.filter(t => t.alwaysShow).map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-shrink-0 px-3 py-2.5 text-sm font-medium rounded-t-lg transition-colors border-b-2 whitespace-nowrap ${
+                className={`flex-shrink-0 px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-all whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'border-purple-600 text-purple-700 bg-purple-50 shadow-sm'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300'
+                    ? 'text-gray-800'
+                    : 'text-white/60 hover:text-white/90 hover:bg-white/10'
                 }`}
+                style={activeTab === tab.id ? { 
+                  background: 'linear-gradient(180deg, #f8f5f5 0%, #f0ecec 100%)', 
+                  boxShadow: '0 -2px 10px rgba(0,0,0,0.08)',
+                } : {}}
               >
                 {tab.label}
               </button>

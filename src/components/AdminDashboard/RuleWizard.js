@@ -117,7 +117,10 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
           <div className="space-y-3">
             <button
               onClick={() => setPurpose('requirement')}
-              className="w-full p-5 rounded-xl border-2 border-gray-200 hover:border-purple-400 text-left transition-all hover:shadow-md"
+              className="w-full p-5 rounded-xl text-left transition-all hover:translate-y-[-2px]"
+              style={{ background: 'linear-gradient(135deg, #f8f5ff, #f0ecff)', border: '2px solid rgba(139,111,111,0.15)', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(139,111,111,0.15)'; e.currentTarget.style.borderColor = 'rgba(139,111,111,0.3)'; }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = 'rgba(139,111,111,0.15)'; }}
             >
               <div className="font-bold text-gray-800 text-base">Requirement Exception</div>
               <div className="text-sm text-gray-500 mt-1">A gym is excused from a monthly requirement (clinic, KNO, open gym)</div>
@@ -126,7 +129,10 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
             
             <button
               onClick={() => setPurpose('validation')}
-              className="w-full p-5 rounded-xl border-2 border-gray-200 hover:border-purple-400 text-left transition-all hover:shadow-md"
+              className="w-full p-5 rounded-xl text-left transition-all hover:translate-y-[-2px]"
+              style={{ background: 'linear-gradient(135deg, #f5f8f5, #ecf0ec)', border: '2px solid rgba(107,142,107,0.15)', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(107,142,107,0.15)'; e.currentTarget.style.borderColor = 'rgba(107,142,107,0.3)'; }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = 'rgba(107,142,107,0.15)'; }}
             >
               <div className="font-bold text-gray-800 text-base">Validation Rule</div>
               <div className="text-sm text-gray-500 mt-1">Set a valid price, time, or program name to prevent false errors</div>
