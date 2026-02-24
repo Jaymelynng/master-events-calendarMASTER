@@ -108,7 +108,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
   if (!purpose) {
     return (
       <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-60" onClick={onCancel}>
-        <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="bg-white rounded-none sm:rounded-xl p-4 sm:p-6 w-full sm:max-w-md mx-0 sm:mx-4 shadow-2xl min-h-screen sm:min-h-0 max-h-screen sm:max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
           <div className="flex justify-between items-center mb-5">
             <h3 className="text-lg font-bold text-gray-800">What do you need?</h3>
             <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 text-xl font-bold w-8 h-8 rounded-full flex items-center justify-center">×</button>
@@ -152,9 +152,9 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
   if (purpose === 'requirement') {
     return (
       <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-60" onClick={onCancel}>
-        <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="bg-white rounded-none sm:rounded-xl p-4 sm:p-6 w-full sm:max-w-md mx-0 sm:mx-4 shadow-2xl min-h-screen sm:min-h-0 max-h-screen sm:max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-gray-800">Requirement Exception — Step {reqStep} of 3</h3>
+            <h3 className="text-base sm:text-lg font-bold text-gray-800">Requirement Exception — Step {reqStep} of 3</h3>
             <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 text-xl font-bold w-8 h-8 rounded-full flex items-center justify-center">×</button>
           </div>
           
@@ -302,9 +302,9 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-60" onClick={onCancel}>
-      <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-none sm:rounded-xl p-4 sm:p-6 w-full sm:max-w-lg mx-0 sm:mx-4 shadow-2xl min-h-screen sm:min-h-0 max-h-screen sm:max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-gray-800">Validation Rule — Step {step} of 5</h3>
+          <h3 className="text-base sm:text-lg font-bold text-gray-800">Validation Rule — Step {step} of 5</h3>
           <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 text-xl font-bold w-8 h-8 rounded-full flex items-center justify-center">×</button>
         </div>
 

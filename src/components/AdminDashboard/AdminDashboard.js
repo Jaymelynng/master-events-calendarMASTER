@@ -103,34 +103,35 @@ export default function AdminDashboard({
       {/* Header */}
       <div className="sticky top-0 z-40" style={{ background: 'linear-gradient(135deg, #8b6f6f 0%, #a08080 50%, #b48f8f 100%)', boxShadow: '0 4px 20px rgba(139, 111, 111, 0.3)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between h-auto py-3 sm:h-16 sm:py-0 flex-wrap sm:flex-nowrap gap-2 sm:gap-0">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
               <button
                 onClick={onClose}
-                className="px-3 py-1.5 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all flex items-center gap-1"
+                className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all flex items-center gap-1 flex-shrink-0"
               >
-                ← Back to Calendar
+                ← <span className="hidden sm:inline">Back to Calendar</span><span className="sm:hidden">Back</span>
               </button>
-              <div className="h-6 w-px bg-white/20"></div>
-              <h1 className="text-xl font-bold text-white flex items-center gap-2" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
-                🪄 Admin Dashboard
+              <div className="h-5 w-px bg-white/20 hidden sm:block"></div>
+              <h1 className="text-base sm:text-xl font-bold text-white flex items-center gap-2 truncate" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
+                <span className="hidden sm:inline">🪄 Admin Dashboard</span>
+                <span className="sm:hidden">🪄 Admin</span>
                 {superAdminMode ? (
-                  <span className="text-xs bg-red-500/20 text-red-100 px-2.5 py-1 rounded-full font-semibold border border-red-400/30">🔐 Super Admin</span>
+                  <span className="text-[10px] sm:text-xs bg-red-500/20 text-red-100 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-semibold border border-red-400/30">🔐</span>
                 ) : (
-                  <span className="text-xs bg-white/15 text-white/80 px-2.5 py-1 rounded-full font-semibold border border-white/20">Admin</span>
+                  <span className="text-[10px] sm:text-xs bg-white/15 text-white/80 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-semibold border border-white/20">Admin</span>
                 )}
               </h1>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => setShowEmailComposer(true)}
-                className="px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5"
                 style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.25)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
                 onMouseEnter={e => { e.target.style.background = 'rgba(255,255,255,0.25)'; }}
                 onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.15)'; }}
               >
-                ✉️ Email Managers
+                ✉️ <span className="hidden sm:inline">Email Managers</span><span className="sm:hidden">Email</span>
               </button>
               {superAdminMode ? (
                 <button onClick={() => setSuperAdminMode(false)} className="text-red-200 hover:text-white text-sm font-medium px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors">
@@ -144,12 +145,12 @@ export default function AdminDashboard({
             </div>
           </div>
 
-          <div className="flex gap-1 -mb-px overflow-x-auto pb-0">
+          <div className="flex gap-0.5 sm:gap-1 -mb-px overflow-x-auto pb-0 scrollbar-hide">
             {tabs.filter(t => t.alwaysShow).map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-shrink-0 px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-all whitespace-nowrap ${
+                className={`flex-shrink-0 px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg transition-all whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'text-gray-800'
                     : 'text-white/60 hover:text-white/90 hover:bg-white/10'
@@ -167,7 +168,7 @@ export default function AdminDashboard({
       </div>
 
       {/* Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         {activeTab === 'audit' && (
           <AdminAuditReview gyms={gyms} initialMonth={initialCalendarMonth} />
         )}

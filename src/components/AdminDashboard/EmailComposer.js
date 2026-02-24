@@ -220,7 +220,7 @@ ${data.ogReq} Open Gym${data.ogReq !== 1 ? 's' : ''}
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 overflow-y-auto p-4">
-      <div className="bg-white rounded-xl w-full max-w-4xl my-4 shadow-2xl">
+      <div className="bg-white rounded-none sm:rounded-xl w-full sm:max-w-4xl my-0 sm:my-4 shadow-2xl min-h-screen sm:min-h-0 max-h-screen sm:max-h-[95vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-4 border-b" style={{ backgroundColor: '#faf5f5' }}>
           <div>
@@ -235,7 +235,7 @@ ${data.ogReq} Open Gym${data.ogReq !== 1 ? 's' : ''}
           {step === 1 && (
             <div>
               <h3 className="font-semibold text-gray-700 mb-4">What do you want to send?</h3>
-              <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
                 {[
                   { v: 'missing', l: 'Missing Events', d: 'Which events are missing for the month', icon: '📋' },
                   { v: 'audit', l: 'Data Errors', d: 'Wrong prices, times, dates in their events', icon: '🔍' },
