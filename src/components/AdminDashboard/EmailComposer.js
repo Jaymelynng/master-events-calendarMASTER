@@ -370,6 +370,93 @@ ${data.ogReq} Open Gym${data.ogReq !== 1 ? 's' : ''}
                       style={{ width: '100%', height: '400px', border: 'none' }}
                     />
                   </div>
+
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => {
+                        const subject = encodeURIComponent(generateSubject(previewGym));
+                        const to = encodeURIComponent(previewGym.manager_email || '');
+                        const cc = encodeURIComponent('jgibson@powersgym.com');
+                        const body = encodeURIComponent(
+                          `Hi ${previewGym.manager_name || 'Team'},\n\n` +
+                          (getGymData(previewGym).missing.length > 0 ? 
+                            `I just ran the ${monthName} compliance check and noticed ${previewGym.name} is missing:\n` +
+                            getGymData(previewGym).missing.map(m => `  - ${m.need} more ${m.type}`).join('\n') + '\n\n' +
+                            `Our monthly requirements are ${monthlyRequirements?.['CLINIC'] || 1} Clinic, ${monthlyRequirements?.['KIDS NIGHT OUT'] || 2} KNO, and ${monthlyRequirements?.['OPEN GYM'] || 1} Open Gym.\n\n`
+                          : '') +
+                          (getGymData(previewGym).dataErrors.length > 0 ?
+                            `I also found ${getGymData(previewGym).dataErrors.length} data issue${getGymData(previewGym).dataErrors.length !== 1 ? 's' : ''} that need attention. I'll send details separately.\n\n`
+                          : '') +
+                          (customNote ? customNote + '\n\n' : '') +
+                          `If there's a reason something isn't set up that I should know about, just let me know.\n\nThanks,\nJayme`
+                        );
+                        window.open(`https://outlook.office.com/mail/deeplink/compose?to=${to}&cc=${cc}&subject=${subject}&body=${body}`, '_blank');
+                      }}
+                      className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm"
+                    >
+                      Open in Outlook
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(generateEmailHTML(previewGym));
+                        alert('HTML copied! Paste into an email using "Insert as HTML" or use the Outlook button instead.');
+                      }}
+                      className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
+                    >
+                      Copy HTML
+                    </button>
+                    <button
+                      onClick={() => {
+                        const subject = generateSubject(previewGym);
+                        const to = previewGym.manager_email || '';
+                        navigator.clipboard.writeText(`To: ${to}\nCC: jgibson@powersgym.com\nSubject: ${subject}`);
+                        alert(`Copied!\nTo: ${to}\nSubject: ${subject}`);
+                      }}
+                      className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
+                    >
+                      Copy Details
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {selectedGyms.length > 1 && previewGym && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="text-sm text-blue-800 font-medium mb-2">Quick open all in Outlook:</div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedGyms.map(gymId => {
+                      const gym = gyms.find(g => g.id === gymId);
+                      if (!gym) return null;
+                      return (
+                        <button
+                          key={gymId}
+                          onClick={() => {
+                            const subject = encodeURIComponent(generateSubject(gym));
+                            const to = encodeURIComponent(gym.manager_email || '');
+                            const cc = encodeURIComponent('jgibson@powersgym.com');
+                            const data = getGymData(gym);
+                            const body = encodeURIComponent(
+                              `Hi ${gym.manager_name || 'Team'},\n\n` +
+                              (data.missing.length > 0 ?
+                                `I just ran the ${monthName} compliance check and noticed ${gym.name} is missing:\n` +
+                                data.missing.map(m => `  - ${m.need} more ${m.type}`).join('\n') + '\n\n' +
+                                `Our monthly requirements are ${monthlyRequirements?.['CLINIC'] || 1} Clinic, ${monthlyRequirements?.['KIDS NIGHT OUT'] || 2} KNO, and ${monthlyRequirements?.['OPEN GYM'] || 1} Open Gym.\n\n`
+                              : '') +
+                              (data.dataErrors.length > 0 ?
+                                `I also found ${data.dataErrors.length} data issue${data.dataErrors.length !== 1 ? 's' : ''} that need attention.\n\n`
+                              : '') +
+                              (customNote ? customNote + '\n\n' : '') +
+                              `If there's a reason something isn't set up that I should know about, just let me know.\n\nThanks,\nJayme`
+                            );
+                            window.open(`https://outlook.office.com/mail/deeplink/compose?to=${to}&cc=${cc}&subject=${subject}&body=${body}`, '_blank');
+                          }}
+                          className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          Open {gym.id} →
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -379,11 +466,12 @@ ${data.ogReq} Open Gym${data.ogReq !== 1 ? 's' : ''}
                   onClick={handleSendAll}
                   disabled={sending}
                   className="px-8 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors flex items-center gap-2"
+                  title="Requires Resend or Power Automate setup"
                 >
                   {sending ? (
                     <><span className="animate-spin">⏳</span> Sending...</>
                   ) : (
-                    <>Send {selectedGyms.length} Email{selectedGyms.length !== 1 ? 's' : ''}</>
+                    <>Send {selectedGyms.length} Email{selectedGyms.length !== 1 ? 's' : ''} (Auto)</>
                   )}
                 </button>
               </div>
