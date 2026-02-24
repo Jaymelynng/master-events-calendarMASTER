@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 // Import real API functions
-import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi, gymValidValuesApi, acknowledgedPatternsApi, rulesApi } from '../lib/api';
+import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi, gymValidValuesApi, acknowledgedPatternsApi, rulesApi, requirementNotesApi } from '../lib/api';
 import { gymLinksApi } from '../lib/gymLinksApi';
 import { cachedApi, cache } from '../lib/cache';
 import { supabase } from '../lib/supabase';
@@ -302,6 +302,8 @@ const EventsDashboard = () => {
   const [dismissModalState, setDismissModalState] = useState(null); // { eventId, errorMessage, errorObj, gymId }
   const [gymRules, setGymRules] = useState([]); // Loaded from gym_valid_values for badge display
   const [acknowledgedPatterns, setAcknowledgedPatterns] = useState([]); // Program-wide dismissals — apply everywhere
+  const [requirementNotes, setRequirementNotes] = useState([]);
+  const [noteModal, setNoteModal] = useState(null); // { gymId, gymName, program, month }
   const [newEvent, setNewEvent] = useState({
     gym_id: '',
     title: '',
@@ -384,6 +386,18 @@ const EventsDashboard = () => {
   }, []);
 
   useEffect(() => { loadAcknowledgedPatterns(); }, [loadAcknowledgedPatterns]);
+
+  // Load requirement notes for status tracking
+  const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+  useEffect(() => {
+    const loadNotes = async () => {
+      try {
+        const data = await requirementNotesApi.getByMonth(currentMonthStr);
+        setRequirementNotes(data || []);
+      } catch (err) { console.error('Error loading requirement notes:', err); }
+    };
+    loadNotes();
+  }, [currentMonthStr]);
 
   // Refresh patterns when returning from Admin (they may have added patterns there)
   useEffect(() => {
@@ -1891,6 +1905,74 @@ The system will add new events and update any changed events automatically.`;
       
       {/* Admin Dashboard is now rendered as full-page via early return above */}
 
+      {/* Requirement Status Note Modal */}
+      {noteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setNoteModal(null)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-800">Status Note</h3>
+              <button onClick={() => setNoteModal(null)} className="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+            </div>
+            <div className="text-sm text-gray-600 mb-3">
+              <strong>{noteModal.gymName}</strong> — missing {noteModal.programs?.join(', ')} for {noteModal.month}
+            </div>
+            {noteModal.programs?.map(program => {
+              const existing = requirementNotes.find(n => n.gym_id === noteModal.gymId && n.program === program && n.month === noteModal.month);
+              return (
+                <div key={program} className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="text-xs font-bold text-gray-700 mb-2">{program === 'KIDS NIGHT OUT' ? 'KNO' : program}</div>
+                  <div className="flex gap-2 mb-2">
+                    {['in_progress', 'late', 'excused'].map(s => (
+                      <button
+                        key={s}
+                        onClick={async () => {
+                          const note = document.getElementById(`note-${program}`)?.value || existing?.note || '';
+                          try {
+                            await requirementNotesApi.upsert(noteModal.gymId, program, noteModal.month, s, note);
+                            const updated = await requirementNotesApi.getByMonth(noteModal.month);
+                            setRequirementNotes(updated);
+                          } catch (err) { console.error(err); }
+                        }}
+                        className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                          existing?.status === s
+                            ? s === 'in_progress' ? 'bg-yellow-500 text-white' : s === 'late' ? 'bg-orange-500 text-white' : 'bg-blue-500 text-white'
+                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        }`}
+                      >
+                        {s === 'in_progress' ? 'In Progress' : s === 'late' ? 'Late' : 'Excused'}
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    id={`note-${program}`}
+                    defaultValue={existing?.note || ''}
+                    placeholder="Paste manager's response or add a note..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none h-20 focus:border-purple-400 focus:outline-none"
+                  />
+                  <button
+                    onClick={async () => {
+                      const note = document.getElementById(`note-${program}`)?.value || '';
+                      const status = existing?.status || 'in_progress';
+                      try {
+                        await requirementNotesApi.upsert(noteModal.gymId, program, noteModal.month, status, note);
+                        const updated = await requirementNotesApi.getByMonth(noteModal.month);
+                        setRequirementNotes(updated);
+                      } catch (err) { console.error(err); alert('Failed to save note.'); }
+                    }}
+                    className="mt-2 px-4 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-semibold hover:bg-purple-700 transition-colors"
+                  >
+                    Save Note
+                  </button>
+                </div>
+              );
+            })}
+            <div className="flex justify-end mt-2">
+              <button onClick={() => setNoteModal(null)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Automated Sync Modal */}
       {showSyncModal && (
         <SyncModal
@@ -2598,9 +2680,34 @@ The system will add new events and update any changed events automatically.`;
                                   </span>
                                 );
                               } else {
+                                // Check for status notes on missing items
+                                const hasNotes = stillMissing.some(item => {
+                                  const programName = item.replace(/^\+\d+ /, '');
+                                  const fullProgram = programName === 'KNO' ? 'KIDS NIGHT OUT' : programName;
+                                  return requirementNotes.some(n => n.gym_id === gymId && n.program === fullProgram && n.month === monthStr);
+                                });
+                                const allHaveNotes = stillMissing.every(item => {
+                                  const programName = item.replace(/^\+\d+ /, '');
+                                  const fullProgram = programName === 'KNO' ? 'KIDS NIGHT OUT' : programName;
+                                  return requirementNotes.some(n => n.gym_id === gymId && n.program === fullProgram && n.month === monthStr);
+                                });
+
+                                const noteForDisplay = requirementNotes.find(n => n.gym_id === gymId && n.month === monthStr);
+
                                 return (
-                                  <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white" style={{ backgroundColor: '#c27878' }}>
-                                    {missingItems.join(' • ')}
+                                  <span
+                                    className="font-bold px-3 py-1 rounded-lg shadow-sm text-white cursor-pointer hover:opacity-90 transition-opacity"
+                                    style={{ backgroundColor: allHaveNotes ? '#c9a84c' : hasNotes ? '#c9a84c' : '#c27878' }}
+                                    title={noteForDisplay ? `${noteForDisplay.status}: ${noteForDisplay.note}` : 'Click to add a status note'}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setNoteModal({ gymId, gymName: gym, programs: stillMissing.map(item => {
+                                        const pn = item.replace(/^\+\d+ /, '');
+                                        return pn === 'KNO' ? 'KIDS NIGHT OUT' : pn;
+                                      }), month: monthStr });
+                                    }}
+                                  >
+                                    {allHaveNotes ? '⏳ ' : ''}{stillMissing.join(' • ')}
                                   </span>
                                 );
                               }

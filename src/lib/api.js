@@ -732,3 +732,48 @@ export const acknowledgedPatternsApi = {
     if (error) throw new Error(error.message);
   }
 };
+
+// Requirement Notes API - tracks status of missing requirements
+export const requirementNotesApi = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('requirement_notes')
+      .select('*');
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async getByMonth(month) {
+    const { data, error } = await supabase
+      .from('requirement_notes')
+      .select('*')
+      .eq('month', month);
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async upsert(gymId, program, month, status, note) {
+    const { data, error } = await supabase
+      .from('requirement_notes')
+      .upsert({
+        gym_id: gymId,
+        program: program,
+        month: month,
+        status: status,
+        note: note,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'gym_id,program,month' })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('requirement_notes')
+      .delete()
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+};
