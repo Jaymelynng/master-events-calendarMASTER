@@ -8,13 +8,18 @@ import asyncio
 import json
 import re
 import html
+import os
 from datetime import datetime, date
 from urllib.request import Request, urlopen
 from playwright.async_api import async_playwright
 
-# Supabase configuration
-SUPABASE_URL = "https://xftiwouxpefchwoxxgpf.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmdGl3b3V4cGVmY2h3b3h4Z3BmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2ODc1MjUsImV4cCI6MjA2NjI2MzUyNX0.jQReOgyjYxOaig_IoJv3jhhPzlfumUcn-vkS1yF9hY4"
+# Supabase configuration — reads from environment variables (set in Railway)
+SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
+SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '') or os.environ.get('SUPABASE_KEY', '')
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("[WARN] SUPABASE_URL or SUPABASE_KEY not set in environment variables.")
+    print("[INFO] Gym data will use hardcoded fallback. Sync will still work if called from local_api_server.")
 
 # Gym data — loaded from Supabase, with hardcoded fallback for safety
 _GYMS_FALLBACK = {
