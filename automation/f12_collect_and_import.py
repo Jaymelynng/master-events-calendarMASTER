@@ -1293,11 +1293,11 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     print(f"    [i] COMPLETENESS: Clinic missing skill mention")
         
         # ========== ACCURACY CHECKS (Compare values across sources) ==========
-        # These check if values MATCH when they exist in multiple places
-        # Covers: CAMP, KNO, CLINIC, OPEN GYM
-        # SPECIAL EVENT is excluded — one-off events with no standard pricing or format
+        # Cross-check iClass API data + pricing tables against title/description
+        # Source of truth: iClass API and pricing tables — NEVER manual text
+        # SPECIAL EVENT is excluded — one-off events with no standard format
         
-        if description and event_type != 'SPECIAL EVENT':
+        if event_type != 'SPECIAL EVENT':
             
             # --- DATE VALIDATION: Cross-check iClassPro dates vs description ---
             # SCANS the description to catch manager mistakes (wrong dates in descriptions)
@@ -1387,6 +1387,89 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                             break
             except ValueError:
                 pass  # Invalid date format, skip
+            
+            # --- WRONG DAY NUMBER: Check if title/description has wrong day ---
+            # Catches: "March 7th" in title when event is actually March 28th
+            # Checks BOTH title and description against iClass startDate (and endDate for camps)
+            try:
+                event_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+                end_date_str_for_day = ev.get("endDate") or start_date
+                end_date_obj_for_day = datetime.strptime(end_date_str_for_day, "%Y-%m-%d")
+                
+                # Build set of valid days (for camps: every day between start and end)
+                valid_days = set()
+                d = event_date_obj
+                while d <= end_date_obj_for_day:
+                    valid_days.add((d.month, d.day))
+                    d += __import__('datetime').timedelta(days=1)
+                
+                # Also build month number lookup for month names found in text
+                import calendar as cal_mod
+                month_name_to_num = {}
+                for i in range(1, 13):
+                    month_name_to_num[cal_mod.month_name[i].lower()] = i
+                    month_name_to_num[cal_mod.month_abbr[i].lower()] = i
+                
+                def check_day_numbers_in_text(text, text_label):
+                    """Extract month+day combos from text and check against valid iClass days."""
+                    if not text:
+                        return
+                    txt = text.lower()
+                    
+                    # Pattern 1: "March 7th", "March 7", "Mar 7th", "march 28"
+                    month_day_matches = re.findall(
+                        r'(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?!\s*[-–]\s*\d{1,2}\s*(?:am|pm|a|p)\b)',
+                        txt
+                    )
+                    
+                    for month_str, day_str in month_day_matches:
+                        month_num = month_name_to_num.get(month_str)
+                        if not month_num:
+                            continue
+                        day_num = int(day_str)
+                        if day_num < 1 or day_num > 31:
+                            continue
+                        
+                        # Skip if this month+day is valid
+                        if (month_num, day_num) in valid_days:
+                            continue
+                        
+                        # Only flag if the month IS correct (wrong month is caught separately)
+                        month_is_valid = any(m == month_num for m, _ in valid_days)
+                        if month_is_valid:
+                            validation_errors.append({
+                                "type": "date_mismatch",
+                                "severity": "error",
+                                "category": "data_error",
+                                "message": f"{text_label} says {month_str.title()} {day_num} but iClass date is {event_date_obj.strftime('%B')} {event_date_obj.day}"
+                            })
+                            print(f"    [!] DAY NUMBER MISMATCH: {text_label} says {month_str.title()} {day_num}, iClass says {event_date_obj.strftime('%B')} {event_date_obj.day}")
+                            return
+                    
+                    # Pattern 2: "M/D" format like "3/7" or "03/07"
+                    slash_dates = re.findall(r'(\d{1,2})/(\d{1,2})(?!/\d)', txt)
+                    for m_str, d_str in slash_dates:
+                        m_num = int(m_str)
+                        d_num = int(d_str)
+                        if m_num < 1 or m_num > 12 or d_num < 1 or d_num > 31:
+                            continue
+                        if (m_num, d_num) in valid_days:
+                            continue
+                        month_is_valid = any(m == m_num for m, _ in valid_days)
+                        if month_is_valid:
+                            validation_errors.append({
+                                "type": "date_mismatch",
+                                "severity": "error",
+                                "category": "data_error",
+                                "message": f"{text_label} says {m_num}/{d_num} but iClass date is {event_date_obj.strftime('%B')} {event_date_obj.day}"
+                            })
+                            print(f"    [!] DAY NUMBER MISMATCH: {text_label} says {m_num}/{d_num}, iClass says {event_date_obj.strftime('%B')} {event_date_obj.day}")
+                            return
+                
+                check_day_numbers_in_text(title, "Title")
+                check_day_numbers_in_text(description[:300] if description else None, "Description")
+            except (ValueError, TypeError):
+                pass
             
             # --- WRONG YEAR IN TITLE: Check if title has wrong year ---
             # Catches: "01/17/2025" when event is actually 2026
@@ -1485,7 +1568,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                             print(f"    [OK] Time {title_time_mismatch} is a valid extra time for {gym_id}")
 
                     # Check times in DESCRIPTION
-                    desc_time_mismatch = check_times_in_text(description, "description", char_limit=300)
+                    desc_time_mismatch = check_times_in_text(description, "description", char_limit=300) if description else None
                     if desc_time_mismatch:
                         # Check if this time is an approved extra time for this gym
                         if desc_time_mismatch.lower().strip() not in extra_time_values:
@@ -1517,7 +1600,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             
             # Extract ages from title and description
             title_age = extract_min_age(title, char_limit=200)
-            desc_age = extract_min_age(description, char_limit=300)
+            desc_age = extract_min_age(description, char_limit=300) if description else None
             
             # Check 1: iClass age_min vs Title
             if age_min is not None and title_age is not None:
@@ -1931,7 +2014,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             # --- PRICING VALIDATION ---
             # Extract all prices from title and description
             title_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', title)
-            desc_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', description)
+            desc_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', description) if description else []
             
             # Rule: If price in BOTH title and description, title price must appear somewhere in description
             if title_prices and desc_prices:
