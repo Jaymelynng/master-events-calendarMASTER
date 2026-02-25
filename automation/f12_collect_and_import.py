@@ -1107,16 +1107,19 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         elif description:
             description_status = 'full'
         
-        # ========== SMART VALIDATION (KNO, CLINIC, OPEN GYM only - skip CAMP) ==========
+        # ========== VALIDATION SETUP ==========
         event_type = camp_type_label.upper()
         title_lower = title.lower()
         description_lower = description.lower() if description else ''
         
-        # ========== COMPLETENESS CHECKS (CAMP, KNO, CLINIC, OPEN GYM) ==========
-        # These check if REQUIRED fields EXIST (not just if they're accurate)
-        # SPECIAL EVENT excluded — one-off events with varying formats
+        # NOTE: FORMAT/completeness checks removed — focus is DATA errors only
+        # (wrong info that hurts signups). Format checks can be re-added later.
         
-        if event_type != 'SPECIAL EVENT':
+        # ========== [REMOVED] COMPLETENESS CHECKS ==========
+        # FORMAT checks (missing info) removed to focus on DATA errors (wrong info).
+        # Can be re-enabled later. See git history for the full completeness checks.
+        
+        if False and event_type != 'SPECIAL EVENT':
             
             # --- TITLE COMPLETENESS ---
             
@@ -1679,15 +1682,6 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                           'kno' in description_lower)
                 has_clinic = 'clinic' in description_lower[:100]  # Check start only
                 
-                if not has_kno:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": "KNO event but description doesn't mention 'Kids Night Out' or 'KNO'"
-                    })
-                    print(f"    ⚠️ KNO: Description missing 'Kids Night Out' or 'KNO'")
-                
                 if has_clinic:
                     validation_errors.append({
                         "type": "program_mismatch",
@@ -1706,15 +1700,6 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                           'kid night out' in desc_start_no_apos or 
                           description_lower[:50].startswith('kno'))
                 has_open_gym = description_lower[:100].startswith('open gym')
-                
-                if not has_clinic:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": "CLINIC event but description doesn't mention 'Clinic'"
-                    })
-                    print(f"    ⚠️ CLINIC: Description missing 'Clinic'")
                 
                 if has_kno:
                     validation_errors.append({
@@ -1790,15 +1775,6 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 desc_start_no_apos = description_lower[:100].replace("'", "").replace("'", "")
                 has_kno = ('kids night out' in desc_start_no_apos or 
                           'kid night out' in desc_start_no_apos)
-                
-                if not has_open_gym:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": "OPEN GYM event but description doesn't mention 'Open Gym' or similar"
-                    })
-                    print(f"    ⚠️ OPEN GYM: Description missing 'Open Gym' or similar")
                 
                 if has_clinic:
                     validation_errors.append({
@@ -1957,18 +1933,8 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             title_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', title)
             desc_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', description)
             
-            # Rule: Price MUST be in description
-            if not desc_prices:
-                validation_errors.append({
-                    "type": "missing_price_in_description",
-                    "severity": "warning",
-                    "category": "formatting",
-                    "message": "Price not found in description"
-                })
-                print(f"    ❌ MISSING PRICE: No $ found in description")
-            
             # Rule: If price in BOTH title and description, title price must appear somewhere in description
-            elif title_prices and desc_prices:
+            if title_prices and desc_prices:
                 title_price = float(title_prices[0])
                 desc_price_floats = [float(p) for p in desc_prices]
                 # Title price is valid if it matches ANY price in the description (within $1 tolerance)
