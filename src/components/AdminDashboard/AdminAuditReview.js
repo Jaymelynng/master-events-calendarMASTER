@@ -54,13 +54,10 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Filter to only events with validation issues
+      // Filter to only events with DATA validation errors
       const eventsWithIssues = (data || []).filter(event => {
         const errors = event.validation_errors || [];
-        const realErrors = errors.filter(err => err.type !== 'sold_out');
-        return realErrors.length > 0 ||
-               event.description_status === 'none' ||
-               event.description_status === 'flyer_only';
+        return errors.some(err => err.type !== 'sold_out' && inferErrorCategory(err) === 'data_error');
       });
 
       setEvents(eventsWithIssues);
@@ -113,33 +110,30 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
     return true;
   };
 
-  // Per-gym error summary for dashboard cards (only counts active errors)
+  // Per-gym error summary for dashboard cards (only counts active DATA errors)
   const gymErrorSummary = {};
   preFilteredEvents.forEach(event => {
     const gymId = event.gym_id;
-    if (!gymErrorSummary[gymId]) gymErrorSummary[gymId] = { data: 0, format: 0, eventCount: 0 };
+    if (!gymErrorSummary[gymId]) gymErrorSummary[gymId] = { data: 0, eventCount: 0 };
     gymErrorSummary[gymId].eventCount++;
     const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
     errors.forEach(e => {
       if (!isActiveError(event, e)) return;
       const cat = inferErrorCategory(e);
       if (cat === 'data_error') gymErrorSummary[gymId].data++;
-      else if (cat === 'formatting') gymErrorSummary[gymId].format++;
     });
   });
 
-  // Count active errors for DATA/FORMAT badges
+  // Count active DATA errors
   const counts = preFilteredEvents.reduce((acc, event) => {
     const errors = (event.validation_errors || []).filter(err => err.type !== 'sold_out');
     errors.forEach(e => {
       if (!isActiveError(event, e)) return;
       const cat = inferErrorCategory(e);
       if (cat === 'data_error') acc.data++;
-      else if (cat === 'formatting') acc.format++;
     });
-    if (event.description_status === 'none' || event.description_status === 'flyer_only') acc.desc++;
     return acc;
-  }, { data: 0, format: 0, desc: 0 });
+  }, { data: 0 });
 
   // Now apply category + status filters
   // Status options: active, verified, bugs, resolved, all
@@ -178,20 +172,9 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
     // Bugs = marked as invalid/bug (needs code fix)
     const hasBugs = errors.some(e => matchCategory(e) && isMarkedBug(e.message));
 
-    // Description issues (only show when error type filter is 'all' or 'format')
-    const hasDescIssue = (selectedCategory === 'all' || selectedCategory === 'formatting') &&
-      (errorTypeFilter === 'all' || errorTypeFilter === 'format') &&
-      (event.description_status === 'none' || event.description_status === 'flyer_only');
-    const descMsg = `description:${event.description_status}`;
-    const descVerifiedAccurate = isVerifiedAccurate(descMsg);
-    const descMarkedBug = isMarkedBug(descMsg);
-
-    // For active, exclude description issues that have been verified
-    const hasActiveDescIssue = hasDescIssue && !descVerifiedAccurate && !descMarkedBug;
-
-    if (statusFilter === 'active' && (hasActive || hasActiveDescIssue)) return true;
-    if (statusFilter === 'verified' && (hasVerified || (hasDescIssue && descVerifiedAccurate))) return true;
-    if (statusFilter === 'bugs' && (hasBugs || (hasDescIssue && descMarkedBug))) return true;
+    if (statusFilter === 'active' && hasActive) return true;
+    if (statusFilter === 'verified' && hasVerified) return true;
+    if (statusFilter === 'bugs' && hasBugs) return true;
     if (statusFilter === 'resolved' && hasResolved) return true;
     if (statusFilter === 'all') return true;
     return false;
@@ -546,7 +529,7 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              {selectedCategory === 'data_error' ? 'Data Errors by Gym' : selectedCategory === 'formatting' ? 'Format Issues by Gym' : 'All Issues by Gym'}
+              Data Errors by Gym
             </span>
             <span className="text-xs text-gray-400">
               Click a gym to focus on it
@@ -554,12 +537,12 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {(gyms || []).filter(g => selectedGyms.includes(g.id) || selectedGyms.length === gyms.length).sort((a, b) => {
-              const aErrors = (selectedCategory === 'formatting' ? gymErrorSummary[a.id]?.format : gymErrorSummary[a.id]?.data) || 0;
-              const bErrors = (selectedCategory === 'formatting' ? gymErrorSummary[b.id]?.format : gymErrorSummary[b.id]?.data) || 0;
+              const aErrors = gymErrorSummary[a.id]?.data || 0;
+              const bErrors = gymErrorSummary[b.id]?.data || 0;
               return bErrors - aErrors;
             }).map(gym => {
-              const summary = gymErrorSummary[gym.id] || { data: 0, format: 0, eventCount: 0 };
-              const errorCount = selectedCategory === 'formatting' ? summary.format : selectedCategory === 'all' ? summary.data + summary.format : summary.data;
+              const summary = gymErrorSummary[gym.id] || { data: 0, eventCount: 0 };
+              const errorCount = summary.data;
               const hasErrors = errorCount > 0;
               const isOnlyGymSelected = selectedGyms.length === 1 && selectedGyms[0] === gym.id;
               return (
@@ -601,15 +584,8 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
             {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} with issues
             {selectedGyms.length > 1 ? ` across ${selectedGyms.length} gyms` : ''}
           </span>
-          {(counts.data > 0 || counts.format > 0 || counts.desc > 0) && (
-            <div className="flex gap-1.5">
-              {counts.data > 0 && (
-                <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded">{counts.data} DATA</span>
-              )}
-              {(counts.format > 0 || counts.desc > 0) && (
-                <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded">{(counts.format || 0) + (counts.desc || 0)} FORMAT</span>
-              )}
-            </div>
+          {counts.data > 0 && (
+            <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded">{counts.data} DATA ERROR{counts.data !== 1 ? 'S' : ''}</span>
           )}
         </div>
       )}

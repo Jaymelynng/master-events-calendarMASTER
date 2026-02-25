@@ -50,11 +50,8 @@ export default function AdminAuditFilters({
     }
   };
 
-  const formatTotal = (counts.format || 0) + (counts.desc || 0);
   const categoryButtons = [
-    { value: 'all', label: 'ALL', color: 'bg-gray-600', activeColor: 'bg-gray-700' },
-    { value: 'data_error', label: `DATA${counts.data ? ` (${counts.data})` : ''}`, color: 'bg-red-500', activeColor: 'bg-red-600' },
-    { value: 'formatting', label: `FORMAT${formatTotal ? ` (${formatTotal})` : ''}`, color: 'bg-orange-500', activeColor: 'bg-orange-600' },
+    { value: 'data_error', label: `DATA ERRORS${counts.data ? ` (${counts.data})` : ''}`, color: 'bg-red-500', activeColor: 'bg-red-600' },
   ];
 
   return (
@@ -181,7 +178,6 @@ export default function AdminAuditFilters({
                   { value: 'age', label: 'Age' },
                   { value: 'date', label: 'Date' },
                   { value: 'program', label: 'Program' },
-                  { value: 'format', label: 'Missing Info' },
                 ].map(opt => (
                   <button
                     key={opt.value}
