@@ -67,27 +67,21 @@ export function compareEvents(newEvents, existingEvents) {
       });
     } else if (existing && !incoming) {
       // POTENTIALLY DELETED: Exists in database but not in new sync
+
+      // Skip events that are ALREADY soft-deleted — they were already handled
+      // in a previous sync. Without this check, the same event gets re-flagged
+      // as "deleted" on every subsequent sync, creating duplicate audit log entries.
+      if (existing.deleted_at) {
+        return; // Already dealt with, move on
+      }
+
       // ONLY mark as deleted if the event HASN'T STARTED YET
-      // 
-      // IMPORTANT: Use start_date (or date) NOT end_date!
-      // - Multi-day events (camps) may have end_date in the future but have already started
       // - iClassPro removes events once they START (not when they end)
-      // - Once an event starts, it naturally disappears from iClassPro - that's expected
-      // - We should only flag as "deleted" events that haven't begun yet
+      // - Past events naturally disappear — that's expected, not a deletion
       const rawStartDate = existing.start_date || existing.date;
-      // Normalize date format: "2025-12-19T00:00:00.000Z" → "2025-12-19"
       const eventStartDate = rawStartDate ? String(rawStartDate).split('T')[0] : null;
       const hasNotStartedYet = eventStartDate && eventStartDate > todayStr;
-      
-      // DEBUG: Log why events are/aren't being marked as deleted
-      console.log(`🔍 Deleted check for "${(existing.title || '').substring(0, 40)}...":`, {
-        rawStartDate,
-        eventStartDate,
-        todayStr,
-        hasNotStartedYet,
-        willMarkDeleted: hasNotStartedYet
-      });
-      
+
       if (hasNotStartedYet) {
         comparison.deleted.push({
           ...existing,
