@@ -43,6 +43,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   useEffect(() => {
     fetchEventsForDateRange();
     fetchCampPricing();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
 
   const fetchCampPricing = async () => {
@@ -74,6 +75,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     if (includeSyncHistory && syncLog.length === 0) {
       fetchSyncLog();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [includeSyncHistory]);
 
   const fetchEventsForDateRange = async () => {
@@ -144,21 +146,10 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const selectAllTypes = () => { setActivePreset(null); setSelectedTypes([...eventTypes]); };
   const selectNoTypes = () => { setActivePreset(null); setSelectedTypes([]); };
 
-  // Admin unlock for Sync History (hidden feature)
-  const unlockAdmin = () => {
-    const pin = prompt('Enter PIN to unlock Sync History:');
-    if (pin === SUPER_ADMIN_PIN) {
-      setIsAdmin(true);
-      sessionStorage.setItem('export_admin_unlocked', 'true');
-    } else if (pin !== null) {
-      alert('Incorrect PIN');
-    }
-  };
-
-  // Listen for * key to unlock admin
+  // Listen for * key to unlock admin (Sync History access)
   useEffect(() => {
     if (isAdmin) return; // Already unlocked, no need to listen
-    
+
     const handleKeyDown = (e) => {
       if (e.key === '*') {
         const pin = prompt('Enter PIN to unlock Sync History:');
@@ -172,7 +163,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAdmin]);
+  }, [isAdmin, SUPER_ADMIN_PIN]);
 
   // ===== QUICK PRESETS =====
   const applyPreset = (presetName) => {

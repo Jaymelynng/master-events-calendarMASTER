@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import React, { useState } from 'react';
 
 export default function EmailComposer({ gyms, events, monthlyRequirements, currentMonth, currentYear, onClose }) {
   const [selectedGyms, setSelectedGyms] = useState([]);
@@ -171,7 +170,6 @@ ${data.ogReq} Open Gym${data.ogReq !== 1 ? 's' : ''}
   };
 
   const generateSubject = (gym) => {
-    const data = getGymData(gym);
     if (emailType === 'missing') return `${monthName} — Missing Events for ${gym.name}`;
     if (emailType === 'audit') return `${monthName} — Data Audit for ${gym.name}`;
     return `${monthName} — Events Update for ${gym.name}`;
@@ -215,8 +213,6 @@ ${data.ogReq} Open Gym${data.ogReq !== 1 ? 's' : ''}
     setSending(false);
     setStep(4);
   };
-
-  const previewHTML = previewGym ? generateEmailHTML(previewGym) : '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 overflow-y-auto p-4">
