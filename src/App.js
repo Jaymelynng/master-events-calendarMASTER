@@ -1,6 +1,6 @@
 import React from 'react';
 import { Analytics } from '@vercel/analytics/react';
-import EventsDashboard from './components/EventsDashboard';
+import EventsDashboard from './components/EventsDashboard_REFACTORED';
 import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 

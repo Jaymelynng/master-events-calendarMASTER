@@ -777,3 +777,66 @@ export const requirementNotesApi = {
     if (error) throw new Error(error.message);
   }
 };
+
+// Future Plans API - tracks planned features, improvements, and ideas
+export const futurePlansApi = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('future_plans')
+      .select('*')
+      .order('priority_sort', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: false });
+    if (error) {
+      // Fallback ordering if priority_sort column doesn't exist
+      const { data: fallback, error: err2 } = await supabase
+        .from('future_plans')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (err2) throw new Error(err2.message);
+      return fallback || [];
+    }
+    return data || [];
+  },
+
+  async create(plan) {
+    const { data, error } = await supabase
+      .from('future_plans')
+      .insert([{
+        title: plan.title,
+        description: plan.description || null,
+        category: plan.category || 'feature',
+        priority: plan.priority || 'medium',
+        status: plan.status || 'planning',
+        target_area: plan.target_area || null,
+        added_by: plan.added_by || 'manual',
+        notes: plan.notes || null
+      }])
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async update(id, updates) {
+    const updateData = { ...updates, updated_at: new Date().toISOString() };
+    if (updates.status === 'completed' && !updates.completed_at) {
+      updateData.completed_at = new Date().toISOString();
+    }
+    const { data, error } = await supabase
+      .from('future_plans')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('future_plans')
+      .delete()
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+};

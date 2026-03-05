@@ -92,11 +92,7 @@ export default function AdminGymRules({ gyms }) {
     return gymIds.join(', ');
   };
 
-  const formatScope = (rule) => {
-    if (rule.scope === 'keyword' && rule.keyword) return `Title contains "${rule.keyword}"`;
-    if (rule.scope === 'single_event') return 'Single event';
-    return 'All events';
-  };
+  // formatScope removed — was declared but never used in JSX
 
   const RuleCard = ({ rule }) => (
     <div 

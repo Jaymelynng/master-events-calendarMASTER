@@ -17,7 +17,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
   const [importResult, setImportResult] = useState(null);
   const [syncLog, setSyncLog] = useState([]);
   const [showProgress, setShowProgress] = useState(true); // Expanded by default
-  const [forceUpdate, setForceUpdate] = useState(false); // Force re-import even if "same"
+  // forceUpdate state removed — was declared but never read
   const [showAuditPanel, setShowAuditPanel] = useState(false); // Show validation errors panel
   const [dismissingError, setDismissingError] = useState(null); // Track which error is being dismissed
   const [dismissModalState, setDismissModalState] = useState(null); // { event, errorMessage, errorObj, gymId }
@@ -866,9 +866,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
         total: editableEvents.length
       });
       
-      // Reset force update checkbox after successful import
-      setForceUpdate(false);
-
       // Explicitly invalidate cache to ensure fresh data
       // Real-time subscription should also trigger, but this is a safety net
       const { cache } = await import('../../lib/cache');
@@ -1909,7 +1906,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                         setSelectedEventType('');
                         setEditableEvents([]);
                         setComparison(null);
-                        setForceUpdate(false);
                       }}
                       className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition-colors shadow-md"
                     >
@@ -1922,7 +1918,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                         setSelectedGym('');
                         setEditableEvents([]);
                         setComparison(null);
-                        setForceUpdate(false);
                       }}
                       className="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-700 transition-colors shadow-md"
                     >

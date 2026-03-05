@@ -5,6 +5,8 @@ import AdminPricing from './AdminPricing';
 import AdminQuickActions from './AdminQuickActions';
 import AdminChangeHistory from './AdminChangeHistory';
 import EmailComposer from './EmailComposer';
+import AdminFuturePlans from './AdminFuturePlans';
+import AdminAuditRulesReference from './AdminAuditRulesReference';
 
 export default function AdminDashboard({
   gyms,
@@ -60,6 +62,8 @@ export default function AdminDashboard({
     { id: 'pricing', label: '💰 Pricing', alwaysShow: true },
     { id: 'rules', label: '📏 Gym Rules', alwaysShow: true },
     { id: 'history', label: '📜 Change History', alwaysShow: true },
+    { id: 'validations', label: '🔍 Audit Rules', alwaysShow: true },
+    { id: 'plans', label: '📅 Future Plans', alwaysShow: true },
     { id: 'actions', label: '⚡ Quick Actions', alwaysShow: true },
   ];
 
@@ -183,6 +187,14 @@ export default function AdminDashboard({
 
         {activeTab === 'history' && (
           <AdminChangeHistory gyms={gyms} />
+        )}
+
+        {activeTab === 'validations' && (
+          <AdminAuditRulesReference />
+        )}
+
+        {activeTab === 'plans' && (
+          <AdminFuturePlans />
         )}
 
         {activeTab === 'actions' && (
