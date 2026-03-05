@@ -1394,7 +1394,25 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     })
                     print(f"    [!] YEAR MISMATCH: Title says {title_year}, event is {event_year}")
                     break  # Only flag once
-            
+
+            # --- WRONG YEAR IN DESCRIPTION: Check if description has wrong year ---
+            # Catches: copied event from 2025 where description still says "2025"
+            desc_year_matches = re.findall(r'\b(20\d{2})\b', description[:300])
+            for desc_year in desc_year_matches:
+                desc_year_int = int(desc_year)
+                if desc_year_int != event_year:
+                    # For multi-year spanning events (Dec 2025 - Jan 2026), also allow the end year
+                    end_year = end_date_obj.year if end_date_obj else event_year
+                    if desc_year_int != end_year:
+                        validation_errors.append({
+                            "type": "year_mismatch",
+                            "severity": "error",
+                            "category": "data_error",
+                            "message": f"Description says {desc_year} but event is in {event_year}"
+                        })
+                        print(f"    [!] YEAR MISMATCH: Description says {desc_year}, event is {event_year}")
+                        break  # Only flag once
+
             # --- TIME VALIDATION: Compare structured time to title AND description ---
             # Handles all formats: 5:00, 5pm, 5:00pm, 5:00 PM, 5 pm, 5:00 p.m.
             if time_str:

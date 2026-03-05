@@ -36,6 +36,8 @@
 | Admin Dashboard | `src/components/AdminDashboard/AdminDashboard.js` |
 | Rule Wizard | `src/components/AdminDashboard/RuleWizard.js` |
 | Email Composer | `src/components/AdminDashboard/EmailComposer.js` |
+| Future Plans | `src/components/AdminDashboard/AdminFuturePlans.js` |
+| Audit Rules Reference | `src/components/AdminDashboard/AdminAuditRulesReference.js` |
 | API functions | `src/lib/api.js` |
 | Event comparison | `src/lib/eventComparison.js` |
 | Validation helpers | `src/lib/validationHelpers.js` |
@@ -77,6 +79,15 @@
 - Level 2: Shift+Click magic wand → Admin Dashboard
 - Level 3: Press `*` + PIN `1426` → Super Admin (Quick Actions)
 
+### Admin Dashboard Tabs (7 tabs + Email button)
+- **Audit & Review** — View/filter/dismiss validation errors
+- **Pricing** — Manage event_pricing and camp_pricing
+- **Gym Rules** — Rule Wizard, permanent/temporary rules, synonyms, exceptions
+- **Change History** — Audit log with filters and CSV export
+- **Audit Rules** — Reference table of all 48 validation checks, where they live (hardcoded vs database), known gaps
+- **Future Plans** — Track planned features, improvements, ideas (add/edit/delete from UI)
+- **Quick Actions** — Sync, import, super admin tools
+
 ---
 
 ## ⚠️ KNOWN BUGS & GAPS (as of Feb 2026)
@@ -88,7 +99,7 @@
 | Day range false positives | ✅ FIXED | "Monday-Friday", "Monday through Friday" now handled |
 | Export showed single Date column | ✅ FIXED | CSV export now includes Start Date and End Date columns for multi-day events |
 | Sync All cross-type false deletions | ✅ FIXED | Comparison now filters existing events by checkedTypes to prevent cross-type false deletions |
-| Wrong year in DESCRIPTION | ❌ Not fixed | Only checks title for wrong year, not description |
+| Wrong year in DESCRIPTION | ✅ FIXED | Now checks both title AND description for wrong year (first 300 chars) |
 | `program_ignore` rule type | ❌ Not built | Can't ignore "open gym" when it's a station name in KNO |
 | `EventsDashboard.js` monolithic | ❌ Not migrated | Refactored version exists but `App.js` still imports the monolithic file |
 | Special Events | ✅ Skipped | All validation skipped for SPECIAL EVENT type |
@@ -168,4 +179,4 @@ docs/
 
 ---
 
-**Last Updated:** February 24, 2026
+**Last Updated:** March 5, 2026

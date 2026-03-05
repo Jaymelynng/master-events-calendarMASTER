@@ -1,6 +1,6 @@
 # Current System Status
 
-**Last Updated:** February 24, 2026
+**Last Updated:** March 5, 2026
 
 ---
 
@@ -36,13 +36,15 @@
 - **Precoded rules** — Hardcoded in Python (`f12_collect_and_import.py`)
 - **Configurable rules** — Per-gym in `gym_valid_values` table (program synonyms, price exceptions, time exceptions)
 
-### Admin Dashboard Tabs (5 tabs) + Email Button
+### Admin Dashboard Tabs (7 tabs) + Email Button
 | Tab | What It Does |
 |-----|-------------|
 | **Audit & Review** | View validation errors by gym, filter by error type/month/program, dismiss/acknowledge errors, verify accuracy, update prices |
 | **Pricing** | Manage event_pricing (Clinic/KNO/Open Gym with effective dates) and view camp_pricing |
 | **Gym Rules** | Unified rules system: permanent/temporary rules, keyword pricing, sibling pricing, program synonyms, requirement exceptions. 5-step Rule Wizard. |
 | **Change History** | View all CREATE/UPDATE/DELETE audit entries with gym and action filters, pagination, CSV export |
+| **Audit Rules** | Reference table of all 48 validation checks showing what gets compared, severity, source (hardcoded vs database), known gaps. Filterable by section and source type. |
+| **Future Plans** | Track planned features, improvements, bugs, and ideas. Add/edit/delete with category, priority, status, and target area. Both Jayme and AI sessions can add entries. |
 | **Quick Actions** | Automated Sync, JSON Import, super admin links to Supabase/Railway dashboards |
 | **Email Managers** (button) | Generate emails for managers about missing events and/or data errors. Preview per gym, open directly in Outlook. |
 
@@ -86,6 +88,7 @@
 | `sync_log` | Sync progress tracking per gym/type | ~50 |
 | `rules` | Unified validation rules (replaces gym_valid_values) | Variable |
 | `requirement_notes` | Status tracking for missing requirements | Variable |
+| `future_plans` | Planned features, improvements, ideas (Admin Dashboard) | Variable |
 
 **Views:** `events_with_gym` (UNION ALL of events + archive), `gym_links_detailed`
 
@@ -107,7 +110,7 @@
 
 | Issue | Status | Details |
 |-------|--------|---------|
-| Wrong year in DESCRIPTION | ❌ Not fixed | Validation only checks title for wrong year, not description |
+| Wrong year in DESCRIPTION | ✅ Fixed Mar 5 | Now checks both title AND description for wrong year (first 300 chars, handles multi-year spanning events) |
 | `program_ignore` rule type | ❌ Not built | Can't ignore "open gym" when it's a station name in KNO events |
 | EventsDashboard.js monolithic | ❌ Not migrated | Refactored version exists (519 lines) but `App.js` still imports old 4000+ line file. Refactored version has several bugs that must be fixed before activation (see Feb 23 audit). |
 | Flyer-only events | ⚠️ Limitation | Can't validate events that only have an image flyer, no text |
@@ -147,6 +150,10 @@
 | **Email composer (generate + Open in Outlook)** | ✅ Added Feb 23 |
 | **Manager contacts stored in gyms table** | ✅ Added Feb 23 |
 | **iClassPro direct API fully mapped** | ✅ Documented Feb 23 |
+| **Wrong year in DESCRIPTION now validated** | ✅ Fixed Mar 5 |
+| **Audit Rules Reference tab in Admin Dashboard** | ✅ Added Mar 5 |
+| **Future Plans tab in Admin Dashboard** | ✅ Added Mar 5 |
+| **future_plans Supabase table + API** | ✅ Added Mar 5 |
 | **Gym pricing data collection started (EST, CCP)** | ✅ Started Feb 23 |
 
 ---
