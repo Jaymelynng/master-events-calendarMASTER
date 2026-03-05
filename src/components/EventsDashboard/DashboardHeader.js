@@ -262,6 +262,19 @@ export function ActionButtons({
           pointerEvents: 'none'
         }} />
       </button>
+
+      {/* Magic Wand - Admin Dashboard */}
+      <button
+        onClick={(e) => {
+          if (e.shiftKey) {
+            onOpenAdminPortal();
+          }
+        }}
+        className="flex items-center justify-center w-10 h-10 bg-white rounded-lg border-2 border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group opacity-70 hover:opacity-100 hover:scale-105 active:scale-95"
+        title="🔐 Shift+Click for Admin Dashboard"
+      >
+        <span className="text-xl group-hover:scale-125 transition-transform">🪄</span>
+      </button>
     </div>
   );
 }

@@ -324,21 +324,6 @@ const EventsDashboard = () => {
           {/* Calendar View */}
           {viewMode === 'calendar' && (
             <div className="space-y-2">
-              {/* Secret Admin Access Button */}
-              <div className="flex justify-center mb-2">
-                <button
-                  onClick={(e) => {
-                    if (e.shiftKey) {
-                      setShowAdminPortal(true);
-                    }
-                  }}
-                  className="flex items-center justify-center w-8 h-8 bg-white rounded border border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group opacity-70 hover:opacity-100"
-                  title="🔐 Jayme's Command Center"
-                >
-                  <span className="text-lg group-hover:scale-125 transition-transform">🪄</span>
-                </button>
-              </div>
-
               {/* Calendar View Toggle */}
               <CalendarViewToggle
                 calendarView={calendarView}
