@@ -1588,7 +1588,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             
             # First: Check iClass program type vs TITLE keywords
             # This catches: iClass says "CLINIC" but title says "Kids Night Out"
-            kno_title_keywords = ['kids night out', "kid's night out", "kids' night out", 'kno', 'ninja night out']
+            kno_title_keywords = ['kids night out', "kid's night out", "kids' night out", 'kno', 'night out', 'parents night out', 'ninja night out']
             clinic_title_keywords = ['clinic']
             open_gym_title_keywords = ['open gym']
             # Add program_synonym rules from gym_valid_values for dynamic keyword matching
@@ -1669,9 +1669,12 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 # KNO: Must contain "kids night out" (any apostrophe style) or "kno"
                 # Strip apostrophes to handle: Kids Night Out, Kid's Night Out, Kids' Night Out
                 desc_no_apostrophes = description_lower.replace("'", "").replace("'", "").replace("`", "")
-                has_kno = ('kids night out' in desc_no_apostrophes or 
+                has_kno = ('kids night out' in desc_no_apostrophes or
                           'kid night out' in desc_no_apostrophes or
-                          'kno' in description_lower)
+                          'kno' in description_lower or
+                          'night out' in description_lower or
+                          'parents night out' in desc_no_apostrophes or
+                          'ninja night out' in description_lower)
                 has_clinic = 'clinic' in description_lower[:100]  # Check start only
                 
                 if not has_kno:
@@ -1697,9 +1700,12 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 has_clinic = 'clinic' in description_lower
                 # Check for any variation of kids night out
                 desc_start_no_apos = description_lower[:100].replace("'", "").replace("'", "")
-                has_kno = ('kids night out' in desc_start_no_apos or 
-                          'kid night out' in desc_start_no_apos or 
-                          description_lower[:50].startswith('kno'))
+                has_kno = ('kids night out' in desc_start_no_apos or
+                          'kid night out' in desc_start_no_apos or
+                          description_lower[:50].startswith('kno') or
+                          'night out' in desc_start_no_apos or
+                          'parents night out' in desc_start_no_apos or
+                          'ninja night out' in description_lower[:100])
                 has_open_gym = description_lower[:100].startswith('open gym')
                 
                 if not has_clinic:
@@ -1783,9 +1789,12 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 has_clinic = description_lower[:100].startswith('clinic') or 'clinic' in description_lower[:50]
                 # Check for any variation of kids night out
                 desc_start_no_apos = description_lower[:100].replace("'", "").replace("'", "")
-                has_kno = ('kids night out' in desc_start_no_apos or 
-                          'kid night out' in desc_start_no_apos)
-                
+                has_kno = ('kids night out' in desc_start_no_apos or
+                          'kid night out' in desc_start_no_apos or
+                          'night out' in desc_start_no_apos or
+                          'parents night out' in desc_start_no_apos or
+                          'ninja night out' in description_lower[:100])
+
                 if not has_open_gym:
                     validation_errors.append({
                         "type": "program_mismatch",
@@ -1819,9 +1828,11 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 # But if description STARTS with "Clinic" or "Kids Night Out", that's wrong
                 has_clinic_start = description_lower[:50].startswith('clinic')
                 desc_start_no_apos = description_lower[:100].replace("'", "").replace("'", "")
-                has_kno_start = (desc_start_no_apos.startswith('kids night out') or 
+                has_kno_start = (desc_start_no_apos.startswith('kids night out') or
                                 desc_start_no_apos.startswith('kid night out') or
-                                description_lower[:50].startswith('kno '))
+                                description_lower[:50].startswith('kno ') or
+                                desc_start_no_apos.startswith('parents night out') or
+                                desc_start_no_apos.startswith('ninja night out'))
                 
                 if has_clinic_start:
                     validation_errors.append({
@@ -1866,9 +1877,12 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             # Check what program keywords are in the TITLE
             title_no_apos = title_lower.replace("'", "").replace("'", "")
             title_has_clinic = 'clinic' in title_lower
-            title_has_kno = ('kids night out' in title_no_apos or 
+            title_has_kno = ('kids night out' in title_no_apos or
                             'kid night out' in title_no_apos or
-                            title_lower.startswith('kno ') or ' kno ' in title_lower)
+                            title_lower.startswith('kno ') or ' kno ' in title_lower or
+                            'night out' in title_no_apos or
+                            'parents night out' in title_no_apos or
+                            'ninja night out' in title_lower)
             title_has_open_gym = 'open gym' in title_lower
             # Also check program_synonym rules for this gym that map to OPEN GYM
             if not title_has_open_gym:
@@ -1882,9 +1896,12 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             desc_start = description_lower[:150]
             desc_start_no_apos = desc_start.replace("'", "").replace("'", "")
             desc_has_clinic = 'clinic' in desc_start
-            desc_has_kno = ('kids night out' in desc_start_no_apos or 
+            desc_has_kno = ('kids night out' in desc_start_no_apos or
                            'kid night out' in desc_start_no_apos or
-                           desc_start.startswith('kno '))
+                           desc_start.startswith('kno ') or
+                           'night out' in desc_start_no_apos or
+                           'parents night out' in desc_start_no_apos or
+                           'ninja night out' in desc_start)
             desc_has_open_gym = desc_start.startswith('open gym')
             
             # Cross-check: Title says Clinic but Description says KNO

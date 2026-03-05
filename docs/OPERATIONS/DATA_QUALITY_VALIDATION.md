@@ -1,6 +1,6 @@
 # Data Quality Validation System
 
-**Last Updated:** February 5, 2026  
+**Last Updated:** March 5, 2026
 **Status:** ✅ Fully Deployed  
 **Files:** `automation/f12_collect_and_import.py`, `src/components/EventsDashboard.js`, `src/components/EventsDashboard/DismissRuleModal.js`, `src/components/AdminDashboard/AdminAuditReview.js`
 
@@ -77,26 +77,9 @@ This section defines EXACTLY what data is considered "correct" and what gets com
 
 ---
 
-## Current Validation Stats (Full Year 2026)
+## Current Validation Stats
 
-| Check | Count | Severity |
-|-------|-------|----------|
-| Missing time in description | 249 | Warning |
-| Missing age in description | 89 | Warning |
-| Missing price in description | 62 | Error |
-| Missing date/time in description | 55 | Warning |
-| Day mismatch | 50 | Warning |
-| Time mismatch | 47 | Warning |
-| Missing age in title | 24 | Warning |
-| Missing program in description | 21 | Warning |
-| Age mismatch | 13 | Warning |
-| Year mismatch (2025 vs 2026) | 13 | Error |
-| Date mismatch | 7 | Error |
-| Title/description program mismatch | 2 | Error |
-| Program type mismatch | 2 | Warning |
-| Missing program in title | 1 | Warning |
-| Skill mismatch | 1 | Error |
-| Missing date in title | 1 | Warning |
+*Stats are generated dynamically during each sync. Check the Audit & Review tab in Admin Dashboard for current counts. The table below was a snapshot from early Feb 2026 and is no longer maintained here — use the live dashboard instead.*
 
 ## How It Works
 
@@ -199,12 +182,12 @@ For CLINIC events, checks if **title OR description** mentions a specific gymnas
 Checks if title contains the expected program type keyword based on iClassPro category.
 
 **Program Keywords Recognized:**
-| iClass Type | Recognized in Title |
-|-------------|---------------------|
-| OPEN GYM | "open gym", "gym fun", "fun gym", "preschool fun" |
-| KIDS NIGHT OUT | "kids night out", "kid's night out", "kno", "night out" |
-| CLINIC | "clinic" |
-| CAMP | "camp", "day camp", "summer camp", "school year camp" |
+| iClass Type | Hardcoded Keywords | Extended By |
+|-------------|-------------------|-------------|
+| KIDS NIGHT OUT | "kids night out", "kid's night out", "kids' night out", "kno", "night out", "parents night out", "ninja night out" | `program_synonym` rules in `gym_valid_values` |
+| CLINIC | "clinic" | `program_synonym` rules |
+| OPEN GYM | "open gym" (hardcoded); "play and explore the gym", "open to all" (description only) | `program_synonym` rules (e.g., "gym fun friday", "fun gym", "preschool fun" are now database rules, not hardcoded) |
+| CAMP | "camp" | `program_synonym` rules |
 
 **Example Violation:**
 - iClass Type: CAMP
@@ -610,10 +593,30 @@ If you dismissed something by mistake:
 
 ---
 
+## What Is NOT Validated
+
+The audit system is a **data cross-reference engine**. It compares structured API data against text and pricing tables. It does NOT include:
+
+| Gap | Details |
+|-----|---------|
+| **Spelling/typos** | No spell check — "Sumemr Camp" passes without error |
+| **Grammar/punctuation** | No grammar validation |
+| **Naming consistency** | Same gym using 3 different names for same event type is not flagged |
+| **Year in description** | Only title is checked for wrong year (known gap) |
+| **Camp day sequences** | Does not verify camps run consecutive days |
+| **Max age** | Only min age compared — managers often use "Ages 5+" |
+
+For the complete technical specification of every check, see `AUDIT_DATA_ERROR_REFERENCE.md`.
+
+---
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
+| Mar 5, 2026 | **FIXED** KNO keyword lists synced across all 7 code locations — `parents night out`, `night out`, `ninja night out` now recognized everywhere (were only in completeness check before) |
+| Mar 5, 2026 | **UPDATED** Open Gym keywords clarified — `gym fun`, `fun gym`, `preschool fun` are now database rules (program_synonym), not hardcoded |
+| Mar 5, 2026 | **ADDED** "What Is NOT Validated" section documenting system boundaries |
 | Feb 2, 2026 | **NEW** Admin Dashboard Audit & Review tab — bulk review/dismiss errors across gyms with filters |
 | Feb 2, 2026 | **NEW** Program synonym rules — program name variations now managed via database instead of hardcoded |
 | Feb 2, 2026 | **NEW** Global rules (gym_id='ALL') apply to all gyms, merged with gym-specific rules |
