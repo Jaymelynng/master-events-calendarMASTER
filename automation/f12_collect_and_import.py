@@ -1107,182 +1107,11 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         title_lower = title.lower()
         description_lower = description.lower() if description else ''
         
-        # ========== COMPLETENESS CHECKS (CAMP, KNO, CLINIC, OPEN GYM) ==========
-        # These check if REQUIRED fields EXIST (not just if they're accurate)
-        # SPECIAL EVENT excluded — one-off events with varying formats
-        
-        if event_type != 'SPECIAL EVENT':
-            
-            # --- TITLE COMPLETENESS ---
-            
-            # Helper to check if age exists in text
-            def has_age_in_text(text):
-                if not text:
-                    return False
-                txt = text.lower()
-                # Match: "Ages 5", "Age 5", "5+", "5-12", "Students 5+"
-                return bool(re.search(r'ages?\s*\d{1,2}|students?\s*\d{1,2}|\d{1,2}\s*[-–+]|\d{1,2}\s*to\s*\d{1,2}', txt))
-            
-            # Helper to check if date exists in text
-            def has_date_in_text(text):
-                if not text:
-                    return False
-                txt = text.lower()
-                # Match: "January", "Jan", "1/9", "01/09", "9th", etc.
-                months = r'(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)'
-                date_formats = r'(\d{1,2}/\d{1,2}|\d{1,2}(st|nd|rd|th))'
-                return bool(re.search(months + r'|' + date_formats, txt))
-            
-            # Helper to check if time exists in text
-            def has_time_in_text(text):
-                if not text:
-                    return False
-                txt = text.lower()
-                
-                # PRE-CLEAN: Remove patterns that cause false positives
-                # "$62 a day" -> "62 a" matched as time, "Ages 4-13" -> "13 a" matched as time
-                txt = re.sub(r'\$\d+(?:\.\d{2})?\s*(?:a\s+day|a\s+week|/day|/week|per\s+day|per\s+week)', ' ', txt)
-                txt = re.sub(r'ages?\s*\d{1,2}\s*[-–to]+\s*\d{1,2}', ' ', txt)
-                txt = re.sub(r'\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:years?|yrs?)', ' ', txt)
-                # Catch-all: "$50 a" (price followed by "a") but NOT "$50 am" (legitimate time)
-                txt = re.sub(r'\$\d+(?:\.\d{2})?\s+a(?!\s*m)', ' ', txt)
-                
-                # Match many time formats:
-                # - "6:30pm", "6:30 pm", "6pm", "6 pm", "6:30p", "6:30 p.m."
-                # - "6:30a", "6:30 a.m.", "6am", "6 am"  
-                # - "9:00 - 3:00" (colon times, even without am/pm)
-                # - "9-3" followed by context suggesting time (less reliable, so require am/pm nearby)
-                
-                # Pattern 1: Time with am/pm indicator (most reliable)
-                has_ampm_time = bool(re.search(r'\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.|a|p)\b', txt))
-                
-                # Pattern 2: Colon time like "9:00" or "9:00 - 3:00" (even without am/pm)
-                has_colon_time = bool(re.search(r'\d{1,2}:\d{2}', txt))
-                
-                return has_ampm_time or has_colon_time
-            
-            # 1. TITLE: Must have AGE
-            if not has_age_in_text(title):
-                validation_errors.append({
-                    "type": "missing_age_in_title",
-                    "severity": "warning",
-                    "category": "formatting",
-                    "message": "Title missing age (e.g., 'Ages 5+')"
-                })
-                print(f"    [!] COMPLETENESS: Title missing age")
-            
-            # 2. TITLE: Must have DATE
-            if not has_date_in_text(title):
-                validation_errors.append({
-                    "type": "missing_date_in_title",
-                    "severity": "warning",
-                    "category": "formatting",
-                    "message": "Title missing date (e.g., 'January 9th')"
-                })
-                print(f"    [!] COMPLETENESS: Title missing date")
-            
-            # 3. TITLE: Must have PROGRAM TYPE keyword
-            # Per standardization: Theme | Program | Age | Date
-            # Program keywords by type
-            def has_program_type_in_text(text, etype):
-                txt = text.lower()
-                txt_no_apos = txt.replace("'", "").replace("'", "")
+        # ========== COMPLETENESS CHECKS — REMOVED ==========
+        # FORMAT checks (missing age/date/time/program/skill in title/description)
+        # were removed to focus on DATA errors which directly impact sales.
+        # Will be re-added as a configurable feature (per-gym toggles via rules table).
 
-                # First check gym_valid_values for program_synonym rules for this gym
-                synonym_rules = get_rules_for_gym(gym_id, event_type).get('program_synonym', [])
-                for rule in synonym_rules:
-                    keyword = rule.get('value', '').lower()
-                    target_type = rule.get('label', '').upper()
-                    if keyword and keyword in txt and target_type == etype:
-                        return True
-
-                if etype == 'KIDS NIGHT OUT':
-                    return ('kids night out' in txt_no_apos or 'kid night out' in txt_no_apos or
-                            'kno' in txt or 'night out' in txt or 'parents night out' in txt_no_apos or
-                            'ninja night out' in txt)
-                elif etype == 'CLINIC':
-                    return 'clinic' in txt
-                elif etype == 'OPEN GYM':
-                    return 'open gym' in txt
-                elif etype == 'CAMP':
-                    return 'camp' in txt
-                return True  # Unknown types pass
-            
-            if not has_program_type_in_text(title, event_type):
-                validation_errors.append({
-                    "type": "missing_program_in_title",
-                    "severity": "warning",
-                    "category": "formatting",
-                    "message": f"Title missing program type (should include '{event_type.title()}' or similar)"
-                })
-                print(f"    [!] COMPLETENESS: Title missing program type '{event_type}'")
-            
-            # --- DESCRIPTION COMPLETENESS ---
-            
-            if description:
-                # 3. DESCRIPTION: Must have AGE
-                if not has_age_in_text(description):
-                    validation_errors.append({
-                        "type": "missing_age_in_description",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": "Description missing age"
-                    })
-                    print(f"    [!] COMPLETENESS: Description missing age")
-                
-                # 4. DESCRIPTION: Must have DATE or TIME
-                if not has_date_in_text(description) and not has_time_in_text(description):
-                    validation_errors.append({
-                        "type": "missing_datetime_in_description",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": "Description missing date/time"
-                    })
-                    print(f"    [!] COMPLETENESS: Description missing date/time")
-                
-                # 5. DESCRIPTION: Must have TIME (required per standardization doc)
-                # EXCEPTION: Camps can use "Full Day" or "Half Day" instead of specific times
-                has_camp_time_format = event_type == 'CAMP' and ('full day' in description_lower or 'half day' in description_lower)
-                if not has_time_in_text(description) and not has_camp_time_format:
-                    validation_errors.append({
-                        "type": "missing_time_in_description",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": "Description missing specific time (e.g., '6:30pm')"
-                    })
-                    print(f"    [!] COMPLETENESS: Description missing time")
-                
-                # 6. DESCRIPTION: Must have PROGRAM TYPE keyword
-                if not has_program_type_in_text(description, event_type):
-                    validation_errors.append({
-                        "type": "missing_program_in_description",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": f"Description missing program type (should mention '{event_type.title()}' or similar)"
-                    })
-                    print(f"    [!] COMPLETENESS: Description missing program type '{event_type}'")
-            
-            # --- PROGRAM-SPECIFIC COMPLETENESS ---
-            
-            # CLINIC: Should mention skill in description
-            if event_type == 'CLINIC' and description:
-                # Comprehensive skills list - check in BOTH title and description
-                skills = ['cartwheel', 'back handspring', 'backhandspring', 'handstand', 'tumbling', 
-                         'bars', 'pullover', 'pullovers', 'front flip', 'roundoff', 'backbend', 
-                         'ninja', 'cheer', 'beam', 'vault', 'floor', 'trampoline', 'tumbl', 'bridge', 
-                         'kickover', 'walkover', 'flip flop', 'flip-flop', 'back walkover', 'front walkover']
-                # Check description OR title for skill (skill in title is sufficient context)
-                has_skill_in_desc = any(skill in description_lower for skill in skills)
-                has_skill_in_title = any(skill in title_lower for skill in skills)
-                has_skill = has_skill_in_desc or has_skill_in_title
-                if not has_skill:
-                    validation_errors.append({
-                        "type": "clinic_missing_skill",
-                        "severity": "info",
-                        "category": "formatting",
-                        "message": "Clinic description doesn't mention specific skill"
-                    })
-                    print(f"    [i] COMPLETENESS: Clinic missing skill mention")
         
         # ========== ACCURACY CHECKS (Compare values across sources) ==========
         # These check if values MATCH when they exist in multiple places
@@ -1987,18 +1816,8 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             title_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', title)
             desc_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', description)
             
-            # Rule: Price MUST be in description
-            if not desc_prices:
-                validation_errors.append({
-                    "type": "missing_price_in_description",
-                    "severity": "warning",
-                    "category": "formatting",
-                    "message": "Price not found in description"
-                })
-                print(f"    ❌ MISSING PRICE: No $ found in description")
-            
             # Rule: If price in BOTH title and description, title price must appear somewhere in description
-            elif title_prices and desc_prices:
+            if title_prices and desc_prices:
                 title_price = float(title_prices[0])
                 desc_price_floats = [float(p) for p in desc_prices]
                 # Title price is valid if it matches ANY price in the description (within $1 tolerance)
@@ -2117,8 +1936,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                                     "message": f"{event_type} price {found_str} doesn't match expected price for {gym_id}. Valid: {valid_str}"
                                 })
                                 print(f"    ❌ {event_type} PRICE: Expected {valid_str} not found for {gym_id}. Found in text: {found_str}")
-                        # else: No prices found in text at all — already caught by
-                        # missing_price_in_description (FORMAT error). No need to double-flag.
+                        # else: No prices found in text at all — no price to validate.
         
         # ========== AVAILABILITY INFO ==========
         # NOTE: Sold out is NOT a validation error - it's informational status
@@ -2207,13 +2025,11 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             
             # Count by category
             data_errors = sum(1 for e in all_errors if e.get("category") == "data_error")
-            format_errors = sum(1 for e in all_errors if e.get("category") == "formatting")
             status_errors = sum(1 for e in all_errors if e.get("category") == "status")
             
             print(f"\n{'='*60}")
             print(f"📊 VALIDATION SUMMARY: {len(processed)} events checked, {len(all_errors)} total errors found")
             print(f"   🚨 DATA errors (wrong info): {data_errors}")
-            print(f"   ⚠️  FORMAT errors (missing info): {format_errors}")
             print(f"   ℹ️  STATUS errors: {status_errors}")
             print(f"   Breakdown by type:")
             for err_type, count in sorted(error_counts.items(), key=lambda x: -x[1]):
