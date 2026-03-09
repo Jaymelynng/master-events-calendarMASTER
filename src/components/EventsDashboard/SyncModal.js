@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Loader, CheckCircle, XCircle } from 'lucide-react';
-import { eventsApi, syncLogApi, auditLogApi, gymValidValuesApi } from '../../lib/api';
+import { eventsApi, syncLogApi, auditLogApi, rulesApi } from '../../lib/api';
 import { isErrorAcknowledgedAnywhere, inferErrorCategory } from '../../lib/validationHelpers';
 import { compareEvents } from '../../lib/eventComparison';
 import { supabase } from '../../lib/supabase';
@@ -2091,12 +2091,16 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
             if (ruleInfo && gymId) {
               try {
                 const isProgramSynonym = ruleInfo.ruleType === 'program_synonym';
-                await gymValidValuesApi.create({
-                  gym_id: gymId,
-                  rule_type: ruleInfo.ruleType,
+                const ruleTypeMap = { 'price': 'valid_price', 'time': 'valid_time', 'program_synonym': 'program_synonym' };
+                await rulesApi.create({
+                  is_permanent: true,
+                  gym_ids: [gymId],
+                  program: isProgramSynonym ? label.toUpperCase() : 'CAMP',
+                  scope: 'all_events',
+                  rule_type: ruleTypeMap[ruleInfo.ruleType] || ruleInfo.ruleType,
                   value: isProgramSynonym ? ruleInfo.value.toLowerCase() : ruleInfo.value,
                   label: label,
-                  event_type: isProgramSynonym ? label.toUpperCase() : 'CAMP'
+                  created_by: 'dismiss'
                 });
                 const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
                 alert(`Rule saved! "${displayValue}" is now valid for ${gymId} (${label}).`);

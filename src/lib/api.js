@@ -487,8 +487,9 @@ export const auditLogApi = {
   }
 };
 
-// Gym Valid Values API - per-gym rules for valid prices, times, etc.
-// These prevent false positive validation errors (e.g. $20 aftercare, 8:30am early dropoff)
+// DEPRECATED: Use rulesApi instead. This API targets the old gym_valid_values table.
+// All code has been migrated to use the unified `rules` table.
+// Kept temporarily for backward compatibility — safe to remove once gym_valid_values table is dropped.
 export const gymValidValuesApi = {
   async getAll() {
     const { data, error } = await supabase

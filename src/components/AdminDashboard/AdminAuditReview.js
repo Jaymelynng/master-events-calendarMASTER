@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { gymValidValuesApi, acknowledgedPatternsApi, eventPricingApi, campPricingApi } from '../../lib/api';
+import { rulesApi, acknowledgedPatternsApi, eventPricingApi, campPricingApi } from '../../lib/api';
 import { inferErrorCategory, isErrorAcknowledged, matchesAcknowledgedPattern, canAddAsRule, extractRuleValue, matchesErrorTypeFilter } from '../../lib/validationHelpers';
 import AdminAuditFilters from './AdminAuditFilters';
 import AdminAuditErrorCard from './AdminAuditErrorCard';
@@ -283,12 +283,16 @@ export default function AdminAuditReview({ gyms, initialMonth }) {
     try {
       const isProgramSynonym = ruleInfo.ruleType === 'program_synonym';
       const eventType = ruleEventType || event?.type || 'CAMP';
-      await gymValidValuesApi.create({
-        gym_id: gymId,
-        rule_type: ruleInfo.ruleType,
+      const ruleTypeMap = { 'price': 'valid_price', 'time': 'valid_time', 'program_synonym': 'program_synonym' };
+      await rulesApi.create({
+        is_permanent: true,
+        gym_ids: [gymId],
+        program: isProgramSynonym ? label.toUpperCase() : eventType,
+        scope: 'all_events',
+        rule_type: ruleTypeMap[ruleInfo.ruleType] || ruleInfo.ruleType,
         value: isProgramSynonym ? ruleInfo.value.toLowerCase() : ruleInfo.value,
         label: label,
-        event_type: isProgramSynonym ? label.toUpperCase() : eventType
+        created_by: 'dismiss'
       });
       ruleCreated = true;
 

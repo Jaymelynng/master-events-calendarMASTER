@@ -2,7 +2,7 @@
 // USE EVENTS DASHBOARD HOOK - All state and logic for the Events Dashboard
 // ============================================================================
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { eventsApi, gymsApi, eventTypesApi, monthlyRequirementsApi, auditLogApi, gymValidValuesApi } from '../../lib/api';
+import { eventsApi, gymsApi, eventTypesApi, monthlyRequirementsApi, auditLogApi, rulesApi } from '../../lib/api';
 import { gymLinksApi } from '../../lib/gymLinksApi';
 import { useRealtimeEvents, useRealtimeGymLinks, useRealtimeGyms } from '../../lib/useRealtimeEvents';
 import { cache } from '../../lib/cache';
@@ -118,7 +118,7 @@ export default function useEventsDashboard() {
           gymsApi.getAll(),
           eventTypesApi.getAll(),
           monthlyRequirementsApi.getAll(),
-          gymValidValuesApi.getAll(),
+          rulesApi.getAll(),
           gymLinksApi.getAllLinksDetailed()
         ]);
 
@@ -252,7 +252,7 @@ export default function useEventsDashboard() {
     return link?.url || null;
   }, [gymsList, gymLinks]);
 
-  // Check if a validation error is matched by a rule
+  // Check if a validation error is matched by a rule (from unified rules table)
   const isMatchedByRule = useCallback((errorMessage, gymId) => {
     if (!gymId || !gymRules.length) return false;
 
@@ -261,12 +261,13 @@ export default function useEventsDashboard() {
     const timeMatch = errorMessage.match(/(\d{1,2}:\d{2}\s*(?:AM|PM)?)/i);
 
     return gymRules.some(rule => {
-      if (rule.gym_id !== gymId && rule.gym_id !== 'ALL') return false;
+      const ruleGymIds = rule.gym_ids || [];
+      if (!ruleGymIds.includes(gymId) && !ruleGymIds.includes('ALL')) return false;
 
-      if (rule.rule_type === 'price' && priceMatch) {
+      if (rule.rule_type === 'valid_price' && priceMatch) {
         return rule.value === priceMatch[1];
       }
-      if (rule.rule_type === 'time' && timeMatch) {
+      if (rule.rule_type === 'valid_time' && timeMatch) {
         return rule.value.toLowerCase() === timeMatch[1].toLowerCase();
       }
       return false;

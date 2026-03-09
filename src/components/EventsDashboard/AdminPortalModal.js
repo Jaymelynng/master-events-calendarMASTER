@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { gymValidValuesApi } from '../../lib/api';
+import { rulesApi } from '../../lib/api';
 
 export default function AdminPortalModal({
   onClose,
@@ -16,7 +16,7 @@ export default function AdminPortalModal({
   const [loadingRules, setLoadingRules] = useState(false);
   // New rule form
   const [newRuleGym, setNewRuleGym] = useState('');
-  const [newRuleType, setNewRuleType] = useState('price');
+  const [newRuleType, setNewRuleType] = useState('valid_price');
   const [newRuleValue, setNewRuleValue] = useState('');
   const [newRuleLabel, setNewRuleLabel] = useState('');
   
@@ -55,7 +55,7 @@ export default function AdminPortalModal({
   const loadRules = async () => {
     setLoadingRules(true);
     try {
-      const data = await gymValidValuesApi.getAll();
+      const data = await rulesApi.getAll();
       setRules(data);
     } catch (err) {
       console.error('Error loading rules:', err);
@@ -66,7 +66,7 @@ export default function AdminPortalModal({
   const handleDeleteRule = async (id) => {
     if (!window.confirm('Delete this rule? The validation check will start flagging this value again on next sync.')) return;
     try {
-      await gymValidValuesApi.delete(id);
+      await rulesApi.delete(id);
       setRules(rules.filter(r => r.id !== id));
     } catch (err) {
       console.error('Error deleting rule:', err);
@@ -81,14 +81,17 @@ export default function AdminPortalModal({
     }
     try {
       // For program synonyms: value = keyword (e.g. "Gym Fun Friday"), label = maps to (e.g. "OPEN GYM")
-      // event_type stores the TARGET program type for synonyms
-      const eventType = newRuleType === 'program_synonym' ? newRuleLabel.trim().toUpperCase() : 'CAMP';
-      const created = await gymValidValuesApi.create({
-        gym_id: newRuleGym,
+      const isProgramSynonym = newRuleType === 'program_synonym';
+      const program = isProgramSynonym ? newRuleLabel.trim().toUpperCase() : 'CAMP';
+      const created = await rulesApi.create({
+        is_permanent: true,
+        gym_ids: [newRuleGym],
+        program: program,
+        scope: 'all_events',
         rule_type: newRuleType,
         value: newRuleValue.trim().toLowerCase(),
         label: newRuleLabel.trim(),
-        event_type: eventType
+        created_by: 'admin_portal'
       });
       setRules([...rules, created]);
       setNewRuleValue('');
@@ -240,21 +243,24 @@ export default function AdminPortalModal({
                           {rules.map(rule => (
                             <div key={rule.id} className="flex items-center justify-between gap-2 p-2 bg-white rounded border text-xs">
                               <span>
-                                <strong className="text-blue-800">{rule.gym_id}</strong>
+                                <strong className="text-blue-800">{(rule.gym_ids || []).join(', ')}</strong>
                                 <span className="mx-1 text-gray-400">|</span>
                                 <span className={`${
-                                  rule.rule_type === 'price' ? 'text-green-700' :
+                                  rule.rule_type === 'valid_price' || rule.rule_type === 'sibling_price' ? 'text-green-700' :
                                   rule.rule_type === 'program_synonym' ? 'text-orange-700' :
                                   'text-purple-700'
                                 }`}>
-                                  {rule.rule_type === 'price' ? `$${rule.value}` : rule.value}
+                                  {rule.rule_type === 'valid_price' || rule.rule_type === 'sibling_price' ? `$${rule.value}` : rule.value}
                                 </span>
                                 <span className="mx-1 text-gray-400">=</span>
                                 <span className="text-gray-700">"{rule.label}"</span>
                                 {rule.rule_type === 'program_synonym' && (
                                   <span className="ml-1 px-1 py-0.5 bg-orange-100 text-orange-600 rounded text-[10px]">synonym</span>
                                 )}
-                                <span className="ml-1 text-gray-400 text-[10px]">({rule.event_type})</span>
+                                {!rule.is_permanent && (
+                                  <span className="ml-1 px-1 py-0.5 bg-yellow-100 text-yellow-600 rounded text-[10px]">temp{rule.end_date ? ` → ${rule.end_date}` : ''}</span>
+                                )}
+                                <span className="ml-1 text-gray-400 text-[10px]">({rule.program || 'ALL'})</span>
                               </span>
                               <button
                                 onClick={() => handleDeleteRule(rule.id)}
@@ -288,15 +294,15 @@ export default function AdminPortalModal({
                             onChange={(e) => setNewRuleType(e.target.value)}
                             className="px-2 py-1.5 border rounded text-xs flex-shrink-0"
                           >
-                            <option value="price">Price</option>
-                            <option value="time">Time</option>
+                            <option value="valid_price">Price</option>
+                            <option value="valid_time">Time</option>
                             <option value="program_synonym">Program Synonym</option>
                           </select>
                           <input
                             type="text"
                             value={newRuleValue}
                             onChange={(e) => setNewRuleValue(e.target.value)}
-                            placeholder={newRuleType === 'price' ? '20' : newRuleType === 'program_synonym' ? 'Gym Fun Friday' : '8:30 AM'}
+                            placeholder={newRuleType === 'valid_price' ? '20' : newRuleType === 'program_synonym' ? 'Gym Fun Friday' : '8:30 AM'}
                             className={`px-2 py-1.5 border rounded text-xs ${newRuleType === 'program_synonym' ? 'w-32' : 'w-20'}`}
                           />
                           <input

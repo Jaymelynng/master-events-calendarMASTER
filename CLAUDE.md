@@ -53,7 +53,7 @@
 - **DATA errors** (red) = something is WRONG (mismatch between sources)
 - **FORMAT errors** (orange) = something is MISSING (required info not found)
 - **Precoded rules** = hardcoded in Python (`f12_collect_and_import.py`)
-- **Configurable rules** = per-gym in `gym_valid_values` table in Supabase
+- **Configurable rules** = unified `rules` table in Supabase (replaced `gym_valid_values` March 2026)
 - **What gets compared:** See `docs/OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md` for the complete comparison table
 
 ### Pricing
@@ -62,10 +62,13 @@
 - **Other prices:** `event_pricing` table with `effective_date` support (we built this Feb 2026)
 - **Raw pricing data:** `data/gym-pricing-raw/` has iClassPro enterprise pricing for EST + CCP (all 10 gyms collected)
 
-### Rules System (NEW Feb 23, 2026)
-- **Unified `rules` table** replaces `gym_valid_values`
+### Rules System (Unified March 2026)
+- **ONE table: `rules`** — Python backend + frontend + Rule Wizard + dismiss flows all use this table
+- **`gym_valid_values` is DEPRECATED** — old table, no longer read or written by any code
 - **Rule Wizard** in Gym Rules tab — two flows: Requirement Exception (3 steps) or Validation Rule (5 steps)
 - **Rule types:** valid_price, sibling_price, valid_time, program_synonym, requirement_exception, exception
+- **Scoping:** all_events, keyword-based, or single_event — rules only affect what they're scoped to
+- **Temporary vs permanent:** Temporary rules auto-expire. Python filters out expired rules during sync
 - **Requirement status notes** — click missing status on dashboard to track (In Progress / Late / Excused)
 
 ### Email System (NEW Feb 23, 2026)
@@ -90,7 +93,7 @@
 
 ---
 
-## ⚠️ KNOWN BUGS & GAPS (as of Feb 2026)
+## ⚠️ KNOWN BUGS & GAPS (as of March 2026)
 
 | Issue | Status | Details |
 |-------|--------|---------|
@@ -100,6 +103,7 @@
 | Export showed single Date column | ✅ FIXED | CSV export now includes Start Date and End Date columns for multi-day events |
 | Sync All cross-type false deletions | ✅ FIXED | Comparison now filters existing events by checkedTypes to prevent cross-type false deletions |
 | Wrong year in DESCRIPTION | ✅ FIXED | Now checks both title AND description for wrong year (first 300 chars) |
+| Two rules tables (`gym_valid_values` + `rules`) | ✅ FIXED | Unified on `rules` table. `gym_valid_values` deprecated. Run migration SQL then drop old table |
 | `program_ignore` rule type | ❌ Not built | Can't ignore "open gym" when it's a station name in KNO |
 | `EventsDashboard.js` monolithic | ❌ Not migrated | Refactored version exists but `App.js` still imports the monolithic file |
 | Special Events | ✅ Skipped | All validation skipped for SPECIAL EVENT type |
@@ -147,7 +151,7 @@ docs/
 
 1. **Don't say "it should work"** — Test it, then say "I tested it and it works"
 2. **Don't skip reading docs** — Jayme spent hours writing them. Read them.
-3. **Don't hardcode values** — Use `gym_valid_values` table for per-gym rules
+3. **Don't hardcode values** — Use the unified `rules` table for per-gym rules (NOT the deprecated `gym_valid_values`)
 4. **Don't assume price comes from iClass** — It doesn't. Check pricing tables.
 5. **Don't make changes without understanding the full system** — Read docs first
 6. **Don't simulate with fake data** — Use actual Supabase data

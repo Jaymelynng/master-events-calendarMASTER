@@ -129,6 +129,15 @@ export default function AdminDashboard({
 
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
+                onClick={onOpenSyncModal}
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded-lg transition-all flex items-center gap-1.5"
+                style={{ background: 'rgba(255,255,255,0.3)', color: 'white', border: '1px solid rgba(255,255,255,0.4)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+                onMouseEnter={e => { e.target.style.background = 'rgba(255,255,255,0.4)'; }}
+                onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.3)'; }}
+              >
+                🔄 Sync
+              </button>
+              <button
                 onClick={() => setShowEmailComposer(true)}
                 className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5"
                 style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.25)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}

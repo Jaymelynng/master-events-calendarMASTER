@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 // Import real API functions
-import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi, gymValidValuesApi, acknowledgedPatternsApi, rulesApi, requirementNotesApi } from '../lib/api';
+import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi, acknowledgedPatternsApi, rulesApi, requirementNotesApi } from '../lib/api';
 import { gymLinksApi } from '../lib/gymLinksApi';
 import { cachedApi, cache } from '../lib/cache';
 import { supabase } from '../lib/supabase';
@@ -352,7 +352,7 @@ const EventsDashboard = () => {
   useEffect(() => {
     const loadGymRules = async () => {
       try {
-        const rules = await gymValidValuesApi.getAll();
+        const rules = await rulesApi.getAll();
         setGymRules(rules || []);
       } catch (err) {
         console.error('Error loading gym rules:', err);
@@ -407,14 +407,15 @@ const EventsDashboard = () => {
   // Helper: check if a dismissed error message matches an existing permanent rule for this gym
   const isMatchedByRule = (errorMessage, gymId) => {
     if (!gymRules.length || !gymId) return false;
-    const rulesForGym = gymRules.filter(r => r.gym_id === gymId);
+    const rulesForGym = gymRules.filter(r =>
+      (r.gym_ids || []).includes(gymId) || (r.gym_ids || []).includes('ALL')
+    );
     return rulesForGym.some(rule => {
-      if (rule.rule_type === 'price') {
+      if (rule.rule_type === 'valid_price') {
         return errorMessage.includes(`$${rule.value}`);
-      } else if (rule.rule_type === 'time') {
+      } else if (rule.rule_type === 'valid_time') {
         return errorMessage.toLowerCase().includes(rule.value.toLowerCase());
       } else if (rule.rule_type === 'program_synonym') {
-        // Program synonym rules match if the error mentions program mismatch/missing
         return errorMessage.toLowerCase().includes('program') &&
                errorMessage.toLowerCase().includes(rule.value.toLowerCase());
       }
@@ -2015,16 +2016,20 @@ The system will add new events and update any changed events automatically.`;
             if (ruleInfo && gymId) {
               try {
                 const isProgramSynonym = ruleInfo.ruleType === 'program_synonym';
-                await gymValidValuesApi.create({
-                  gym_id: gymId,
-                  rule_type: ruleInfo.ruleType,
+                const ruleTypeMap = { 'price': 'valid_price', 'time': 'valid_time', 'program_synonym': 'program_synonym' };
+                await rulesApi.create({
+                  is_permanent: true,
+                  gym_ids: [gymId],
+                  program: isProgramSynonym ? label.toUpperCase() : 'CAMP',
+                  scope: 'all_events',
+                  rule_type: ruleTypeMap[ruleInfo.ruleType] || ruleInfo.ruleType,
                   value: isProgramSynonym ? ruleInfo.value.toLowerCase() : ruleInfo.value,
                   label: label,
-                  event_type: isProgramSynonym ? label.toUpperCase() : 'CAMP'
+                  created_by: 'dismiss'
                 });
                 const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
                 // Refresh gym rules so badge updates immediately
-                try { const updated = await gymValidValuesApi.getAll(); setGymRules(updated || []); } catch (e) {}
+                try { const updated = await rulesApi.getAll(); setGymRules(updated || []); } catch (e) {}
                 alert(`Rule saved! "${displayValue}" is now valid for ${gymId} (${label}).`);
               } catch (ruleErr) {
                 console.error('Error adding rule:', ruleErr);
