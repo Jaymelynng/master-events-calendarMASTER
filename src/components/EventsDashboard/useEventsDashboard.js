@@ -226,12 +226,27 @@ export default function useEventsDashboard() {
 
   // Get gym link URL
   const getGymLinkUrl = useCallback((gymName, linkType) => {
+    // Map display event types to database link_type_id values
+    const linkTypeMap = {
+      'CLINIC': 'skill_clinics',
+      'KIDS NIGHT OUT': 'kids_night_out',
+      'OPEN GYM': 'open_gym',
+      'BOOKING': 'booking',
+      'camps': 'camps',
+      'camps_half': 'camps_half',
+      'camps_summer_full': 'camps_summer_full',
+      'camps_summer_half': 'camps_summer_half',
+      'camps_holiday': 'camps_holiday',
+      'special_events': 'special_events'
+    };
+    const linkTypeId = linkTypeMap[linkType] || linkType;
+
     const gym = gymsList.find(g => g.name === gymName);
     if (!gym) return null;
 
     const link = gymLinks.find(gl =>
       gl.gym_id === gym.id &&
-      (gl.link_type_id === linkType || gl.link_type_id === linkType.toUpperCase())
+      gl.link_type_id === linkTypeId
     );
     return link?.url || null;
   }, [gymsList, gymLinks]);
@@ -295,9 +310,24 @@ export default function useEventsDashboard() {
   // ==================== URL FUNCTIONS ====================
 
   const getAllUrlsForEventType = useCallback((eventType) => {
+    // Map display event types to database link_type_id values
+    const linkTypeMap = {
+      'CLINIC': 'skill_clinics',
+      'KIDS NIGHT OUT': 'kids_night_out',
+      'OPEN GYM': 'open_gym',
+      'BOOKING': 'booking',
+      'camps': 'camps',
+      'camps_half': 'camps_half',
+      'camps_summer_full': 'camps_summer_full',
+      'camps_summer_half': 'camps_summer_half',
+      'camps_holiday': 'camps_holiday',
+      'special_events': 'special_events'
+    };
+    const linkTypeId = linkTypeMap[eventType] || eventType;
+
     const urls = [];
     gymsList.forEach(gym => {
-      const link = gymLinks.find(gl => gl.gym_id === gym.id && gl.link_type_id === eventType);
+      const link = gymLinks.find(gl => gl.gym_id === gym.id && gl.link_type_id === linkTypeId);
       if (link?.url) urls.push(link.url);
     });
     return urls;
@@ -324,8 +354,9 @@ export default function useEventsDashboard() {
     const gym = gymsList.find(g => g.name === gymName);
     if (!gym) return;
 
-    ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM', 'camps', 'camps_half'].forEach(type => {
-      const link = gymLinks.find(gl => gl.gym_id === gym.id && gl.link_type_id === type);
+    // Use database link_type_id values (not display names)
+    ['skill_clinics', 'kids_night_out', 'open_gym', 'camps', 'camps_half'].forEach(linkTypeId => {
+      const link = gymLinks.find(gl => gl.gym_id === gym.id && gl.link_type_id === linkTypeId);
       if (link?.url) urls.push(link.url);
     });
 
