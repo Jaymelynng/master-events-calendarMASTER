@@ -3,6 +3,7 @@
 // ============================================================================
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { eventsApi, gymsApi, eventTypesApi, monthlyRequirementsApi, auditLogApi, gymValidValuesApi } from '../../lib/api';
+import { gymLinksApi } from '../../lib/gymLinksApi';
 import { useRealtimeEvents, useRealtimeGymLinks, useRealtimeGyms } from '../../lib/useRealtimeEvents';
 import { cache } from '../../lib/cache';
 import { defaultMonthlyRequirements } from './constants';
@@ -99,9 +100,7 @@ export default function useEventsDashboard() {
 
   const [gymLinks, setGymLinks] = useState([]);
   useRealtimeGymLinks(() => {
-    import('../../lib/gymLinksApi').then(({ gymLinksApi }) => {
-      gymLinksApi.getAllLinksDetailed().then(setGymLinks);
-    });
+    gymLinksApi.getAllLinksDetailed().then(setGymLinks);
   });
   useRealtimeGyms(() => {
     gymsApi.getAll().then(data => setGymsList(data || []));
@@ -115,16 +114,18 @@ export default function useEventsDashboard() {
     const fetchAllData = async () => {
       setLoading(true);
       try {
-        const [gymsData, typesData, reqsData, rulesData] = await Promise.all([
+        const [gymsData, typesData, reqsData, rulesData, linksData] = await Promise.all([
           gymsApi.getAll(),
           eventTypesApi.getAll(),
           monthlyRequirementsApi.getAll(),
-          gymValidValuesApi.getAll()
+          gymValidValuesApi.getAll(),
+          gymLinksApi.getAllLinksDetailed()
         ]);
 
         setGymsList(gymsData || []);
         setEventTypes(typesData || []);
         setGymRules(rulesData || []);
+        setGymLinks(linksData || []);
 
         // Transform requirements
         if (reqsData && reqsData.length > 0) {
