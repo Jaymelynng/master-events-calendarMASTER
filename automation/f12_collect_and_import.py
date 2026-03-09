@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 """
-F12 Event Collection Script
-Uses Playwright to intercept /camps/{id} detail calls (like the working script)
+Event Collection Script for iClassPro
+======================================
+Collects camp/event data from iClassPro portals for all 10 Rise Athletics gyms.
+
+Two collection methods available (controlled by USE_DIRECT_API env var):
+  - Direct API (default, fast ~5 min): HTTP calls to iClassPro public API
+  - Playwright (fallback, slow ~50 min): Headless browser interception
+
+History:
+  - Original: Playwright browser automation (intercepted /camps/{id} network calls)
+  - March 2026: Added Direct API method — 10x faster, no browser dependency
+  - Playwright code kept as fallback (set USE_DIRECT_API=false to use)
 """
 
 import asyncio
@@ -9,9 +19,19 @@ import json
 import re
 import html
 import os
+import time
 from datetime import datetime, date
 from urllib.request import Request, urlopen
-from playwright.async_api import async_playwright
+from urllib.error import URLError, HTTPError
+
+# Playwright is optional — only needed if USE_DIRECT_API=false
+try:
+    from playwright.async_api import async_playwright
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    async_playwright = None
+    PLAYWRIGHT_AVAILABLE = False
+    print("[INFO] Playwright not installed. Direct API mode only (USE_DIRECT_API=true)")
 
 # Supabase configuration — reads from environment variables (set in Railway)
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
@@ -107,6 +127,289 @@ EVENT_TYPE_ALIASES = {
     "SCHOOL YEAR CAMP": "CAMP",
     "CAMP": "CAMP",
 }
+
+# ============================================================================
+# DIRECT API COLLECTION — Added March 2026
+# ============================================================================
+# Replaces Playwright browser automation with direct HTTP API calls.
+#
+# Old method (Playwright):
+#   Launch headless Chromium → navigate to portal page → wait for Angular app
+#   → intercept /camps/{id} network responses → click pagination buttons
+#   Time: ~10 minutes for all 10 gyms
+#
+# New method (Direct API):
+#   HTTP GET to iClassPro public API endpoints:
+#   1. /{slug}/locations → locationId
+#   2. /{slug}/bookings/{locId} → discover category typeIds
+#   3. /{slug}/camps?typeId={id} → event listings
+#   4. /{slug}/camps/{eventId} → full event detail
+#   Time: ~5 minutes for all 10 gyms
+#
+# Returns the SAME raw event dict format → convert_event_dicts_to_flat() works identically.
+#
+# To switch back to Playwright: set USE_DIRECT_API=false environment variable
+# ============================================================================
+
+USE_DIRECT_API = os.environ.get('USE_DIRECT_API', 'true').lower() in ('true', '1', 'yes')
+
+ICLASSPRO_API_BASE = "https://app.iclasspro.com/api/open/v1"
+
+# Map iClassPro booking category titles to our event types.
+# Categories NOT listed here are SKIPPED (e.g., CAMP AFTER CARE, CAMP BEFORE CARE).
+# To add new categories in the future, just add them here — they'll be collected automatically.
+BOOKING_TITLE_TO_EVENT_TYPE = {
+    'CLINIC': 'CLINIC',
+    'CLINICS': 'CLINIC',
+    'KIDS NIGHT OUT': 'KIDS NIGHT OUT',
+    "KID'S NIGHT OUT": 'KIDS NIGHT OUT',
+    "KIDS' NIGHT OUT": 'KIDS NIGHT OUT',
+    'OPEN GYM': 'OPEN GYM',
+    'OPEN GYMS': 'OPEN GYM',
+    'SCHOOL YEAR CAMP': 'CAMP',
+    'SCHOOL YEAR CAMP - FULL DAY': 'CAMP',
+    'SCHOOL YEAR CAMP - HALF DAY': 'CAMP',
+    'SUMMER CAMP': 'CAMP',
+    'SUMMER CAMP - FULL DAY': 'CAMP',
+    'SUMMER CAMP - HALF DAY': 'CAMP',
+    'EVENTS': 'SPECIAL EVENT',
+    'SPECIAL EVENTS': 'SPECIAL EVENT',
+}
+
+
+def _api_get(url, timeout=15):
+    """Make a GET request to iClassPro public API. Returns parsed JSON or None."""
+    try:
+        req = Request(url)
+        req.add_header('User-Agent', 'TeamCalendar/1.0')
+        with urlopen(req, timeout=timeout) as response:
+            return json.loads(response.read().decode())
+    except HTTPError as e:
+        print(f"  [API] HTTP {e.code}: {url}")
+        return None
+    except URLError as e:
+        print(f"  [API] Network error: {e.reason} — {url}")
+        return None
+    except Exception as e:
+        print(f"  [API] Error: {e} — {url}")
+        return None
+
+
+def _get_location_id_api(slug):
+    """Get the locationId for a gym from iClassPro public API."""
+    url = f"{ICLASSPRO_API_BASE}/{slug}/locations"
+    result = _api_get(url)
+    if result and result.get('data') and len(result['data']) > 0:
+        return result['data'][0].get('id')
+    return None
+
+
+def _get_booking_categories(slug, location_id):
+    """
+    Discover all camp/event categories for a gym via the bookings endpoint.
+    Returns list of {title, typeId, our_event_type} for known event types only.
+    Unknown categories (not in BOOKING_TITLE_TO_EVENT_TYPE) are skipped with a log message.
+    """
+    url = f"{ICLASSPRO_API_BASE}/{slug}/bookings/{location_id}"
+    result = _api_get(url)
+    if not result or not result.get('data'):
+        return []
+
+    categories = []
+    for item in result['data']:
+        if item.get('target') != 'camps':
+            continue
+        params = item.get('targetParams', {})
+        type_id = params.get('typeId')
+        if type_id is None:
+            continue
+
+        title = item.get('title', '').strip()
+        our_type = BOOKING_TITLE_TO_EVENT_TYPE.get(title.upper())
+
+        if our_type:
+            categories.append({
+                'title': title,
+                'typeId': type_id,
+                'our_event_type': our_type,
+            })
+        else:
+            print(f"  [API] Skipping unknown category: '{title}' (typeId={type_id})")
+
+    return categories
+
+
+def _get_event_listing_api(slug, location_id, type_id, limit=50):
+    """Get all events for a category via direct API. Handles pagination."""
+    all_events = []
+    page = 1
+    total_records = None
+
+    while True:
+        url = (f"{ICLASSPRO_API_BASE}/{slug}/camps"
+               f"?locationId={location_id}&typeId={type_id}"
+               f"&limit={limit}&page={page}&sortBy=time")
+        result = _api_get(url)
+        if not result or not result.get('data'):
+            break
+
+        events = result['data']
+        if isinstance(events, list):
+            all_events.extend(events)
+        elif isinstance(events, dict) and events.get('records'):
+            all_events.extend(events['records'])
+            total_records = events.get('totalRecords', 0)
+
+        if total_records is None:
+            total_records = result.get('totalRecords', len(all_events))
+
+        if len(all_events) >= total_records:
+            break
+
+        page += 1
+        time.sleep(0.2)  # Be polite to the API
+
+    return all_events, total_records or len(all_events)
+
+
+def _get_event_detail_api(slug, event_id):
+    """Get full detail for a single event via direct API."""
+    url = f"{ICLASSPRO_API_BASE}/{slug}/camps/{event_id}"
+    result = _api_get(url)
+    if result and result.get('data'):
+        return result['data']
+    return None
+
+
+def _collect_events_direct_api(gym_id, event_type_filter=None):
+    """
+    Collect events for a gym via direct HTTP API calls to iClassPro.
+
+    This replaces the Playwright browser automation approach. Instead of launching
+    a headless browser and intercepting network calls, we call the iClassPro public
+    API directly. Returns the SAME raw event dict format that
+    convert_event_dicts_to_flat() expects — no downstream changes needed.
+
+    Args:
+        gym_id: Gym code (e.g., 'CCP', 'EST')
+        event_type_filter: 'ALL' to collect all types, or specific type like 'CAMP', 'CLINIC'
+
+    Returns:
+        For 'ALL': {'events': {event_type: [raw_dicts]}, 'checked_types': [...]}
+        For single type: [raw_dicts] (same format as old Playwright path)
+    """
+    if gym_id not in GYMS:
+        print(f"[API] Unknown gym ID: {gym_id}")
+        if event_type_filter and event_type_filter != 'ALL':
+            return []
+        return {'events': {}, 'checked_types': []}
+
+    gym = GYMS[gym_id]
+    slug = gym['slug']
+    collect_all = (event_type_filter is None or event_type_filter == 'ALL')
+
+    print(f"\n{'='*60}")
+    print(f"  DIRECT API COLLECTION: {gym['name']} ({gym_id})")
+    print(f"  Mode: {'ALL types' if collect_all else event_type_filter}")
+    print(f"{'='*60}")
+
+    # Step 1: Get locationId
+    print(f"\n  [API] Step 1: Getting location for {slug}...")
+    location_id = _get_location_id_api(slug)
+    if not location_id:
+        print(f"  [API] ❌ Could not get location for {slug}")
+        if not collect_all:
+            return []
+        return {'events': {}, 'checked_types': []}
+    print(f"  [API] Location ID: {location_id}")
+
+    # Step 2: Discover categories automatically from bookings endpoint
+    print(f"  [API] Step 2: Discovering categories...")
+    categories = _get_booking_categories(slug, location_id)
+    if not categories:
+        print(f"  [API] ⚠️ No known categories found")
+        if not collect_all:
+            return []
+        return {'events': {}, 'checked_types': []}
+
+    for cat in categories:
+        print(f"    {cat['title']} → typeId={cat['typeId']} → {cat['our_event_type']}")
+
+    # Filter categories if a specific event type was requested
+    if not collect_all:
+        normalized_filter = EVENT_TYPE_ALIASES.get(event_type_filter, event_type_filter)
+        categories = [c for c in categories if c['our_event_type'] == normalized_filter]
+        if not categories:
+            print(f"  [API] No categories match type '{event_type_filter}'")
+            return []
+
+    # Build checked_types from discovered categories
+    checked_types = sorted(set(c['our_event_type'] for c in categories))
+
+    # Steps 3 & 4: Get event listings and full details for each category
+    all_results = {}  # {event_type: [raw_dicts]}
+    global_seen_ids = set()  # Dedupe across all categories (e.g., SUMMER CAMP + SCHOOL YEAR CAMP)
+
+    for cat in categories:
+        cat_title = cat['title']
+        type_id = cat['typeId']
+        our_type = cat['our_event_type']
+
+        print(f"\n  [API] Step 3: Listing events for '{cat_title}' (typeId={type_id})...")
+        events_list, total_records = _get_event_listing_api(slug, location_id, type_id)
+        print(f"  [API] Found {len(events_list)} events (totalRecords={total_records})")
+
+        if our_type not in all_results:
+            all_results[our_type] = []
+
+        for ev in events_list:
+            event_id = ev.get('id')
+            if not event_id:
+                continue
+            if event_id in global_seen_ids:
+                print(f"    [API] ⏭️ Skipping duplicate {event_id}")
+                continue
+
+            print(f"    [API] Step 4: Detail {event_id} — {ev.get('name', 'Unknown')[:50]}...")
+            detail = _get_event_detail_api(slug, event_id)
+
+            if detail:
+                global_seen_ids.add(event_id)
+                all_results[our_type].append(detail)
+                # Log same debug info as Playwright version for consistency
+                print(f"      [RAW API] minAge={detail.get('minAge')}, maxAge={detail.get('maxAge')}")
+                price_fields = [k for k in detail.keys() if any(
+                    w in k.lower() for w in ['price', 'fee', 'cost', 'amount', 'rate', 'tuition']
+                )]
+                if price_fields:
+                    print(f"      [RAW API] PRICE FIELDS: {price_fields}")
+                    for pk in price_fields:
+                        print(f"        - {pk}: {detail.get(pk)}")
+                # Log all keys on first event per type to see full API response structure
+                if len(all_results[our_type]) == 1:
+                    print(f"      [RAW API] ALL FIELDS IN API RESPONSE: {list(detail.keys())}")
+
+            time.sleep(0.1)  # Be polite to the API
+
+    total = sum(len(evs) for evs in all_results.values())
+    print(f"\n{'='*60}")
+    print(f"  DIRECT API COMPLETE: {total} events across {len(all_results)} types for {gym_id}")
+    print(f"  Checked types: {checked_types}")
+    print(f"{'='*60}\n")
+
+    if collect_all:
+        return {'events': all_results, 'checked_types': checked_types}
+    else:
+        # Single type — return flat list (same as old Playwright _collect_events_from_url)
+        normalized_filter = EVENT_TYPE_ALIASES.get(event_type_filter, event_type_filter)
+        return all_results.get(normalized_filter, [])
+
+
+# ============================================================================
+# PLAYWRIGHT COLLECTION (Original method — kept as fallback)
+# ============================================================================
+# Set USE_DIRECT_API=false to use this path instead of direct API.
+# Requires: pip install playwright && playwright install chromium
 
 # Camp pricing is now fetched from Supabase camp_pricing table
 # Validates Full Day Daily and Full Day Weekly prices only
@@ -678,15 +981,18 @@ async def _collect_events_from_url(gym_id, url):
 
 async def collect_events_via_f12(gym_id, camp_type):
     """
-    Opens the camp listing page and collects JSON from /camps/<id> detail calls.
-    (EXACT same approach as the working script)
-    
-    If camp_type is "CAMP", collects from ALL camp URLs for the gym.
+    Collect events from iClassPro for a gym.
+
+    Routes to either:
+      - Direct API (USE_DIRECT_API=true, default): Fast HTTP calls (~5 min all gyms)
+      - Playwright browser (USE_DIRECT_API=false): Headless Chromium interception (~50 min)
+
+    If camp_type is "CAMP", collects from ALL camp categories.
     If camp_type is "ALL", collects ALL program types for the gym.
-    
+
     Returns:
-        events_raw: list of event dicts (one per event)
-        OR for "ALL": dict of { event_type: [events...] }
+        For single type: list of raw event dicts
+        For "ALL": {'events': {event_type: [events...]}, 'checked_types': [...]}
     """
     # Reset all pricing/rules caches so fresh data is always used
     global GYM_VALID_VALUES, EVENT_PRICING, CAMP_PRICING
@@ -697,6 +1003,20 @@ async def collect_events_via_f12(gym_id, camp_type):
     if gym_id not in GYMS:
         print(f"Unknown gym ID: {gym_id}")
         return [] if camp_type != "ALL" else {}
+
+    # ===== DIRECT API PATH (fast, ~5 min for all 10 gyms) =====
+    # Uses HTTP calls to iClassPro public API — no browser needed
+    if USE_DIRECT_API:
+        print(f"[INFO] Using DIRECT API collection (fast mode)")
+        return _collect_events_direct_api(gym_id, event_type_filter=camp_type)
+
+    # ===== PLAYWRIGHT PATH (slow, ~50 min, kept as fallback) =====
+    # Set USE_DIRECT_API=false to use this path
+    print(f"[INFO] Using PLAYWRIGHT browser collection (fallback mode)")
+    if not PLAYWRIGHT_AVAILABLE:
+        print(f"[ERROR] Playwright is not installed! Install with: pip install playwright && playwright install chromium")
+        print(f"[ERROR] Or set USE_DIRECT_API=true (default) to use the fast direct API method")
+        return [] if camp_type != "ALL" else {'events': {}, 'checked_types': []}
 
     # Special handling for "ALL" - collect ALL program types
     if camp_type == "ALL":

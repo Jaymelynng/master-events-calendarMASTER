@@ -178,9 +178,9 @@ React app (Vercel) sends POST /sync-events
     ↓
 Flask API (Railway) receives request
     ↓
-Playwright opens iClassPro portal
+Direct HTTP API calls to iClassPro (replaced Playwright Mar 2026)
     ↓
-Intercepts JSON responses with event data
+Fetches event listings + details via public API
     ↓
 Extracts: title, date, time, age, description
     ↓
@@ -347,7 +347,7 @@ Admin Dashboard → Quick Actions → "JSON Import (F12 Method)"
 
 ### **Backend Architecture:**
 - **Server**: Flask (Python)
-- **Automation**: Playwright (browser automation)
+- **Automation**: Direct HTTP API to iClassPro (Playwright kept as fallback)
 - **Hosting**: Railway.app
 - **Database**: Supabase PostgreSQL
 - **CORS**: Enabled for Vercel domain
@@ -424,7 +424,7 @@ API_KEY=your-shared-api-key
 | File | Purpose |
 |------|---------|
 | `automation/local_api_server.py` | Flask API server (main entry point) |
-| `automation/f12_collect_and_import.py` | Playwright event collection |
+| `automation/f12_collect_and_import.py` | Event collection via Direct API (Playwright fallback) + validation |
 | `automation/requirements.txt` | Python dependencies |
 | `automation/Procfile` | Railway start command |
 | `automation/railway.json` | Railway configuration |

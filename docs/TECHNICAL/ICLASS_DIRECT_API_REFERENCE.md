@@ -75,10 +75,24 @@
 - `programIsDeleted` — event was removed (instant deletion detection!)
 - `autoApprove` — auto-approval vs manual
 
-### 6. Booking Menu
-**URL:** `/{slug}/1` (or the first numeric endpoint on the booking page)
-**Returns:** Top-level menu of available sections with type IDs and images
-**Note:** Similar to camp-programs but includes "Find a Class" and "Book a Party" sections
+### 6. Booking Menu (⚠️ THIS is the typeId source)
+**URL:** `/{slug}/bookings/{locationId}`
+**Returns:** Top-level menu with CORRECT typeIds for the camps listing URL
+**Example response (CCP, locationId=1):**
+```json
+[
+  {"title":"Find a Class","target":"classes"},
+  {"title":"Book a Party","target":"parties"},
+  {"title":"CLINIC","target":"camps","targetParams":{"typeId":7}},
+  {"title":"KIDS NIGHT OUT","target":"camps","targetParams":{"typeId":13}},
+  {"title":"OPEN GYM","target":"camps","targetParams":{"typeId":17}},
+  {"title":"SCHOOL YEAR CAMP - FULL DAY","target":"camps","targetParams":{"typeId":14}},
+  {"title":"SUMMER CAMP - FULL DAY","target":"camps","targetParams":{"typeId":1}},
+  {"title":"SUMMER CAMP - HALF DAY","target":"camps","targetParams":{"typeId":21}}
+]
+```
+
+**⚠️ CRITICAL:** Do NOT use `camp-programs/{locationId}` for typeIds! That endpoint returns programIds (e.g., CLINICS=246) which DO NOT work as typeIds in the camps listing URL. Tested March 9, 2026: `camps?typeId=246` returns "No camps found."
 
 ---
 
@@ -86,17 +100,18 @@
 
 ```
 For each gym:
-  1. GET /{slug}/locations           → get locationId
-  2. GET /{slug}/camp-programs/{loc} → discover program types + IDs
-  3. For each program type:
-     GET /{slug}/camps?locationId={loc}&typeId={id}&limit=50&page=1
+  1. GET /{slug}/locations              → get locationId
+  2. GET /{slug}/bookings/{locationId}  → discover typeIds + category names
+     ⚠️ Use bookings, NOT camp-programs!
+  3. For each category (where target="camps"):
+     GET /{slug}/camps?locationId={loc}&typeId={typeId}&limit=50&page=1
      → get all events (paginate if totalRecords > 50)
   4. For each event:
      GET /{slug}/camps/{eventId}
      → get description + full detail
 ```
 
-**Estimated speed:** 1-2 minutes for all 10 gyms (vs 50-60 minutes with Playwright)
+**Estimated speed:** ~5 minutes for all 10 gyms (vs ~10 minutes with Playwright) — ✅ Implemented Mar 9, 2026
 
 ---
 

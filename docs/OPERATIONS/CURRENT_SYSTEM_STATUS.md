@@ -1,6 +1,6 @@
 # Current System Status
 
-**Last Updated:** March 5, 2026
+**Last Updated:** March 9, 2026
 
 ---
 
@@ -9,11 +9,11 @@
 | Component | Status | URL / Details |
 |-----------|--------|---------------|
 | **Frontend** | ✅ Live | https://teamcalendar.mygymtools.com |
-| **Backend API** | ✅ Live | Railway (Flask + Playwright) |
+| **Backend API** | ✅ Live | Railway (Flask + Direct API, Playwright fallback) |
 | **Database** | ✅ Live | Supabase (PostgreSQL) |
 | **Build** | ✅ Passing | ESLint warnings only, no errors |
 
-**Tech Stack:** React 18 + Tailwind CSS (Vercel) | Flask + Playwright (Railway) | Supabase (PostgreSQL)
+**Tech Stack:** React 18 + Tailwind CSS (Vercel) | Flask + Direct API (Railway) | Supabase (PostgreSQL)
 
 ---
 
@@ -21,8 +21,8 @@
 
 ### Core Features
 - **Calendar Display** — All 10 gyms, ~400 events, filterable by gym/type/date
-- **Automated Sync** — Sync events from iClassPro portals via Playwright browser automation
-- **Sync All Gyms** — One-click sync + auto-import for all 10 gyms (sequential, ~50-60 min total)
+- **Automated Sync** — Sync events from iClassPro via direct HTTP API calls (replaced Playwright Mar 2026)
+- **Sync All Gyms** — One-click sync + auto-import for all 10 gyms (sequential, ~5 min total)
 - **Event Comparison** — Detects new, changed, unchanged, and deleted events on each sync
 - **Auto-Import** — Inserts new, updates changed, refreshes validation on unchanged, soft-deletes removed
 - **Real-time Updates** — Supabase subscriptions push changes to all connected browsers
@@ -114,7 +114,7 @@
 | `program_ignore` rule type | ❌ Not built | Can't ignore "open gym" when it's a station name in KNO events |
 | EventsDashboard.js monolithic | ❌ Not migrated | Refactored version exists (519 lines) but `App.js` still imports old 4000+ line file. Refactored version has several bugs that must be fixed before activation (see Feb 23 audit). |
 | Flyer-only events | ⚠️ Limitation | Can't validate events that only have an image flyer, no text |
-| Sync All Gyms speed | ⚠️ Slow | Takes ~50-60 min for all 10 gyms (Playwright scraping bottleneck, not app issue) |
+| Sync All Gyms speed | ✅ Fixed Mar 9 | Replaced Playwright with Direct HTTP API — now ~5 min for all 10 gyms (was ~10 min) |
 | Database view conflicts | ⚠️ Fixed Feb 23 | 4 different SQL files had conflicting view definitions. `CREATE_EVENTS_WITH_GYM_VIEW.sql` is now the canonical source of truth with ALL columns. |
 | Schema doc incomplete | ⚠️ Outdated | `DATABASE_COMPLETE_SCHEMA.md` missing 3 tables: `event_pricing`, `camp_pricing`, `acknowledged_patterns` |
 | Day abbreviations not checked | ❌ Not fixed | Validation checks full day names but `day_abbrevs` variable is defined and never used in Python |
@@ -122,7 +122,7 @@
 
 ---
 
-## Recent Fixes & Additions (Feb 2026)
+## Recent Fixes & Additions (Feb–Mar 2026)
 
 | What | Status |
 |------|--------|
@@ -155,6 +155,9 @@
 | **Future Plans tab in Admin Dashboard** | ✅ Added Mar 5 |
 | **future_plans Supabase table + API** | ✅ Added Mar 5 |
 | **Gym pricing data collection started (EST, CCP)** | ✅ Started Feb 23 |
+| **Direct HTTP API replaces Playwright for event collection** | ✅ Swapped Mar 9 |
+| **Sync All Gyms: ~5 min (was ~10 min with Playwright)** | ✅ Fixed Mar 9 |
+| **Playwright kept as fallback (USE_DIRECT_API=false)** | ✅ Added Mar 9 |
 
 ---
 
@@ -184,8 +187,10 @@ These columns are **never touched by sync/import code**, so markings persist eve
 | API functions | `src/lib/api.js` |
 | Event comparison | `src/lib/eventComparison.js` |
 | Validation helpers | `src/lib/validationHelpers.js` |
-| Python automation | `automation/f12_collect_and_import.py` |
+| Python automation | `automation/f12_collect_and_import.py` (Direct API + Playwright fallback + validation) |
 | Flask API server | `automation/local_api_server.py` |
+| Direct API test script | `automation/test_direct_api.py` (read-only, safe to run anytime) |
+| API vs Supabase comparison | `automation/test_compare_supabase.py` (read-only dry-run comparison) |
 | Auto-archive docs | `docs/OPERATIONS/AUTO_ARCHIVE_SYSTEM.md` |
 | iClassPro API map | `docs/TECHNICAL/ICLASS_DIRECT_API_REFERENCE.md` |
 | Pricing raw data | `data/gym-pricing-raw/` |

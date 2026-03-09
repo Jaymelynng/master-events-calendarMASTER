@@ -18,7 +18,7 @@
 
 **Tech Stack:**
 - **Frontend:** React 18 + Tailwind CSS → deployed on Vercel
-- **Backend:** Flask + Playwright (Python) → deployed on Railway
+- **Backend:** Flask + Direct HTTP API (Python) → deployed on Railway (Playwright kept as fallback)
 - **Database:** Supabase (PostgreSQL)
 - **Live URL:** https://teamcalendar.mygymtools.com
 
@@ -41,7 +41,7 @@
 | API functions | `src/lib/api.js` |
 | Event comparison | `src/lib/eventComparison.js` |
 | Validation helpers | `src/lib/validationHelpers.js` |
-| Python automation | `automation/f12_collect_and_import.py` (event collection + validation) |
+| Python automation | `automation/f12_collect_and_import.py` (event collection via Direct API + validation) |
 | Flask API server | `automation/local_api_server.py` |
 | Supabase config | `src/lib/supabase.js` |
 
@@ -164,6 +164,7 @@ docs/
 | Time parsing | Regex `\d{1,2}\s*(a|p)\b` matches "$62 a" and "Ages 4-13" — now pre-cleaned |
 | Day parsing | "Monday-Friday" ranges were flagged as day mismatches — now pre-cleaned |
 | Copilot rules | ALWAYS search + inspect code before answering. Never assume. |
+| Direct API swap | Playwright → Direct HTTP API (Mar 9, 2026). USE_DIRECT_API env var defaults true, set false to revert. Same data format, zero downstream changes needed. |
 
 ---
 
@@ -179,4 +180,4 @@ docs/
 
 ---
 
-**Last Updated:** March 5, 2026
+**Last Updated:** March 9, 2026

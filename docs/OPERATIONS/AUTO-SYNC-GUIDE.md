@@ -1,7 +1,7 @@
 # ⚡ AUTOMATED SYNC GUIDE
 ## One-Click Event Collection from iClassPro
 
-**Last Updated:** February 2, 2026  
+**Last Updated:** March 9, 2026
 **Status:** ✅ FULLY WORKING - Verified against live data  
 **New Feature:** 🚀 SYNC ALL PROGRAMS - One click syncs everything!
 
@@ -93,13 +93,13 @@ Click individual buttons to sync one type at a time:
 
 The system will:
 1. Connect to Railway API server (with API key authentication)
-2. Open iClassPro portal (via Playwright)
-3. Capture event data from JSON responses
+2. Call iClassPro public API directly (fast HTTP calls — no browser needed)
+3. Collect event data from API responses
 4. Return results to you
 
 **Timing:**
-- Single program: 10-30 seconds
-- SYNC ALL: 30-60 seconds (syncing multiple pages)
+- Single program: 5-15 seconds
+- SYNC ALL: 20-40 seconds per gym (all program types)
 
 You'll see a loading indicator.
 
@@ -168,11 +168,13 @@ At the top of the sync modal, you'll see a **progress grid** showing:
 
 ### What Happens When You Click "SYNC ALL"
 
-1. **System checks `gym_links` table** for all URLs configured for that gym
-2. **Opens each iClassPro page** (KNO page, Clinic page, Camp pages, etc.)
-3. **Collects events from each page**
+1. **System calls iClassPro Direct API** to discover all booking categories for that gym
+2. **Fetches event listings** for each category (KNO, Clinic, Camp types, etc.)
+3. **Gets full details** for each event (dates, times, ages, description, openings)
 4. **Combines and deduplicates** all events
 5. **Returns summary** showing count by type
+
+> **Note (Mar 2026):** The old system used Playwright (headless browser) and the `gym_links` table for URLs. The new Direct API method discovers categories automatically — no hardcoded URLs needed. Playwright is kept as a fallback (set `USE_DIRECT_API=false` on Railway to revert).
 
 ### Camp Syncing (Special!)
 
@@ -308,7 +310,7 @@ If a gym doesn't have any events of that type scheduled:
 9. Repeat for each gym
 10. Done for the month!
 
-**Time:** ~10-15 minutes for all 10 gyms (vs 30+ minutes the old way!)
+**Time:** ~5 minutes for all 10 gyms with Direct API (was ~10 min with Playwright)
 
 ### Quick Update (Daily/Weekly)
 
@@ -341,9 +343,9 @@ If a gym doesn't have any events of that type scheduled:
 
 ### "Sync takes forever"
 
-- Normal sync takes 10-30 seconds
-- If over 60 seconds, the portal might be slow
-- Try again later
+- Normal sync takes 5-30 seconds per gym (Direct API)
+- If over 60 seconds, the iClassPro API might be slow — try again later
+- If using Playwright fallback (USE_DIRECT_API=false), expect 3-5 minutes per gym
 
 ### "Events not showing after import"
 
@@ -365,9 +367,10 @@ If a gym doesn't have any events of that type scheduled:
 
 ### "No events collected but portal shows events"
 
-1. Check `gym_links` table in Supabase
-2. Verify the URL is configured and `is_active = true`
-3. Make sure the URL is a valid iClassPro portal URL
+1. Check Railway logs for API errors (HTTP 4xx/5xx from iClassPro)
+2. Verify the gym's slug is correct in `f12_collect_and_import.py` GYMS dict
+3. If using Playwright fallback: Check `gym_links` table in Supabase for correct URLs
+4. Try syncing a single program type to isolate which category fails
 
 ### "Special Events won't sync"
 
@@ -515,6 +518,7 @@ If you ever want to bring back hidden access:
 | Date | Bug | Fix |
 |------|-----|-----|
 | Dec 28, 2025 | Soft-deleted events couldn't be re-imported | Fixed `bulkImport` to detect soft-deleted events and restore them with updated data instead of skipping |
+| Mar 9, 2026 | Sync took ~10 min for all 10 gyms (Playwright) | Replaced Playwright browser automation with Direct HTTP API calls to iClassPro. Same data, ~2x faster (~5 min total). No browser dependency. Playwright kept as fallback via `USE_DIRECT_API=false` env var. |
 
 ---
 

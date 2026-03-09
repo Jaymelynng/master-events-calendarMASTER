@@ -1,6 +1,6 @@
 # 🚨 AI AGENT - READ THIS ENTIRE FILE FIRST - MANDATORY
 
-**Last Updated**: February 24, 2026  
+**Last Updated**: March 9, 2026
 **Purpose**: This file contains EVERYTHING an AI needs to know about this system. Read it completely before doing ANYTHING.
 
 > **Quick Start:** Also see `CLAUDE.md` in the root for a condensed 2-minute onboarding guide with session workflow.
@@ -52,7 +52,7 @@
 | Layer | Technology |
 |-------|------------|
 | Frontend | React 18, Tailwind CSS, Lucide Icons |
-| Backend | Flask (Python API), Playwright (browser automation) |
+| Backend | Flask (Python API), Direct HTTP API (replaced Playwright Mar 2026, Playwright kept as fallback) |
 | Database | Supabase (PostgreSQL) |
 | Deployment | Vercel (frontend), Railway (API) |
 | Local Dev | `npm start` on port 3000 |
@@ -64,7 +64,7 @@
 | `src/components/AdminDashboard/AdminDashboard.js` | Admin panel (Shift+Click magic wand) |
 | `src/components/AdminDashboard/RuleWizard.js` | Unified rule creation wizard (validation rules + requirement exceptions) |
 | `src/components/AdminDashboard/EmailComposer.js` | Email generation for managers (missing events + data errors) |
-| `automation/f12_collect_and_import.py` | Core Python script - collects events, runs validation |
+| `automation/f12_collect_and_import.py` | Core Python script - collects events via Direct API (or Playwright fallback), runs validation |
 | `src/lib/supabase.js` | Supabase client config |
 | `src/lib/api.js` | API functions for database (includes rulesApi, requirementNotesApi) |
 | `src/lib/validationHelpers.js` | Error category logic |
