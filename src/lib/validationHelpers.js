@@ -51,7 +51,7 @@ export const inferErrorCategory = (error) => {
 
   if (dataErrorTypes.includes(error.type)) return 'data_error';
   if (statusErrorTypes.includes(error.type)) return 'status';
-  return 'formatting';
+  return 'other';
 };
 
 // Check if an error type supports "Add as Rule"
@@ -92,9 +92,11 @@ export const processEventsWithIssues = (events) => {
 
     // Separate by category using inferErrorCategory for legacy data
     const dataErrors = errors.filter(e => inferErrorCategory(e) === 'data_error');
-    const formattingErrors = errors.filter(e => inferErrorCategory(e) === 'formatting');
     const statusErrors = errors.filter(e => inferErrorCategory(e) === 'status');
-    const otherErrors = errors.filter(e => !e.category && !inferErrorCategory(e));
+    const otherErrors = errors.filter(e => {
+      const cat = inferErrorCategory(e);
+      return cat !== 'data_error' && cat !== 'status';
+    });
 
     // Separate active vs dismissed
     const activeErrors = errors.filter(err => !isErrorAcknowledged(acknowledged, err.message));
@@ -103,7 +105,6 @@ export const processEventsWithIssues = (events) => {
     return {
       ...event,
       dataErrors,
-      formattingErrors,
       statusErrors,
       otherErrors,
       activeErrors,
@@ -178,13 +179,6 @@ const TIME_TYPES = ['time_mismatch'];
 const AGE_TYPES = ['age_mismatch'];
 const DATE_TYPES = ['date_mismatch', 'day_mismatch', 'year_mismatch'];
 const PROGRAM_TYPES = ['program_mismatch', 'missing_program_in_title'];
-const FORMAT_TYPES = [
-  'missing_age_in_description', 'missing_age_in_title',
-  'missing_time_in_description', 'missing_price_in_description',
-  'missing_program_in_description', 'missing_datetime_in_description',
-  'missing_date_in_title', 'clinic_missing_skill', 'title_desc_mismatch',
-];
-
 // Check if an error matches the error type filter + hidePrices toggle
 export const matchesErrorTypeFilter = (errorType, filterValue, hidePrices = false) => {
   // Always hide prices when toggle is on
@@ -196,7 +190,6 @@ export const matchesErrorTypeFilter = (errorType, filterValue, hidePrices = fals
   if (filterValue === 'age') return AGE_TYPES.includes(errorType);
   if (filterValue === 'date') return DATE_TYPES.includes(errorType);
   if (filterValue === 'program') return PROGRAM_TYPES.includes(errorType);
-  if (filterValue === 'format') return FORMAT_TYPES.includes(errorType);
   return true;
 };
 

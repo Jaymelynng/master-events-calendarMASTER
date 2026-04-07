@@ -89,7 +89,7 @@ WHERE id = 'OAS';
 -- Scottsdale Gymnastics (SGT)
 UPDATE gyms SET 
   phone = '480-951-0496',
-  email = 'Funhappens@scottsdalegymnastics.com',
+  email = 'info@scottsdalegymnastics.com',
   address = '8662 E Shea Blvd, Scottsdale, AZ 85260',
   website_url = 'https://scottsdalegymnastics.com'
 WHERE id = 'SGT';

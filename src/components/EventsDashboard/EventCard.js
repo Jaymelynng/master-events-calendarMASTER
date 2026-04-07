@@ -24,31 +24,13 @@ export default function EventCard({
 
     // Separate by category
     const dataErrors = activeErrors.filter(err => inferErrorCategory(err) === 'data_error');
-    const formattingErrors = activeErrors.filter(err => inferErrorCategory(err) === 'formatting');
     const hasDataErrors = dataErrors.length > 0;
-    const hasFormattingErrors = formattingErrors.length > 0;
 
-    // Show colored dots based on error types
-    if (hasDataErrors && hasFormattingErrors) {
-      // Both types - show TWO dots: red + orange side by side
-      return (
-        <span className="absolute -top-1 -right-1 flex items-center" title={`DATA: ${dataErrors.length} | FORMAT: ${formattingErrors.length}`}>
-          <span className="w-2.5 h-2.5 bg-red-500 rounded-full shadow-sm inline-block border border-red-700"></span>
-          <span className="w-2 h-2 bg-orange-400 rounded-full shadow-sm inline-block border border-orange-600 -ml-1"></span>
-        </span>
-      );
-    } else if (hasDataErrors) {
-      // Data errors only - red dot
+    // Show colored dot for data errors
+    if (hasDataErrors) {
       return (
         <span className="absolute -top-1 -right-1" title={`${dataErrors.length} DATA ERROR(S) - wrong info!`}>
           <span className="w-3 h-3 bg-red-500 rounded-full shadow-sm inline-block border border-red-700"></span>
-        </span>
-      );
-    } else if (hasFormattingErrors) {
-      // Formatting only - orange dot
-      return (
-        <span className="absolute -top-1 -right-1" title={`${formattingErrors.length} formatting issue(s) - incomplete info`}>
-          <span className="w-2.5 h-2.5 bg-orange-400 rounded-full shadow-sm inline-block border border-orange-600"></span>
         </span>
       );
     } else if (event.description_status === 'flyer_only') {

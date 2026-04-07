@@ -23,6 +23,7 @@ import time
 from datetime import datetime, date
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
+from validation_engine import ValidationContext, run_validation
 
 # Playwright is optional — only needed if USE_DIRECT_API=false
 try:
@@ -503,10 +504,10 @@ def get_event_pricing():
     return EVENT_PRICING
 
 # Per-gym validation rules (extra prices, times, synonyms) from unified `rules` table
-# Replaces the old `gym_valid_values` table — same internal format for backward compat
-GYM_VALID_VALUES = None
+RULES_CACHE = None
+GYM_VALID_VALUES = None  # Backward-compat alias — do not use in new code
 
-def fetch_gym_valid_values():
+def fetch_rules():
     """Fetch validation rules from Supabase `rules` table (unified rules system).
     Filters to active rules only (permanent, or temporary with end_date >= today).
     Maps new rule_type names to legacy names used by validation code:
@@ -587,13 +588,18 @@ def fetch_gym_valid_values():
         print(f"[WARN] Could not fetch rules from rules table: {e}")
         return {}
 
-def get_gym_valid_values():
-    """Get cached gym valid values or fetch from Supabase.
+fetch_gym_valid_values = fetch_rules  # Backward-compat alias
+
+def get_rules():
+    """Get cached rules or fetch from Supabase.
     Rules with gym_id='ALL' are merged into every gym's rules."""
-    global GYM_VALID_VALUES
-    if GYM_VALID_VALUES is None:
-        GYM_VALID_VALUES = fetch_gym_valid_values()
-    return GYM_VALID_VALUES
+    global RULES_CACHE, GYM_VALID_VALUES
+    if RULES_CACHE is None:
+        RULES_CACHE = fetch_rules()
+        GYM_VALID_VALUES = RULES_CACHE  # Keep alias in sync
+    return RULES_CACHE
+
+get_gym_valid_values = get_rules  # Backward-compat alias
 
 def get_rules_for_gym(gym_id, event_type=None):
     """Get merged rules for a specific gym, optionally filtered by event type.
@@ -602,7 +608,7 @@ def get_rules_for_gym(gym_id, event_type=None):
     - rule.event_type == 'ALL', or
     - rule.event_type matches event_type
     """
-    all_values = get_gym_valid_values()
+    all_values = get_rules()
     gym_rules = {}
 
     def matches_event_type(rule):
@@ -1041,7 +1047,8 @@ async def collect_events_via_f12(gym_id, camp_type):
         For "ALL": {'events': {event_type: [events...]}, 'checked_types': [...]}
     """
     # Reset all pricing/rules caches so fresh data is always used
-    global GYM_VALID_VALUES, EVENT_PRICING, CAMP_PRICING
+    global RULES_CACHE, GYM_VALID_VALUES, EVENT_PRICING, CAMP_PRICING
+    RULES_CACHE = None
     GYM_VALID_VALUES = None
     EVENT_PRICING = None
     CAMP_PRICING = None
@@ -1248,7 +1255,27 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
     processed = []
     seen_ids = set()
     today_str = date.today().isoformat()  # e.g. "2025-11-13"
-    
+
+    # Fetch active validation checks from database (once per batch)
+    try:
+        checks_url = f"{SUPABASE_URL}/rest/v1/rules?select=*&is_active=eq.true&rule_type=like.check_%2A"
+        checks_req = Request(checks_url)
+        checks_req.add_header("apikey", SUPABASE_KEY)
+        checks_req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
+        with urlopen(checks_req) as checks_resp:
+            all_check_rows = json.loads(checks_resp.read().decode())
+        # Filter out expired temporary rules
+        active_checks = []
+        for cr in all_check_rows:
+            if not cr.get('is_permanent', True) and cr.get('end_date'):
+                if cr['end_date'] < today_str:
+                    continue
+            active_checks.append(cr)
+        print(f"  📋 Loaded {len(active_checks)} active validation checks from database")
+    except Exception as e:
+        print(f"  [WARN] Could not load checks from database: {e}")
+        active_checks = []
+
     for ev in events:
         event_id = ev.get("id")
         if event_id is None:
@@ -1468,1055 +1495,49 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         elif description:
             description_status = 'full'
         
-        # ========== SMART VALIDATION (KNO, CLINIC, OPEN GYM only - skip CAMP) ==========
         event_type = camp_type_label.upper()
         title_lower = title.lower()
         description_lower = description.lower() if description else ''
         
-        # ========== COMPLETENESS CHECKS (CAMP, KNO, CLINIC, OPEN GYM) ==========
-        # These check if REQUIRED fields EXIST (not just if they're accurate)
-        # SPECIAL EVENT excluded — one-off events with varying formats
-        
-        if event_type != 'SPECIAL EVENT':
-            
-            # --- TITLE COMPLETENESS ---
-            
-            # Helper to check if age exists in text
-            def has_age_in_text(text):
-                if not text:
-                    return False
-                txt = text.lower()
-                # Match: "Ages 5", "Age 5", "5+", "5-12", "Students 5+"
-                return bool(re.search(r'ages?\s*\d{1,2}|students?\s*\d{1,2}|\d{1,2}\s*[-–+]|\d{1,2}\s*to\s*\d{1,2}', txt))
-            
-            # Helper to check if date exists in text
-            def has_date_in_text(text):
-                if not text:
-                    return False
-                txt = text.lower()
-                # Match: "January", "Jan", "1/9", "01/09", "9th", etc.
-                months = r'(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)'
-                date_formats = r'(\d{1,2}/\d{1,2}|\d{1,2}(st|nd|rd|th))'
-                return bool(re.search(months + r'|' + date_formats, txt))
-            
-            # Helper to check if time exists in text
-            def has_time_in_text(text):
-                if not text:
-                    return False
-                txt = text.lower()
-                
-                # PRE-CLEAN: Remove patterns that cause false positives
-                # "$62 a day" -> "62 a" matched as time, "Ages 4-13" -> "13 a" matched as time
-                txt = re.sub(r'\$\d+(?:\.\d{2})?\s*(?:a\s+day|a\s+week|/day|/week|per\s+day|per\s+week)', ' ', txt)
-                txt = re.sub(r'ages?\s*\d{1,2}\s*[-–to]+\s*\d{1,2}', ' ', txt)
-                txt = re.sub(r'\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:years?|yrs?)', ' ', txt)
-                # Catch-all: "$50 a" (price followed by "a") but NOT "$50 am" (legitimate time)
-                txt = re.sub(r'\$\d+(?:\.\d{2})?\s+a(?!\s*m)', ' ', txt)
-                
-                # Match many time formats:
-                # - "6:30pm", "6:30 pm", "6pm", "6 pm", "6:30p", "6:30 p.m."
-                # - "6:30a", "6:30 a.m.", "6am", "6 am"  
-                # - "9:00 - 3:00" (colon times, even without am/pm)
-                # - "9-3" followed by context suggesting time (less reliable, so require am/pm nearby)
-                
-                # Pattern 1: Time with am/pm indicator (most reliable)
-                has_ampm_time = bool(re.search(r'\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.|a|p)\b', txt))
-                
-                # Pattern 2: Colon time like "9:00" or "9:00 - 3:00" (even without am/pm)
-                has_colon_time = bool(re.search(r'\d{1,2}:\d{2}', txt))
-                
-                return has_ampm_time or has_colon_time
-            
-            # 1. TITLE: Must have AGE
-            if not has_age_in_text(title):
-                validation_errors.append({
-                    "type": "missing_age_in_title",
-                    "severity": "warning",
-                    "category": "formatting",
-                    "message": "Title missing age (e.g., 'Ages 5+')"
-                })
-                print(f"    [!] COMPLETENESS: Title missing age")
-            
-            # 2. TITLE: Must have DATE
-            if not has_date_in_text(title):
-                validation_errors.append({
-                    "type": "missing_date_in_title",
-                    "severity": "warning",
-                    "category": "formatting",
-                    "message": "Title missing date (e.g., 'January 9th')"
-                })
-                print(f"    [!] COMPLETENESS: Title missing date")
-            
-            # 3. TITLE: Must have PROGRAM TYPE keyword
-            # Per standardization: Theme | Program | Age | Date
-            # Program keywords by type
-            def has_program_type_in_text(text, etype):
-                txt = text.lower()
-                txt_no_apos = txt.replace("'", "").replace("'", "")
-
-                # First check rules table for program_synonym rules for this gym
-                synonym_rules = get_rules_for_gym(gym_id, event_type).get('program_synonym', [])
-                for rule in synonym_rules:
-                    keyword = rule.get('value', '').lower()
-                    target_type = rule.get('label', '').upper()
-                    if keyword and keyword in txt and target_type == etype:
-                        return True
-
-                if etype == 'KIDS NIGHT OUT':
-                    return ('kids night out' in txt_no_apos or 'kid night out' in txt_no_apos or
-                            'kno' in txt or 'night out' in txt or 'parents night out' in txt_no_apos or
-                            'ninja night out' in txt)
-                elif etype == 'CLINIC':
-                    return 'clinic' in txt
-                elif etype == 'OPEN GYM':
-                    return 'open gym' in txt
-                elif etype == 'CAMP':
-                    return 'camp' in txt
-                return True  # Unknown types pass
-            
-            if not has_program_type_in_text(title, event_type):
-                validation_errors.append({
-                    "type": "missing_program_in_title",
-                    "severity": "warning",
-                    "category": "formatting",
-                    "message": f"Title missing program type (should include '{event_type.title()}' or similar)"
-                })
-                print(f"    [!] COMPLETENESS: Title missing program type '{event_type}'")
-            
-            # --- DESCRIPTION COMPLETENESS ---
-            
-            if description:
-                # 3. DESCRIPTION: Must have AGE
-                if not has_age_in_text(description):
-                    validation_errors.append({
-                        "type": "missing_age_in_description",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": "Description missing age"
-                    })
-                    print(f"    [!] COMPLETENESS: Description missing age")
-                
-                # 4. DESCRIPTION: Must have DATE or TIME
-                if not has_date_in_text(description) and not has_time_in_text(description):
-                    validation_errors.append({
-                        "type": "missing_datetime_in_description",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": "Description missing date/time"
-                    })
-                    print(f"    [!] COMPLETENESS: Description missing date/time")
-                
-                # 5. DESCRIPTION: Must have TIME (required per standardization doc)
-                # EXCEPTION: Camps can use "Full Day" or "Half Day" instead of specific times
-                has_camp_time_format = event_type == 'CAMP' and ('full day' in description_lower or 'half day' in description_lower)
-                if not has_time_in_text(description) and not has_camp_time_format:
-                    validation_errors.append({
-                        "type": "missing_time_in_description",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": "Description missing specific time (e.g., '6:30pm')"
-                    })
-                    print(f"    [!] COMPLETENESS: Description missing time")
-                
-                # 6. DESCRIPTION: Must have PROGRAM TYPE keyword
-                if not has_program_type_in_text(description, event_type):
-                    validation_errors.append({
-                        "type": "missing_program_in_description",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": f"Description missing program type (should mention '{event_type.title()}' or similar)"
-                    })
-                    print(f"    [!] COMPLETENESS: Description missing program type '{event_type}'")
-            
-            # --- PROGRAM-SPECIFIC COMPLETENESS ---
-            
-            # CLINIC: Should mention skill in description
-            if event_type == 'CLINIC' and description:
-                # Comprehensive skills list - check in BOTH title and description
-                skills = ['cartwheel', 'back handspring', 'backhandspring', 'handstand', 'tumbling', 
-                         'bars', 'pullover', 'pullovers', 'front flip', 'roundoff', 'backbend', 
-                         'ninja', 'cheer', 'beam', 'vault', 'floor', 'trampoline', 'tumbl', 'bridge', 
-                         'kickover', 'walkover', 'flip flop', 'flip-flop', 'back walkover', 'front walkover']
-                # Check description OR title for skill (skill in title is sufficient context)
-                has_skill_in_desc = any(skill in description_lower for skill in skills)
-                has_skill_in_title = any(skill in title_lower for skill in skills)
-                has_skill = has_skill_in_desc or has_skill_in_title
-                if not has_skill:
-                    validation_errors.append({
-                        "type": "clinic_missing_skill",
-                        "severity": "info",
-                        "category": "formatting",
-                        "message": "Clinic description doesn't mention specific skill"
-                    })
-                    print(f"    [i] COMPLETENESS: Clinic missing skill mention")
-        
-        # ========== ACCURACY CHECKS (Compare values across sources) ==========
-        # These check if values MATCH when they exist in multiple places
-        # Covers: CAMP, KNO, CLINIC, OPEN GYM
-        # SPECIAL EVENT is excluded — one-off events with no standard pricing or format
-        
+        # ========== DATABASE-DRIVEN VALIDATION ==========
+        # All checks come from the `rules` table. Python has no hardcoded validation.
         if description and event_type != 'SPECIAL EVENT':
-            
-            # --- DATE VALIDATION: Cross-check iClassPro dates vs description ---
-            # SCANS the description to catch manager mistakes (wrong dates in descriptions)
-            # BUILT-IN RULES (universal - no per-gym setup needed):
-            #   - Camps spanning multiple months are NORMAL (June 28 - July 5)
-            #     All months between start and end are valid
-            #   - End date before start date = manager error
-            #   - Registration dates, promo references are ignored
-            try:
-                event_date = datetime.strptime(start_date, "%Y-%m-%d")
-                event_month = event_date.strftime("%B").lower()
-                event_year = event_date.year
-                event_day = event_date.day
-
-                end_date_str = ev.get("endDate") or start_date
-                end_date_obj = datetime.strptime(end_date_str, "%Y-%m-%d")
-
-                # BUILT-IN: End date before start date = manager error
-                if end_date_obj < event_date:
-                    validation_errors.append({
-                        "type": "date_mismatch",
-                        "severity": "error",
-                        "category": "data_error",
-                        "message": f"End date ({end_date_str}) is before start date ({start_date})"
-                    })
-                    print(f"    [!] DATE ERROR: End date {end_date_str} before start date {start_date}")
-
-                # Build valid months from iClassPro start_date and end_date
-                # BUILT-IN: Include ALL months between start and end
-                # So a camp from June 28 - August 1 won't flag July
-                import calendar
-                event_month_abbr = event_date.strftime("%b").lower()
-                end_month = end_date_obj.strftime("%B").lower()
-                end_month_abbr = end_date_obj.strftime("%b").lower()
-                valid_months = {event_month, end_month, event_month_abbr, end_month_abbr}
-
-                # Add every month BETWEEN start and end
-                if event_date.month != end_date_obj.month:
-                    m = event_date.month
-                    while m != end_date_obj.month:
-                        m = m % 12 + 1
-                        valid_months.add(calendar.month_name[m].lower())
-                        valid_months.add(calendar.month_abbr[m].lower())
-
-                # Scan description for month mentions that DON'T match the event dates
-                all_months = {}
-                for i, full_name in enumerate(calendar.month_name):
-                    if full_name:
-                        all_months[full_name.lower()] = i
-                for i, abbr in enumerate(calendar.month_abbr):
-                    if abbr:
-                        all_months[abbr.lower()] = i
-
-                for month_name, month_num in all_months.items():
-                    if len(month_name) <= 3:
-                        pattern = r'\b' + month_name + r'\b'
-                        if not re.search(pattern, description_lower[:200]):
-                            continue
-                    else:
-                        if month_name not in description_lower[:200]:
-                            continue
-
-                    if month_name not in valid_months:
-                        # BUILT-IN: Skip registration/signup context
-                        # "Register by September 1" is not a date error
-                        skip_patterns = [
-                            r'(register|registration|sign\s*up|enroll|deadline|closes?|opens?|book\s*by|by)\s+\w*\s*' + month_name,
-                            r'(also|check out|see our|upcoming|next|other|more)\s+\w*\s*' + month_name,
-                        ]
-                        if any(re.search(p, description_lower[:300]) for p in skip_patterns):
-                            continue
-
-                        # Only flag if prominent (first 200 chars)
-                        if len(month_name) <= 3:
-                            in_first_200 = bool(re.search(r'\b' + month_name + r'\b', description_lower[:200]))
-                        else:
-                            in_first_200 = month_name in description_lower[:200]
-
-                        if in_first_200:
-                            validation_errors.append({
-                                "type": "date_mismatch",
-                                "severity": "error",
-                                "category": "data_error",
-                                "message": f"Event is {event_month.title()} {event_day} but description says '{month_name.title()}'"
-                            })
-                            print(f"    [!] DATE MISMATCH: Event is {event_month.title()}, description says {month_name.title()}")
-                            break
-            except ValueError:
-                pass  # Invalid date format, skip
-            
-            # --- WRONG YEAR IN TITLE: Check if title has wrong year ---
-            # Catches: "01/17/2025" when event is actually 2026
-            title_year_matches = re.findall(r'\b(20\d{2})\b', title)
-            for title_year in title_year_matches:
-                title_year_int = int(title_year)
-                if title_year_int != event_year:
-                    validation_errors.append({
-                        "type": "year_mismatch",
-                        "severity": "error",
-                        "category": "data_error",
-                        "message": f"Title says {title_year} but event is in {event_year}"
-                    })
-                    print(f"    [!] YEAR MISMATCH: Title says {title_year}, event is {event_year}")
-                    break  # Only flag once
-
-            # --- WRONG YEAR IN DESCRIPTION: Check if description has wrong year ---
-            # Catches: copied event from 2025 where description still says "2025"
-            desc_year_matches = re.findall(r'\b(20\d{2})\b', description[:300])
-            for desc_year in desc_year_matches:
-                desc_year_int = int(desc_year)
-                if desc_year_int != event_year:
-                    # For multi-year spanning events (Dec 2025 - Jan 2026), also allow the end year
-                    end_year = end_date_obj.year if end_date_obj else event_year
-                    if desc_year_int != end_year:
-                        validation_errors.append({
-                            "type": "year_mismatch",
-                            "severity": "error",
-                            "category": "data_error",
-                            "message": f"Description says {desc_year} but event is in {event_year}"
-                        })
-                        print(f"    [!] YEAR MISMATCH: Description says {desc_year}, event is {event_year}")
-                        break  # Only flag once
-
-            # --- TIME VALIDATION: Compare structured time to title AND description ---
-            # Handles all formats: 5:00, 5pm, 5:00pm, 5:00 PM, 5 pm, 5:00 p.m.
-            if time_str:
-                # Extract ALL hours from structured time (e.g., "6:30 PM - 9:30 PM" -> [18, 21] in 24hr)
-                event_times = re.findall(r'(\d{1,2}):?(\d{2})?\s*(am|pm|a\.m\.|p\.m\.)?', time_str.lower())
-                event_hours = set()
-                for et in event_times:
-                    if et[0]:
-                        hour = int(et[0])
-                        ampm = (et[2] or '').replace('.', '')
-                        # Convert to 24hr
-                        if ampm == 'pm' and hour != 12:
-                            hour += 12
-                        elif ampm == 'am' and hour == 12:
-                            hour = 0
-                        event_hours.add(hour)
-                
-                if event_hours:
-                    # Helper to check times in text
-                    def check_times_in_text(text, text_name, char_limit=300):
-                        """Check if times in text match event times. Format-tolerant."""
-                        text_lower = text.lower()[:char_limit]
-                        
-                        # PRE-CLEAN: Remove patterns that cause false positives
-                        # 1. Price patterns: "$62 a day" -> remove so "62 a" isn't matched as time
-                        text_cleaned = re.sub(r'\$\d+(?:\.\d{2})?\s*(?:a\s+day|a\s+week|/day|/week|per\s+day|per\s+week)', ' ', text_lower)
-                        # 2. Age patterns: "Ages 4-13" -> remove so "13 a" isn't matched as time
-                        text_cleaned = re.sub(r'ages?\s*\d{1,2}\s*[-–to]+\s*\d{1,2}', ' ', text_cleaned)
-                        text_cleaned = re.sub(r'\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:years?|yrs?)', ' ', text_cleaned)
-                        # 3. Standalone price amounts: "$XX" followed by space and "a" (but not "am")
-                        text_cleaned = re.sub(r'\$\d+(?:\.\d{2})?\s+a(?!\s*m)', ' ', text_cleaned)
-                        
-                        # Match many time formats:
-                        # "6:30pm", "6:30 pm", "6pm", "6 pm", "6:30p", "6:30 p.m."
-                        # "6:30a", "6am", "9a - 3p" (TIGAR format)
-                        # Captures: (hour, minutes_or_empty, am/pm indicator)
-                        found_times = re.findall(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.|a|p)(?:\b|(?=\s|-))', text_cleaned)
-                        
-                        for found_time in found_times:
-                            found_hour = int(found_time[0])
-                            raw_ampm = found_time[2].replace('.', '') if found_time[2] else ''
-                            # Normalize: "a" -> "am", "p" -> "pm"
-                            found_ampm = 'am' if raw_ampm in ['a', 'am'] else 'pm' if raw_ampm in ['p', 'pm'] else ''
-                            
-                            # Convert to 24hr
-                            if found_ampm == 'pm' and found_hour != 12:
-                                found_hour += 12
-                            elif found_ampm == 'am' and found_hour == 12:
-                                found_hour = 0
-                            
-                            # Check if this time matches ANY of the event times - EXACT HOUR MATCH
-                            matches_event = any(found_hour == eh for eh in event_hours)
-                            
-                            if not matches_event:
-                                # Format the time for message
-                                time_str_formatted = f"{found_time[0]}"
-                                if found_time[1]:  # has minutes
-                                    time_str_formatted += f":{found_time[1]}"
-                                time_str_formatted += f" {raw_ampm}"
-                                return time_str_formatted
-                        return None
-                    
-                    # Get extra valid times for this gym (e.g. "8:30 AM" for early dropoff)
-                    extra_time_rules = get_rules_for_gym(gym_id, event_type).get('time', [])
-                    extra_time_values = [t['value'].lower().strip() for t in extra_time_rules]
-
-                    # Check times in TITLE
-                    title_time_mismatch = check_times_in_text(title, "title", char_limit=200)
-                    if title_time_mismatch:
-                        # Check if this time is an approved extra time for this gym
-                        if title_time_mismatch.lower().strip() not in extra_time_values:
-                            validation_errors.append({
-                                "type": "time_mismatch",
-                                "severity": "warning",
-                                "category": "data_error",
-                                "message": f"iClass time is {time_str} but title says {title_time_mismatch}"
-                            })
-                            print(f"    [!] TIME MISMATCH: iClass={time_str}, Title says {title_time_mismatch}")
-                        else:
-                            print(f"    [OK] Time {title_time_mismatch} is a valid extra time for {gym_id}")
-
-                    # Check times in DESCRIPTION
-                    desc_time_mismatch = check_times_in_text(description, "description", char_limit=300)
-                    if desc_time_mismatch:
-                        # Check if this time is an approved extra time for this gym
-                        if desc_time_mismatch.lower().strip() not in extra_time_values:
-                            validation_errors.append({
-                                "type": "time_mismatch",
-                                "severity": "warning",
-                                "category": "data_error",
-                                "message": f"iClass time is {time_str} but description says {desc_time_mismatch}"
-                            })
-                            print(f"    [!] TIME MISMATCH: iClass={time_str}, Description says {desc_time_mismatch}")
-                        else:
-                            print(f"    [OK] Time {desc_time_mismatch} is a valid extra time for {gym_id}")
-            
-            # --- AGE VALIDATION: Compare iClass age_min vs Title vs Description ---
-            # All three should match (we only check MIN age because managers often use "Ages 5+")
-            
-            # Helper function to extract min age from text
-            def extract_min_age(text, char_limit=300):
-                """Extract the minimum age from text like 'Ages 5-12', 'Ages 5+', 'Age 5'"""
-                if not text:
-                    return None
-                text_lower = text.lower()[:char_limit]
-                age_patterns = re.findall(r'ages?\s*(\d{1,2})\s*[-–to+]|ages?\s*(\d{1,2})\b|(\d{1,2})\s*[-–]\s*\d{1,2}\s*(?:years?|yrs?)', text_lower)
-                for age_match in age_patterns:
-                    for group in age_match:
-                        if group:
-                            return int(group)
-                return None
-            
-            # Extract ages from title and description
-            title_age = extract_min_age(title, char_limit=200)
-            desc_age = extract_min_age(description, char_limit=300)
-            
-            # Check 1: iClass age_min vs Title
-            if age_min is not None and title_age is not None:
-                if age_min != title_age:
-                    validation_errors.append({
-                        "type": "age_mismatch",
-                        "severity": "warning",
-                        "category": "data_error",
-                        "message": f"iClass min age is {age_min} but title says {title_age}"
-                    })
-                    print(f"    [!] AGE MISMATCH: iClass age_min={age_min}, Title says {title_age}")
-            
-            # Check 2: iClass age_min vs Description
-            if age_min is not None and desc_age is not None:
-                if age_min != desc_age:
-                    validation_errors.append({
-                        "type": "age_mismatch",
-                        "severity": "warning",
-                        "category": "data_error",
-                        "message": f"iClass min age is {age_min} but description says {desc_age}"
-                    })
-                    print(f"    [!] AGE MISMATCH: iClass age_min={age_min}, Description says {desc_age}")
-            
-            # Check 3: Title vs Description (even if iClass age_min is missing)
-            if title_age is not None and desc_age is not None:
-                if title_age != desc_age:
-                    validation_errors.append({
-                        "type": "age_mismatch",
-                        "severity": "warning",
-                        "category": "data_error",
-                        "message": f"Title says age {title_age} but description says {desc_age}"
-                    })
-                    print(f"    [!] AGE MISMATCH: Title says {title_age}, Description says {desc_age}")
-            
-            # NOTE: MAX age validation not checked - managers often omit max age or use "+" notation
-            
-            # --- DAY OF WEEK VALIDATION: Compare calculated day to description ---
-            # Skip for CAMP events - camps span multiple days so day mentions are expected
-            if day_of_week and event_type != 'CAMP':
-                day_lower = day_of_week.lower()  # e.g., "friday"
-                # List of days to check (full names and abbreviations)
-                all_days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-                day_abbrevs = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
-                
-                # Check first 200 chars for day mentions
-                desc_snippet = description_lower[:200]
-                
-                # PRE-CLEAN: Remove day ranges like "Monday-Friday", "Mon-Fri", "Monday through Friday" before checking
-                # These describe schedules, not the specific event day
-                day_range_pattern = r'(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\s*(?:[-–]|to|thru|through)\s*(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)'
-                desc_snippet_cleaned = re.sub(day_range_pattern, '', desc_snippet)
-                
-                # Also remove parenthetical day ranges like "(Monday-Friday)"
-                desc_snippet_cleaned = re.sub(r'\([^)]*(?:monday|mon)[-–][^)]*(?:friday|fri)[^)]*\)', '', desc_snippet_cleaned)
-                
-                day_abbrev_lower = day_lower[:3]  # e.g. "friday" → "fri"
-                day_found = False
-                for full, abbr in zip(all_days, day_abbrevs):
-                    if full == day_lower or abbr == day_abbrev_lower:
-                        continue
-                    # Check full name first, then abbreviation with word boundary
-                    if full in desc_snippet_cleaned or re.search(r'\b' + abbr + r'\b', desc_snippet_cleaned):
-                        validation_errors.append({
-                            "type": "day_mismatch",
-                            "severity": "warning",
-                            "category": "data_error",
-                            "message": f"Event is on {day_of_week} but description says '{full.title()}'"
-                        })
-                        print(f"    ⚠️ DAY MISMATCH: Event is {day_of_week}, description says {full.title()}")
-                        day_found = True
-                        break
-                if day_found:
-                    pass
-            
-            # --- PROGRAM TYPE VALIDATION ---
-            
-            # First: Check iClass program type vs TITLE keywords
-            # This catches: iClass says "CLINIC" but title says "Kids Night Out"
-            kno_title_keywords = ['kids night out', "kid's night out", "kids' night out", 'kno', 'night out', 'parents night out', 'ninja night out']
-            clinic_title_keywords = ['clinic']
-            open_gym_title_keywords = ['open gym']
-            # Add program_synonym rules from rules table for dynamic keyword matching
-            synonym_rules = get_rules_for_gym(gym_id, event_type).get('program_synonym', [])
-            for rule in synonym_rules:
-                target = rule.get('label', '').upper()
-                keyword = rule.get('value', '').lower()
-                if not keyword:
-                    continue
-                if target == 'OPEN GYM' and keyword not in open_gym_title_keywords:
-                    open_gym_title_keywords.append(keyword)
-                elif target == 'KIDS NIGHT OUT' and keyword not in kno_title_keywords:
-                    kno_title_keywords.append(keyword)
-                elif target == 'CLINIC' and keyword not in clinic_title_keywords:
-                    clinic_title_keywords.append(keyword)
-
-            title_has_kno = any(kw in title_lower for kw in kno_title_keywords)
-            title_has_clinic = any(kw in title_lower for kw in clinic_title_keywords)
-            title_has_open_gym = any(kw in title_lower for kw in open_gym_title_keywords)
-            
-            # Check: iClass type vs Title keywords
-            if event_type == 'KIDS NIGHT OUT' and title_has_clinic and not title_has_kno:
-                validation_errors.append({
-                    "type": "program_mismatch",
-                    "severity": "error",
-                    "category": "data_error",
-                    "message": "iClass says KNO but title says 'Clinic'"
-                })
-                print(f"    [!] PROGRAM MISMATCH: iClass=KNO, Title says Clinic")
-            
-            if event_type == 'KIDS NIGHT OUT' and title_has_open_gym and not title_has_kno:
-                validation_errors.append({
-                    "type": "program_mismatch",
-                    "severity": "error",
-                    "category": "data_error",
-                    "message": "iClass says KNO but title says 'Open Gym'"
-                })
-                print(f"    [!] PROGRAM MISMATCH: iClass=KNO, Title says Open Gym")
-            
-            if event_type == 'CLINIC' and title_has_kno:
-                validation_errors.append({
-                    "type": "program_mismatch",
-                    "severity": "error",
-                    "category": "data_error",
-                    "message": "iClass says CLINIC but title says 'Kids Night Out'"
-                })
-                print(f"    [!] PROGRAM MISMATCH: iClass=CLINIC, Title says KNO")
-            
-            if event_type == 'CLINIC' and title_has_open_gym and not title_has_clinic:
-                validation_errors.append({
-                    "type": "program_mismatch",
-                    "severity": "error",
-                    "category": "data_error",
-                    "message": "iClass says CLINIC but title says 'Open Gym'"
-                })
-                print(f"    [!] PROGRAM MISMATCH: iClass=CLINIC, Title says Open Gym")
-            
-            if event_type == 'OPEN GYM' and title_has_kno:
-                validation_errors.append({
-                    "type": "program_mismatch",
-                    "severity": "error",
-                    "category": "data_error",
-                    "message": "iClass says OPEN GYM but title says 'Kids Night Out'"
-                })
-                print(f"    [!] PROGRAM MISMATCH: iClass=OPEN GYM, Title says KNO")
-            
-            if event_type == 'OPEN GYM' and title_has_clinic and not title_has_open_gym:
-                validation_errors.append({
-                    "type": "program_mismatch",
-                    "severity": "error",
-                    "category": "data_error",
-                    "message": "iClass says OPEN GYM but title says 'Clinic'"
-                })
-                print(f"    [!] PROGRAM MISMATCH: iClass=OPEN GYM, Title says Clinic")
-            
-            # Now check iClass type vs DESCRIPTION (existing code)
-            if event_type == 'KIDS NIGHT OUT':
-                # KNO: Must contain "kids night out" (any apostrophe style) or "kno"
-                # Strip apostrophes to handle: Kids Night Out, Kid's Night Out, Kids' Night Out
-                desc_no_apostrophes = description_lower.replace("'", "").replace("'", "").replace("`", "")
-                has_kno = ('kids night out' in desc_no_apostrophes or
-                          'kid night out' in desc_no_apostrophes or
-                          'kno' in description_lower or
-                          'night out' in description_lower or
-                          'parents night out' in desc_no_apostrophes or
-                          'ninja night out' in description_lower)
-                has_clinic = 'clinic' in description_lower[:100]  # Check start only
-                
-                if not has_kno:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": "KNO event but description doesn't mention 'Kids Night Out' or 'KNO'"
-                    })
-                    print(f"    ⚠️ KNO: Description missing 'Kids Night Out' or 'KNO'")
-                
-                if has_clinic:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "error",
-                        "category": "data_error",
-                        "message": "KNO event but description says 'Clinic'"
-                    })
-                    print(f"    🚨 KNO: Description says 'Clinic' - wrong program!")
-            
-            elif event_type == 'CLINIC':
-                # CLINIC: Must contain "clinic", check for skill mismatch, should NOT say KNO/Open Gym
-                has_clinic = 'clinic' in description_lower
-                # Check for any variation of kids night out
-                desc_start_no_apos = description_lower[:100].replace("'", "").replace("'", "")
-                has_kno = ('kids night out' in desc_start_no_apos or
-                          'kid night out' in desc_start_no_apos or
-                          description_lower[:50].startswith('kno') or
-                          'night out' in desc_start_no_apos or
-                          'parents night out' in desc_start_no_apos or
-                          'ninja night out' in description_lower[:100])
-                has_open_gym = description_lower[:100].startswith('open gym')
-                
-                if not has_clinic:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": "CLINIC event but description doesn't mention 'Clinic'"
-                    })
-                    print(f"    ⚠️ CLINIC: Description missing 'Clinic'")
-                
-                if has_kno:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "error",
-                        "category": "data_error",
-                        "message": "CLINIC event but description says 'Kids Night Out'"
-                    })
-                    print(f"    🚨 CLINIC: Description says 'Kids Night Out' - wrong program!")
-                
-                if has_open_gym:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "error",
-                        "category": "data_error",
-                        "message": "CLINIC event but description starts with 'Open Gym'"
-                    })
-                    print(f"    🚨 CLINIC: Description starts with 'Open Gym' - wrong program!")
-                
-                # Check for SKILL MISMATCH
-                # Use the same comprehensive skills list as the completeness check
-                skills = ['cartwheel', 'back handspring', 'backhandspring', 'handstand', 'tumbling', 
-                         'bars', 'pullover', 'pullovers', 'front flip', 'roundoff', 'backbend', 
-                         'ninja', 'cheer', 'beam', 'vault', 'floor', 'trampoline', 'tumbl', 'bridge', 
-                         'kickover', 'walkover', 'flip flop', 'flip-flop', 'back walkover', 'front walkover']
-                
-                title_skill = None
-                desc_skill = None
-                
-                for skill in skills:
-                    if skill in title_lower:
-                        title_skill = skill
-                        break
-                
-                # Check first 100 chars of description for a skill
-                desc_start = description_lower[:150]
-                for skill in skills:
-                    if skill in desc_start:
-                        desc_skill = skill
-                        break
-                
-                # Flag if BOTH have a skill and they're DIFFERENT
-                if title_skill and desc_skill and title_skill != desc_skill:
-                    # Handle "back handspring" vs "backhandspring"
-                    title_normalized = title_skill.replace(' ', '')
-                    desc_normalized = desc_skill.replace(' ', '')
-                    if title_normalized != desc_normalized:
-                        validation_errors.append({
-                            "type": "skill_mismatch",
-                            "severity": "error",
-                            "category": "data_error",
-                            "message": f"Title says '{title_skill}' but description says '{desc_skill}'"
-                        })
-                        print(f"    🚨 SKILL MISMATCH: Title '{title_skill}' vs Description '{desc_skill}'")
-            
-            elif event_type == 'OPEN GYM':
-                # OPEN GYM: Must contain "open gym" or variations, should NOT say Clinic or KNO
-                # Program synonym rules from rules table replace hardcoded keywords
-                has_open_gym = (
-                    'open gym' in description_lower or
-                    'play and explore the gym' in description_lower or
-                    'open to all' in description_lower
-                )
-                # Also check program_synonym rules for this gym (from rules table) that map to OPEN GYM
-                if not has_open_gym:
-                    og_synonym_rules = get_rules_for_gym(gym_id, event_type).get('program_synonym', [])
-                    for rule in og_synonym_rules:
-                        if rule.get('label', '').upper() == 'OPEN GYM' and rule.get('value', '').lower() in description_lower:
-                            has_open_gym = True
-                            break
-                has_clinic = description_lower[:100].startswith('clinic') or 'clinic' in description_lower[:50]
-                # Check for any variation of kids night out
-                desc_start_no_apos = description_lower[:100].replace("'", "").replace("'", "")
-                has_kno = ('kids night out' in desc_start_no_apos or
-                          'kid night out' in desc_start_no_apos or
-                          'night out' in desc_start_no_apos or
-                          'parents night out' in desc_start_no_apos or
-                          'ninja night out' in description_lower[:100])
-
-                if not has_open_gym:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "warning",
-                        "category": "formatting",
-                        "message": "OPEN GYM event but description doesn't mention 'Open Gym' or similar"
-                    })
-                    print(f"    ⚠️ OPEN GYM: Description missing 'Open Gym' or similar")
-                
-                if has_clinic:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "error",
-                        "category": "data_error",
-                        "message": "OPEN GYM event but description says 'Clinic'"
-                    })
-                    print(f"    🚨 OPEN GYM: Description says 'Clinic' - wrong program!")
-                
-                if has_kno:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "error",
-                        "category": "data_error",
-                        "message": "OPEN GYM event but description says 'Kids Night Out'"
-                    })
-                    print(f"    🚨 OPEN GYM: Description says 'Kids Night Out' - wrong program!")
-            
-            elif event_type == 'CAMP':
-                # CAMP: Check for major program type mismatches
-                # CAMPs might mention "open gym" or "ninja" as activities - that's OK
-                # But if description STARTS with "Clinic" or "Kids Night Out", that's wrong
-                has_clinic_start = description_lower[:50].startswith('clinic')
-                desc_start_no_apos = description_lower[:100].replace("'", "").replace("'", "")
-                has_kno_start = (desc_start_no_apos.startswith('kids night out') or
-                                desc_start_no_apos.startswith('kid night out') or
-                                description_lower[:50].startswith('kno ') or
-                                desc_start_no_apos.startswith('parents night out') or
-                                desc_start_no_apos.startswith('ninja night out'))
-                
-                if has_clinic_start:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "error",
-                        "category": "data_error",
-                        "message": "CAMP event but description starts with 'Clinic'"
-                    })
-                    print(f"    🚨 CAMP: Description starts with 'Clinic' - wrong program!")
-                
-                if has_kno_start:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "error",
-                        "category": "data_error",
-                        "message": "CAMP event but description starts with 'Kids Night Out'"
-                    })
-                    print(f"    🚨 CAMP: Description starts with 'Kids Night Out' - wrong program!")
-                
-                # Check if title says Clinic or KNO but iClass says CAMP
-                if title_has_kno:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "error",
-                        "category": "data_error",
-                        "message": "iClass says CAMP but title says 'Kids Night Out'"
-                    })
-                    print(f"    [!] PROGRAM MISMATCH: iClass=CAMP, Title says KNO")
-                
-                if title_has_clinic:
-                    validation_errors.append({
-                        "type": "program_mismatch",
-                        "severity": "error",
-                        "category": "data_error",
-                        "message": "iClass says CAMP but title says 'Clinic'"
-                    })
-                    print(f"    [!] PROGRAM MISMATCH: iClass=CAMP, Title says Clinic")
-            
-            # --- TITLE vs DESCRIPTION CROSS-CHECK (applies to ALL events) ---
-            # This catches copy/paste errors regardless of which iClassPro page the event is on
-            
-            # Check what program keywords are in the TITLE
-            title_no_apos = title_lower.replace("'", "").replace("'", "")
-            title_has_clinic = 'clinic' in title_lower
-            title_has_kno = ('kids night out' in title_no_apos or
-                            'kid night out' in title_no_apos or
-                            title_lower.startswith('kno ') or ' kno ' in title_lower or
-                            'night out' in title_no_apos or
-                            'parents night out' in title_no_apos or
-                            'ninja night out' in title_lower)
-            title_has_open_gym = 'open gym' in title_lower
-            # Also check program_synonym rules for this gym that map to OPEN GYM
-            if not title_has_open_gym:
-                og_syn_rules = get_rules_for_gym(gym_id, event_type).get('program_synonym', [])
-                for rule in og_syn_rules:
-                    if rule.get('label', '').upper() == 'OPEN GYM' and rule.get('value', '').lower() in title_lower:
-                        title_has_open_gym = True
-                        break
-
-            # Check what program keywords are in the DESCRIPTION (first 150 chars)
-            desc_start = description_lower[:150]
-            desc_start_no_apos = desc_start.replace("'", "").replace("'", "")
-            desc_has_clinic = 'clinic' in desc_start
-            desc_has_kno = ('kids night out' in desc_start_no_apos or
-                           'kid night out' in desc_start_no_apos or
-                           desc_start.startswith('kno ') or
-                           'night out' in desc_start_no_apos or
-                           'parents night out' in desc_start_no_apos or
-                           'ninja night out' in desc_start)
-            desc_has_open_gym = desc_start.startswith('open gym')
-            
-            # Cross-check: Title says Clinic but Description says KNO
-            if title_has_clinic and desc_has_kno:
-                validation_errors.append({
-                    "type": "title_desc_mismatch",
-                    "severity": "error",
-                    "category": "data_error",
-                    "message": "Title says 'Clinic' but description says 'Kids Night Out'"
-                })
-                print(f"    🚨 TITLE/DESC MISMATCH: Title has 'Clinic' but description says 'Kids Night Out'")
-            
-            # Cross-check: Title says KNO but Description says Clinic
-            if title_has_kno and desc_has_clinic:
-                validation_errors.append({
-                    "type": "title_desc_mismatch",
-                    "severity": "error",
-                    "category": "data_error",
-                    "message": "Title says 'Kids Night Out' but description says 'Clinic'"
-                })
-                print(f"    🚨 TITLE/DESC MISMATCH: Title has 'KNO' but description says 'Clinic'")
-            
-            # Cross-check: Title says Open Gym but Description says KNO
-            if title_has_open_gym and desc_has_kno:
-                validation_errors.append({
-                    "type": "title_desc_mismatch",
-                    "severity": "error",
-                    "category": "data_error",
-                    "message": "Title says 'Open Gym' but description says 'Kids Night Out'"
-                })
-                print(f"    🚨 TITLE/DESC MISMATCH: Title has 'Open Gym' but description says 'Kids Night Out'")
-            
-            # Cross-check: Title says KNO but Description starts with Open Gym
-            if title_has_kno and desc_has_open_gym:
-                validation_errors.append({
-                    "type": "title_desc_mismatch",
-                    "severity": "error",
-                    "category": "data_error",
-                    "message": "Title says 'Kids Night Out' but description starts with 'Open Gym'"
-                })
-                print(f"    🚨 TITLE/DESC MISMATCH: Title has 'KNO' but description starts with 'Open Gym'")
-            
-            # Cross-check: Title says Clinic but Description starts with Open Gym
-            if title_has_clinic and desc_has_open_gym:
-                validation_errors.append({
-                    "type": "title_desc_mismatch",
-                    "severity": "error",
-                    "category": "data_error",
-                    "message": "Title says 'Clinic' but description starts with 'Open Gym'"
-                })
-                print(f"    🚨 TITLE/DESC MISMATCH: Title has 'Clinic' but description starts with 'Open Gym'")
-            
-            # Cross-check: Title says Open Gym but Description says Clinic
-            if title_has_open_gym and desc_has_clinic:
-                validation_errors.append({
-                    "type": "title_desc_mismatch",
-                    "severity": "error",
-                    "category": "data_error",
-                    "message": "Title says 'Open Gym' but description says 'Clinic'"
-                })
-                print(f"    🚨 TITLE/DESC MISMATCH: Title has 'Open Gym' but description says 'Clinic'")
-            
-            # --- PRICING VALIDATION ---
-            # Extract all prices from title and description
-            title_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', title)
-            desc_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', description)
-            
-            # Rule: Price MUST be in description
-            if not desc_prices:
-                validation_errors.append({
-                    "type": "missing_price_in_description",
-                    "severity": "warning",
-                    "category": "formatting",
-                    "message": "Price not found in description"
-                })
-                print(f"    ❌ MISSING PRICE: No $ found in description")
-            
-            # Rule: If price in BOTH title and description, title price must appear somewhere in description
-            elif title_prices and desc_prices:
-                title_price = float(title_prices[0])
-                desc_price_floats = [float(p) for p in desc_prices]
-                # Title price is valid if it matches ANY price in the description (within $1 tolerance)
-                title_price_found = any(abs(title_price - dp) <= 1 for dp in desc_price_floats)
-                if not title_price_found:
-                    validation_errors.append({
-                        "type": "price_mismatch",
-                        "severity": "error",
-                        "category": "data_error",
-                        "message": f"Title says ${title_price:.0f} but description prices are {', '.join(['$' + p for p in desc_prices])}"
-                    })
-                    print(f"    ❌ PRICE MISMATCH: Title ${title_price:.0f} not found in description prices: {', '.join(['$' + p for p in desc_prices])}")
-            
-            # --- CAMP PRICE VALIDATION (Full Day + Half Day, Daily + Weekly) ---
-            # Checks if price in title OR description matches ANY valid camp price for this gym
-            # Valid prices: full_day_daily, full_day_weekly, half_day_daily, half_day_weekly
-            # Note: Some gyms don't offer half day (NULL values) - those are skipped
-            # Check both title and description prices (some camps only have price in title)
-            all_camp_prices = list(set(title_prices + desc_prices))  # Combine and dedupe
-            if event_type == 'CAMP' and all_camp_prices:
-                camp_pricing = get_camp_pricing()
-                if gym_id in camp_pricing:
-                    gym_prices = camp_pricing[gym_id]
-                    
-                    # Build list of all valid prices for this gym (skip NULL values)
-                    valid_prices = []
-                    price_labels = []
-                    
-                    if gym_prices.get('full_day_daily'):
-                        valid_prices.append(float(gym_prices['full_day_daily']))
-                        price_labels.append(f"Full Day Daily ${gym_prices['full_day_daily']}")
-                    if gym_prices.get('full_day_weekly'):
-                        valid_prices.append(float(gym_prices['full_day_weekly']))
-                        price_labels.append(f"Full Day Weekly ${gym_prices['full_day_weekly']}")
-                    if gym_prices.get('half_day_daily'):
-                        valid_prices.append(float(gym_prices['half_day_daily']))
-                        price_labels.append(f"Half Day Daily ${gym_prices['half_day_daily']}")
-                    if gym_prices.get('half_day_weekly'):
-                        valid_prices.append(float(gym_prices['half_day_weekly']))
-                        price_labels.append(f"Half Day Weekly ${gym_prices['half_day_weekly']}")
-
-                    # Also add any extra valid prices from rules table
-                    # (e.g. Before Care $20, After Care $20 - per-gym rules)
-                    extra_price_rules = get_rules_for_gym(gym_id, event_type).get('price', [])
-                    for ep in extra_price_rules:
-                        try:
-                            extra_price = float(ep['value'])
-                            if extra_price not in valid_prices:
-                                valid_prices.append(extra_price)
-                                price_labels.append(f"{ep.get('label', 'Custom')} ${ep['value']}")
-                        except (ValueError, TypeError):
-                            pass
-
-                    if valid_prices:
-                        # Check each price found in title or description
-                        for camp_price_str in all_camp_prices:
-                            camp_price = float(camp_price_str)
-                            
-                            # Check if price matches any valid price (with $2 tolerance for rounding)
-                            is_valid = any(abs(camp_price - vp) <= 2 for vp in valid_prices)
-                            
-                            if not is_valid:
-                                validation_errors.append({
-                                    "type": "camp_price_mismatch",
-                                    "severity": "warning",
-                                    "category": "data_error",
-                                    "message": f"Camp price ${camp_price:.0f} doesn't match any valid price for {gym_id}. Valid: {', '.join(price_labels)}"
-                                })
-                                print(f"    ⚠️ CAMP PRICE: ${camp_price:.0f} not valid for {gym_id}. Expected one of: {', '.join(price_labels)}")
-                                break  # Only flag once per event
-            
-            # --- EVENT PRICE VALIDATION (Clinic, KNO, Open Gym) ---
-            # Checks if the expected price from event_pricing table appears ANYWHERE in the title OR description
-            # Uses effective_date to automatically use correct price (handles price increases)
-            # Approach: Instead of extracting one price and comparing, check if ANY valid price
-            # from Supabase appears in the text. This avoids false positives when descriptions
-            # have multiple prices (e.g., "$45 for 1 child, $40 for siblings").
-            # NOTE: Checks title+description combined (not just description) so gyms that only
-            # put prices in titles (like CCP, CPF) still get validated.
-            if event_type in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']:
-                event_pricing = get_event_pricing()
-                if gym_id in event_pricing and event_type in event_pricing[gym_id]:
-                    valid_prices = event_pricing[gym_id][event_type]
-
-                    # Also add any extra valid prices from rules table
-                    extra_price_rules = get_rules_for_gym(gym_id, event_type).get('price', [])
-                    for ep in extra_price_rules:
-                        try:
-                            extra_price = float(ep['value'])
-                            if extra_price not in valid_prices:
-                                valid_prices.append(extra_price)
-                        except (ValueError, TypeError):
-                            pass
-
-                    if valid_prices:
-                        # Combine prices from BOTH title and description (not just description)
-                        # This fixes a bug where gyms that only put prices in titles
-                        # (like CCP, CPF) were never getting price-validated
-                        all_event_prices = list(set(title_prices + desc_prices))
-
-                        if all_event_prices:
-                            # Prices found in text — check if any match expected
-                            all_found_prices = set(float(p) for p in all_event_prices)
-                            expected_price_found = any(
-                                any(abs(found - vp) <= 1 for found in all_found_prices)
-                                for vp in valid_prices
-                            )
-
-                            if not expected_price_found:
-                                valid_str = ', '.join([f'${p:.0f}' for p in valid_prices])
-                                found_str = ', '.join([f'${p}' for p in all_event_prices])
-                                validation_errors.append({
-                                    "type": "event_price_mismatch",
-                                    "severity": "error",
-                                    "category": "data_error",
-                                    "message": f"{event_type} price {found_str} doesn't match expected price for {gym_id}. Valid: {valid_str}"
-                                })
-                                print(f"    ❌ {event_type} PRICE: Expected {valid_str} not found for {gym_id}. Found in text: {found_str}")
-                        # else: No prices found in text at all — already caught by
-                        # missing_price_in_description (FORMAT error). No need to double-flag.
+            ctx = ValidationContext(
+                event_dict=ev,
+                gym_id=gym_id,
+                event_type=event_type,
+                title=title,
+                description=description,
+                start_date=start_date,
+                end_date_str=(ev.get("endDate") or start_date),
+                time_str=time_str,
+                age_min=age_min,
+                day_of_week=day_of_week,
+                get_rules_for_gym_fn=get_rules_for_gym,
+                get_camp_pricing_fn=get_camp_pricing,
+                get_event_pricing_fn=get_event_pricing
+            )
+            validation_errors, _hit_counts = run_validation(ctx, active_checks)
         
-        # ========== AVAILABILITY INFO ==========
-        # NOTE: Sold out is NOT a validation error - it's informational status
-        # The has_openings field is saved separately and displays "FULL" badge
-        # We do NOT add sold_out to validation_errors (it's not an audit issue)
-        
-        # Check if registration has closed but event is still in the future
-        if registration_end_date and start_date:
+        # Registration status checks (not validation — informational)
+        if registration_end_date:
             try:
-                reg_end = datetime.strptime(registration_end_date, "%Y-%m-%d").date()
-                event_start = datetime.strptime(start_date, "%Y-%m-%d").date()
-                today = date.today()
-                
-                # Registration closed but event hasn't happened yet
-                if reg_end < today and event_start >= today:
+                reg_end = datetime.strptime(registration_end_date, "%Y-%m-%d")
+                if reg_end < datetime.now():
                     validation_errors.append({
                         "type": "registration_closed",
-                        "severity": "warning",
+                        "severity": "info",
                         "category": "status",
-                        "message": f"Registration closed on {registration_end_date} but event is {start_date}"
+                        "message": f"Registration closed on {registration_end_date}"
                     })
-                    print(f"    ⚠️ REGISTRATION CLOSED: Ended {registration_end_date}, event on {start_date}")
+                    print(f"    ℹ️ REGISTRATION CLOSED: Ended {registration_end_date}")
             except (ValueError, TypeError):
-                pass  # Invalid date format, skip
+                pass
         
-        # Check if registration hasn't opened yet
-        if registration_start_date and start_date:
+        if registration_start_date:
             try:
-                reg_start = datetime.strptime(registration_start_date, "%Y-%m-%d").date()
-                today = date.today()
-                
-                if reg_start > today:
+                reg_start = datetime.strptime(registration_start_date, "%Y-%m-%d")
+                if reg_start > datetime.now():
                     validation_errors.append({
                         "type": "registration_not_open",
                         "severity": "info",
@@ -2525,7 +1546,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                     })
                     print(f"    ℹ️ REGISTRATION NOT OPEN YET: Opens {registration_start_date}")
             except (ValueError, TypeError):
-                pass  # Invalid date format, skip
+                pass
         
         # Log status
         if description_status == 'none':
@@ -2573,13 +1594,11 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             
             # Count by category
             data_errors = sum(1 for e in all_errors if e.get("category") == "data_error")
-            format_errors = sum(1 for e in all_errors if e.get("category") == "formatting")
             status_errors = sum(1 for e in all_errors if e.get("category") == "status")
-            
+
             print(f"\n{'='*60}")
             print(f"📊 VALIDATION SUMMARY: {len(processed)} events checked, {len(all_errors)} total errors found")
             print(f"   🚨 DATA errors (wrong info): {data_errors}")
-            print(f"   ⚠️  FORMAT errors (missing info): {format_errors}")
             print(f"   ℹ️  STATUS errors: {status_errors}")
             print(f"   Breakdown by type:")
             for err_type, count in sorted(error_counts.items(), key=lambda x: -x[1]):

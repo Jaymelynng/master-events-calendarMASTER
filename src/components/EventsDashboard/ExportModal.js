@@ -254,8 +254,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       
       // Separate by category for better display
       const dataErrors = unacknowledgedErrors.filter(err => inferErrorCategory(err) === 'data_error');
-      const formattingErrors = unacknowledgedErrors.filter(err => inferErrorCategory(err) === 'formatting');
-      
+
       return {
         gym_id: e.gym_id,
         gym_name: e.gym_name || e.gym_id,
@@ -265,10 +264,8 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         end_date: e.end_date,
         type: e.type,
         data_error_count: dataErrors.length,
-        formatting_error_count: formattingErrors.length,
         issues: [
           ...dataErrors.map(err => `[DATA ERROR] ${err.message}`),
-          ...formattingErrors.map(err => `[FORMATTING] ${err.message}`),
           e.description_status === 'none' ? '[MISSING] No description' : null,
           e.description_status === 'flyer_only' ? '[INCOMPLETE] Flyer only (no text)' : null
         ].filter(Boolean),
@@ -475,11 +472,10 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       csvContent += `AUDIT CHECK ISSUES - ${monthName}\n`;
       csvContent += `Total events with issues: ${issues.length} out of ${filteredEvents.length} events\n`;
       const totalDataErrors = issues.reduce((sum, i) => sum + i.data_error_count, 0);
-      const totalFormattingErrors = issues.reduce((sum, i) => sum + i.formatting_error_count, 0);
-      csvContent += `Data Errors (wrong info): ${totalDataErrors} | Formatting Issues (missing info): ${totalFormattingErrors}\n\n`;
+      csvContent += `Data Errors (wrong info): ${totalDataErrors}\n\n`;
       
       if (issues.length > 0) {
-        csvContent += 'Gym,Title,Start Date,End Date,Type,Data Errors,Formatting Issues,All Issues,Event URL\n';
+        csvContent += 'Gym,Title,Start Date,End Date,Type,Data Errors,All Issues,Event URL\n';
         issues.forEach(issue => {
           const iStartDate = (issue.start_date || issue.date || '').split('T')[0];
           const iEndDate = (issue.end_date || issue.start_date || issue.date || '').split('T')[0];
@@ -491,7 +487,6 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
             iIsMultiDay ? iEndDate : '',
             issue.type,
             issue.data_error_count,
-            issue.formatting_error_count,
             `"${issue.issues.join('; ')}"`,
             issue.event_url || ''
           ].join(',') + '\n';
@@ -867,9 +862,6 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             <button onclick="filterByType('data')" class="filter-btn" data-filter="data" style="padding: 6px 12px; border: 2px solid #dc2626; background: white; color: #dc2626; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
               🚨 Data Errors Only
             </button>
-            <button onclick="filterByType('formatting')" class="filter-btn" data-filter="formatting" style="padding: 6px 12px; border: 2px solid #f59e0b; background: white; color: #f59e0b; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
-              ⚠️ Formatting Only
-            </button>
           </div>
         </div>
         <div>
@@ -921,7 +913,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             </div>
             <div style="border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; padding: 12px;">
               ${gym.issues.map(issue => `
-              <div class="event-card" data-has-data="${issue.data_error_count > 0}" data-has-formatting="${issue.formatting_error_count > 0}" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+              <div class="event-card" data-has-data="${issue.data_error_count > 0}" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
                   <div>
                     <strong style="color: #333; font-size: 13px;">${issue.title?.substring(0, 55)}${issue.title?.length > 55 ? '...' : ''}</strong>
@@ -945,13 +937,12 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
                 </div>
                 ` : ''}
                 
-                ${issue.formatting_error_count > 0 ? `
-                <div class="formatting-errors">
-                  <div style="background: #f59e0b; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; display: inline-block;">FORMATTING</div>
+                ${issue.issues.filter(i => i.startsWith('[MISSING]') || i.startsWith('[INCOMPLETE]')).length > 0 ? `
+                <div>
                   <ul style="margin: 4px 0 0 0; padding: 0; list-style: none;">
-                    ${issue.issues.filter(i => i.startsWith('[FORMATTING]') || i.startsWith('[MISSING]') || i.startsWith('[INCOMPLETE]')).map(i => `
-                    <li style="background: #fef3c7; padding: 4px 8px; border-radius: 4px; margin: 3px 0; border-left: 3px solid #f59e0b; font-size: 11px;">
-                      ⚠️ ${i.replace('[FORMATTING] ', '').replace('[MISSING] ', '').replace('[INCOMPLETE] ', '')}
+                    ${issue.issues.filter(i => i.startsWith('[MISSING]') || i.startsWith('[INCOMPLETE]')).map(i => `
+                    <li style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; margin: 3px 0; border-left: 3px solid #9ca3af; font-size: 11px;">
+                      ${i.replace('[MISSING] ', '').replace('[INCOMPLETE] ', '')}
                     </li>
                     `).join('')}
                   </ul>
@@ -991,11 +982,11 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         // Update button styles
         document.querySelectorAll('.filter-btn').forEach(btn => {
           if (btn.dataset.filter === type) {
-            btn.style.background = btn.dataset.filter === 'all' ? '#6366f1' : btn.dataset.filter === 'data' ? '#dc2626' : '#f59e0b';
+            btn.style.background = btn.dataset.filter === 'all' ? '#6366f1' : '#dc2626';
             btn.style.color = 'white';
           } else {
             btn.style.background = 'white';
-            btn.style.color = btn.dataset.filter === 'all' ? '#6366f1' : btn.dataset.filter === 'data' ? '#dc2626' : '#f59e0b';
+            btn.style.color = btn.dataset.filter === 'all' ? '#6366f1' : '#dc2626';
           }
         });
       }
@@ -1030,12 +1021,10 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
           let hasVisibleEvents = false;
           section.querySelectorAll('.event-card').forEach(card => {
             const hasData = card.dataset.hasData === 'true';
-            const hasFormatting = card.dataset.hasFormatting === 'true';
-            
+
             let show = false;
             if (currentTypeFilter === 'all') show = true;
             else if (currentTypeFilter === 'data' && hasData) show = true;
-            else if (currentTypeFilter === 'formatting' && hasFormatting) show = true;
             
             card.style.display = show ? 'block' : 'none';
             if (show) hasVisibleEvents = true;

@@ -1,8 +1,8 @@
 # Data Quality Validation System
 
-**Last Updated:** March 5, 2026
-**Status:** ✅ Fully Deployed  
-**Files:** `automation/f12_collect_and_import.py`, `src/components/EventsDashboard.js`, `src/components/EventsDashboard/DismissRuleModal.js`, `src/components/AdminDashboard/AdminAuditReview.js`
+**Last Updated:** March 17, 2026
+**Status:** ✅ Fully Deployed
+**Files:** `automation/f12_collect_and_import.py`, `automation/validation_engine.py`, `src/components/EventsDashboard.js`, `src/components/EventsDashboard/DismissRuleModal.js`, `src/components/AdminDashboard/AdminAuditReview.js`
 
 ---
 
@@ -33,7 +33,7 @@ This section defines EXACTLY what data is considered "correct" and what gets com
 
 | Event Type | Price Source of Truth | What Gets Compared |
 |------------|----------------------|-------------------|
-| **CAMP** | ✅ `camp_pricing` table (full_day_daily, full_day_weekly, half_day_daily, half_day_weekly) + `gym_valid_values` exceptions | Description price vs your Supabase pricing table |
+| **CAMP** | ✅ `camp_pricing` table (full_day_daily, full_day_weekly, half_day_daily, half_day_weekly) + `rules` table exceptions | Description price vs your Supabase pricing table |
 | **CLINIC** | ✅ `event_pricing` table (per gym, with effective_date) | Description/title price vs your Supabase pricing table |
 | **KIDS NIGHT OUT** | ✅ `event_pricing` table (per gym, with effective_date) | Description/title price vs your Supabase pricing table |
 | **OPEN GYM** | ✅ `event_pricing` table (per gym, with effective_date) | Description/title price vs your Supabase pricing table |
@@ -61,7 +61,7 @@ This section defines EXACTLY what data is considered "correct" and what gets com
 │                  SUPABASE PRICING TABLES                             │
 │  camp_pricing: full_day_daily, full_day_weekly, etc. (CAMP)         │
 │  event_pricing: per gym/type with effective_date (CLINIC/KNO/OG)    │
-│  gym_valid_values: custom exceptions (Before Care $20, etc.)        │
+│  rules: custom exceptions (Before Care $20, etc.)                   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -90,16 +90,6 @@ When events are synced from iClassPro, the system:
 4. **Flags issues** with appropriate icons on the calendar
 
 ## Complete Validation Matrix
-
-### Completeness Checks (Does it EXIST?)
-
-| Required Field | In Title? | In Description? |
-|----------------|-----------|-----------------|
-| **Age** | ✅ Must exist | ✅ Must exist |
-| **Date** | ✅ Must exist | ✅ Must exist (or time) |
-| **Time** | Optional | ✅ Should exist |
-| **Price** | Optional | ✅ Must exist |
-| **Skill (clinics)** | Optional | ℹ️ Should exist |
 
 ### Accuracy Checks (Does it MATCH?)
 
@@ -133,74 +123,9 @@ When events are synced from iClassPro, the system:
 
 ### Validation Checks
 
-## PART A: COMPLETENESS CHECKS (Does it EXIST?)
+## PART A: COMPLETENESS CHECKS (FORMAT Errors)
 
-These checks verify that REQUIRED fields are present, not just accurate.
-
-#### C1. Title Must Have Age
-Checks if title contains age information in any format.
-
-**Formats Recognized:** `Ages 5+`, `Ages 5-12`, `Age 5+`, `Students 5+`, `5+`, `5-12`
-
-**Example Violation:**
-- Title: "Gym Fun Fridays | January 16 | 10:00-11:30am | $10"
-- ⚠️ Flag: "Title missing age (e.g., 'Ages 5+')"
-
-#### C2. Title Must Have Date
-Checks if title contains date information.
-
-**Formats Recognized:** `January`, `Jan`, `1/9`, `01/09`, `9th`
-
-**Example Violation:**
-- Title: "Kids Night Out Bring a Friend for $10 - Friends sign up here!"
-- ⚠️ Flag: "Title missing date (e.g., 'January 9th')"
-
-#### C3. Description Must Have Age
-Checks if description contains age information.
-
-**Example Violation:**
-- Description: "KIDS NIGHT OUT extended!!! 7-10 PM. Take the night off..."
-- ⚠️ Flag: "Description missing age"
-
-#### C4. Description Must Have Date/Time
-Checks if description contains date or time information.
-
-**Example Violation:**
-- Description: "This hands-on open gym invites toddlers to move, explore, jump, and play!"
-- ⚠️ Flag: "Description missing date/time"
-
-#### C5. Clinic Should Mention Skill (INFO level)
-For CLINIC events, checks if **title OR description** mentions a specific gymnastics skill.
-
-**Skills Recognized:** cartwheel, back handspring, backhandspring, handstand, tumbling, bars, pullover, pullovers, front flip, roundoff, backbend, ninja, cheer, beam, vault, floor, trampoline, tumbl, bridge, kickover, walkover, flip flop, flip-flop, back walkover, front walkover
-
-**Example Info:**
-- Description: "Our specialized skill clinics provide students with the opportunity..."
-- ℹ️ Info: "Clinic description doesn't mention specific skill"
-
-#### C6. Title Must Have Program Type Keyword
-Checks if title contains the expected program type keyword based on iClassPro category.
-
-**Program Keywords Recognized:**
-| iClass Type | Hardcoded Keywords | Extended By |
-|-------------|-------------------|-------------|
-| KIDS NIGHT OUT | "kids night out", "kid's night out", "kids' night out", "kno", "night out", "parents night out", "ninja night out" | `program_synonym` rules in `gym_valid_values` |
-| CLINIC | "clinic" | `program_synonym` rules |
-| OPEN GYM | "open gym" (hardcoded); "play and explore the gym", "open to all" (description only) | `program_synonym` rules (e.g., "gym fun friday", "fun gym", "preschool fun" are now database rules, not hardcoded) |
-| CAMP | "camp" | `program_synonym` rules |
-
-**Example Violation:**
-- iClass Type: CAMP
-- Title: "Spring Break | March 16th-March 20th | Full Day (9-3)"
-- ⚠️ Flag: "Title missing program type (e.g., 'Camp')"
-
-#### C7. Description Must Have Program Type Keyword
-Checks if description contains the expected program type keyword based on iClassPro category.
-
-**Example Violation:**
-- iClass Type: CLINIC
-- Description: "Ninja training with obstacle courses..."
-- ⚠️ Flag: "Description missing program type (should mention 'Clinic' or similar)"
+> **Note:** FORMAT errors (completeness checks C1-C7) were planned but never implemented in the production validation engine. Removed from documentation March 17, 2026. The system only performs accuracy checks (Part B below) — comparing structured API data against title/description text and pricing tables.
 
 ---
 
@@ -379,14 +304,14 @@ flowchart TD
 #### 7b. Camp Price Validation (CAMP Only)
 Compares prices found in camp description against **two sources of truth**:
 1. `camp_pricing` table — standard daily/weekly prices per gym
-2. `gym_valid_values` table — per-gym exception rules (e.g., "$20 Before Care")
+2. `rules` table — per-gym exception rules (e.g., "$20 Before Care")
 
 If a price in the description matches either source, it passes. Otherwise: 🚨 Flag.
 
 **Example:**
 - Camp description mentions "$20"
 - Standard pricing for RBA: Full Day Daily $62, Full Day Weekly $250
-- But `gym_valid_values` has a rule: RBA | price | 20 = "Before Care"
+- But `rules` table has a rule: RBA | valid_price | 20 = "Before Care"
 - ✅ No flag — $20 is a known valid price for RBA
 
 #### 8. Flyer Detection (All Programs)
@@ -450,16 +375,6 @@ Then re-sync gyms: **Admin Dashboard → Quick Actions → Automated Sync**
 
 Camp events now receive **full validation** including:
 
-### Completeness Checks
-- ⚠️ Title must have year
-- ⚠️ Title must have age
-- ⚠️ Title must have date
-- ⚠️ Title must have program type ("Camp")
-- ⚠️ Description must have age
-- ⚠️ Description must have date/time
-- ⚠️ Description must have program type ("Camp")
-- ❌ Description must have price
-
 ### Accuracy Checks
 - 🚨 Year mismatch (title says 2025 but event is in 2026)
 - 🚨 Date mismatch (wrong month in description)
@@ -474,7 +389,8 @@ Camp events now receive **full validation** including:
 ## Technical Implementation
 
 ### Files Involved
-- `automation/f12_collect_and_import.py` - Validation logic runs during sync
+- `automation/f12_collect_and_import.py` - Event collection and sync orchestration
+- `automation/validation_engine.py` - System checks (database-driven validation logic) runs during sync
 - `automation/local_api_server.py` - ALLOWED_EVENT_FIELDS includes validation fields
 - `src/lib/eventComparison.js` - Comparison includes validation fields
 - `src/lib/validationHelpers.js` - Shared helpers (inferErrorCategory, canAddAsRule, etc.)
@@ -486,11 +402,12 @@ Camp events now receive **full validation** including:
 
 ### Validation Flow
 ```
-iClassPro API 
+iClassPro API (Direct HTTP)
     ↓
-Railway (f12_collect_and_import.py)
+Railway (f12_collect_and_import.py → validation_engine.py)
     ↓ extracts structured data
-    ↓ parses description text
+    ↓ loads rules from Supabase `rules` table
+    ↓ runs accuracy checks (DATA errors only — no FORMAT errors)
     ↓ compares and generates validation_errors
     ↓
 Supabase (stores validation fields)
@@ -515,7 +432,7 @@ Sometimes a validation warning is a **false positive** - the data is actually co
 **From Admin Dashboard (Audit & Review tab):**
 1. Shift+Click 🪄 wand → Admin Dashboard opens
 2. Select gyms via checkboxes → validation errors load
-3. Filter by category (DATA/FORMAT), month, program type, status
+3. Filter by category, month, program type, status
 4. Click **[✓ OK]** on any error → same DismissRuleModal opens
 5. Accept exception or create permanent rule
 
@@ -530,13 +447,13 @@ For `camp_price_mismatch`, `time_mismatch`, `program_mismatch`, and `missing_pro
    - For price rules: e.g., "Before Care", "After Care"
    - For time rules: e.g., "Early Dropoff"
    - For program synonyms: e.g., "OPEN GYM", "CLINIC" (the program type this title maps to)
-5. Rule is saved to `gym_valid_values` table for that specific gym
+5. Rule is saved to `rules` table for that specific gym
 6. Badge shows: **📋 Permanent Rule** (blue)
 7. Future syncs will never flag this value for this gym again
 
 ### Program Synonym Rules (NEW)
 
-Previously, program name variations like "Gym Fun Friday" → Open Gym were hardcoded in Python. Now they're database rules:
+Previously, program name variations like "Gym Fun Friday" → Open Gym were hardcoded in Python. Now they're database rules in the `rules` table:
 
 | Keyword | Maps To | Gym |
 |---------|---------|-----|
@@ -546,9 +463,9 @@ Previously, program name variations like "Gym Fun Friday" → Open Gym were hard
 | `bonus tumbling` | OPEN GYM | ALL (global) |
 
 **How it works:**
-- When a title says "Gym Fun Friday" and the event is synced as OPEN GYM, the system checks `gym_valid_values` for a `program_synonym` rule
+- When a title says "Gym Fun Friday" and the event is synced as OPEN GYM, the system checks the `rules` table for a `program_synonym` rule
 - If it finds `gym fun friday → OPEN GYM`, it passes validation
-- Rules with `gym_id = 'ALL'` apply to every gym
+- Rules with `gym_ids = '{ALL}'` apply to every gym
 - Gym-specific rules override or extend global rules
 
 **To add a new synonym:**
@@ -573,7 +490,7 @@ Rules can be viewed, added, and deleted in:
 
 | Badge | Meaning |
 |-------|---------|
-| 📋 **Permanent Rule** (blue) | Backed by a rule in `gym_valid_values` — won't be flagged on future syncs |
+| 📋 **Permanent Rule** (blue) | Backed by a rule in `rules` table — won't be flagged on future syncs |
 | **One-time** (gray) | One-time exception — may re-flag on next sync |
 
 ### If the Event is Updated Later
@@ -602,7 +519,7 @@ The audit system is a **data cross-reference engine**. It compares structured AP
 | **Spelling/typos** | No spell check — "Sumemr Camp" passes without error |
 | **Grammar/punctuation** | No grammar validation |
 | **Naming consistency** | Same gym using 3 different names for same event type is not flagged |
-| **Year in description** | Only title is checked for wrong year (known gap) |
+| **Year in description** | ✅ FIXED — Now checks both title AND description for wrong year (first 300 chars) |
 | **Camp day sequences** | Does not verify camps run consecutive days |
 | **Max age** | Only min age compared — managers often use "Ages 5+" |
 
@@ -614,6 +531,10 @@ For the complete technical specification of every check, see `AUDIT_DATA_ERROR_R
 
 | Date | Change |
 |------|--------|
+| Mar 17, 2026 | **REMOVED** FORMAT errors (C1-C7 completeness checks) from documentation — never implemented in production validation engine |
+| Mar 17, 2026 | **UPDATED** All `gym_valid_values` references replaced with `rules` table |
+| Mar 17, 2026 | **FIXED** Year in description — now checks both title AND description (first 300 chars) |
+| Mar 17, 2026 | **ADDED** `validation_engine.py` to files involved — system checks are now database-driven |
 | Mar 5, 2026 | **FIXED** KNO keyword lists synced across all 7 code locations — `parents night out`, `night out`, `ninja night out` now recognized everywhere (were only in completeness check before) |
 | Mar 5, 2026 | **UPDATED** Open Gym keywords clarified — `gym fun`, `fun gym`, `preschool fun` are now database rules (program_synonym), not hardcoded |
 | Mar 5, 2026 | **ADDED** "What Is NOT Validated" section documenting system boundaries |

@@ -1,8 +1,8 @@
 # 🗄️ COMPLETE DATABASE SCHEMA
 ## Master Events Calendar - All Tables & Views
 
-**Last Updated:** February 2, 2026  
-**Database:** `https://xftiwouxpefchwoxxgpf.supabase.co`  
+**Last Updated:** March 17, 2026
+**Database:** `https://xftiwouxpefchwoxxgpf.supabase.co`
 **Status:** ✅ PRODUCTION READY
 
 ---
@@ -11,7 +11,7 @@
 
 | Category | Count |
 |----------|-------|
-| **Tables** | 13 |
+| **Tables** | 15 |
 | **Views** | 2 |
 | **Total Events** | ~500+ (active + archived) |
 | **Gyms** | 10 |
@@ -36,11 +36,13 @@
 7. [monthly_requirements](#7-monthly_requirements-table) - Business rules (2 columns)
 8. [event_audit_log](#8-event_audit_log-table) - Change tracking (11 columns)
 9. [sync_log](#9-sync_log-table) - Sync progress (6 columns)
-10. [gym_valid_values](#10-gym_valid_values-table) - Per-gym validation rules (7 columns)
+10. [rules](#10-rules-table) - Unified validation rules (22 columns)
 11. [event_pricing](#11-event_pricing-table) - Non-camp event prices with effective_date support (8 columns)
 12. [camp_pricing](#12-camp_pricing-table) - Camp price lookup by gym (8 columns)
 13. [acknowledged_patterns](#13-acknowledged_patterns-table) - Bulk dismiss patterns per gym/event type (7 columns)
-14. [Views](#views) - events_with_gym, gym_links_detailed
+14. [requirement_notes](#14-requirement_notes-table) - Requirement status tracking notes (7 columns)
+15. [future_plans](#15-future_plans-table) - Planned features and improvements (8 columns)
+16. [Views](#views) - events_with_gym, gym_links_detailed
 
 ---
 
@@ -357,23 +359,61 @@ sync_log (
 
 ---
 
-## 10. GYM_VALID_VALUES TABLE (DEPRECATED)
+## 10. RULES TABLE
 
-**Status:** ⚠️ **DEPRECATED** — Replaced by the unified `rules` table (March 2026). All code now reads/writes the `rules` table. This table remains in the database for reference only. Run `database/MIGRATE_GYM_VALID_VALUES_TO_RULES.sql` to migrate any remaining data, then drop this table.
+**Purpose:** Unified validation rules — used by Python backend, frontend dismiss flows, Rule Wizard, and Admin Dashboard
+**Row Count:** Varies
+**Column Count:** 22
 
 ```sql
-gym_valid_values (
+rules (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  gym_id TEXT NOT NULL,
-  rule_type TEXT NOT NULL,           -- 'price', 'time', or 'program_synonym'
-  value TEXT NOT NULL,
-  label TEXT NOT NULL,
-  event_type TEXT DEFAULT 'CAMP',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  is_permanent BOOLEAN DEFAULT TRUE,          -- FALSE = temporary rule with end_date
+  end_date DATE,                              -- When temporary rule expires (NULL if permanent)
+  gym_ids TEXT[] DEFAULT '{ALL}',             -- Array of gym codes, or '{ALL}' for global
+  program TEXT DEFAULT 'ALL',                 -- Event type scope (CAMP, CLINIC, etc. or ALL)
+  scope TEXT DEFAULT 'all_events',            -- 'all_events', 'keyword', or 'single_event'
+  keyword TEXT,                               -- Keyword match (when scope = 'keyword')
+  event_id UUID,                              -- Specific event (when scope = 'single_event')
+  rule_type TEXT NOT NULL,                    -- valid_price, sibling_price, valid_time, program_synonym, requirement_exception, exception
+  value TEXT,                                 -- Primary value (price amount, time, synonym keyword)
+  value_kid2 TEXT,                            -- 2nd child price (for sibling_price rules)
+  value_kid3 TEXT,                            -- 3rd child price (for sibling_price rules)
+  label TEXT,                                 -- Human-readable label (e.g., "Before Care", "Early Dropoff")
+  note TEXT,                                  -- Optional explanation
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by TEXT DEFAULT 'manual',           -- 'manual', 'rule_wizard', 'dismiss_flow', 'system'
+  start_date DATE,                            -- When rule takes effect
+  is_active BOOLEAN DEFAULT TRUE,             -- Soft disable without deleting
+  is_system BOOLEAN DEFAULT FALSE,            -- System-generated vs user-created
+  last_hit_count INTEGER DEFAULT 0,           -- How many events matched on last sync
+  last_sync_at TIMESTAMPTZ,                   -- When rule was last evaluated
+  description TEXT                            -- Longer description of rule purpose
 )
 ```
 
-**Migration mapping:** `price` → `valid_price`, `time` → `valid_time`, `gym_id` → `gym_ids[]`
+**Rule Types:**
+| Type | Purpose | Example |
+|------|---------|---------|
+| `valid_price` | Acceptable price for a gym/program | $20 Before Care at RBA |
+| `sibling_price` | Multi-child pricing | $35 1st kid, $25 2nd kid |
+| `valid_time` | Acceptable time variant | 8:30am Early Dropoff |
+| `program_synonym` | Title keyword maps to program type | "gym fun friday" → OPEN GYM |
+| `requirement_exception` | Exempt gym from monthly requirement | SGT exempt from CLINIC in March |
+| `exception` | One-time dismiss of specific error | Dismissed mismatch on single event |
+
+**Scoping:**
+| Scope | Meaning |
+|-------|---------|
+| `all_events` | Rule applies to all events matching gym/program |
+| `keyword` | Rule applies only when event title contains `keyword` |
+| `single_event` | Rule applies only to the specific `event_id` |
+
+**Usage:** Python backend loads rules via `fetch_gym_valid_values()` (name kept for compatibility). Expired temporary rules (where `is_permanent = false` and `end_date < today`) are automatically filtered out.
+
+### gym_valid_values (DROPPED)
+
+**Status:** ❌ **DROPPED** — Removed from database March 2026. All data migrated to the `rules` table above. Migration script: `database/MIGRATE_GYM_VALID_VALUES_TO_RULES.sql`. No code references this table anymore.
 
 ---
 
@@ -442,6 +482,51 @@ acknowledged_patterns (
 ```
 
 **Usage:** When a validation error matches a pattern in this table (same gym_id, event_type, and error_message), it is automatically dismissed during sync.
+
+---
+
+## 14. REQUIREMENT_NOTES TABLE
+
+**Purpose:** Track requirement status notes (In Progress, Late, Excused) for missing events
+**Row Count:** Varies
+**Column Count:** 7
+
+```sql
+requirement_notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id TEXT NOT NULL,              -- FK to gyms.id
+  event_type TEXT NOT NULL,          -- CLINIC, KIDS NIGHT OUT, OPEN GYM
+  month TEXT NOT NULL,               -- e.g., '2026-03'
+  status TEXT NOT NULL,              -- 'in_progress', 'late', 'excused'
+  note TEXT,                         -- Optional explanation
+  created_at TIMESTAMPTZ DEFAULT NOW()
+)
+```
+
+**Usage:** When a gym is missing a required event type for a month, clicking the missing status on the dashboard lets you track why (In Progress, Late, or Excused with a note).
+
+---
+
+## 15. FUTURE_PLANS TABLE
+
+**Purpose:** Track planned features, improvements, and ideas from the Admin Dashboard
+**Row Count:** Varies
+**Column Count:** 8
+
+```sql
+future_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,               -- Feature/plan title
+  description TEXT,                  -- Details
+  category TEXT,                     -- e.g., 'feature', 'improvement', 'idea'
+  priority TEXT,                     -- e.g., 'high', 'medium', 'low'
+  status TEXT DEFAULT 'planned',     -- 'planned', 'in_progress', 'completed'
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+)
+```
+
+**Usage:** Managed from the Admin Dashboard Future Plans tab. Add, edit, and delete planned features directly from the UI.
 
 ---
 
@@ -528,11 +613,11 @@ gyms (10 rows)
   ├──< sync_log (51 rows)
   │     └── gym_id → gyms.id
   │
-  └──< event_audit_log (1,198 rows)
-        └── gym_id → gyms.id
+  ├──< event_audit_log (1,198 rows)
+  │     └── gym_id → gyms.id
   │
-  └──< gym_valid_values
-        └── gym_id → gyms.id
+  ├──< rules
+  │     └── gym_ids[] contains gyms.id (or 'ALL')
   │
   ├──< event_pricing
   │     └── gym_id → gyms.id
@@ -540,8 +625,14 @@ gyms (10 rows)
   ├──< camp_pricing
   │     └── gym_id → gyms.id
   │
-  └──< acknowledged_patterns
-        └── gym_id → gyms.id
+  ├──< acknowledged_patterns
+  │     └── gym_id → gyms.id
+  │
+  ├──< requirement_notes
+  │     └── gym_id → gyms.id
+  │
+  └──< future_plans
+        └── (no gym FK — global plans)
 
 link_types (10 rows)
   └──< gym_links (76 rows)
@@ -611,7 +702,7 @@ CREATE INDEX idx_events_description_status ON events(description_status);
 ```
 Automated Sync (Railway)
     ↓
-Playwright collects from iClassPro
+Direct HTTP API collects from iClassPro (Playwright kept as fallback)
     ↓
 Returns to React frontend
     ↓
@@ -741,6 +832,9 @@ SELECT
 | Dec 2025 | Added acknowledged_errors column |
 | Dec 2025 | Added availability columns |
 | Feb 2, 2026 | Added program_synonym rule type and ALL (global) gym support |
+| Mar 2026 | Unified on `rules` table — `gym_valid_values` DROPPED |
+| Mar 2026 | Created `requirement_notes` table for requirement status tracking |
+| Mar 2026 | Created `future_plans` table for planned features tracking |
 | Feb 2, 2026 | Created gym_valid_values table for per-gym validation rules |
 | Feb 2026 | Created event_pricing table for Clinic/KNO/Open Gym prices |
 | Feb 2026 | Created acknowledged_patterns table for bulk dismiss |
@@ -753,6 +847,7 @@ SELECT
 
 | Date | Change |
 |------|--------|
+| Mar 17, 2026 | Replaced `gym_valid_values` with `rules` table (DROPPED). Added `requirement_notes` and `future_plans` tables. Updated table count to 15. Replaced Playwright with Direct HTTP API in data flow. |
 | Feb 2, 2026 | Added gym_valid_values table documentation |
 | Dec 28, 2025 | Created complete schema documentation |
 | Dec 28, 2025 | Documented all 9 tables with exact column counts |

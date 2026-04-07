@@ -76,17 +76,7 @@ export const calendarViews = {
 
 // Error type labels for validation issues
 export const errorTypeLabels = {
-  // Completeness errors (missing required fields)
-  'missing_age_in_title': '📝 Title Missing Age',
-  'missing_date_in_title': '📝 Title Missing Date',
-  'missing_program_in_title': '📝 Title Missing Program Type',
-  'missing_age_in_description': '📄 Description Missing Age',
-  'missing_datetime_in_description': '📄 Description Missing Date/Time',
-  'missing_time_in_description': '📄 Description Missing Time',
-  'missing_price_in_description': '💰 Description Missing Price',
-  'missing_program_in_description': '📄 Description Missing Program Type',
-  'clinic_missing_skill': '🏋️ Clinic Missing Skill',
-  // Accuracy errors (data mismatches)
+  // Data errors (mismatches between sources)
   'year_mismatch': '📅 Wrong Year in Title',
   'date_mismatch': '📅 Date/Month Mismatch',
   'time_mismatch': '🕐 Time Mismatch',

@@ -1,6 +1,6 @@
 # 🚨 AI AGENT - READ THIS ENTIRE FILE FIRST - MANDATORY
 
-**Last Updated**: March 9, 2026
+**Last Updated**: April 7, 2026
 **Purpose**: This file contains EVERYTHING an AI needs to know about this system. Read it completely before doing ANYTHING.
 
 > **Quick Start:** Also see `CLAUDE.md` in the root for a condensed 2-minute onboarding guide with session workflow.
@@ -65,6 +65,7 @@
 | `src/components/AdminDashboard/RuleWizard.js` | Unified rule creation wizard (validation rules + requirement exceptions) |
 | `src/components/AdminDashboard/EmailComposer.js` | Email generation for managers (missing events + data errors) |
 | `automation/f12_collect_and_import.py` | Core Python script - collects events via Direct API (or Playwright fallback), runs validation |
+| `automation/validation_engine.py` | Database-driven validation engine — all checks from rules table |
 | `src/lib/supabase.js` | Supabase client config |
 | `src/lib/api.js` | API functions for database (includes rulesApi, requirementNotesApi) |
 | `src/lib/validationHelpers.js` | Error category logic |
@@ -76,8 +77,7 @@
 | `events_archive` | Archived/past events + soft-deleted events |
 | `gyms` | 10 gymnastics facilities (includes manager_name, manager_email) |
 | `gym_links` | URLs for each gym's iClassPro pages |
-| `rules` | Unified validation rules (replaces gym_valid_values) |
-| `gym_valid_values` | Legacy per-gym rules (migrated to rules table) |
+| `rules` | Unified validation rules + system checks — drives all validation via validation_engine.py (17 rows: 11 system checks + 6 user rules) |
 | `camp_pricing` | Source of truth for CAMP prices |
 | `event_pricing` | Source of truth for Clinic, KNO, Open Gym prices (with effective dates) |
 | `event_audit_log` | History of all changes |
@@ -151,44 +151,32 @@ Something is **WRONG** - mismatch between sources that could confuse customers.
 | `camp_price_mismatch` | Description price vs `camp_pricing` | Supabase `camp_pricing` |
 | `event_price_mismatch` | Description price vs `event_pricing` | Supabase `event_pricing` (Clinic/KNO/Open Gym) |
 
-### FORMAT Errors (Orange - Warning)
-Something is **MISSING** - required info not found.
+**FORMAT Errors: Removed.** Format/completeness errors were planned but never implemented in the Python backend. All dead code references have been cleaned up (March 17, 2026).
 
-| Error Type | What's Missing |
-|------------|----------------|
-| `missing_age_in_title` | No age range in title |
-| `missing_date_in_title` | No date in title |
-| `missing_program_in_title` | No program type keyword in title |
-| `missing_age_in_description` | No age range in description |
-| `missing_time_in_description` | No time in description |
-| `missing_datetime_in_description` | No date or time in description |
-| `missing_program_in_description` | No program type keyword in description |
-| `missing_price_in_description` | No price ($XX) in description |
-| `description_status: none` | No description at all |
-| `description_status: flyer_only` | Only flyer image, no text to validate |
+## System Checks (Database-Driven)
+All validation checks live in the `rules` table as rows with `rule_type` starting with `check_`. The Python engine (`validation_engine.py`) reads active checks from the database, runs them, and stores results. There are NO hardcoded validation rules in Python.
 
-## Precoded Rules (Hardcoded in Python)
-These work automatically - no configuration needed:
+Current system checks (11):
+- `check_date_mismatch` — Month in description vs actual event dates
+- `check_year_mismatch` — Wrong year in title or description
+- `check_time_mismatch` — Time in description vs iClassPro time
+- `check_age_mismatch` — Age range vs iClassPro settings
+- `check_program_mismatch` — Program type cross-contamination
+- `check_title_desc_mismatch` — Title and description contradict
+- `check_impossible_date` — Dates that can't exist (June 31st)
+- `check_price_mismatch` — Price in title vs description
+- `check_day_mismatch` — Day of week vs actual event day
+- `check_camp_price` — Camp prices vs pricing table
+- `check_event_price` — Event prices vs pricing table
 
-| Rule | How It Works |
-|------|--------------|
-| Case insensitivity | "KIDS NIGHT OUT" = "kids night out" |
-| Apostrophe handling | "Kid's" = "Kids" |
-| Month recognition | Full names AND abbreviations (January, Jan) |
-| Day recognition | Full names AND abbreviations (Friday, Fri) |
-| Multi-day events | Checks BOTH start and end month for camps spanning months |
-| Time formats | Handles 5pm, 5:00pm, 5:00 PM, 5 p.m., etc. |
-| Price patterns | Finds $XX, $XX.XX in text |
-| Program keywords | KNO, CLINIC, OPEN GYM, CAMP auto-detected |
-
-## Configurable Rules (Database - `gym_valid_values` table)
+## Configurable Rules (Database - `rules` table)
 Per-gym customization:
 
 | rule_type | Purpose | Example |
 |-----------|---------|---------|
 | `program_synonym` | Alternative names for programs | "ninja night" → KIDS NIGHT OUT |
-| `price` | Price exceptions | "Before Care" can have different price |
-| `time` | Time exceptions | "Early Dropoff" can have different time |
+| `valid_price` | Price exceptions | "Before Care" can have different price |
+| `valid_time` | Time exceptions | "Early Dropoff" can have different time |
 
 ## NOT YET IMPLEMENTED (Planned)
 | rule_type | Purpose | Status |
@@ -203,7 +191,7 @@ Per-gym customization:
 
 | Gap | Description | Priority | Status |
 |-----|-------------|----------|--------|
-| Wrong year in DESCRIPTION | Only checks title for wrong year, not description | Should fix | ❌ Open |
+| Wrong year in DESCRIPTION | Now checks both title AND description for wrong year | Fixed | ✅ Fixed |
 | `program_ignore` not built | Can't ignore "open gym" when it's a station in KNO | Medium | ❌ Open |
 | Date ranges not validated | "Jan 15-17" not checked against actual dates | Low | ❌ Open |
 | Flyer-only events | Can't validate anything if only image, no text | Known limitation | ❌ Open |
@@ -218,7 +206,7 @@ Per-gym customization:
 | Export single Date column | Feb 23, 2026 | CSV export now includes Start Date and End Date columns for multi-day events |
 | Sync All cross-type false deletions | Feb 23, 2026 | Comparison filters existing events by checkedTypes to prevent cross-type false deletions |
 | includeDeleted flag missing | Feb 23, 2026 | Added includeDeleted parameter to prevent deleted events from reappearing |
-| CORS restriction on Railway | Feb 23, 2026 | Restricted CORS to production origin only |
+| CORS restriction on Railway | Feb 23, 2026 | Attempted but reverted — CORS is still open (`CORS(app)` with no origin restriction). Known issue, not yet fixed. |
 
 ---
 
@@ -231,11 +219,11 @@ Per-gym customization:
 
 ## Admin Dashboard (`AdminDashboard.js`)
 - Accessed via Shift+Click on magic wand
-- Contains: Audit Review, Gym Rules, Quick Actions
-- Quick Actions has: Automated Sync, JSON Import (F12 Method)
+- 7 tabs: Audit & Review, Pricing, Gym Rules, Change History, Audit Rules, Future Plans, Quick Actions
+- Plus Email Composer button for manager notifications
 
 ## Audit Review System
-- Filter by: Gym, Category (Data Error, Format Error), Status
+- Filter by: Gym, Category (Data Error), Status
 - 5 Status Filters: All, Pending Review, Verified Accurate, Invalid/Bug, Has Override
 - Actions: "Verified Accurate", "Invalid/Bug", "Temporary Override", "Permanent Rule"
 
@@ -247,7 +235,7 @@ Per-gym customization:
 |---------|----------------|------------------|
 | Assuming price comes from iClass | iClass has NO price field | Check `camp_pricing` for camps, title vs description for others |
 | Not checking both start AND end date | Multi-day camps span months | Always check `endDate` too |
-| Hardcoding validation rules | Gyms have different needs | Use `gym_valid_values` table |
+| Hardcoding validation rules | Gyms have different needs | Use `rules` table |
 | Saying "it should work" | Jayme has been burned by this | Test it, then say "it works" |
 | Not reading documentation | Docs explain complex logic | Read `docs/` folder first |
 | Waiting for Jayme to find bugs | She's non-technical | Proactively audit and catch issues |
@@ -280,6 +268,8 @@ Before saying ANYTHING works:
 | Feb 11, 2026 | Updated known gaps (marked fixed items), added CLAUDE.md quick-start reference |
 | Feb 11, 2026 | Added missing error types (skill_mismatch, title_desc_mismatch), completed FORMAT errors list, added AUDIT_DATA_ERROR_REFERENCE.md link |
 | Feb 23, 2026 | Added Feb 23 fixes: export start/end date, sync all cross-type deletion, includeDeleted flag, CORS restriction. Fixed outdated event_pricing reference. |
+| Mar 9, 2026 | Direct API swap, rules table unification, validation_engine.py added to key files |
+| Mar 17, 2026 | Removed FORMAT errors (never implemented). Replaced precoded rules with database-driven system checks. Dropped gym_valid_values references. Updated Admin Dashboard to 7 tabs. CORS note corrected. |
 
 ---
 
@@ -294,11 +284,11 @@ Before saying ANYTHING works:
 
 ## When Jayme asks about errors:
 → DATA error = something is WRONG (mismatch)
-→ FORMAT error = something is MISSING
+→ FORMAT errors were removed (never implemented in Python backend)
 
 ## When Jayme asks about rules:
-→ Precoded = hardcoded in `f12_collect_and_import.py`
-→ Configurable = `gym_valid_values` table in Supabase
+→ System checks = rows in `rules` table with `check_*` rule_type
+→ Configurable = `rules` table in Supabase
 
 ## When something doesn't work:
 → Ask for F12 console output

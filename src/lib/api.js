@@ -487,49 +487,6 @@ export const auditLogApi = {
   }
 };
 
-// DEPRECATED: Use rulesApi instead. This API targets the old gym_valid_values table.
-// All code has been migrated to use the unified `rules` table.
-// Kept temporarily for backward compatibility — safe to remove once gym_valid_values table is dropped.
-export const gymValidValuesApi = {
-  async getAll() {
-    const { data, error } = await supabase
-      .from('gym_valid_values')
-      .select('*')
-      .order('gym_id')
-      .order('rule_type');
-    if (error) throw new Error(error.message);
-    return data || [];
-  },
-
-  async getByGym(gymId) {
-    const { data, error } = await supabase
-      .from('gym_valid_values')
-      .select('*')
-      .eq('gym_id', gymId)
-      .order('rule_type');
-    if (error) throw new Error(error.message);
-    return data || [];
-  },
-
-  async create(rule) {
-    const { data, error } = await supabase
-      .from('gym_valid_values')
-      .insert([rule])
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return data;
-  },
-
-  async delete(id) {
-    const { error } = await supabase
-      .from('gym_valid_values')
-      .delete()
-      .eq('id', id);
-    if (error) throw new Error(error.message);
-  }
-};
-
 // Rules API - unified validation rules system (replaces gym_valid_values)
 export const rulesApi = {
   async getAll() {

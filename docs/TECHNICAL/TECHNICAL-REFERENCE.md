@@ -2,8 +2,8 @@
 ## Updated Production-Ready Documentation
 
 **Live URL:** https://teamcalendar.mygymtools.com  
-**Last Updated:** February 2, 2026  
-**Version:** Production 3.3
+**Last Updated:** March 17, 2026
+**Version:** Production 3.5
 **Status:** ✅ FULLY DEPLOYED & WORKING
 **Part of:** mygymtools.com suite
 
@@ -97,7 +97,7 @@ Your Master Events Calendar is a **production-deployed event management platform
 - ✅ **Auto-Archive** - Past events automatically archived at midnight
 - ✅ **Data Export** - Export to CSV/JSON with custom date ranges
 - ✅ **Data Quality Tracking** - Flyer detection, validation errors
-- ✅ **Per-Gym Validation Rules** - Prevent false positives with `gym_valid_values` table
+- ✅ **Per-Gym Validation Rules** - Prevent false positives with unified `rules` table
 - ✅ **Full-Page Admin Dashboard** - Tabbed interface with Audit & Review, Gym Rules, Quick Actions
 
 ---
@@ -108,7 +108,7 @@ Your Master Events Calendar is a **production-deployed event management platform
 **Database:** `https://xftiwouxpefchwoxxgpf.supabase.co`
 
 ### **Current Stats:**
-- **10 Tables** + 2 Views
+- **15 Tables** + 2 Views
 - **500+ Events** (active + archived, counts change frequently)
 - **~75 Gym Links** configured
 - **10 Gyms** across TX, AZ, CA
@@ -291,7 +291,7 @@ open_gym_required: 1
 | Level | Who | Access Method | Features |
 |-------|-----|---------------|----------|
 | **1 - Normal** | Everyone | Just visit URL | Calendar, event details, stats, export |
-| **2 - Admin** | Jayme | Shift+Click 🪄 wand | Full-page Admin Dashboard with 3 tabs |
+| **2 - Admin** | Jayme | Shift+Click 🪄 wand | Full-page Admin Dashboard with 7 tabs + Email button |
 | **3 - Super Admin** | Jayme only | Inside Admin Dashboard, press `*` + PIN `1426` | Quick Actions: Supabase/Railway links, Audit History, Sync, Import |
 
 ### **Admin Dashboard (Full-Page):**
@@ -299,9 +299,14 @@ Shift+clicking the 🪄 wand replaces the calendar with a full-page Admin Dashbo
 
 | Tab | Purpose |
 |-----|---------|
-| **Audit & Review** | See all validation errors across selected gyms, filter by category (DATA/FORMAT), month, program type, status (Active/Resolved). Dismiss errors or create permanent rules. |
-| **Gym Rules** | View, add, and delete per-gym validation rules (price, time, program_synonym). Rules grouped by gym. |
-| **Quick Actions** | Automated Sync and JSON Import buttons. Super Admin tools (Supabase, Railway, Audit History) require PIN. |
+| **Audit & Review** | See all validation errors across selected gyms, filter by category, month, program type, status. Dismiss errors or create permanent rules. |
+| **Pricing** | Manage event_pricing (Clinic, KNO, Open Gym) and camp_pricing tables. |
+| **Gym Rules** | Rule Wizard with two flows (Requirement Exception, Validation Rule). View/add/delete rules from unified `rules` table. |
+| **Change History** | Audit log with filters and CSV export. |
+| **Audit Rules** | Reference table of all validation checks, where they live (hardcoded vs database), known gaps. |
+| **Future Plans** | Track planned features, improvements, ideas (add/edit/delete from UI). |
+| **Quick Actions** | Automated Sync and JSON Import buttons. Super Admin tools (Supabase, Railway) require PIN. |
+| **Email** (button) | Email Composer — generate emails for missing events and/or data errors. Open in Outlook. |
 
 **Architecture:** State-based view swap (no React Router). `showAdminPortal` flag triggers an early return of `<AdminDashboard>` instead of the calendar.
 
@@ -354,7 +359,7 @@ Admin Dashboard → Quick Actions → "JSON Import (F12 Method)"
 
 ### **Database Architecture:**
 - **Provider**: Supabase
-- **Tables**: 9 core tables + 2 views
+- **Tables**: 15 core tables + 2 views
 - **Auth**: API key based (anon key for frontend, service key for backend)
 - **Security**: Row Level Security configured
 - **Real-time**: Subscriptions enabled
@@ -415,7 +420,7 @@ API_KEY=your-shared-api-key
 | `src/components/EventsDashboard/ExportModal.js` | Data export UI |
 | `src/components/EventsDashboard/DismissRuleModal.js` | Dismiss warning / create rule modal |
 | `src/lib/validationHelpers.js` | Shared validation helpers (inferErrorCategory, canAddAsRule, etc.) |
-| `src/lib/api.js` | Database API functions (includes gymValidValuesApi) |
+| `src/lib/api.js` | Database API functions (rules table access, event CRUD, pricing) |
 | `src/lib/eventComparison.js` | New/changed/deleted logic |
 | `src/lib/gymLinksApi.js` | Gym links from Supabase |
 | `src/App.js` | Main app with Analytics |
@@ -424,7 +429,8 @@ API_KEY=your-shared-api-key
 | File | Purpose |
 |------|---------|
 | `automation/local_api_server.py` | Flask API server (main entry point) |
-| `automation/f12_collect_and_import.py` | Event collection via Direct API (Playwright fallback) + validation |
+| `automation/f12_collect_and_import.py` | Event collection via Direct API (Playwright fallback), ~1562 lines — orchestrates sync but delegates validation to validation_engine.py |
+| `automation/validation_engine.py` | Database-driven validation engine — system checks loaded from `rules` table |
 | `automation/requirements.txt` | Python dependencies |
 | `automation/Procfile` | Railway start command |
 | `automation/railway.json` | Railway configuration |
@@ -472,7 +478,7 @@ API_KEY=your-shared-api-key
 - ✅ Auto-archive system
 - ✅ Data quality tracking
 - ✅ Availability tracking
-- ✅ Per-gym validation rules (gym_valid_values)
+- ✅ Per-gym validation rules (unified `rules` table)
 - ✅ Full-page Admin Dashboard with Audit & Review
 - ✅ Program synonym rules (database-driven)
 
@@ -563,7 +569,7 @@ API_KEY=your-shared-api-key
 
 ---
 
-**Last Updated:** February 2, 2026
-**Version:** Production 3.3
+**Last Updated:** March 17, 2026
+**Version:** Production 3.5
 **Status:** ✅ FULLY DEPLOYED & VERIFIED - Cross-checked against live iClassPro data
 

@@ -92,20 +92,21 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
       const activeErrors = errors.filter(e => !isErrorAcknowledgedAnywhere(event, e.message, acknowledgedPatterns));
       // Separate by category
       const dataErrors = activeErrors.filter(e => (e.category || inferErrorCategory(e)) === 'data_error');
-      const formattingErrors = activeErrors.filter(e => (e.category || inferErrorCategory(e)) === 'formatting');
       const statusErrors = activeErrors.filter(e => (e.category || inferErrorCategory(e)) === 'status');
-      const otherErrors = activeErrors.filter(e => !e.category && !inferErrorCategory(e));
-      
+      const otherErrors = activeErrors.filter(e => {
+        const cat = e.category || inferErrorCategory(e);
+        return cat !== 'data_error' && cat !== 'status';
+      });
+
       return {
         ...event,
         dataErrors,
-        formattingErrors,
         statusErrors,
         otherErrors,
         totalErrors: activeErrors.length,
         hasDescriptionIssue: event.description_status === 'none' || event.description_status === 'flyer_only'
       };
-    }).filter(e => e.dataErrors.length + e.formattingErrors.length + e.statusErrors.length + e.otherErrors.length > 0 || e.hasDescriptionIssue);
+    }).filter(e => e.dataErrors.length + e.statusErrors.length + e.otherErrors.length > 0 || e.hasDescriptionIssue);
   };
 
   // Check if an error type supports "Add as Rule"
@@ -1496,9 +1497,8 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
         {result && result.success && editableEvents.length > 0 && !importResult && (() => {
           const eventsWithIssues = getEventsWithValidationIssues();
           const totalDataErrors = eventsWithIssues.reduce((sum, e) => sum + e.dataErrors.length, 0);
-          const totalFormattingErrors = eventsWithIssues.reduce((sum, e) => sum + e.formattingErrors.length, 0);
           const totalDescriptionIssues = eventsWithIssues.filter(e => e.hasDescriptionIssue).length;
-          const totalIssues = totalDataErrors + totalFormattingErrors + totalDescriptionIssues;
+          const totalIssues = totalDataErrors + totalDescriptionIssues;
           
           if (totalIssues === 0) return null;
           
@@ -1523,11 +1523,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                       {totalDataErrors > 0 && (
                         <span className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">
                           {totalDataErrors} DATA
-                        </span>
-                      )}
-                      {totalFormattingErrors > 0 && (
-                        <span className="px-2 py-1 bg-orange-500 text-white text-xs font-bold rounded">
-                          {totalFormattingErrors} FORMAT
                         </span>
                       )}
                       {totalDescriptionIssues > 0 && (
@@ -1590,33 +1585,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                                 <div key={errIdx} className="flex items-center justify-between gap-2 p-1.5 bg-red-100 rounded border-l-4 border-red-500 text-xs">
                                   <span className="flex-1 text-red-800">
                                     🚨 {error.message}
-                                  </span>
-                                  <button
-                                    onClick={() => handleDismissError(event, error.message, error)}
-                                    disabled={dismissingError === `${event.event_url}-${error.message}`}
-                                    className="flex-shrink-0 px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors font-medium disabled:opacity-50"
-                                    title="Dismiss with optional note"
-                                  >
-                                    {dismissingError === `${event.event_url}-${error.message}` ? '...' : '✓ OK'}
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Formatting Errors (Lower Priority) */}
-                        {event.formattingErrors.length > 0 && (
-                          <div className="mt-2">
-                            <div className="text-xs font-semibold text-orange-700 mb-1 flex items-center gap-1">
-                              <span className="bg-orange-500 text-white px-1.5 py-0.5 rounded text-[10px]">FORMAT</span>
-                              Missing Info:
-                            </div>
-                            <div className="space-y-1">
-                              {event.formattingErrors.map((error, errIdx) => (
-                                <div key={errIdx} className="flex items-center justify-between gap-2 p-1.5 bg-orange-50 rounded border-l-4 border-orange-400 text-xs">
-                                  <span className="flex-1 text-orange-800">
-                                    ⚠️ {error.message}
                                   </span>
                                   <button
                                     onClick={() => handleDismissError(event, error.message, error)}

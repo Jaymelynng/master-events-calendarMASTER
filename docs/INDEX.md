@@ -1,8 +1,8 @@
 # 📚 Team Calendar - Documentation Index
 
 **Live URL:** https://teamcalendar.mygymtools.com  
-**Last Updated:** February 11, 2026  
-**Part of:** mygymtools.com suite  
+**Last Updated:** April 7, 2026
+**Part of:** mygymtools.com suite
 **Maintained by:** Jayme
 
 ---
@@ -25,7 +25,7 @@ docs/
 │   ├── AUTO-SYNC-GUIDE.md      ⭐ Main workflow
 │   ├── SYNC-QUICK-REFERENCE.md ⭐ Quick reference
 │   ├── SECRET_ADMIN_MODE.md    ⭐ Admin access
-│   └── ... (17 more guides)
+│   └── ... (19 more guides)
 └── TECHNICAL/                  ← Architecture, code details
     ├── TECHNICAL-REFERENCE.md  ⭐ Master overview
     ├── DATABASE_COMPLETE_SCHEMA.md
@@ -69,9 +69,10 @@ docs/
 
 | Document | Purpose |
 |----------|---------|
+| **[CURRENT_SYSTEM_STATUS.md](OPERATIONS/CURRENT_SYSTEM_STATUS.md)** ⭐ | What's working NOW — read this first |
 | **[AUTO-SYNC-GUIDE.md](OPERATIONS/AUTO-SYNC-GUIDE.md)** ⭐ | Main sync workflow (SYNC ALL!) |
 | **[SYNC-QUICK-REFERENCE.md](OPERATIONS/SYNC-QUICK-REFERENCE.md)** ⭐ | Non-technical quick reference |
-| **[SECRET_ADMIN_MODE.md](OPERATIONS/SECRET_ADMIN_MODE.md)** ⭐ | 3-tier admin access (PIN: 1426) |
+| **[SECRET_ADMIN_MODE.md](OPERATIONS/SECRET_ADMIN_MODE.md)** ⭐ | 3-tier admin access (PIN set via env var) |
 | [F12-IMPORT-GUIDE.md](OPERATIONS/F12-IMPORT-GUIDE.md) | Backup manual import method |
 
 ### System Features
@@ -88,6 +89,7 @@ docs/
 
 | Document | Purpose |
 |----------|---------|
+| [ADMIN_DATA_FLOW.md](OPERATIONS/ADMIN_DATA_FLOW.md) | Admin dashboard data flow and architecture |
 | [DEPLOYMENT_PLAN.md](OPERATIONS/DEPLOYMENT_PLAN.md) | Deployment architecture & checklists |
 | [LOCAL_DEVELOPMENT_GUIDE.md](OPERATIONS/LOCAL_DEVELOPMENT_GUIDE.md) | Running app locally |
 | [MAINTENANCE_GUIDE.md](OPERATIONS/MAINTENANCE_GUIDE.md) | Weekly/monthly maintenance tasks |
@@ -100,6 +102,8 @@ docs/
 | [BULK-IMPORT-LEARNINGS.md](OPERATIONS/BULK-IMPORT-LEARNINGS.md) | Historical lessons learned |
 | [CAMP_COMPLEXITY_MASTER_GUIDE.md](OPERATIONS/CAMP_COMPLEXITY_MASTER_GUIDE.md) | Camp data structure variations |
 | [AI_VERIFICATION_PROTOCOL.md](OPERATIONS/AI_VERIFICATION_PROTOCOL.md) | Rules for AI testing |
+| [HOW_TO_RUN_TESTS.md](OPERATIONS/HOW_TO_RUN_TESTS.md) | Running the test suite |
+| [DOCUMENTATION_AUDIT_FEB2026.md](OPERATIONS/DOCUMENTATION_AUDIT_FEB2026.md) | Feb 2026 documentation cleanup audit |
 
 ---
 
@@ -126,7 +130,7 @@ docs/
 1. **🏆 BOSS-PRESENTATION.md** — Business value / ROI
 2. **🚀 AUTO-SYNC-GUIDE.md** — Main sync workflow
 3. **📋 SYNC-QUICK-REFERENCE.md** — Quick non-technical guide
-4. **🔐 SECRET_ADMIN_MODE.md** — Hidden admin (PIN: 1426)
+4. **🔐 SECRET_ADMIN_MODE.md** — Hidden admin (PIN via env var)
 5. **📤 EXPORT_DATA_GUIDE.md** — Reports, presets, email summaries
 6. **🔧 TECHNICAL-REFERENCE.md** — Complete system guide
 
@@ -134,19 +138,29 @@ docs/
 
 ## 📊 Documentation Stats
 
-- **Total Documents:** 22 (updated Feb 11, 2026)
+- **Total Documents:** 34 (updated April 7, 2026)
 - **BUSINESS:** 2 documents
-- **TECHNICAL:** 6 documents  
-- **OPERATIONS:** 17 documents
+- **TECHNICAL:** 8 documents
+- **OPERATIONS:** 22 documents
+- **Root docs/:** INDEX.md, TEST_COVERAGE_ANALYSIS.md
 - **Root:** `CLAUDE.md` (AI quick-start guide)
-- **Last Major Update:** February 11, 2026
+- **Last Major Update:** April 7, 2026
 
 ---
 
 ## 🔄 Recent Changes
 
+### March 17, 2026
+- **ADDED** `automation/validation_engine.py` — Database-driven validation engine (replaces hardcoded checks in f12_collect_and_import.py)
+- **ADDED** `ADMIN_DATA_FLOW.md` — Admin dashboard data flow documentation
+- **UPDATED** Rules system — `gym_valid_values` table dropped, fully unified on `rules` table
+- **UPDATED** `f12_collect_and_import.py` — `fetch_gym_valid_values()` renamed to `fetch_rules()` (alias kept), GYM_VALID_VALUES global renamed to RULES_CACHE
+- **REMOVED** `gymValidValuesApi` from `api.js` — dead code cleanup
+- **RESTORED** `CURRENT_SYSTEM_STATUS.md` — active again in OPERATIONS/
+
 ### February 11, 2026
-- **DELETED** `CURRENT_SYSTEM_STATUS.md`, `SYNC_PROGRESS_TRACKER.md`, `EXPORT_BUG_ANALYSIS.md` — Outdated; trust code over docs
+- **DELETED** `SYNC_PROGRESS_TRACKER.md`, `EXPORT_BUG_ANALYSIS.md` — Outdated; trust code over docs
+- **RESTORED** `CURRENT_SYSTEM_STATUS.md` — Active again in OPERATIONS/
 - **UPDATED** `AUDIT_DATA_ERROR_REFERENCE.md` — Added acknowledged_patterns, temp override scopes
 - **UPDATED** `database/README.md` — Added acknowledged_patterns, gym_valid_values, event_pricing, camp_pricing
 - **UPDATED** `AI_RULES_READ_FIRST.md` — Added missing error types (skill_mismatch, title_desc_mismatch), completed FORMAT errors list
@@ -173,5 +187,5 @@ Code can be rewritten, but this knowledge is irreplaceable.
 
 ---
 
-**Last Updated:** February 11, 2026  
+**Last Updated:** April 7, 2026
 **Maintained by:** Jayme

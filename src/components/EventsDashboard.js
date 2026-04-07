@@ -300,7 +300,7 @@ const EventsDashboard = () => {
   const [showAdminPortal, setShowAdminPortal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [dismissModalState, setDismissModalState] = useState(null); // { eventId, errorMessage, errorObj, gymId }
-  const [gymRules, setGymRules] = useState([]); // Loaded from gym_valid_values for badge display
+  const [gymRules, setGymRules] = useState([]); // Loaded from rules table for badge display
   const [acknowledgedPatterns, setAcknowledgedPatterns] = useState([]); // Program-wide dismissals — apply everywhere
   const [requirementNotes, setRequirementNotes] = useState([]);
   const [noteModal, setNoteModal] = useState(null); // { gymId, gymName, program, month }
@@ -3403,38 +3403,17 @@ The system will add new events and update any changed events automatically.`;
                                           )}
                                           {/* Validation status indicator - only show problems (respects dismissed warnings) */}
                                           {/* NOTE: sold_out type is excluded - it's informational, not an audit error */}
-                                          {/* Color coding: RED dot = data error, ORANGE dot = formatting, BOTH = red+orange */}
+                                          {/* Color coding: RED dot = data error */}
                                           {(() => {
                                             const activeErrors = (event.validation_errors || []).filter(
                                               err => err.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(event, err.message, acknowledgedPatterns)
                                             );
-                                            // Separate by category (using inferErrorCategory for legacy data without category field)
                                             const dataErrors = activeErrors.filter(err => inferErrorCategory(err) === 'data_error');
-                                            const formattingErrors = activeErrors.filter(err => inferErrorCategory(err) === 'formatting');
-                                            const hasDataErrors = dataErrors.length > 0;
-                                            const hasFormattingErrors = formattingErrors.length > 0;
-                                            
-                                            // Show colored dots based on error types
-                                            if (hasDataErrors && hasFormattingErrors) {
-                                              // Both types - show TWO dots: red + orange side by side
-                                              return (
-                                                <span className="absolute -top-1 -right-1 flex items-center" title={`DATA: ${dataErrors.length} | FORMAT: ${formattingErrors.length}`}>
-                                                  <span className="w-2.5 h-2.5 bg-red-500 rounded-full shadow-sm inline-block border border-red-700"></span>
-                                                  <span className="w-2 h-2 bg-orange-400 rounded-full shadow-sm inline-block border border-orange-600 -ml-1"></span>
-                                                </span>
-                                              );
-                                            } else if (hasDataErrors) {
-                                              // Data errors only - red dot
+
+                                            if (dataErrors.length > 0) {
                                               return (
                                                 <span className="absolute -top-1 -right-1" title={`${dataErrors.length} DATA ERROR(S) - wrong info!`}>
                                                   <span className="w-3 h-3 bg-red-500 rounded-full shadow-sm inline-block border border-red-700"></span>
-                                                </span>
-                                              );
-                                            } else if (hasFormattingErrors) {
-                                              // Formatting only - orange dot
-                                              return (
-                                                <span className="absolute -top-1 -right-1" title={`${formattingErrors.length} formatting issue(s) - incomplete info`}>
-                                                  <span className="w-2.5 h-2.5 bg-orange-400 rounded-full shadow-sm inline-block border border-orange-600"></span>
                                                 </span>
                                               );
                                             } else if (event.description_status === 'flyer_only') {
@@ -3763,12 +3742,9 @@ The system will add new events and update any changed events automatically.`;
                       // Count total issues including description status
                       const totalIssues = activeErrors.length + (hasDescriptionIssue ? 1 : 0);
                       
-                      // Separate by category (using inferErrorCategory for legacy data without category field)
+                      // Separate by category
                       const dataErrors = activeErrors.filter(e => inferErrorCategory(e) === 'data_error');
-                      const formattingErrors = activeErrors.filter(e => inferErrorCategory(e) === 'formatting');
                       const statusErrors = activeErrors.filter(e => inferErrorCategory(e) === 'status');
-                      // No more uncategorized - inferErrorCategory handles all cases
-                      const uncategorizedErrors = []; // Keep for backwards compatibility but will always be empty
                       
                       return (
                         <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
@@ -3810,36 +3786,6 @@ The system will add new events and update any changed events automatically.`;
                                           <span className="flex-1">
                                             🚨 <strong>{getErrorLabel(error.type)}</strong>
                                             <span className="text-xs block text-red-600 mt-0.5">{error.message}</span>
-                                          </span>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleDismissWithNote(selectedEventForPanel.id, error.message, error);
-                                            }}
-                                            className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
-                                            title="Dismiss with optional note"
-                                          >
-                                            ✓ OK
-                                          </button>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </li>
-                                )}
-                                
-                                {/* FORMATTING ERRORS - Lower Priority (Yellow/Orange) */}
-                                {formattingErrors.length > 0 && (
-                                  <li className="pt-1">
-                                    <div className="text-xs font-semibold text-orange-700 uppercase mb-1 flex items-center gap-1">
-                                      <span className="bg-orange-500 text-white px-1.5 py-0.5 rounded text-[10px]">FORMATTING</span>
-                                      Missing/Incomplete Info:
-                                    </div>
-                                    <ul className="space-y-1 ml-2">
-                                      {formattingErrors.map((error, idx) => (
-                                        <li key={`fmt-${idx}`} className="flex items-center justify-between gap-2 p-1.5 bg-orange-50 rounded border-l-4 border-orange-400 text-orange-800">
-                                          <span className="flex-1">
-                                            {error.severity === 'info' ? 'ℹ️' : '⚠️'} <strong>{getErrorLabel(error.type)}</strong>
-                                            <span className="text-xs block text-orange-600 mt-0.5">{error.message}</span>
                                           </span>
                                           <button
                                             onClick={(e) => {
@@ -3952,7 +3898,7 @@ The system will add new events and update any changed events automatically.`;
                                   const dismissedAt = typeof ack === 'object' && ack.dismissed_at
                                     ? new Date(ack.dismissed_at).toLocaleDateString()
                                     : null;
-                                  // Check if this dismissed error is backed by a permanent rule in gym_valid_values
+                                  // Check if this dismissed error is backed by a permanent rule in rules table
                                   const hasPermanentRule = (typeof ack === 'object' && ack.has_rule) ||
                                     isMatchedByRule(message, selectedEventForPanel?.gym_id);
 

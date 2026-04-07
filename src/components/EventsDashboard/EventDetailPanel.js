@@ -31,7 +31,6 @@ export default function EventDetailPanel({
 
   // Separate errors by category
   const dataErrors = activeErrors.filter(e => inferErrorCategory(e) === 'data_error');
-  const formattingErrors = activeErrors.filter(e => inferErrorCategory(e) === 'formatting');
   const statusErrors = activeErrors.filter(e => inferErrorCategory(e) === 'status');
 
   const totalIssues = activeErrors.length + (hasDescriptionIssue ? 1 : 0);
@@ -178,7 +177,6 @@ export default function EventDetailPanel({
             event={event}
             activeErrors={activeErrors}
             dataErrors={dataErrors}
-            formattingErrors={formattingErrors}
             statusErrors={statusErrors}
             hasDescriptionIssue={hasDescriptionIssue}
             totalIssues={totalIssues}
@@ -290,7 +288,6 @@ function ValidationIssues({
   event,
   activeErrors,
   dataErrors,
-  formattingErrors,
   statusErrors,
   hasDescriptionIssue,
   totalIssues,
@@ -333,20 +330,6 @@ function ValidationIssues({
                 borderColor="border-red-500"
                 labelBgColor="bg-red-600"
                 icon="🚨"
-                onDismiss={onDismiss}
-              />
-            )}
-
-            {/* Formatting Errors */}
-            {formattingErrors.length > 0 && (
-              <ErrorSection
-                title="Missing/Incomplete Info"
-                errors={formattingErrors}
-                bgColor="bg-orange-50"
-                borderColor="border-orange-400"
-                labelBgColor="bg-orange-500"
-                textColor="text-orange-800"
-                icon="⚠️"
                 onDismiss={onDismiss}
               />
             )}
@@ -445,7 +428,7 @@ function ErrorSection({ title, errors, bgColor, borderColor, labelBgColor, textC
     <li className="pt-1">
       <div className={`text-xs font-semibold ${textColor} uppercase mb-1 flex items-center gap-1`}>
         <span className={`${labelBgColor} text-white px-1.5 py-0.5 rounded text-[10px]`}>
-          {title.includes('Data') ? 'HIGH PRIORITY' : title.includes('Missing') ? 'FORMATTING' : 'INFO'}
+          {title.includes('Data') ? 'HIGH PRIORITY' : 'INFO'}
         </span>
         {title}:
       </div>

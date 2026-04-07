@@ -118,9 +118,9 @@ describe('inferErrorCategory', () => {
     expect(inferErrorCategory({ type: 'sold_out' })).toBe('status');
   });
 
-  test('defaults to formatting for unknown types', () => {
-    expect(inferErrorCategory({ type: 'missing_age_in_title' })).toBe('formatting');
-    expect(inferErrorCategory({ type: 'unknown_type' })).toBe('formatting');
+  test('defaults to other for unknown types', () => {
+    expect(inferErrorCategory({ type: 'missing_age_in_title' })).toBe('other');
+    expect(inferErrorCategory({ type: 'unknown_type' })).toBe('other');
   });
 });
 
@@ -166,11 +166,6 @@ describe('matchesErrorTypeFilter', () => {
     expect(matchesErrorTypeFilter('year_mismatch', 'date')).toBe(true);
   });
 
-  test('format filter matches formatting types', () => {
-    expect(matchesErrorTypeFilter('missing_age_in_title', 'format')).toBe(true);
-    expect(matchesErrorTypeFilter('clinic_missing_skill', 'format')).toBe(true);
-    expect(matchesErrorTypeFilter('price_mismatch', 'format')).toBe(false);
-  });
 });
 
 // ── extractRuleValue ─────────────────────────────────────────────────

@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rules Management — Mockup v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  /* ── Header ── */
+  .page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 24px;
+    padding: 36px 40px;
+    margin-bottom: 28px;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .page-header h1 {
+    font-size: 36px;
+    font-weight: 900;
+    color: white;
+    letter-spacing: -0.5px;
+  }
+  .page-header p {
+    font-size: 18px;
+    color: rgba(255,255,255,0.85);
+    font-weight: 600;
+  }
+  .header-stats {
+    display: flex;
+    gap: 16px;
+  }
+  .header-stat {
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 14px 24px;
+    text-align: center;
+    min-width: 100px;
+  }
+  .header-stat-number {
+    font-size: 32px;
+    font-weight: 900;
+    color: white;
+    line-height: 1;
+  }
+  .header-stat-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.8);
+    margin-top: 4px;
+  }
+
+  /* ── New Rule Button ── */
+  .new-rule-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    color: #764ba2;
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 16px 32px;
+    border-radius: 16px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .new-rule-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .new-rule-btn .plus {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: #764ba2;
+    color: white;
+    border-radius: 10px;
+    font-size: 24px;
+    font-weight: 900;
+  }
+
+  /* ── Filter Bar ── */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 28px;
+    align-items: center;
+  }
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .filter-label {
+    font-size: 14px;
+    font-weight: 800;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .pill:hover { transform: translateY(-1px); }
+  .pill.active { border-color: currentColor; }
+
+  .pill-all { background: #e8eaed; color: #444; }
+  .pill-all.active { background: #444; color: white; border-color: #444; }
+  .pill-system { background: #e0e7ff; color: #4338ca; }
+  .pill-system.active { background: #4338ca; color: white; border-color: #4338ca; }
+  .pill-custom { background: #dcfce7; color: #16a34a; }
+  .pill-custom.active { background: #16a34a; color: white; border-color: #16a34a; }
+  .pill-temp { background: #fff3cd; color: #b45309; }
+  .pill-temp.active { background: #b45309; color: white; border-color: #b45309; }
+
+  .pill-data { background: #fee2e2; color: #dc2626; }
+  .pill-data.active { background: #dc2626; color: white; border-color: #dc2626; }
+  .pill-format { background: #ffedd5; color: #ea580c; }
+  .pill-format.active { background: #ea580c; color: white; border-color: #ea580c; }
+  .pill-status { background: #dbeafe; color: #2563eb; }
+  .pill-status.active { background: #2563eb; color: white; border-color: #2563eb; }
+
+  .divider {
+    width: 2px;
+    height: 32px;
+    background: #d1d5db;
+    border-radius: 2px;
+    margin: 0 8px;
+  }
+
+  /* ── Section Headers ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    margin-top: 12px;
+  }
+  .section-header h2 {
+    font-size: 24px;
+    font-weight: 900;
+    color: #1a1a2e;
+  }
+  .section-count {
+    background: #e8eaed;
+    color: #555;
+    font-size: 16px;
+    font-weight: 800;
+    padding: 4px 14px;
+    border-radius: 50px;
+  }
+  .section-line {
+    flex: 1;
+    height: 3px;
+    background: #e8eaed;
+    border-radius: 3px;
+  }
+
+  /* ── Rule Cards ── */
+  .rules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+
+  .rule-card {
+    background: white;
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    border-left: 6px solid #ccc;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .rule-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  }
+
+  .rule-card.border-red { border-left-color: #ef4444; }
+  .rule-card.border-orange { border-left-color: #f97316; }
+  .rule-card.border-blue { border-left-color: #3b82f6; }
+  .rule-card.border-green { border-left-color: #22c55e; }
+  .rule-card.border-purple { border-left-color: #8b5cf6; }
+  .rule-card.border-yellow { border-left-color: #eab308; }
+  .rule-card.border-pink { border-left-color: #ec4899; }
+
+  .rule-card.disabled {
+    opacity: 0.5;
+    border-left-color: #d1d5db;
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1a1a2e;
+    line-height: 1.2;
+  }
+  .card-badges {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 14px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .badge-system { background: #e0e7ff; color: #4338ca; }
+  .badge-custom { background: #dcfce7; color: #16a34a; }
+  .badge-temp { background: #fff3cd; color: #b45309; }
+  .badge-data { background: #fee2e2; color: #dc2626; }
+  .badge-format { background: #ffedd5; color: #ea580c; }
+  .badge-status { background: #dbeafe; color: #2563eb; }
+  .badge-off { background: #f3f4f6; color: #9ca3af; }
+
+  .card-desc {
+    font-size: 16px;
+    font-weight: 600;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .card-scope {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .scope-pill {
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .scope-clinic { background: #F3E8FF; color: #7c3aed; }
+  .scope-kno { background: #ffe4e6; color: #e11d48; }
+  .scope-opengym { background: #C8E6C9; color: #15803d; }
+  .scope-camp { background: #fef3c7; color: #a16207; }
+  .scope-all { background: #f3f4f6; color: #555; }
+  .scope-gym {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #555;
+  }
+  .gym-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .card-impact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .impact-number {
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .impact-number.red { color: #ef4444; }
+  .impact-number.green { color: #22c55e; }
+  .impact-number.muted { color: #9ca3af; }
+  .impact-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #888;
+    line-height: 1.2;
+  }
+
+  /* ── Expanded Detail (overlay card) ── */
+  .detail-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 40px;
+    overflow-y: auto;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .detail-overlay.open { display: flex; }
+
+  .detail-modal {
+    background: white;
+    border-radius: 28px;
+    max-width: 800px;
+    width: 100%;
+    padding: 40px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+    position: relative;
+  }
+
+  .detail-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #f3f4f6;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-weight: 700;
+    transition: background 0.15s;
+  }
+  .detail-close:hover { background: #e5e7eb; }
+
+  .detail-title {
+    font-size: 32px;
+    font-weight: 900;
+    color: #1a1a2e;
+    margin-bottom: 6px;
+    padding-right: 50px;
+  }
+  .detail-subtitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: #888;
+    margin-bottom: 28px;
+  }
+
+  /* Toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 24px;
+    background: #f8fafc;
+    border-radius: 16px;
+    margin-bottom: 24px;
+  }
+  .toggle-track {
+    width: 56px;
+    height: 30px;
+    background: #d1d5db;
+    border-radius: 50px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle-track.on { background: #22c55e; }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: transform 0.2s;
+  }
+  .toggle-track.on::after { transform: translateX(26px); }
+  .toggle-text {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .toggle-text.on-text { color: #16a34a; }
+  .toggle-text.off-text { color: #9ca3af; }
+
+  /* Impact bar in detail */
+  .impact-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .impact-box {
+    text-align: center;
+    padding: 24px 16px;
+    background: #f8fafc;
+    border-radius: 16px;
+  }
+  .impact-box-number {
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .impact-box-number.red { color: #ef4444; }
+  .impact-box-number.green { color: #22c55e; }
+  .impact-box-number.blue { color: #3b82f6; }
+  .impact-box-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #888;
+  }
+
+  /* Detail sections */
+  .detail-section {
+    margin-bottom: 28px;
+  }
+  .detail-section-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+
+  .detail-row {
+    display: flex;
+    padding: 14px 0;
+    border-bottom: 2px solid #f3f4f6;
+    gap: 16px;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label {
+    font-size: 15px;
+    font-weight: 700;
+    color: #999;
+    width: 140px;
+    flex-shrink: 0;
+  }
+  .detail-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    flex: 1;
+  }
+  .detail-value code {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    background: #f0f0f5;
+    padding: 3px 10px;
+    border-radius: 8px;
+    color: #6366f1;
+    font-weight: 700;
+  }
+
+  /* Example events in detail */
+  .event-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: #f8fafc;
+    border-radius: 14px;
+    margin-bottom: 10px;
+  }
+  .event-type-bar {
+    width: 6px;
+    height: 44px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .event-type-bar.clinic { background: #a78bfa; }
+  .event-type-bar.kno { background: #fb7185; }
+  .event-type-bar.camp { background: #fbbf24; }
+  .event-type-bar.opengym { background: #4ade80; }
+  .event-info { flex: 1; }
+  .event-title-text {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+  .event-meta {
+    font-size: 13px;
+    font-weight: 600;
+    color: #999;
+  }
+  .event-error-text {
+    font-size: 14px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .event-error-text.red { color: #ef4444; }
+  .event-error-text.green { color: #22c55e; }
+
+  /* Expire banner */
+  .expire-banner {
+    background: #fef3c7;
+    border: 3px solid #fde68a;
+    border-radius: 16px;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #92400e;
+    margin-bottom: 24px;
+  }
+  .expire-banner-icon { font-size: 28px; }
+
+  /* Action buttons in detail */
+  .detail-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+  .action-btn {
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 800;
+    padding: 14px 28px;
+    border-radius: 14px;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .action-btn:hover { transform: translateY(-2px); }
+  .action-btn-primary {
+    background: #6366f1;
+    color: white;
+  }
+  .action-btn-danger {
+    background: white;
+    color: #ef4444;
+    border-color: #fecaca;
+  }
+  .action-btn-upgrade {
+    background: white;
+    color: #6366f1;
+    border-color: #c7d2fe;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════ HEADER ══════ -->
+<div class="page-header">
+  <div>
+    <h1>⚙️ Rules Management</h1>
+    <p>View, create, and manage all validation rules in one place</p>
+  </div>
+  <div class="header-stats">
+    <div class="header-stat">
+      <div class="header-stat-number">48</div>
+      <div class="header-stat-label">Active</div>
+    </div>
+    <div class="header-stat">
+      <div class="header-stat-number">3</div>
+      <div class="header-stat-label">Disabled</div>
+    </div>
+    <div class="header-stat">
+      <div class="header-stat-number">7</div>
+      <div class="header-stat-label">Catching</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ FILTERS + NEW RULE ══════ -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <span class="filter-label">Source:</span>
+    <span class="pill pill-all active" onclick="togglePill(this)">All</span>
+    <span class="pill pill-system" onclick="togglePill(this)">🔒 System</span>
+    <span class="pill pill-custom" onclick="togglePill(this)">✏️ Custom</span>
+    <span class="pill pill-temp" onclick="togglePill(this)">⏳ Temporary</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="filter-group">
+    <span class="filter-label">Type:</span>
+    <span class="pill pill-data" onclick="togglePill(this)">🔴 Data</span>
+    <span class="pill pill-format" onclick="togglePill(this)">🟠 Format</span>
+    <span class="pill pill-status" onclick="togglePill(this)">🔵 Status</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <button class="new-rule-btn" onclick="alert('Your existing Rule Wizard would launch here!')">
+    <span class="plus">+</span>
+    New Rule
+  </button>
+</div>
+
+<!-- ══════ SYSTEM RULES — DATA ACCURACY ══════ -->
+<div class="section-header">
+  <h2>🔒 System Rules — Data Accuracy</h2>
+  <span class="section-count">11</span>
+  <div class="section-line"></div>
+</div>
+
+<div class="rules-grid">
+
+  <div class="rule-card border-red" onclick="openDetail('year')">
+    <div class="card-top">
+      <div class="card-title">Year Mismatch</div>
+      <div class="card-badges">
+        <span class="badge badge-system">SYSTEM</span>
+        <span class="badge badge-data">DATA</span>
+      </div>
+    </div>
+    <div class="card-desc">Title says 2025 but the event is in 2026 — catches copy/paste from last year</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-pill scope-all">All Gyms</span>
+        <span class="scope-pill scope-all">All Programs</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number red">4</div>
+        <div class="impact-label">errors<br>found</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-red" onclick="openDetail('time')">
+    <div class="card-top">
+      <div class="card-title">Time Mismatch</div>
+      <div class="card-badges">
+        <span class="badge badge-system">SYSTEM</span>
+        <span class="badge badge-data">DATA</span>
+      </div>
+    </div>
+    <div class="card-desc">iClass says 9:00 AM but the description says 10:00 AM</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-pill scope-all">All Gyms</span>
+        <span class="scope-pill scope-clinic">Clinic</span>
+        <span class="scope-pill scope-kno">KNO</span>
+        <span class="scope-pill scope-opengym">Open Gym</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number red">6</div>
+        <div class="impact-label">errors<br>found</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-red">
+    <div class="card-top">
+      <div class="card-title">Date / Month Mismatch</div>
+      <div class="card-badges">
+        <span class="badge badge-system">SYSTEM</span>
+        <span class="badge badge-data">DATA</span>
+      </div>
+    </div>
+    <div class="card-desc">Description says "December" but the event is in January</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-pill scope-all">All Gyms</span>
+        <span class="scope-pill scope-all">All Programs</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number red">2</div>
+        <div class="impact-label">errors<br>found</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-red">
+    <div class="card-top">
+      <div class="card-title">Program Type Mismatch</div>
+      <div class="card-badges">
+        <span class="badge badge-system">SYSTEM</span>
+        <span class="badge badge-data">DATA</span>
+      </div>
+    </div>
+    <div class="card-desc">iClass says KNO but the title says "Clinic"</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-pill scope-all">All Gyms</span>
+        <span class="scope-pill scope-all">All Programs</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number red">3</div>
+        <div class="impact-label">errors<br>found</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-red">
+    <div class="card-top">
+      <div class="card-title">Skill Mismatch</div>
+      <div class="card-badges">
+        <span class="badge badge-system">SYSTEM</span>
+        <span class="badge badge-data">DATA</span>
+      </div>
+    </div>
+    <div class="card-desc">Title says "Tumbling" but description says "Back Handspring"</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-pill scope-all">All Gyms</span>
+        <span class="scope-pill scope-clinic">Clinic Only</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number red">1</div>
+        <div class="impact-label">error<br>found</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-red">
+    <div class="card-top">
+      <div class="card-title">Age Mismatch</div>
+      <div class="card-badges">
+        <span class="badge badge-system">SYSTEM</span>
+        <span class="badge badge-data">DATA</span>
+      </div>
+    </div>
+    <div class="card-desc">iClass says Ages 7+ but title says Ages 5-12</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-pill scope-all">All Gyms</span>
+        <span class="scope-pill scope-all">All Programs</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number green">0</div>
+        <div class="impact-label">errors<br>found</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════ SYSTEM RULES — COMPLETENESS ══════ -->
+<div class="section-header">
+  <h2>🔒 System Rules — Completeness</h2>
+  <span class="section-count">7</span>
+  <div class="section-line"></div>
+</div>
+
+<div class="rules-grid">
+
+  <div class="rule-card border-orange">
+    <div class="card-top">
+      <div class="card-title">Missing Price in Description</div>
+      <div class="card-badges">
+        <span class="badge badge-system">SYSTEM</span>
+        <span class="badge badge-format">FORMAT</span>
+      </div>
+    </div>
+    <div class="card-desc">Description has no $XX price — parents need to know the cost</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-pill scope-all">All Gyms</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number red">12</div>
+        <div class="impact-label">errors<br>found</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-orange">
+    <div class="card-top">
+      <div class="card-title">Missing Age in Title</div>
+      <div class="card-badges">
+        <span class="badge badge-system">SYSTEM</span>
+        <span class="badge badge-format">FORMAT</span>
+      </div>
+    </div>
+    <div class="card-desc">Title doesn't say "Ages 5+" or "Ages 5-12" — parents can't see at a glance</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-pill scope-all">All Gyms</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number red">8</div>
+        <div class="impact-label">errors<br>found</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-orange">
+    <div class="card-top">
+      <div class="card-title">Missing Date in Title</div>
+      <div class="card-badges">
+        <span class="badge badge-system">SYSTEM</span>
+        <span class="badge badge-format">FORMAT</span>
+      </div>
+    </div>
+    <div class="card-desc">Title has no date — hard to identify when the event is</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-pill scope-all">All Gyms</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number red">5</div>
+        <div class="impact-label">errors<br>found</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card disabled">
+    <div class="card-top">
+      <div class="card-title" style="color: #9ca3af;">Missing Program in Title</div>
+      <div class="card-badges">
+        <span class="badge badge-system">SYSTEM</span>
+        <span class="badge badge-off">OFF</span>
+      </div>
+    </div>
+    <div class="card-desc" style="color: #9ca3af;">Disabled for CCP — they use custom event naming</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-gym"><span class="gym-dot" style="background:#8b5cf6;"></span> CCP only</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number muted">—</div>
+        <div class="impact-label" style="color:#bbb;">disabled</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════ CUSTOM RULES ══════ -->
+<div class="section-header">
+  <h2>✏️ Custom Rules — Per Gym</h2>
+  <span class="section-count">14</span>
+  <div class="section-line"></div>
+</div>
+
+<div class="rules-grid">
+
+  <div class="rule-card border-green" onclick="openDetail('synonym')">
+    <div class="card-top">
+      <div class="card-title">"Ninja Night" → KNO</div>
+      <div class="card-badges">
+        <span class="badge badge-custom">CUSTOM</span>
+      </div>
+    </div>
+    <div class="card-desc">Program synonym — "Ninja Night" recognized as Kids Night Out</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-gym"><span class="gym-dot" style="background:#e11d48;"></span> RBA</span>
+        <span class="scope-pill scope-kno">KNO</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number green">2</div>
+        <div class="impact-label">errors<br>prevented</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-green" onclick="openDetail('price')">
+    <div class="card-top">
+      <div class="card-title">$20 Before Care</div>
+      <div class="card-badges">
+        <span class="badge badge-custom">CUSTOM</span>
+      </div>
+    </div>
+    <div class="card-desc">Valid price — $20 is Before Care at RBA camps, not an error</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-gym"><span class="gym-dot" style="background:#f59e0b;"></span> RBA</span>
+        <span class="scope-pill scope-camp">Camp</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number green">5</div>
+        <div class="impact-label">errors<br>prevented</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-green">
+    <div class="card-top">
+      <div class="card-title">"Gym Fun Friday" → Open Gym</div>
+      <div class="card-badges">
+        <span class="badge badge-custom">CUSTOM</span>
+      </div>
+    </div>
+    <div class="card-desc">Program synonym — global rule for all gyms</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-pill scope-all">All Gyms</span>
+        <span class="scope-pill scope-opengym">Open Gym</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number green">4</div>
+        <div class="impact-label">errors<br>prevented</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-green">
+    <div class="card-top">
+      <div class="card-title">$15 Sibling Discount</div>
+      <div class="card-badges">
+        <span class="badge badge-custom">CUSTOM</span>
+      </div>
+    </div>
+    <div class="card-desc">Valid price — $15 sibling rate for KNO at HGA</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-gym"><span class="gym-dot" style="background:#06b6d4;"></span> HGA</span>
+        <span class="scope-pill scope-kno">KNO</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number green">1</div>
+        <div class="impact-label">error<br>prevented</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-green">
+    <div class="card-top">
+      <div class="card-title">8:00am Early Dropoff</div>
+      <div class="card-badges">
+        <span class="badge badge-custom">CUSTOM</span>
+      </div>
+    </div>
+    <div class="card-desc">Valid time — 8:00am is early dropoff for CCP camps</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-gym"><span class="gym-dot" style="background:#8b5cf6;"></span> CCP</span>
+        <span class="scope-pill scope-camp">Camp</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number green">3</div>
+        <div class="impact-label">errors<br>prevented</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════ TEMPORARY EXCEPTIONS ══════ -->
+<div class="section-header">
+  <h2>⏳ Temporary Exceptions</h2>
+  <span class="section-count">3</span>
+  <div class="section-line"></div>
+</div>
+
+<div class="rules-grid">
+
+  <div class="rule-card border-yellow" onclick="openDetail('temp')">
+    <div class="card-top">
+      <div class="card-title">Spring Break Camp — wrong month OK</div>
+      <div class="card-badges">
+        <span class="badge badge-temp">TEMP</span>
+      </div>
+    </div>
+    <div class="card-desc">Date mismatch accepted — description mentions Feb registration deadline, not an error</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-gym"><span class="gym-dot" style="background:#f59e0b;"></span> EST</span>
+        <span style="font-size:14px; font-weight:700; color:#b45309;">Expires Apr 1</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number" style="color:#b45309;">1</div>
+        <div class="impact-label">event<br>excepted</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-yellow">
+    <div class="card-top">
+      <div class="card-title">Back Handspring Clinic — promo price OK</div>
+      <div class="card-badges">
+        <span class="badge badge-temp">TEMP</span>
+      </div>
+    </div>
+    <div class="card-desc">Price mismatch accepted — temporary promotional pricing for this event</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-gym"><span class="gym-dot" style="background:#e11d48;"></span> RBK</span>
+        <span style="font-size:14px; font-weight:700; color:#888;">Single event</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number" style="color:#b45309;">1</div>
+        <div class="impact-label">event<br>excepted</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card border-yellow">
+    <div class="card-top">
+      <div class="card-title">All KNO at SGT — time OK this month</div>
+      <div class="card-badges">
+        <span class="badge badge-temp">TEMP</span>
+      </div>
+    </div>
+    <div class="card-desc">Time mismatch accepted for all KNO at SGT — schedule change not yet updated in iClass</div>
+    <div class="card-bottom">
+      <div class="card-scope">
+        <span class="scope-gym"><span class="gym-dot" style="background:#10b981;"></span> SGT</span>
+        <span style="font-size:14px; font-weight:700; color:#b45309;">Expires Mar 31</span>
+      </div>
+      <div class="card-impact">
+        <div class="impact-number" style="color:#b45309;">3</div>
+        <div class="impact-label">events<br>excepted</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════ DETAIL MODALS ══════ -->
+
+<!-- Year Mismatch Detail -->
+<div class="detail-overlay" id="modal-year">
+  <div class="detail-modal">
+    <button class="detail-close" onclick="closeDetail('year')">✕</button>
+    <div class="detail-title">Year Mismatch</div>
+    <div class="detail-subtitle">System rule · Data accuracy · All gyms · All programs</div>
+
+    <div class="toggle-row">
+      <div class="toggle-track on" onclick="this.classList.toggle('on')"></div>
+      <span class="toggle-text on-text">Rule is ACTIVE — checking all events</span>
+    </div>
+
+    <div class="impact-bar">
+      <div class="impact-box">
+        <div class="impact-box-number red">4</div>
+        <div class="impact-box-label">Errors Found</div>
+      </div>
+      <div class="impact-box">
+        <div class="impact-box-number blue">847</div>
+        <div class="impact-box-label">Events Scanned</div>
+      </div>
+      <div class="impact-box">
+        <div class="impact-box-number green">99.5%</div>
+        <div class="impact-box-label">Pass Rate</div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">How This Rule Works</div>
+      <div class="detail-row">
+        <span class="detail-label">Source of Truth</span>
+        <span class="detail-value">iClass API <code>startDate</code> → year extracted</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Compares To</span>
+        <span class="detail-value">Any 4-digit year found in the event title</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Triggers When</span>
+        <span class="detail-value">Title contains a year like "2025" that doesn't match the actual event year</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Applies To</span>
+        <div class="detail-value">
+          <span class="scope-pill scope-clinic">Clinic</span>
+          <span class="scope-pill scope-kno">KNO</span>
+          <span class="scope-pill scope-opengym">Open Gym</span>
+          <span class="scope-pill scope-camp">Camp</span>
+        </div>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Can Override?</span>
+        <span class="detail-value">Temporary dismiss only — year should always match</span>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Events Currently Flagged (4)</div>
+      <div class="event-row">
+        <div class="event-type-bar clinic"></div>
+        <div class="event-info">
+          <div class="event-title-text">Tumbling Clinic | Ages 5+ | 01/17/2025</div>
+          <div class="event-meta">RBK · Jan 17, 2026 · Clinic</div>
+        </div>
+        <span class="event-error-text red">Title says 2025</span>
+      </div>
+      <div class="event-row">
+        <div class="event-type-bar kno"></div>
+        <div class="event-info">
+          <div class="event-title-text">Kids Night Out | Dec 2025 | Ages 4-13</div>
+          <div class="event-meta">HGA · Jan 10, 2026 · KNO</div>
+        </div>
+        <span class="event-error-text red">Title says 2025</span>
+      </div>
+      <div class="event-row">
+        <div class="event-type-bar camp"></div>
+        <div class="event-info">
+          <div class="event-title-text">Spring Break Camp 2025 | Full Day</div>
+          <div class="event-meta">EST · Mar 16, 2026 · Camp</div>
+        </div>
+        <span class="event-error-text red">Title says 2025</span>
+      </div>
+      <div class="event-row">
+        <div class="event-type-bar clinic"></div>
+        <div class="event-info">
+          <div class="event-title-text">Back Handspring Clinic 2025 | $30</div>
+          <div class="event-meta">CCP · Feb 8, 2026 · Clinic</div>
+        </div>
+        <span class="event-error-text red">Title says 2025</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Synonym Detail -->
+<div class="detail-overlay" id="modal-synonym">
+  <div class="detail-modal">
+    <button class="detail-close" onclick="closeDetail('synonym')">✕</button>
+    <div class="detail-title">"Ninja Night" → Kids Night Out</div>
+    <div class="detail-subtitle">Custom rule · Program synonym · RBA</div>
+
+    <div class="toggle-row">
+      <div class="toggle-track on" onclick="this.classList.toggle('on')"></div>
+      <span class="toggle-text on-text">Rule is ACTIVE — protecting events</span>
+    </div>
+
+    <div class="impact-bar">
+      <div class="impact-box">
+        <div class="impact-box-number green">2</div>
+        <div class="impact-box-label">Errors Prevented</div>
+      </div>
+      <div class="impact-box">
+        <div class="impact-box-number blue">14</div>
+        <div class="impact-box-label">Events Matched</div>
+      </div>
+      <div class="impact-box">
+        <div class="impact-box-number" style="color:#888;">Feb 2</div>
+        <div class="impact-box-label">Created</div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Rule Definition</div>
+      <div class="detail-row">
+        <span class="detail-label">Keyword</span>
+        <span class="detail-value"><code>ninja night</code></span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Maps To</span>
+        <span class="detail-value"><span class="scope-pill scope-kno">KIDS NIGHT OUT</span></span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Gym</span>
+        <span class="detail-value"><span class="scope-gym"><span class="gym-dot" style="background:#e11d48;"></span> RBA (Rowland Ballard Atascocita)</span></span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">What It Does</span>
+        <span class="detail-value">When a title contains "ninja night" and the event is KNO in iClass, program_mismatch and missing_program_in_title checks will PASS</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Duration</span>
+        <span class="detail-value">♾️ Permanent — active until you delete it</span>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Events This Rule is Protecting (2)</div>
+      <div class="event-row">
+        <div class="event-type-bar kno"></div>
+        <div class="event-info">
+          <div class="event-title-text">Ninja Night | Ages 5-12 | March 21st | $40</div>
+          <div class="event-meta">RBA · Mar 21, 2026 · KNO</div>
+        </div>
+        <span class="event-error-text green">✓ Protected</span>
+      </div>
+      <div class="event-row">
+        <div class="event-type-bar kno"></div>
+        <div class="event-info">
+          <div class="event-title-text">Ninja Night | Bring a Friend! | April 4th | $40</div>
+          <div class="event-meta">RBA · Apr 4, 2026 · KNO</div>
+        </div>
+        <span class="event-error-text green">✓ Protected</span>
+      </div>
+    </div>
+
+    <div class="detail-actions">
+      <button class="action-btn action-btn-danger" onclick="alert('Rule would be deleted')">🗑️ Delete Rule</button>
+    </div>
+  </div>
+</div>
+
+<!-- Price Rule Detail -->
+<div class="detail-overlay" id="modal-price">
+  <div class="detail-modal">
+    <button class="detail-close" onclick="closeDetail('price')">✕</button>
+    <div class="detail-title">$20 Before Care — RBA Camps</div>
+    <div class="detail-subtitle">Custom rule · Valid price exception · RBA</div>
+
+    <div class="toggle-row">
+      <div class="toggle-track on" onclick="this.classList.toggle('on')"></div>
+      <span class="toggle-text on-text">Rule is ACTIVE — protecting events</span>
+    </div>
+
+    <div class="impact-bar">
+      <div class="impact-box">
+        <div class="impact-box-number green">5</div>
+        <div class="impact-box-label">Errors Prevented</div>
+      </div>
+      <div class="impact-box">
+        <div class="impact-box-number blue">23</div>
+        <div class="impact-box-label">Camp Events at RBA</div>
+      </div>
+      <div class="impact-box">
+        <div class="impact-box-number" style="color:#888;">Jan 15</div>
+        <div class="impact-box-label">Created</div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Rule Definition</div>
+      <div class="detail-row">
+        <span class="detail-label">Price Value</span>
+        <span class="detail-value"><code>$20</code></span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Label</span>
+        <span class="detail-value">Before Care</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Gym</span>
+        <span class="detail-value"><span class="scope-gym"><span class="gym-dot" style="background:#f59e0b;"></span> RBA (Rowland Ballard Atascocita)</span></span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Applies To</span>
+        <span class="detail-value"><span class="scope-pill scope-camp">Camp</span></span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">What It Does</span>
+        <span class="detail-value">When $20 appears in a camp description at RBA, it won't trigger a camp_price_mismatch error (±$2 tolerance)</span>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Events This Rule is Protecting (3 of 5)</div>
+      <div class="event-row">
+        <div class="event-type-bar camp"></div>
+        <div class="event-info">
+          <div class="event-title-text">Spring Break Camp | Mar 16-20 | Full Day + Before Care $20</div>
+          <div class="event-meta">RBA · Mar 16, 2026 · Camp</div>
+        </div>
+        <span class="event-error-text green">✓ Protected</span>
+      </div>
+      <div class="event-row">
+        <div class="event-type-bar camp"></div>
+        <div class="event-info">
+          <div class="event-title-text">Summer Camp Week 1 | Jun 1-5 | $250/wk + Before Care $20</div>
+          <div class="event-meta">RBA · Jun 1, 2026 · Camp</div>
+        </div>
+        <span class="event-error-text green">✓ Protected</span>
+      </div>
+      <div class="event-row">
+        <div class="event-type-bar camp"></div>
+        <div class="event-info">
+          <div class="event-title-text">Summer Camp Week 2 | Jun 8-12 | $250/wk + Before Care $20</div>
+          <div class="event-meta">RBA · Jun 8, 2026 · Camp</div>
+        </div>
+        <span class="event-error-text green">✓ Protected</span>
+      </div>
+    </div>
+
+    <div class="detail-actions">
+      <button class="action-btn action-btn-danger" onclick="alert('Rule would be deleted')">🗑️ Delete Rule</button>
+    </div>
+  </div>
+</div>
+
+<!-- Temp Exception Detail -->
+<div class="detail-overlay" id="modal-temp">
+  <div class="detail-modal">
+    <button class="detail-close" onclick="closeDetail('temp')">✕</button>
+    <div class="detail-title">Spring Break Camp — Date OK</div>
+    <div class="detail-subtitle">Temporary exception · Single event · EST</div>
+
+    <div class="expire-banner">
+      <span class="expire-banner-icon">⚠️</span>
+      <span><strong>Expires April 1, 2026</strong> — this exception auto-removes and the error will come back on the next sync</span>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Exception Details</div>
+      <div class="detail-row">
+        <span class="detail-label">Error Suppressed</span>
+        <span class="detail-value"><span class="badge badge-data">DATA</span> date_mismatch</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Event</span>
+        <span class="detail-value">Spring Break Camp | March 16-20 | Full Day (9-3)</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Gym</span>
+        <span class="detail-value"><span class="scope-gym"><span class="gym-dot" style="background:#f59e0b;"></span> EST (Estrella Gymnastics)</span></span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Reason</span>
+        <span class="detail-value">"Description mentions February registration deadline — not an actual date error"</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Scope</span>
+        <span class="detail-value">This event only — won't affect other events at EST</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Created</span>
+        <span class="detail-value">March 5, 2026</span>
+      </div>
+    </div>
+
+    <div class="detail-actions">
+      <button class="action-btn action-btn-upgrade" onclick="alert('Would convert to permanent rule')">📋 Make Permanent Rule</button>
+      <button class="action-btn action-btn-danger" onclick="alert('Exception would be removed')">🗑️ Remove Exception</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openDetail(id) {
+    document.getElementById('modal-' + id).classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDetail(id) {
+    document.getElementById('modal-' + id).classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function togglePill(el) {
+    el.classList.toggle('active');
+  }
+
+  document.querySelectorAll('.detail-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+    });
+  });
+</script>
+
+</body>
+</html>

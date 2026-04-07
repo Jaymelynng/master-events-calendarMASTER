@@ -28,7 +28,7 @@ export default function EmailComposer({ gyms, events, monthlyRequirements, curre
     const dataErrors = gymEvents.filter(e => {
       const errors = (e.validation_errors || []).filter(err => err.type !== 'sold_out');
       return errors.some(err => {
-        const cat = err.category || (err.type?.includes('mismatch') ? 'data_error' : 'formatting');
+        const cat = err.category || (err.type?.includes('mismatch') ? 'data_error' : 'other');
         return cat === 'data_error';
       });
     });

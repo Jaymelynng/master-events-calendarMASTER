@@ -278,7 +278,8 @@ The system compares events by **event_url** (unique identifier).
 **Per-Gym Validation Rules:**
 - Some warnings are false positives (e.g., $20 Before Care pricing, 8:30am Early Dropoff)
 - You can dismiss warnings as **one-time exceptions** or **permanent rules** per gym
-- Permanent rules are stored in `gym_valid_values` and checked during future syncs
+- Permanent rules are stored in the unified `rules` table and checked during future syncs
+- Validation now runs through `validation_engine.py` — system checks are database-driven
 - Manage rules in: **Admin Dashboard → Gym Rules tab**
 - Review all errors across gyms: **Admin Dashboard → Audit & Review tab**
 

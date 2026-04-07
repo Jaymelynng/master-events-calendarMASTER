@@ -409,7 +409,7 @@ const AUDIT_RULES = [
 
 // Known validation gaps - things NOT yet checked
 const KNOWN_GAPS = [
-  { what: 'Year in description', risk: 'HIGH', details: 'Year mismatch only checks title. Description could say "2025" while event is 2026.', status: 'Fix planned' },
+  { what: 'Year in description', risk: 'HIGH', details: 'Year mismatch now checks both title AND description (first 300 chars).', status: 'Fixed' },
   { what: 'Month in title', risk: 'Medium', details: 'Month validation only checks description, not title.', status: 'Not started' },
   { what: 'Max age', risk: 'Low', details: 'Only minimum age is compared. Maximum age is ignored.', status: 'Not started' },
   { what: 'program_ignore rule', risk: 'Medium', details: 'Can\'t ignore "open gym" when it\'s used as an activity name inside KNO.', status: 'Not started' },
