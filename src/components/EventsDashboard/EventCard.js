@@ -16,6 +16,23 @@ export default function EventCard({
   const eventTypeData = eventTypes.find(et => et.name === eventTypeName);
   const displayName = eventTypeData?.display_name || eventTypeName || 'Event';
 
+  // Calculate spots remaining (sum across grouped variants if applicable)
+  const isFull = event.has_openings === false;
+  let totalOpenings = null;
+  if (event.isGrouped && Array.isArray(event.groupedEvents)) {
+    const variantsWithData = event.groupedEvents.filter(v => v.openings != null);
+    if (variantsWithData.length > 0) {
+      totalOpenings = variantsWithData.reduce((sum, v) => sum + (v.openings || 0), 0);
+    }
+  } else if (event.openings != null) {
+    totalOpenings = event.openings;
+  }
+  const isLow = totalOpenings != null && totalOpenings > 0 && totalOpenings <= 3;
+  const showCount = totalOpenings != null && !isFull;
+  const countTooltip = event.isGrouped
+    ? `${totalOpenings} spots open across ${event.optionCount} options`
+    : `${totalOpenings} spots open`;
+
   // Get validation status indicators — rules apply everywhere (per-event + patterns)
   const getValidationIndicator = () => {
     const activeErrors = (event.validation_errors || []).filter(
@@ -78,11 +95,32 @@ export default function EventCard({
         <div className="font-semibold leading-tight text-sm">
           {displayName}
         </div>
-        <div className="text-gray-600 mt-0.5 leading-tight text-xs">
+        <div className="text-gray-600 mt-0.5 leading-tight text-xs flex items-center justify-center gap-1">
           {event.isGrouped ? (
-            <span className="text-gray-500 italic">{event.optionCount} options available</span>
+            <>
+              {showCount ? (
+                <span
+                  className={isLow ? 'text-orange-700 font-semibold' : 'text-green-700 font-semibold'}
+                  title={countTooltip}
+                >
+                  {isLow ? '⚠️' : '🟢'} {totalOpenings}
+                </span>
+              ) : (
+                <span className="text-gray-500 italic">{event.optionCount} opts</span>
+              )}
+            </>
           ) : (
-            formatTimeShort(event.time || event.event_time)
+            <>
+              <span>{formatTimeShort(event.time || event.event_time)}</span>
+              {showCount && (
+                <span
+                  className={isLow ? 'text-orange-700 font-semibold' : 'text-green-700 font-semibold'}
+                  title={countTooltip}
+                >
+                  · {isLow ? '⚠️' : '🟢'} {totalOpenings}
+                </span>
+              )}
+            </>
           )}
         </div>
       </div>
