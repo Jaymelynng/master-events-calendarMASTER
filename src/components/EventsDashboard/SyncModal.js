@@ -388,6 +388,9 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                 description_status: changed.incoming.description_status || 'unknown',
                 validation_errors: changed.incoming.validation_errors || [],
                 has_openings: changed.incoming.has_openings !== undefined ? changed.incoming.has_openings : true,
+                openings: changed.incoming.openings !== undefined ? changed.incoming.openings : null,
+                openings_display: changed.incoming.openings_display || null,
+                show_openings: changed.incoming.show_openings !== undefined ? changed.incoming.show_openings : true,
                 registration_start_date: changed.incoming.registration_start_date || null,
                 registration_end_date: changed.incoming.registration_end_date || null,
                 deleted_at: null
@@ -420,6 +423,9 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                 description_status: incoming.description_status || 'unknown',
                 validation_errors: incoming.validation_errors || [],
                 has_openings: incoming.has_openings !== undefined ? incoming.has_openings : true,
+                openings: incoming.openings !== undefined ? incoming.openings : null,
+                openings_display: incoming.openings_display || null,
+                show_openings: incoming.show_openings !== undefined ? incoming.show_openings : true,
                 registration_start_date: incoming.registration_start_date || null,
                 registration_end_date: incoming.registration_end_date || null
               });
@@ -739,6 +745,9 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                 validation_errors: changed.incoming.validation_errors || [],
                 // Availability tracking from iClassPro
                 has_openings: changed.incoming.has_openings !== undefined ? changed.incoming.has_openings : true,
+                openings: changed.incoming.openings !== undefined ? changed.incoming.openings : null,
+                openings_display: changed.incoming.openings_display || null,
+                show_openings: changed.incoming.show_openings !== undefined ? changed.incoming.show_openings : true,
                 registration_start_date: changed.incoming.registration_start_date || null,
                 registration_end_date: changed.incoming.registration_end_date || null,
                 deleted_at: null  // Ensure it's not marked as deleted
@@ -800,6 +809,9 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
               validation_errors: incomingEvent.validation_errors || [],
               // Availability tracking
               has_openings: incomingEvent.has_openings !== undefined ? incomingEvent.has_openings : true,
+              openings: incomingEvent.openings !== undefined ? incomingEvent.openings : null,
+              openings_display: incomingEvent.openings_display || null,
+              show_openings: incomingEvent.show_openings !== undefined ? incomingEvent.show_openings : true,
               registration_start_date: incomingEvent.registration_start_date || null,
               registration_end_date: incomingEvent.registration_end_date || null
             });
