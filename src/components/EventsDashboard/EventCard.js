@@ -95,34 +95,21 @@ export default function EventCard({
         <div className="font-semibold leading-tight text-sm">
           {displayName}
         </div>
-        <div className="text-gray-600 mt-0.5 leading-tight text-xs flex items-center justify-center gap-1">
-          {event.isGrouped ? (
-            <>
-              {showCount ? (
-                <span
-                  className={isLow ? 'text-orange-700 font-semibold' : 'text-green-700 font-semibold'}
-                  title={countTooltip}
-                >
-                  {isLow ? '⚠️' : '🟢'} {totalOpenings}
-                </span>
-              ) : (
-                <span className="text-gray-500 italic">{event.optionCount} opts</span>
-              )}
-            </>
-          ) : (
-            <>
-              <span>{formatTimeShort(event.time || event.event_time)}</span>
-              {showCount && (
-                <span
-                  className={isLow ? 'text-orange-700 font-semibold' : 'text-green-700 font-semibold'}
-                  title={countTooltip}
-                >
-                  · {isLow ? '⚠️' : '🟢'} {totalOpenings}
-                </span>
-              )}
-            </>
-          )}
+        {/* Time / options line */}
+        <div className="text-gray-600 mt-0.5 leading-tight text-xs">
+          {event.isGrouped
+            ? `${event.optionCount} opts`
+            : formatTimeShort(event.time || event.event_time)}
         </div>
+        {/* Openings count line — own row, sits below time */}
+        {showCount && (
+          <div
+            className={`mt-0.5 leading-tight text-xs font-semibold ${isLow ? 'text-orange-700' : 'text-green-700'}`}
+            title={countTooltip}
+          >
+            {isLow ? '⚠️' : '🟢'} {totalOpenings}
+          </div>
+        )}
       </div>
     </div>
   );
