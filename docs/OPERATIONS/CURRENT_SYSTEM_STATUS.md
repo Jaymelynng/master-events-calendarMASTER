@@ -1,6 +1,6 @@
 # Current System Status
 
-**Last Updated:** March 17, 2026
+**Last Updated:** April 26, 2026
 
 ---
 
@@ -70,6 +70,15 @@
 - **Camp prices:** `camp_pricing` table (full_day_daily, full_day_weekly, half_day_daily, half_day_weekly)
 - **Other prices:** `event_pricing` table with `effective_date` support (added Feb 2026)
 - Prices are parsed from event title/description and compared against these tables
+
+### Openings / Capacity (NEW April 26, 2026)
+- **Spot count on every event card** — `🟢 23` (green = 4+ open), `⚠️ 2` (orange = 1-3 left), `🔴 FULL` badge top-left when 0
+- **Source:** iClassPro `/api/open/v1/{slug}/camps/{id}` — `openings`, `openingsDisplay`, `showOpenings` fields
+- **All 10 gyms send the integer** — verified live; no iClass settings to change
+- **Total capacity NOT available** — iClass `maxStudents` is always null. No "23/40" fraction format possible without manual entry.
+- **CSV export:** new `Spots Left` and `Openings Display` columns
+- **Time was removed from cards** in the same update — accessible via hover tooltip, Table View, side panel
+- **Full doc:** `docs/OPERATIONS/OPENINGS_CAPACITY_FEATURE.md`
 
 ---
 
@@ -166,6 +175,10 @@
 | **gym_valid_values table fully dropped from database** | ✅ Done Mar 17 |
 | **Legacy naming cleanup (GYM_VALID_VALUES → RULES_CACHE)** | ✅ Done Mar 17 |
 | **AdminAuditRulesReference: "Year in description" gap → Fixed** | ✅ Updated Mar 17 |
+| **Openings/spots-remaining count captured + displayed** | ✅ Apr 26 |
+| **CSV export: Spots Left + Openings Display columns** | ✅ Apr 26 |
+| **Time removed from event cards (compact layout)** | ✅ Apr 26 |
+| **`pricing_supabase.py` added to git (was untracked, broke Railway)** | ✅ Apr 26 |
 
 ---
 

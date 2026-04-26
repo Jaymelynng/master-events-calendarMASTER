@@ -1,6 +1,6 @@
 # 🚨 AI AGENT - READ THIS ENTIRE FILE FIRST - MANDATORY
 
-**Last Updated**: April 7, 2026
+**Last Updated**: April 8, 2026
 **Purpose**: This file contains EVERYTHING an AI needs to know about this system. Read it completely before doing ANYTHING.
 
 > **Quick Start:** Also see `CLAUDE.md` in the root for a condensed 2-minute onboarding guide with session workflow.
@@ -99,6 +99,10 @@
 | **Program Type** | iClass API (`link_type_id`) | Maps to KNO, CLINIC, CAMP, etc. |
 | **CAMP Price** | Supabase `camp_pricing` table | WE BUILT THIS - iClass has no price field |
 | **Clinic/KNO/Open Gym Price** | Supabase `event_pricing` table | WE BUILT THIS Feb 2026 - supports effective dates for price changes |
+| **Spots Remaining** | iClass API (`openings`) | NEW Apr 26 — exact integer count of empty spots per event |
+| **Spot Display String** | iClass API (`openingsDisplay`) | NEW Apr 26 — pre-formatted (e.g. "23 Openings Available") |
+| **Show Openings Setting** | iClass API (`showOpenings`) | NEW Apr 26 — gym setting; all 10 gyms currently `true` |
+| **Total Capacity** | ❌ NOT AVAILABLE | iClass `maxStudents` is always null in public API. Cannot show "23/40" without manual entry. |
 
 ### The Price Solution
 iClass does NOT provide price in their API. We built our own pricing tables:
@@ -258,6 +262,22 @@ Before saying ANYTHING works:
 
 ---
 
+# PART 9: PRODUCT VISION — MULTI-SPORT & AI-ASSISTED SETUP (PLANNED)
+
+**Jayme’s direction (documented April 8, 2026):**
+
+1. **Multi-sport / multi-vertical:** The product is **not** gymnastics-only forever. Architecture targets **other sports** and eventually **other data sources** while keeping the same pattern: structured fields vs marketing copy, with **one shared** `validation_engine.py` for universal logic and **per-tenant** configuration via `rules`, pricing tables, and links.
+
+2. **AI startup / onboarding:** Research and future product work toward an **AI-assisted setup** flow that helps organizations configure Pricing, Rules, and links **without** technical operators — guided explanations, checklists, safe drafts — **not** unreviewed rewrites of embedded validation.
+
+3. **Authoritative in-repo notes:**
+   - [`memory/MEMORY.md`](../memory/MEMORY.md) — short memory anchor
+   - [`docs/OPERATIONS/PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md`](../docs/OPERATIONS/PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md) — full narrative + boundaries
+
+Agents should **read these** when asked about roadmap, sellability, onboarding, or “other sports.”
+
+---
+
 # PART 10: DOCUMENT HISTORY
 
 | Date | Update |
@@ -270,6 +290,8 @@ Before saying ANYTHING works:
 | Feb 23, 2026 | Added Feb 23 fixes: export start/end date, sync all cross-type deletion, includeDeleted flag, CORS restriction. Fixed outdated event_pricing reference. |
 | Mar 9, 2026 | Direct API swap, rules table unification, validation_engine.py added to key files |
 | Mar 17, 2026 | Removed FORMAT errors (never implemented). Replaced precoded rules with database-driven system checks. Dropped gym_valid_values references. Updated Admin Dashboard to 7 tabs. CORS note corrected. |
+| Apr 8, 2026 | Added Part 9: multi-sport + AI-assisted setup vision; pointers to `memory/MEMORY.md` and PRODUCT_VISION doc |
+| Apr 26, 2026 | Added openings/spots-remaining capacity feature. New columns + iClass API discovery (`openings`, `openingsDisplay`, `showOpenings`). Card display, side panel badge, CSV export columns. Time removed from cards. Full doc: `docs/OPERATIONS/OPENINGS_CAPACITY_FEATURE.md`. Also: `pricing_supabase.py` added to git (was untracked, broke Railway sync). |
 
 ---
 

@@ -24,6 +24,12 @@
 
 **User:** Jayme is a NON-TECHNICAL vibe coder. He communicates through documentation. Read ALL docs before making changes.
 
+### Product vision (multi-sport + AI setup) — read when scoping features
+
+- **Plan:** Platform is intended to generalize beyond gymnastics; **same embedded validation code for every gym**, with differences in **data** (`rules`, pricing, links). Jayme is researching an **AI-assisted onboarding / startup** to help new organizations configure setup (explain checks, guide Pricing & Rules — **not** ad-hoc replacement of core validation without design).
+- **In-repo memory:** [`memory/MEMORY.md`](memory/MEMORY.md)
+- **Full write-up:** [`docs/OPERATIONS/PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md`](docs/OPERATIONS/PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md)
+
 ---
 
 ## 📁 KEY FILES (Where to look first)
@@ -59,6 +65,7 @@
 | Event collection | `automation/f12_collect_and_import.py` (Direct API — calls validation_engine, no hardcoded validation) |
 | Validation engine | `automation/validation_engine.py` (database-driven — all checks from `rules` table) |
 | Flask API server | `automation/local_api_server.py` |
+| **Vision / roadmap** | `memory/MEMORY.md`, `docs/OPERATIONS/PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md` |
 
 ---
 
@@ -92,6 +99,16 @@
 - **Open in Outlook** — pre-fills To, CC, Subject, Body in Outlook web compose
 - **Manager contacts** stored in `gyms` table (manager_name, manager_email)
 - Auto-send via Resend or Power Automate planned but not yet configured
+
+### Openings / Spot Count (NEW April 26, 2026)
+- **Live spot count on every event card** — `🟢 23` / `⚠️ 2` (almost full) / `🔴 FULL`
+- **Source:** iClassPro `/api/open/v1/{slug}/camps/{id}` returns `openings` (int), `openingsDisplay` (string), `showOpenings` (bool) — was always there, just wasn't being captured
+- **All 10 gyms send the integer** — verified via live API probe; no iClass settings to change
+- **Database columns:** `openings`, `openings_display`, `show_openings` on `events` + `events_archive` (and exposed in `events_with_gym` view)
+- **CSV export:** new `Spots Left` and `Openings Display` columns
+- **Time removed from cards** — accessible via hover tooltip, Table View, side panel
+- **Capacity total NOT available** — iClass `maxStudents` is always null; can't show "23/40" fraction format without manual entry
+- **Full doc:** `docs/OPERATIONS/OPENINGS_CAPACITY_FEATURE.md`
 
 ### Admin Access
 - Level 1: Everyone sees calendar
@@ -193,6 +210,8 @@ docs/
 | Direct API swap | Playwright → Direct HTTP API (Mar 9, 2026). USE_DIRECT_API env var defaults true, set false to revert. Same data format, zero downstream changes needed. |
 | Validation engine | All hardcoded validation replaced with database-driven engine (Mar 17, 2026). `validation_engine.py` reads check rules from `rules` table. f12 reduced from 2417 to 1562 lines. |
 | Full audit (Apr 7) | Pipeline audit found 5 risks: silent error wipe, no-description skip, check crash swallowing, exact-match dismiss fragility, validation changes hidden in sync. README/CLAUDE.md/AI_RULES updated. |
+| Openings count (Apr 26) | Captured `openings`, `openings_display`, `show_openings` from iClass detail endpoint — already in API, just wasn't being captured. New DB columns + Sync Modal patches (4 spots) + card display + CSV columns. Full doc: `docs/OPERATIONS/OPENINGS_CAPACITY_FEATURE.md`. **Critical:** `pricing_supabase.py` was untracked locally; added to git mid-session after Railway sync error. |
+| April 7 pricing crisis (resolved Apr 26) | The MEMORY.md "DO NOT DEPLOY" warning about `find_matching_schedule()` is OUTDATED — that broken function does not exist in the codebase. Current pricing flow uses `programName` directly from API + `pricing_supabase.py` for date-aware lookups. Test fixture explicitly asserts the broken function stays gone. |
 
 ---
 
@@ -208,4 +227,4 @@ docs/
 
 ---
 
-**Last Updated:** April 7, 2026
+**Last Updated:** April 26, 2026

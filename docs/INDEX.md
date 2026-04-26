@@ -1,7 +1,7 @@
 # 📚 Team Calendar - Documentation Index
 
 **Live URL:** https://teamcalendar.mygymtools.com  
-**Last Updated:** April 7, 2026
+**Last Updated:** April 8, 2026
 **Part of:** mygymtools.com suite
 **Maintained by:** Jayme
 
@@ -83,7 +83,11 @@ docs/
 | [AUTO_ARCHIVE_SYSTEM.md](OPERATIONS/AUTO_ARCHIVE_SYSTEM.md) | Automatic event archiving |
 | [AUDIT-SYSTEM.md](OPERATIONS/AUDIT-SYSTEM.md) | Change tracking / audit history |
 | [DATA_QUALITY_VALIDATION.md](OPERATIONS/DATA_QUALITY_VALIDATION.md) | Automatic data validation + per-gym rules |
+| **[PRICING_SOURCE_OF_TRUTH.md](OPERATIONS/PRICING_SOURCE_OF_TRUTH.md)** | Contract: `camp_pricing` / `event_pricing` / `rules` for price checks |
+| [PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md](OPERATIONS/PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md) | Roadmap: other sports + AI-assisted org setup (planned) |
 | **[AUDIT_DATA_ERROR_REFERENCE.md](OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md)** ⭐ | What gets compared for each DATA error — source of truth explained |
+| **[OPENINGS_CAPACITY_FEATURE.md](OPERATIONS/OPENINGS_CAPACITY_FEATURE.md)** ⭐ NEW | Spot-count tracking — iClass API discovery, card display, CSV export, layout decisions |
+| [EMBEDDED_RULES_TRANSLATION.md](OPERATIONS/EMBEDDED_RULES_TRANSLATION.md) | Plain-language audit flow: iClass → title → description → cross-check; maps informal names to `type` |
 
 ### Technical Operations
 
@@ -115,11 +119,14 @@ docs/
 | **Understand how it works technically** | `TECHNICAL/TECHNICAL-REFERENCE.md` |
 | **Understand precoded vs configurable rules** | `TECHNICAL/VALIDATION_RULES_ARCHITECTURE.md` |
 | **See what each DATA error compares** | `OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md` |
+| **Understand truth vs title/description consistency** | `OPERATIONS/EMBEDDED_RULES_TRANSLATION.md` |
 | **Learn how to use automated sync** | `OPERATIONS/AUTO-SYNC-GUIDE.md` |
 | **Quick sync reminder (non-technical)** | `OPERATIONS/SYNC-QUICK-REFERENCE.md` |
 | **Access admin/super admin features** | `OPERATIONS/SECRET_ADMIN_MODE.md` |
 | **Export data or generate reports** | `OPERATIONS/EXPORT_DATA_GUIDE.md` |
 | **Manage per-gym validation rules** | `OPERATIONS/DATA_QUALITY_VALIDATION.md` |
+| **Know which tables drive price validation** | `OPERATIONS/PRICING_SOURCE_OF_TRUTH.md` |
+| **Roadmap: multi-sport / AI onboarding product** | `memory/MEMORY.md`, `OPERATIONS/PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md` |
 | **Troubleshoot deployment issues** | `OPERATIONS/DEPLOYMENT_PLAN.md` |
 | **Understand the database** | `TECHNICAL/DATABASE_COMPLETE_SCHEMA.md` or `database/README.md` |
 
