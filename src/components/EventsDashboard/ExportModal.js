@@ -1083,19 +1083,15 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-7xl mx-4 max-h-[95vh] overflow-hidden flex flex-col">
-        {/* Sticky Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 z-20 px-6 py-4 flex justify-between items-center">
+      <div className="bg-white rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[95vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             📤 Export & Reports
           </h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
         </div>
 
-        {/* Scrollable Body */}
-        <div className="overflow-y-auto p-6 flex-1">
-
-        {/* Quick Presets - Always at top, full width */}
+        {/* Quick Presets - NEW */}
         <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
           <h3 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
             ⚡ Quick Presets
@@ -1168,22 +1164,8 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════
-            3-PANEL RESPONSIVE GRID
-            Mobile (default): 1 column stacked
-            Tablet (md, 768px+): 2 columns
-            Desktop (lg, 1024px+): 3 columns side-by-side
-        ═══════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* ─────────────────────────────────────────────
-            LEFT PANEL — SCOPE (Date / Gyms / Event Types)
-        ───────────────────────────────────────────────── */}
-        <div className="space-y-4 lg:col-span-1">
-          <h3 className="text-xs uppercase font-bold tracking-wider text-gray-500 px-1">📍 Scope — what data window</h3>
-
         {/* Date Range Selection */}
-        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <h3 className="font-semibold text-gray-800 mb-3">📅 Date Range:</h3>
           
           {/* Quick date range buttons */}
@@ -1268,18 +1250,9 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
           )}
         </div>
 
-        </div>
-        {/* END LEFT PANEL */}
-
-        {/* ─────────────────────────────────────────────
-            MIDDLE PANEL — WHAT (Sections to include + previews)
-        ───────────────────────────────────────────────── */}
-        <div className="space-y-4 lg:col-span-1">
-          <h3 className="text-xs uppercase font-bold tracking-wider text-gray-500 px-1">📦 What to include — sections in your file</h3>
-
         {/* What to Export */}
-        <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-          <h3 className="font-semibold text-amber-800 mb-3">Sections:</h3>
+        <div className="mb-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <h3 className="font-semibold text-amber-800 mb-3">What to export:</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
               <input 
@@ -1449,17 +1422,8 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
           )}
         </div>
 
-        </div>
-        {/* END MIDDLE PANEL */}
-
-        {/* ─────────────────────────────────────────────
-            RIGHT PANEL — FILTERS + FORMAT + EXPORT
-        ───────────────────────────────────────────────── */}
-        <div className="space-y-4 lg:col-span-1">
-          <h3 className="text-xs uppercase font-bold tracking-wider text-gray-500 px-1">🚀 Filters & Output</h3>
-
         {/* Gyms Selection */}
-        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-semibold text-blue-800">Select Gyms:</h3>
             <div className="flex gap-2">
@@ -1483,7 +1447,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         </div>
 
         {/* Event Types Selection */}
-        <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+        <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-semibold text-purple-800">Select Event Types:</h3>
             <div className="flex gap-2">
@@ -1516,7 +1480,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         </div>
 
         {/* Format Selection */}
-        <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+        <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
           <h3 className="font-semibold text-green-800 mb-3">Export Format:</h3>
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -1560,28 +1524,8 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
           )}
         </div>
 
-        {/* Summary card — quick at-a-glance of what will be exported */}
-        <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-          <h3 className="font-semibold text-indigo-800 mb-2 text-sm">📋 Summary:</h3>
-          <div className="text-sm text-gray-700 space-y-1">
-            <div>📅 <strong>{filteredEvents.length}</strong> events</div>
-            <div>🏢 <strong>{selectedGyms.length}</strong> of {gyms.length} gyms</div>
-            <div>📂 <strong>{selectedTypes.length}</strong> of {eventTypes.length} types</div>
-            <div className="text-xs text-gray-500 mt-1">Format: {exportFormat.toUpperCase()}</div>
-          </div>
-        </div>
-
-        </div>
-        {/* END RIGHT PANEL */}
-
-        </div>
-        {/* END 3-PANEL GRID */}
-
-        </div>
-        {/* END SCROLLABLE BODY */}
-
-        {/* Sticky Footer — Cancel + Export always visible */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end gap-3 z-20">
+        {/* Export Button */}
+        <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
             className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -1592,8 +1536,8 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             onClick={handleExport}
             disabled={!canExport}
             className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              canExport
-                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl'
+              canExport 
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl' 
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
