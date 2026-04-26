@@ -131,8 +131,15 @@ ALLOWED_EVENT_FIELDS = {
     'validation_errors',
     # Availability tracking from iClassPro
     'has_openings',
+    'openings',
+    'openings_display',
+    'show_openings',
     'registration_start_date',
-    'registration_end_date'
+    'registration_end_date',
+    # iClassPro camp fields for pricing schedule matching
+    'type_id',
+    'allow_choose_days',
+    'program_name'
 }
 
 def sanitize_event_payload(event: dict, gym_id: str, event_type: str) -> dict:

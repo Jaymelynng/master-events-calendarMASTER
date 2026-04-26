@@ -24,6 +24,7 @@ from datetime import datetime, date
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 from validation_engine import ValidationContext, run_validation
+from pricing_supabase import get_active_event_prices_for_validation, build_event_pricing_for_today
 
 # Playwright is optional — only needed if USE_DIRECT_API=false
 try:
@@ -412,96 +413,63 @@ def _collect_events_direct_api(gym_id, event_type_filter=None):
 # Set USE_DIRECT_API=false to use this path instead of direct API.
 # Requires: pip install playwright && playwright install chromium
 
-# Camp pricing is now fetched from Supabase camp_pricing table
-# Validates Full Day Daily and Full Day Weekly prices only
+# ============================================================================
+# PRICING: Source of truth — Supabase camp_pricing + event_pricing + rules
+# See docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md
+# ============================================================================
 
-def fetch_camp_pricing():
-    """Fetch camp pricing from Supabase camp_pricing table (all 4 price types)"""
+CAMP_PRICING_CACHE = None
+
+
+def fetch_camp_pricing_from_db():
+    """Load camp_pricing rows from Supabase. Returns { gym_id: { full_day_daily, ... } }."""
     try:
-        url = f"{SUPABASE_URL}/rest/v1/camp_pricing?select=*"
+        url = f"{SUPABASE_URL}/rest/v1/camp_pricing?select=gym_id,full_day_daily,full_day_weekly,half_day_daily,half_day_weekly"
         req = Request(url)
         req.add_header("apikey", SUPABASE_KEY)
         req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
-        
         with urlopen(req) as response:
             rows = json.loads(response.read().decode())
-        
-        pricing = {}
+        out = {}
         for row in rows:
-            gym_id = row.get('gym_id')
-            if gym_id:
-                pricing[gym_id] = {
-                    'full_day_daily': row.get('full_day_daily'),
-                    'full_day_weekly': row.get('full_day_weekly'),
-                    'half_day_daily': row.get('half_day_daily'),
-                    'half_day_weekly': row.get('half_day_weekly')
-                }
-        
-        print(f"[INFO] Loaded camp pricing for {len(pricing)} gyms from Supabase (Full Day + Half Day)")
-        return pricing
+            gid = row.get('gym_id')
+            if not gid:
+                continue
+            out[gid] = {
+                'full_day_daily': row.get('full_day_daily'),
+                'full_day_weekly': row.get('full_day_weekly'),
+                'half_day_daily': row.get('half_day_daily'),
+                'half_day_weekly': row.get('half_day_weekly'),
+            }
+        print(f"[INFO] Loaded camp_pricing for {len(out)} gyms from Supabase")
+        return out
     except Exception as e:
-        print(f"[WARN] Could not fetch camp pricing: {e}")
+        print(f"[WARN] Could not fetch camp_pricing: {e}")
         return {}
 
-# Global cache for camp pricing
-CAMP_PRICING = None
 
 def get_camp_pricing():
-    """Get cached camp pricing or fetch from Supabase"""
-    global CAMP_PRICING
-    if CAMP_PRICING is None:
-        CAMP_PRICING = fetch_camp_pricing()
-    return CAMP_PRICING
+    """Cached camp pricing by gym (camp_pricing table). Values are numeric or None."""
+    global CAMP_PRICING_CACHE
+    if CAMP_PRICING_CACHE is None:
+        raw = fetch_camp_pricing_from_db()
+        CAMP_PRICING_CACHE = {}
+        for gid, cols in raw.items():
+            CAMP_PRICING_CACHE[gid] = {
+                'full_day_daily': str(cols['full_day_daily']) if cols.get('full_day_daily') is not None else None,
+                'full_day_weekly': str(cols['full_day_weekly']) if cols.get('full_day_weekly') is not None else None,
+                'half_day_daily': str(cols['half_day_daily']) if cols.get('half_day_daily') is not None else None,
+                'half_day_weekly': str(cols['half_day_weekly']) if cols.get('half_day_weekly') is not None else None,
+            }
+    return CAMP_PRICING_CACHE
 
-# Event pricing (Clinic, KNO, Open Gym) from event_pricing table
-EVENT_PRICING = None
-
-def fetch_event_pricing():
-    """Fetch event pricing from Supabase event_pricing table.
-    Returns dict grouped by gym_id and event_type with list of valid prices.
-    Only returns prices that are currently effective (based on effective_date and end_date).
-    { 'CCP': { 'KIDS NIGHT OUT': [40.0], 'CLINIC': [35.0], 'OPEN GYM': [10.0] } }
-    """
-    try:
-        # Get today's date for filtering
-        from datetime import date
-        today = date.today().isoformat()
-        
-        # Query with date filtering - get prices where today is between effective_date and end_date
-        url = f"{SUPABASE_URL}/rest/v1/event_pricing?select=*&effective_date=lte.{today}&or=(end_date.is.null,end_date.gte.{today})"
-        req = Request(url)
-        req.add_header("apikey", SUPABASE_KEY)
-        req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
-
-        with urlopen(req) as response:
-            rows = json.loads(response.read().decode())
-
-        pricing = {}
-        for row in rows:
-            gym_id = row.get('gym_id')
-            event_type = row.get('event_type')
-            price = row.get('price')
-            if gym_id and event_type and price is not None:
-                if gym_id not in pricing:
-                    pricing[gym_id] = {}
-                if event_type not in pricing[gym_id]:
-                    pricing[gym_id][event_type] = []
-                # Convert to float and add to list (gym may have multiple valid prices)
-                pricing[gym_id][event_type].append(float(price))
-
-        total_prices = sum(len(prices) for gym in pricing.values() for prices in gym.values())
-        print(f"[INFO] Loaded {total_prices} event prices for {len(pricing)} gyms from Supabase (effective {today})")
-        return pricing
-    except Exception as e:
-        print(f"[WARN] Could not fetch event pricing: {e}")
-        return {}
 
 def get_event_pricing():
-    """Get cached event pricing or fetch from Supabase"""
-    global EVENT_PRICING
-    if EVENT_PRICING is None:
-        EVENT_PRICING = fetch_event_pricing()
-    return EVENT_PRICING
+    """
+    Build { gym_id: { event_type: [prices] } } using **today** for effective_date / end_date window.
+    Per-event validation uses get_active_event_prices_for_validation(..., event_start_date) from pricing_supabase.
+    """
+    return build_event_pricing_for_today()
 
 # Per-gym validation rules (extra prices, times, synonyms) from unified `rules` table
 RULES_CACHE = None
@@ -1347,12 +1315,10 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
 
         # For non-CAMP events, get price from event_pricing table
         elif event_type_upper in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']:
-            event_pricing_data = get_event_pricing()
-            if gym_id in event_pricing_data and event_type_upper in event_pricing_data[gym_id]:
-                valid_prices = event_pricing_data[gym_id][event_type_upper]
-                if valid_prices:
-                    price = valid_prices[0]  # Use first valid price
-                    print(f"    [PRICE] Using source of truth: ${price} ({event_type_upper})")
+            valid_prices = get_active_event_prices_for_validation(gym_id, event_type_upper, start_date)
+            if valid_prices:
+                price = valid_prices[0]
+                print(f"    [PRICE] Using source of truth: ${price} ({event_type_upper})")
 
         # Fallback: extract from title/description only if no source of truth price found
         if price is None:
@@ -1378,12 +1344,17 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         
         # Extract availability info from iClassPro
         has_openings = ev.get("hasOpenings", True)  # Default to true if not present
+        openings = ev.get("openings")  # Integer: exact spots remaining (e.g., 23)
+        openings_display = ev.get("openingsDisplay")  # Pre-formatted string (e.g., "23 Openings Available")
+        show_openings = ev.get("showOpenings", True)  # Gym setting: whether to show count publicly
         registration_start_date = ev.get("registrationStartDate")  # YYYY-MM-DD or None
         registration_end_date = ev.get("registrationEndDate")  # YYYY-MM-DD or None
-        
+
         # Log availability status
         if has_openings == False:
             print(f"    🔴 SOLD OUT / FULL - no openings available")
+        elif openings is not None:
+            print(f"    🟢 {openings} spots remaining")
         
         # Extract description and check for flyer images
         description_raw = ev.get("description", "")
@@ -1572,8 +1543,15 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "flyer_url": flyer_url,
             "description_status": description_status,
             "validation_errors": validation_errors,
+            # iClassPro camp fields for pricing schedule matching
+            "type_id": ev.get("typeId"),
+            "allow_choose_days": ev.get("allowChooseDays"),
+            "program_name": ev.get("programName"),
             # Availability tracking from iClassPro
             "has_openings": has_openings,
+            "openings": openings,
+            "openings_display": openings_display,
+            "show_openings": show_openings,
             "registration_start_date": registration_start_date,
             "registration_end_date": registration_end_date,
         })

@@ -42,6 +42,9 @@ SELECT
   e.verified_errors,
   -- Availability columns
   e.has_openings,
+  e.openings,
+  e.openings_display,
+  e.show_openings,
   e.registration_start_date,
   e.registration_end_date,
   -- Gym info
@@ -81,6 +84,9 @@ SELECT
   a.verified_errors,
   -- Availability columns
   a.has_openings,
+  a.openings,
+  a.openings_display,
+  a.show_openings,
   a.registration_start_date,
   a.registration_end_date,
   -- Gym info

@@ -167,7 +167,7 @@ export default function EventDetailPanel({
         )}
 
         {/* Availability Status */}
-        {(event.has_openings === false || event.registration_end_date) && (
+        {(event.has_openings === false || event.openings != null || event.registration_end_date) && (
           <AvailabilityStatus event={event} />
         )}
 
@@ -253,9 +253,15 @@ function CampQuickAccess({ event, gymLinks }) {
 
 // Availability status component
 function AvailabilityStatus({ event }) {
+  const hasCount = event.openings != null;
+  const count = event.openings;
+  // Color thresholds: 0 = red (treated as sold out), 1-3 = orange (almost full), 4+ = green
+  const isLow = hasCount && count > 0 && count <= 3;
+  const isFull = event.has_openings === false || count === 0;
+
   return (
     <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
-      {event.has_openings === false && (
+      {isFull && (
         <div className="bg-red-100 border border-red-300 rounded-lg p-3 mb-2">
           <div className="font-bold text-red-800 flex items-center gap-2">
             🔴 SOLD OUT
@@ -263,6 +269,18 @@ function AvailabilityStatus({ event }) {
           <div className="text-sm text-red-700 mt-1">
             This event is full - no spots available
           </div>
+        </div>
+      )}
+      {!isFull && hasCount && (
+        <div className={`border rounded-lg p-3 mb-2 ${isLow ? 'bg-orange-50 border-orange-300' : 'bg-green-50 border-green-300'}`}>
+          <div className={`font-bold flex items-center gap-2 ${isLow ? 'text-orange-800' : 'text-green-800'}`}>
+            {isLow ? '⚠️' : '🟢'} {event.openings_display || `${count} ${count === 1 ? 'spot' : 'spots'} remaining`}
+          </div>
+          {event.show_openings === false && (
+            <div className={`text-xs mt-1 ${isLow ? 'text-orange-700' : 'text-green-700'} italic`}>
+              (Internal — gym hides this count from public)
+            </div>
+          )}
         </div>
       )}
       {event.registration_end_date && (
