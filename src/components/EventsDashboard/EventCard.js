@@ -69,10 +69,20 @@ export default function EventCard({
     return null;
   };
 
+  // Build hover tooltip with the info we removed from the card
+  const eventTime = formatTimeShort(event.time || event.event_time);
+  const tooltipParts = [event.title || displayName];
+  if (eventTime) tooltipParts.push(`Time: ${eventTime}`);
+  if (showCount) tooltipParts.push(`${totalOpenings} spots open`);
+  if (event.isGrouped) tooltipParts.push(`${event.optionCount} options`);
+  if (event.has_openings === false) tooltipParts.push('SOLD OUT');
+  const cardTooltip = tooltipParts.join(' · ');
+
   return (
     <div
       className="relative group cursor-pointer"
       onClick={() => onClick(event)}
+      title={cardTooltip}
     >
       <div
         className="text-xs rounded text-gray-700 text-center font-medium transition-all duration-200 border p-2 hover:shadow-md hover:scale-105 relative"
@@ -91,21 +101,20 @@ export default function EventCard({
         {/* Validation status indicator */}
         {getValidationIndicator()}
 
-        {/* Compact Card View */}
+        {/* Compact Card View — TYPE name */}
         <div className="font-semibold leading-tight text-sm">
           {displayName}
         </div>
-        {/* Time / options line */}
-        <div className="text-gray-600 mt-0.5 leading-tight text-xs">
-          {event.isGrouped
-            ? `${event.optionCount} opts`
-            : formatTimeShort(event.time || event.event_time)}
-        </div>
-        {/* Openings count line — own row, sits below time */}
+        {/* Options count for grouped events (single events skip this row entirely) */}
+        {event.isGrouped && (
+          <div className="text-gray-500 italic mt-0.5 leading-tight text-xs">
+            {event.optionCount} opts
+          </div>
+        )}
+        {/* Openings count line */}
         {showCount && (
           <div
             className={`mt-0.5 leading-tight text-xs font-semibold ${isLow ? 'text-orange-700' : 'text-green-700'}`}
-            title={countTooltip}
           >
             {isLow ? '⚠️' : '🟢'} {totalOpenings}
           </div>
