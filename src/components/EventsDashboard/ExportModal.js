@@ -379,7 +379,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     // Events section
     if (includeEvents && filteredEvents.length > 0) {
       csvContent += `EVENTS - ${monthName}\n`;
-      csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Full Day Daily,Full Day Weekly,Half Day Daily,Half Day Weekly,Ages,Description Status,Has Openings,Spots Left,Openings Display,URL\n';
+      csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Full Day Daily,Full Day Weekly,Half Day Daily,Half Day Weekly,Ages,Description,Description Status,Has Openings,Spots Left,Openings Display,URL\n';
       filteredEvents.forEach(event => {
         const gym = gyms.find(g => g.id === event.gym_id);
         const ageDisplay = event.age_min && event.age_max
@@ -415,6 +415,9 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
           hdDaily,
           hdWeekly,
           ageDisplay,
+          event.description
+            ? `"${event.description.replace(/\r?\n/g, ' ').replace(/"/g, '""').trim()}"`
+            : '',
           event.description_status || 'unknown',
           event.has_openings === false ? 'SOLD OUT' : 'Available',
           event.openings != null ? event.openings : '',
