@@ -1169,18 +1169,12 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         </div>
 
         {/* ═══════════════════════════════════════════════════════════
-            4-PANEL RESPONSIVE GRID
+            3-PANEL RESPONSIVE GRID
             Mobile (default): 1 column stacked
             Tablet (md, 768px+): 2 columns
-            Laptop (lg, 1024px+): 2 columns (still readable)
-            Desktop (xl, 1280px+): 4 columns side-by-side
-            ┌──────┬────────┬───────────────┬──────────────┐
-            │ WHEN │ WHO    │ WHAT + WHICH  │ HOW + SUMMARY│
-            │ Date │ Gyms   │ Sections +    │ Format +     │
-            │      │ (10+)  │ Event Types   │ Summary      │
-            └──────┴────────┴───────────────┴──────────────┘
+            Desktop (lg, 1024px+): 3 columns side-by-side
         ═══════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* ─────────────────────────────────────────────
             LEFT PANEL — WHEN (Date Range)
@@ -1275,14 +1269,13 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         </div>
 
         </div>
-        {/* END LEFT PANEL — WHEN */}
+        {/* END LEFT PANEL */}
 
         {/* ─────────────────────────────────────────────
-            PANEL 3 — WHAT + WHICH (Sections + Event Types + previews)
-            Note: Gyms moved out to its own panel (PANEL 2 — WHO) below
+            MIDDLE PANEL — WHAT (Sections to include + previews)
         ───────────────────────────────────────────────── */}
-        <div className="space-y-4 xl:col-span-1 xl:order-3">
-          <h3 className="text-xs uppercase font-bold tracking-wider text-gray-500 px-1">📦 What — sections + types</h3>
+        <div className="space-y-4 lg:col-span-1">
+          <h3 className="text-xs uppercase font-bold tracking-wider text-gray-500 px-1">📦 What to include — sections in your file</h3>
 
         {/* What to Export */}
         <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
@@ -1457,14 +1450,13 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         </div>
 
         </div>
-        {/* END PANEL 3 — WHAT */}
+        {/* END MIDDLE PANEL */}
 
         {/* ─────────────────────────────────────────────
-            PANEL 2 — WHO (Gyms only, gets its own column)
-            xl:order-2 puts it second on wide screens (after WHEN)
+            RIGHT PANEL — FILTERS + FORMAT + EXPORT
         ───────────────────────────────────────────────── */}
-        <div className="space-y-4 xl:col-span-1 xl:order-2">
-          <h3 className="text-xs uppercase font-bold tracking-wider text-gray-500 px-1">🏢 Who — gyms</h3>
+        <div className="space-y-4 lg:col-span-1">
+          <h3 className="text-xs uppercase font-bold tracking-wider text-gray-500 px-1">🚀 Filters & Output</h3>
 
         {/* Gyms Selection */}
         <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -1475,29 +1467,20 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
               <button onClick={selectNoGyms} className="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded">None</button>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 xl:grid-cols-1 gap-1">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {gyms.map(gym => (
               <label key={gym.id} className="flex items-center gap-2 cursor-pointer text-sm hover:bg-blue-100 p-1 rounded">
-                <input
-                  type="checkbox"
-                  checked={selectedGyms.includes(gym.id)}
+                <input 
+                  type="checkbox" 
+                  checked={selectedGyms.includes(gym.id)} 
                   onChange={() => toggleGym(gym.id)}
-                  className="w-4 h-4 text-blue-600 flex-shrink-0"
+                  className="w-4 h-4 text-blue-600"
                 />
-                <span className="text-gray-700 truncate text-xs">{gym.id} — {gym.name?.split(' ').slice(0, 2).join(' ')}</span>
+                <span className="text-gray-700 truncate">{gym.id} - {gym.name?.split(' ').slice(0, 2).join(' ')}</span>
               </label>
             ))}
           </div>
         </div>
-
-        </div>
-        {/* END PANEL 2 — WHO */}
-
-        {/* ─────────────────────────────────────────────
-            PANEL 4 — HOW + GO (Event Types + Format + Summary)
-        ───────────────────────────────────────────────── */}
-        <div className="space-y-4 xl:col-span-1 xl:order-4">
-          <h3 className="text-xs uppercase font-bold tracking-wider text-gray-500 px-1">🚀 How — output settings</h3>
 
         {/* Event Types Selection */}
         <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
@@ -1589,10 +1572,10 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         </div>
 
         </div>
-        {/* END PANEL 4 — HOW */}
+        {/* END RIGHT PANEL */}
 
         </div>
-        {/* END 4-PANEL GRID */}
+        {/* END 3-PANEL GRID */}
 
         </div>
         {/* END SCROLLABLE BODY */}
