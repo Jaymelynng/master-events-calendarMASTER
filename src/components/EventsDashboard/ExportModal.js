@@ -1082,17 +1082,23 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
   const auditCheckCount = getAuditCheckIssues().length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[95vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4 backdrop-blur-sm">
+      <div className="bg-gray-50 rounded-2xl w-full max-w-7xl mx-4 max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-gray-200">
+        {/* Sticky Header — clean white with shadow */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 z-30 px-6 py-4 flex justify-between items-center shadow-sm">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             📤 Export & Reports
           </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-3xl font-light leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">×</button>
         </div>
 
-        {/* Quick Presets - NEW */}
-        <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+        {/* Scrollable Body */}
+        <div className="overflow-y-auto p-6 flex-1 space-y-6">
+
+        {/* ═══════════════════════════════════════════════════════════
+            SECTION 1 — QUICK PRESETS (full width, elevated)
+        ═══════════════════════════════════════════════════════════ */}
+        <div className="p-5 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200 shadow-md">
           <h3 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
             ⚡ Quick Presets
             <span className="text-xs font-normal text-purple-600">(One-click export configurations)</span>
@@ -1100,9 +1106,9 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             <button
               onClick={() => applyPreset('monthly-compliance')}
-              className={`p-3 rounded-lg border-2 transition-all text-center ${
-                activePreset === 'monthly-compliance' 
-                  ? 'border-purple-500 bg-purple-100' 
+              className={`p-3 rounded-xl border-2 transition-all text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 ${
+                activePreset === 'monthly-compliance'
+                  ? 'border-purple-500 bg-purple-100 shadow-purple-200'
                   : 'border-gray-200 bg-white hover:border-purple-300'
               }`}
             >
@@ -1111,9 +1117,9 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             </button>
             <button
               onClick={() => applyPreset('printable-report')}
-              className={`p-3 rounded-lg border-2 transition-all text-center ${
-                activePreset === 'printable-report' 
-                  ? 'border-purple-500 bg-purple-100' 
+              className={`p-3 rounded-xl border-2 transition-all text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 ${
+                activePreset === 'printable-report'
+                  ? 'border-purple-500 bg-purple-100 shadow-purple-200'
                   : 'border-gray-200 bg-white hover:border-purple-300'
               }`}
             >
@@ -1123,9 +1129,9 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             </button>
             <button
               onClick={() => applyPreset('full-backup')}
-              className={`p-3 rounded-lg border-2 transition-all text-center ${
-                activePreset === 'full-backup' 
-                  ? 'border-purple-500 bg-purple-100' 
+              className={`p-3 rounded-xl border-2 transition-all text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 ${
+                activePreset === 'full-backup'
+                  ? 'border-purple-500 bg-purple-100 shadow-purple-200'
                   : 'border-gray-200 bg-white hover:border-purple-300'
               }`}
             >
@@ -1135,9 +1141,9 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             </button>
             <button
               onClick={() => applyPreset('audit-check')}
-              className={`p-3 rounded-lg border-2 transition-all text-center ${
-                activePreset === 'audit-check' 
-                  ? 'border-purple-500 bg-purple-100' 
+              className={`p-3 rounded-xl border-2 transition-all text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 ${
+                activePreset === 'audit-check'
+                  ? 'border-purple-500 bg-purple-100 shadow-purple-200'
                   : 'border-gray-200 bg-white hover:border-purple-300'
               }`}
             >
@@ -1151,9 +1157,9 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             {isAdmin && (
               <button
                 onClick={() => applyPreset('sync-status')}
-                className={`p-3 rounded-lg border-2 transition-all text-center ${
-                  activePreset === 'sync-status' 
-                    ? 'border-purple-500 bg-purple-100' 
+                className={`p-3 rounded-xl border-2 transition-all text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 ${
+                  activePreset === 'sync-status'
+                    ? 'border-purple-500 bg-purple-100 shadow-purple-200'
                     : 'border-gray-200 bg-white hover:border-purple-300'
                 }`}
               >
@@ -1164,12 +1170,18 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
           </div>
         </div>
 
-        {/* Date Range Selection */}
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <h3 className="font-semibold text-gray-800 mb-3">📅 Date Range:</h3>
-          
-          {/* Quick date range buttons */}
-          <div className="flex flex-wrap gap-2 mb-3">
+        {/* ═══════════════════════════════════════════════════════════
+            SECTION 2 — DATE RANGE (horizontal bar, full width)
+        ═══════════════════════════════════════════════════════════ */}
+        <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-md">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 font-semibold text-gray-800 mr-2">
+              <span className="text-lg">📅</span>
+              <span>Date Range:</span>
+            </div>
+
+          {/* Quick date range chips */}
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => {
                 const today = new Date();
@@ -1218,42 +1230,54 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             </button>
           </div>
           
-          <div className="flex flex-wrap items-center gap-4">
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">From:</label>
-              <input 
-                type="date" 
-                value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setActivePreset(null); }}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">To:</label>
-              <input 
-                type="date" 
-                value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setActivePreset(null); }}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            {loadingEvents && (
-              <div className="text-sm text-blue-600 flex items-center gap-2 self-end pb-2">
-                <span className="animate-spin">⏳</span> Loading...
-              </div>
+          {/* From / To inline */}
+          <div className="flex items-center gap-2 ml-2">
+            <span className="text-xs text-gray-500">From:</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => { setStartDate(e.target.value); setActivePreset(null); }}
+              className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none shadow-sm"
+            />
+            <span className="text-xs text-gray-500">To:</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => { setEndDate(e.target.value); setActivePreset(null); }}
+              className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none shadow-sm"
+            />
+          </div>
+
+          {/* Count + loading on the right */}
+          <div className="ml-auto text-sm text-gray-600">
+            {loadingEvents ? (
+              <span className="text-blue-600 flex items-center gap-1"><span className="animate-spin">⏳</span> Loading...</span>
+            ) : (
+              <span>Found <span className="font-semibold text-blue-600">{activeEvents.length}</span> events</span>
             )}
           </div>
-          {!loadingEvents && (
-            <div className="mt-2 text-sm text-gray-600">
-              Found <span className="font-semibold text-blue-600">{activeEvents.length}</span> events in selected range
-            </div>
-          )}
+          </div>
         </div>
 
-        {/* What to Export */}
-        <div className="mb-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
-          <h3 className="font-semibold text-amber-800 mb-3">What to export:</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {/* ═══════════════════════════════════════════════════════════
+            SECTION 3 — 3-PANEL GRID (WHO | WHAT | HOW)
+            Source order: WHAT, GYMS, EVENT TYPES + FORMAT
+            Visual order at xl: WHO (gyms) | WHAT (sections) | HOW (types+format)
+            via xl:order classes
+        ═══════════════════════════════════════════════════════════ */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        {/* PANEL: WHAT (Sections to include + previews) — visual middle (xl:order-2) */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden lg:order-2">
+          <div className="bg-amber-50 border-b border-amber-200 px-5 py-3">
+            <h3 className="font-bold text-amber-900 flex items-center gap-2">
+              📦 What to Include
+            </h3>
+            <p className="text-xs text-amber-700 mt-0.5">Pick which sections appear in your file</p>
+          </div>
+          <div className="p-5 space-y-2">
+          <h3 className="sr-only">What to export:</h3>
+          <div className="grid grid-cols-1 gap-1">
             <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-amber-100">
               <input 
                 type="checkbox" 
@@ -1422,39 +1446,81 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
           )}
         </div>
 
-        {/* Gyms Selection */}
-        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="font-semibold text-blue-800">Select Gyms:</h3>
-            <div className="flex gap-2">
-              <button onClick={selectAllGyms} className="text-xs px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded">All</button>
-              <button onClick={selectNoGyms} className="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded">None</button>
+          </div>
+        {/* END PANEL: WHAT */}
+
+        {/* PANEL: WHO (Gyms with logos + initials) — visual left (xl:order-1) */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden lg:order-1">
+          <div className="bg-blue-50 border-b border-blue-200 px-5 py-3 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-blue-900 flex items-center gap-2">
+                🏢 Who — Gyms
+              </h3>
+              <p className="text-xs text-blue-700 mt-0.5">{selectedGyms.length} of {gyms.length} selected</p>
+            </div>
+            <div className="flex gap-1">
+              <button onClick={selectAllGyms} className="text-xs px-2 py-1 bg-white border border-blue-300 hover:bg-blue-100 rounded shadow-sm">All</button>
+              <button onClick={selectNoGyms} className="text-xs px-2 py-1 bg-white border border-gray-300 hover:bg-gray-100 rounded shadow-sm">None</button>
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {gyms.map(gym => (
-              <label key={gym.id} className="flex items-center gap-2 cursor-pointer text-sm hover:bg-blue-100 p-1 rounded">
-                <input 
-                  type="checkbox" 
-                  checked={selectedGyms.includes(gym.id)} 
-                  onChange={() => toggleGym(gym.id)}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <span className="text-gray-700 truncate">{gym.id} - {gym.name?.split(' ').slice(0, 2).join(' ')}</span>
-              </label>
-            ))}
+          <div className="p-3 space-y-1 max-h-96 overflow-y-auto">
+            {gyms.map(gym => {
+              const isSelected = selectedGyms.includes(gym.id);
+              return (
+                <label
+                  key={gym.id}
+                  className={`flex items-center gap-3 cursor-pointer p-2 rounded-lg transition-all ${
+                    isSelected
+                      ? 'bg-blue-50 border border-blue-200 shadow-sm'
+                      : 'border border-transparent hover:bg-gray-50 hover:border-gray-200'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleGym(gym.id)}
+                    className="w-4 h-4 text-blue-600 flex-shrink-0"
+                  />
+                  {gym.logo_url ? (
+                    <img
+                      src={gym.logo_url}
+                      alt={gym.id}
+                      className="w-9 h-9 rounded-full object-cover shadow-md border-2 border-white flex-shrink-0"
+                      onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                    />
+                  ) : null}
+                  <div
+                    className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-xs items-center justify-center shadow-md border-2 border-white flex-shrink-0"
+                    style={{ display: gym.logo_url ? 'none' : 'flex' }}
+                  >
+                    {gym.id}
+                  </div>
+                  <span className="font-bold text-gray-800 text-sm">{gym.id}</span>
+                </label>
+              );
+            })}
           </div>
         </div>
+        {/* END PANEL: WHO */}
 
-        {/* Event Types Selection */}
-        <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="font-semibold text-purple-800">Select Event Types:</h3>
-            <div className="flex gap-2">
-              <button onClick={selectAllTypes} className="text-xs px-2 py-1 bg-purple-200 hover:bg-purple-300 rounded">All</button>
-              <button onClick={selectNoTypes} className="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded">None</button>
+        {/* PANEL: HOW (Event Types + Format + Summary) — visual right (xl:order-3) */}
+        <div className="space-y-4 lg:order-3">
+
+        {/* Event Types Selection — inside HOW panel */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
+          <div className="bg-purple-50 border-b border-purple-200 px-5 py-3 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-purple-900 flex items-center gap-2">
+                🎯 Event Types
+              </h3>
+              <p className="text-xs text-purple-700 mt-0.5">{selectedTypes.length} of {eventTypes.length} selected</p>
+            </div>
+            <div className="flex gap-1">
+              <button onClick={selectAllTypes} className="text-xs px-2 py-1 bg-white border border-purple-300 hover:bg-purple-100 rounded shadow-sm">All</button>
+              <button onClick={selectNoTypes} className="text-xs px-2 py-1 bg-white border border-gray-300 hover:bg-gray-100 rounded shadow-sm">None</button>
             </div>
           </div>
+          <div className="p-4">
           <div className="flex flex-wrap gap-3">
             {eventTypes.map(type => {
               const isRequired = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'].includes(type);
@@ -1477,11 +1543,20 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
           <div className="mt-2 text-xs text-gray-500">
             <span className="text-red-500">*</span> = Required for monthly compliance
           </div>
+          </div>
         </div>
+        {/* end Event Types */}
 
-        {/* Format Selection */}
-        <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-          <h3 className="font-semibold text-green-800 mb-3">Export Format:</h3>
+        {/* Format Selection — inside HOW panel */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
+          <div className="bg-green-50 border-b border-green-200 px-5 py-3">
+            <h3 className="font-bold text-green-900 flex items-center gap-2">
+              📊 Format
+            </h3>
+            <p className="text-xs text-green-700 mt-0.5">How the file is delivered</p>
+          </div>
+          <div className="p-4">
+          <h3 className="sr-only">Export Format:</h3>
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input 
@@ -1522,22 +1597,49 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
               📧 HTML report includes a copy-paste email summary and print button
             </div>
           )}
+          </div>
         </div>
+        {/* end Format */}
 
-        {/* Export Button */}
-        <div className="flex justify-end gap-3">
+        {/* Summary card — inside HOW panel */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
+          <div className="bg-indigo-50 border-b border-indigo-200 px-5 py-3">
+            <h3 className="font-bold text-indigo-900 flex items-center gap-2">
+              📋 Summary
+            </h3>
+          </div>
+          <div className="p-4 text-sm text-gray-700 space-y-1.5">
+            <div className="flex justify-between"><span>📅 Events in range:</span> <strong>{filteredEvents.length}</strong></div>
+            <div className="flex justify-between"><span>🏢 Gyms selected:</span> <strong>{selectedGyms.length} of {gyms.length}</strong></div>
+            <div className="flex justify-between"><span>🎯 Types selected:</span> <strong>{selectedTypes.length} of {eventTypes.length}</strong></div>
+            <div className="flex justify-between border-t border-gray-100 pt-1.5 mt-1.5"><span>Format:</span> <strong>{exportFormat.toUpperCase()}</strong></div>
+          </div>
+        </div>
+        {/* end Summary */}
+
+        </div>
+        {/* END PANEL: HOW */}
+
+        </div>
+        {/* END 3-PANEL GRID */}
+
+        </div>
+        {/* END SCROLLABLE BODY */}
+
+        {/* Sticky Footer — Cancel + Export always visible */}
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end gap-3 z-30 shadow-lg">
           <button
             onClick={onClose}
-            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
           >
             Cancel
           </button>
           <button
             onClick={handleExport}
             disabled={!canExport}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              canExport 
-                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl' 
+            className={`px-8 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+              canExport
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
