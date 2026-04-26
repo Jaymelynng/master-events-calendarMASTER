@@ -1177,10 +1177,10 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* ─────────────────────────────────────────────
-            LEFT PANEL — WHEN (Date Range)
+            LEFT PANEL — SCOPE (Date / Gyms / Event Types)
         ───────────────────────────────────────────────── */}
         <div className="space-y-4 lg:col-span-1">
-          <h3 className="text-xs uppercase font-bold tracking-wider text-gray-500 px-1">📅 When — date window</h3>
+          <h3 className="text-xs uppercase font-bold tracking-wider text-gray-500 px-1">📍 Scope — what data window</h3>
 
         {/* Date Range Selection */}
         <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
