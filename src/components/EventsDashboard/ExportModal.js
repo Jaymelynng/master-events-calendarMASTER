@@ -1459,43 +1459,44 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
               <p className="text-xs text-blue-700 mt-0.5">{selectedGyms.length} of {gyms.length} selected</p>
             </div>
             <div className="flex gap-1">
-              <button onClick={selectAllGyms} className="text-xs px-2 py-1 bg-white border border-blue-300 hover:bg-blue-100 rounded shadow-sm">All</button>
-              <button onClick={selectNoGyms} className="text-xs px-2 py-1 bg-white border border-gray-300 hover:bg-gray-100 rounded shadow-sm">None</button>
+              <button onClick={selectAllGyms} className="text-xs font-semibold px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm transition-colors">All</button>
+              <button onClick={selectNoGyms} className="text-xs font-semibold px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-md shadow-sm transition-colors">Clear</button>
             </div>
           </div>
-          <div className="p-3 space-y-1 max-h-96 overflow-y-auto">
+          <div className="p-3 space-y-2">
             {gyms.map(gym => {
               const isSelected = selectedGyms.includes(gym.id);
               return (
                 <label
                   key={gym.id}
-                  className={`flex items-center gap-3 cursor-pointer p-2 rounded-lg transition-all ${
+                  className={`flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg border-2 transition-all shadow-sm hover:shadow-md ${
                     isSelected
-                      ? 'bg-blue-50 border border-blue-200 shadow-sm'
-                      : 'border border-transparent hover:bg-gray-50 hover:border-gray-200'
+                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400'
+                      : 'bg-white border-gray-200 hover:border-blue-300'
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleGym(gym.id)}
-                    className="w-4 h-4 text-blue-600 flex-shrink-0"
+                    className="w-5 h-5 text-blue-600 rounded flex-shrink-0 cursor-pointer"
                   />
                   {gym.logo_url ? (
                     <img
                       src={gym.logo_url}
                       alt={gym.id}
-                      className="w-9 h-9 rounded-full object-cover shadow-md border-2 border-white flex-shrink-0"
+                      className="w-10 h-10 rounded-full object-cover shadow-md border-2 border-white flex-shrink-0"
                       onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                     />
                   ) : null}
                   <div
-                    className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-xs items-center justify-center shadow-md border-2 border-white flex-shrink-0"
+                    className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-[10px] items-center justify-center shadow-md border-2 border-white flex-shrink-0"
                     style={{ display: gym.logo_url ? 'none' : 'flex' }}
                   >
                     {gym.id}
                   </div>
-                  <span className="font-bold text-gray-800 text-sm">{gym.id}</span>
+                  <span className={`font-bold text-base flex-1 ${isSelected ? 'text-blue-900' : 'text-gray-800'}`}>{gym.id}</span>
+                  {isSelected && <span className="text-blue-600 text-xs font-semibold">✓</span>}
                 </label>
               );
             })}
@@ -1516,8 +1517,8 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
               <p className="text-xs text-purple-700 mt-0.5">{selectedTypes.length} of {eventTypes.length} selected</p>
             </div>
             <div className="flex gap-1">
-              <button onClick={selectAllTypes} className="text-xs px-2 py-1 bg-white border border-purple-300 hover:bg-purple-100 rounded shadow-sm">All</button>
-              <button onClick={selectNoTypes} className="text-xs px-2 py-1 bg-white border border-gray-300 hover:bg-gray-100 rounded shadow-sm">None</button>
+              <button onClick={selectAllTypes} className="text-xs font-semibold px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-md shadow-sm transition-colors">All</button>
+              <button onClick={selectNoTypes} className="text-xs font-semibold px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-md shadow-sm transition-colors">Clear</button>
             </div>
           </div>
           <div className="p-4">
