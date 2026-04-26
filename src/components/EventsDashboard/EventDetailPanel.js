@@ -274,7 +274,10 @@ function AvailabilityStatus({ event }) {
       {!isFull && hasCount && (
         <div className={`border rounded-lg p-3 mb-2 ${isLow ? 'bg-orange-50 border-orange-300' : 'bg-green-50 border-green-300'}`}>
           <div className={`font-bold flex items-center gap-2 ${isLow ? 'text-orange-800' : 'text-green-800'}`}>
-            {isLow ? '⚠️' : '🟢'} {event.openings_display || `${count} ${count === 1 ? 'spot' : 'spots'} remaining`}
+            {isLow ? '⚠️' : '🟢'} {count} {count === 1 ? 'spot' : 'spots'} remaining
+            {event.openings_display && !/\d/.test(event.openings_display) && (
+              <span className="text-xs font-normal opacity-70 ml-1">({event.openings_display})</span>
+            )}
           </div>
           {event.show_openings === false && (
             <div className={`text-xs mt-1 ${isLow ? 'text-orange-700' : 'text-green-700'} italic`}>
