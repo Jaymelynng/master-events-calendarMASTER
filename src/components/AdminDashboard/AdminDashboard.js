@@ -6,7 +6,6 @@ import AdminQuickActions from './AdminQuickActions';
 import AdminChangeHistory from './AdminChangeHistory';
 import EmailComposer from './EmailComposer';
 import AdminFuturePlans from './AdminFuturePlans';
-import AdminAuditRulesReference from './AdminAuditRulesReference';
 
 export default function AdminDashboard({
   gyms,
@@ -21,7 +20,7 @@ export default function AdminDashboard({
   onOpenBulkImport,
 }) {
   const [showEmailComposer, setShowEmailComposer] = useState(false);
-  const [activeTab, setActiveTab] = useState(initialTab || 'audit');
+  const [activeTab, setActiveTab] = useState(initialTab || 'rules');
   const [superAdminMode, setSuperAdminMode] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinInput, setPinInput] = useState('');
@@ -58,13 +57,12 @@ export default function AdminDashboard({
   };
 
   const tabs = [
-    { id: 'audit', label: '📋 Audit & Review', alwaysShow: true },
-    { id: 'pricing', label: '💰 Pricing', alwaysShow: true },
-    { id: 'rules', label: '📏 Gym Rules', alwaysShow: true },
-    { id: 'history', label: '📜 Change History', alwaysShow: true },
-    { id: 'validations', label: '🔍 Audit Rules', alwaysShow: true },
-    { id: 'plans', label: '📅 Future Plans', alwaysShow: true },
-    { id: 'actions', label: '⚡ Quick Actions', alwaysShow: true },
+    { id: 'rules', label: 'Gym Rules', alwaysShow: true },
+    { id: 'audit', label: 'Audit & Review', alwaysShow: true },
+    { id: 'pricing', label: 'Pricing', alwaysShow: true },
+    { id: 'history', label: 'Change History', alwaysShow: true },
+    { id: 'plans', label: 'Future Plans', alwaysShow: true },
+    { id: 'actions', label: 'Quick Actions', alwaysShow: true },
   ];
 
   return (
@@ -182,12 +180,12 @@ export default function AdminDashboard({
 
       {/* Content Area */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
-        {activeTab === 'audit' && (
-          <AdminAuditReview gyms={gyms} initialMonth={initialCalendarMonth} />
-        )}
-
         {activeTab === 'rules' && (
           <AdminGymRules gyms={gyms} />
+        )}
+
+        {activeTab === 'audit' && (
+          <AdminAuditReview gyms={gyms} initialMonth={initialCalendarMonth} />
         )}
 
         {activeTab === 'pricing' && (
@@ -196,10 +194,6 @@ export default function AdminDashboard({
 
         {activeTab === 'history' && (
           <AdminChangeHistory gyms={gyms} />
-        )}
-
-        {activeTab === 'validations' && (
-          <AdminAuditRulesReference />
         )}
 
         {activeTab === 'plans' && (
