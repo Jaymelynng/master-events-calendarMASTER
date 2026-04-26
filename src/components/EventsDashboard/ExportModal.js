@@ -2,6 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { isErrorAcknowledgedAnywhere, inferErrorCategory } from '../../lib/validationHelpers';
 
+// Real gym brand colors (primary brand color per gym)
+const GYM_BRAND_COLORS = {
+  'AGA': '#053A99',
+  'CCP': '#1f53a3',
+  'CPF': '#1f53a3',
+  'CRR': '#ff1493',
+  'EST': '#011837',
+  'HGA': '#c91724',
+  'MGC': '#33c7c9',
+  'OAS': '#3eb29f',
+  'PLG': '#C4149B',
+  'RBA': '#1a3c66',
+  'RBK': '#1a3c66',
+  'SGT': '#c72b12',
+  'TIG': '#f57f20',
+};
+
 export default function ExportModal({ onClose, events, gyms, monthlyRequirements, currentMonth, currentYear, acknowledgedPatterns = [] }) {
   // NOTE: The 'events' prop is received but not used - component fetches its own data from database
   // based on the date range selector, which allows exporting any date range (not just current view)
@@ -1268,17 +1285,17 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {/* PANEL: WHAT (Sections to include + previews) — visual middle (xl:order-2) */}
-        <div className="bg-amber-50 rounded-xl border-2 border-amber-200 shadow-md overflow-hidden lg:order-2">
-          <div className="bg-amber-100 border-b-2 border-amber-300 px-5 py-3">
-            <h3 className="font-bold text-amber-900 flex items-center gap-2 text-base">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden lg:order-2">
+          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50">
+            <h3 className="font-bold text-gray-800 flex items-center gap-2 text-base">
               📦 What to Include
             </h3>
-            <p className="text-xs text-amber-700 mt-0.5">Pick which sections appear in your file</p>
+            <p className="text-xs text-gray-500 mt-0.5">Pick which sections appear in your file</p>
           </div>
           <div className="p-5 space-y-3">
           <h3 className="sr-only">What to export:</h3>
           <div className="grid grid-cols-1 gap-2">
-            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-white border border-amber-200 shadow-sm hover:shadow-md hover:border-amber-400 transition-all">
+            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
               <input 
                 type="checkbox" 
                 checked={includeEvents} 
@@ -1292,7 +1309,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
                 </span>
               </span>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-white border border-amber-200 shadow-sm hover:shadow-md hover:border-amber-400 transition-all">
+            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
               <input 
                 type="checkbox" 
                 checked={includeAnalytics} 
@@ -1301,7 +1318,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
               />
               <span className="text-gray-700">📊 Analytics Dashboard</span>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-white border border-amber-200 shadow-sm hover:shadow-md hover:border-amber-400 transition-all">
+            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
               <input 
                 type="checkbox" 
                 checked={includeMissing} 
@@ -1310,7 +1327,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
               />
               <span className="text-gray-700">⚠️ Missing Requirements</span>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-white border border-amber-200 shadow-sm hover:shadow-md hover:border-amber-400 transition-all">
+            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
               <input 
                 type="checkbox" 
                 checked={includeAuditCheck} 
@@ -1319,7 +1336,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
               />
               <span className="text-gray-700">🔍 Audit Check (validation errors, missing descriptions)</span>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-white border border-amber-200 shadow-sm hover:shadow-md hover:border-amber-400 transition-all">
+            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
               <input 
                 type="checkbox" 
                 checked={includeDismissedWarnings} 
@@ -1335,7 +1352,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             </label>
             {/* Sync History - Admin Only */}
             {isAdmin ? (
-              <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-white border border-amber-200 shadow-sm hover:shadow-md hover:border-amber-400 transition-all">
+              <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
                 <input 
                   type="checkbox" 
                   checked={includeSyncHistory} 
@@ -1449,37 +1466,42 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
           </div>
         {/* END PANEL: WHAT */}
 
-        {/* PANEL: WHO (Gyms with logos + initials) — visual left (xl:order-1) */}
-        <div className="bg-blue-50 rounded-xl border-2 border-blue-200 shadow-md overflow-hidden lg:order-1">
-          <div className="bg-blue-100 border-b-2 border-blue-300 px-5 py-3 flex items-center justify-between">
+        {/* PANEL: WHO (Gyms with logos + brand-colored outline) — visual left (xl:order-1) */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden lg:order-1">
+          <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
             <div>
-              <h3 className="font-bold text-blue-900 flex items-center gap-2 text-base">
+              <h3 className="font-bold text-gray-800 flex items-center gap-2 text-base">
                 🏢 Who — Gyms
               </h3>
-              <p className="text-xs text-blue-700 mt-0.5">{selectedGyms.length} of {gyms.length} selected</p>
+              <p className="text-xs text-gray-500 mt-0.5">{selectedGyms.length} of {gyms.length} selected</p>
             </div>
             <div className="flex gap-1">
-              <button onClick={selectAllGyms} className="text-xs font-semibold px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm transition-colors">All</button>
+              <button onClick={selectAllGyms} className="text-xs font-semibold px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white rounded-md shadow-sm transition-colors">All</button>
               <button onClick={selectNoGyms} className="text-xs font-semibold px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-md shadow-sm transition-colors">Clear</button>
             </div>
           </div>
-          <div className="p-3 grid grid-cols-2 gap-2">
+          <div className="p-3 grid grid-cols-2 gap-2.5">
             {gyms.map(gym => {
               const isSelected = selectedGyms.includes(gym.id);
+              const brandColor = GYM_BRAND_COLORS[gym.id] || '#6b7280';
               return (
                 <label
                   key={gym.id}
-                  className={`flex items-center gap-2 cursor-pointer px-2.5 py-2 rounded-lg transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 ${
-                    isSelected
-                      ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white ring-2 ring-blue-700'
-                      : 'bg-white text-gray-800 hover:bg-blue-50'
-                  }`}
+                  className={`flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-lg transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 bg-white`}
+                  style={{
+                    borderLeft: `5px solid ${brandColor}`,
+                    border: `2px solid ${isSelected ? brandColor : '#e5e7eb'}`,
+                    borderLeftWidth: '5px',
+                    borderLeftColor: brandColor,
+                    backgroundColor: isSelected ? `${brandColor}15` : '#ffffff',
+                  }}
                 >
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleGym(gym.id)}
-                    className="w-4 h-4 rounded flex-shrink-0 cursor-pointer accent-blue-600"
+                    className="w-4 h-4 rounded flex-shrink-0 cursor-pointer"
+                    style={{ accentColor: brandColor }}
                   />
                   {gym.logo_url ? (
                     <img
@@ -1490,12 +1512,12 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
                     />
                   ) : null}
                   <div
-                    className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-[10px] items-center justify-center shadow-md border-2 border-white flex-shrink-0"
-                    style={{ display: gym.logo_url ? 'none' : 'flex' }}
+                    className="w-9 h-9 rounded-full text-white font-bold text-[10px] items-center justify-center shadow-md border-2 border-white flex-shrink-0"
+                    style={{ display: gym.logo_url ? 'none' : 'flex', backgroundColor: brandColor }}
                   >
                     {gym.id}
                   </div>
-                  <span className="font-bold text-sm flex-1">{gym.id}</span>
+                  <span className="font-bold text-sm flex-1" style={{ color: isSelected ? brandColor : '#1f2937' }}>{gym.id}</span>
                 </label>
               );
             })}
@@ -1508,15 +1530,15 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
 
         {/* Event Types Selection — inside HOW panel */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
-          <div className="bg-purple-50 border-b border-purple-200 px-5 py-3 flex items-center justify-between">
+          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-purple-900 flex items-center gap-2">
+              <h3 className="font-bold text-gray-800 flex items-center gap-2">
                 🎯 Event Types
               </h3>
-              <p className="text-xs text-purple-700 mt-0.5">{selectedTypes.length} of {eventTypes.length} selected</p>
+              <p className="text-xs text-gray-500 mt-0.5">{selectedTypes.length} of {eventTypes.length} selected</p>
             </div>
             <div className="flex gap-1">
-              <button onClick={selectAllTypes} className="text-xs font-semibold px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-md shadow-sm transition-colors">All</button>
+              <button onClick={selectAllTypes} className="text-xs font-semibold px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white rounded-md shadow-sm transition-colors">All</button>
               <button onClick={selectNoTypes} className="text-xs font-semibold px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-md shadow-sm transition-colors">Clear</button>
             </div>
           </div>
@@ -1549,11 +1571,11 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
 
         {/* Format Selection — inside HOW panel */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
-          <div className="bg-green-50 border-b border-green-200 px-5 py-3">
-            <h3 className="font-bold text-green-900 flex items-center gap-2">
+          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50">
+            <h3 className="font-bold text-gray-800 flex items-center gap-2">
               📊 Format
             </h3>
-            <p className="text-xs text-green-700 mt-0.5">How the file is delivered</p>
+            <p className="text-xs text-gray-500 mt-0.5">How the file is delivered</p>
           </div>
           <div className="p-4">
           <h3 className="sr-only">Export Format:</h3>
@@ -1603,8 +1625,8 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
 
         {/* Summary card — inside HOW panel */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
-          <div className="bg-indigo-50 border-b border-indigo-200 px-5 py-3">
-            <h3 className="font-bold text-indigo-900 flex items-center gap-2">
+          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50">
+            <h3 className="font-bold text-gray-800 flex items-center gap-2">
               📋 Summary
             </h3>
           </div>
