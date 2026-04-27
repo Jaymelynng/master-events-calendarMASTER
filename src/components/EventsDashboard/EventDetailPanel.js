@@ -139,6 +139,20 @@ export default function EventDetailPanel({
               ) : (
                 <div className="text-sm text-gray-500 italic">Price not in event details</div>
               )}
+              {/* Camp signup mode — inline tag under price (only for CAMPs that have data) */}
+              {event.type === 'CAMP' && event.allow_choose_days != null && (
+                <div className="mt-1">
+                  {event.allow_choose_days ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-800 border border-blue-200" title="Parents can register for individual days">
+                      ✓ Per-Day Signup
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-800 border border-purple-200" title="Parents must register for the entire camp">
+                      📦 Full Week Only
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -164,32 +178,6 @@ export default function EventDetailPanel({
         {/* Camp Quick Access Links */}
         {event.type === 'CAMP' && (
           <CampQuickAccess event={event} gymLinks={gymLinks} />
-        )}
-
-        {/* Camp Signup Mode — only show for camps where we have data */}
-        {event.type === 'CAMP' && event.allow_choose_days != null && (
-          <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
-            <div className="font-semibold text-xs text-gray-500 uppercase mb-2">📅 Signup Mode</div>
-            {event.allow_choose_days ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <div className="font-bold text-blue-800 flex items-center gap-2">
-                  ✓ Per-Day Signup Allowed
-                </div>
-                <div className="text-sm text-blue-700 mt-1">
-                  Parents can register for individual days
-                </div>
-              </div>
-            ) : (
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                <div className="font-bold text-purple-800 flex items-center gap-2">
-                  📦 Full Week Only
-                </div>
-                <div className="text-sm text-purple-700 mt-1">
-                  Parents must register for the entire camp (no day-by-day option)
-                </div>
-              </div>
-            )}
-          </div>
         )}
 
         {/* Availability Status */}
