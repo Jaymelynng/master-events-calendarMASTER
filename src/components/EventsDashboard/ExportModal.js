@@ -32,7 +32,52 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const [includeSyncHistory, setIncludeSyncHistory] = useState(false);
   const [includeDismissedWarnings, setIncludeDismissedWarnings] = useState(false);
   const [includeSpotsSnapshot, setIncludeSpotsSnapshot] = useState(false);
-  
+
+  // NEW: Use-case picker (drives which underlying section toggles get checked)
+  // 'full' | 'spots' | 'compliance' | 'audit' | 'sync' | 'custom'
+  const [useCase, setUseCase] = useState('full');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Apply a use-case → set the right combination of underlying include* flags
+  const applyUseCase = (uc) => {
+    setUseCase(uc);
+    setActivePreset(null);
+    // Reset all
+    setIncludeEvents(false);
+    setIncludeAnalytics(false);
+    setIncludeMissing(false);
+    setIncludeAuditCheck(false);
+    setIncludeDismissedWarnings(false);
+    setIncludeSyncHistory(false);
+    setIncludeSpotsSnapshot(false);
+    // Apply preset combo
+    switch (uc) {
+      case 'full':
+        setIncludeEvents(true);
+        break;
+      case 'spots':
+        setIncludeSpotsSnapshot(true);
+        break;
+      case 'compliance':
+        setIncludeAnalytics(true);
+        setIncludeMissing(true);
+        break;
+      case 'audit':
+        setIncludeAuditCheck(true);
+        setIncludeDismissedWarnings(true);
+        break;
+      case 'sync':
+        setIncludeSyncHistory(true);
+        break;
+      case 'custom':
+        // Don't auto-toggle — let user pick freely in advanced section
+        setShowAdvanced(true);
+        break;
+      default:
+        setIncludeEvents(true);
+    }
+  };
+
   // Admin check for Sync History (hidden feature)
   // PIN from environment variable (fallback for local dev)
   const SUPER_ADMIN_PIN = process.env.REACT_APP_ADMIN_PIN || '1426';
@@ -1319,110 +1364,148 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         ═══════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        {/* PANEL: WHAT (Sections to include + previews) — visual middle (xl:order-2) */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden lg:order-2">
-          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50">
+        {/* PANEL: WHAT — use-case picker (5 radio cards by user intent) */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden lg:order-2">
+          <div className="px-5 py-4 border-b border-gray-100">
             <h3 className="font-bold text-gray-800 flex items-center gap-2 text-base">
-              📦 What to Include
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-600 text-sm">⏱</span>
+              What are you exporting for?
             </h3>
-            <p className="text-xs text-gray-500 mt-0.5">Pick which sections appear in your file</p>
           </div>
-          <div className="p-5 space-y-3">
-          <h3 className="sr-only">What to export:</h3>
-          <div className="grid grid-cols-1 gap-2">
-            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
-              <input 
-                type="checkbox" 
-                checked={includeEvents} 
-                onChange={(e) => { setIncludeEvents(e.target.checked); setActivePreset(null); }}
-                className="w-4 h-4 text-amber-600"
-              />
-              <span className="text-gray-700">
-                📋 Event Details 
-                <span className="text-xs text-gray-500 ml-1">
-                  {loadingEvents ? '(loading...)' : `(${filteredEvents.length} events)`}
-                </span>
-              </span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
-              <input 
-                type="checkbox" 
-                checked={includeAnalytics} 
-                onChange={(e) => { setIncludeAnalytics(e.target.checked); setActivePreset(null); }}
-                className="w-4 h-4 text-amber-600"
-              />
-              <span className="text-gray-700">📊 Analytics Dashboard</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
-              <input 
-                type="checkbox" 
-                checked={includeMissing} 
-                onChange={(e) => { setIncludeMissing(e.target.checked); setActivePreset(null); }}
-                className="w-4 h-4 text-amber-600"
-              />
-              <span className="text-gray-700">⚠️ Missing Requirements</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
-              <input 
-                type="checkbox" 
-                checked={includeAuditCheck} 
-                onChange={(e) => { setIncludeAuditCheck(e.target.checked); setActivePreset(null); }}
-                className="w-4 h-4 text-amber-600"
-              />
-              <span className="text-gray-700">🔍 Audit Check (validation errors, missing descriptions)</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
-              <input 
-                type="checkbox" 
-                checked={includeDismissedWarnings} 
-                onChange={(e) => { setIncludeDismissedWarnings(e.target.checked); setActivePreset(null); }}
-                className="w-4 h-4 text-amber-600"
-              />
-              <span className="text-gray-700">
-                ✓ Dismissed Warnings (exceptions with notes)
-                {!loadingEvents && getDismissedWarnings().length > 0 && (
-                  <span className="text-xs text-green-600 ml-1">({getDismissedWarnings().length} events)</span>
-                )}
-              </span>
-            </label>
-            {/* Spots & Signup Snapshot — isolated operational view */}
-            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
-              <input
-                type="checkbox"
-                checked={includeSpotsSnapshot}
-                onChange={(e) => { setIncludeSpotsSnapshot(e.target.checked); setActivePreset(null); }}
-                className="w-4 h-4 text-amber-600"
-              />
-              <span className="text-gray-700">
-                🟢 Spots &amp; Signup Snapshot
-                <span className="text-xs text-gray-500 ml-1 block">Isolated: just spots remaining + per-day vs full-week per event</span>
-              </span>
-            </label>
-            {/* Sync History - Admin Only */}
-            {isAdmin ? (
-              <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
-                <input 
-                  type="checkbox" 
-                  checked={includeSyncHistory} 
-                  onChange={(e) => { setIncludeSyncHistory(e.target.checked); setActivePreset(null); }}
-                  className="w-4 h-4 text-amber-600"
-                />
-                <span className="text-gray-700">
-                  🔄 Sync History
-                  {loadingSyncLog && <span className="text-xs text-blue-600 ml-1">(loading...)</span>}
-                  {!loadingSyncLog && syncLog.length > 0 && (
-                    <span className="text-xs text-gray-500 ml-1">({syncLog.length} records)</span>
-                  )}
-                </span>
+          <div className="p-4 space-y-2.5">
+          {/* USE-CASE OPTION CARDS — radio-style, exclusive */}
+          {(() => {
+            const auditCount = getAuditCheckIssues().length;
+            const dismissedCount = getDismissedWarnings().length;
+            const missingCount = getMissingGyms().length;
+            // Smart "Recommended" — picks based on what's actionable right now
+            const recommendedKey = auditCount > 0 ? 'audit'
+                                : missingCount > 0 ? 'compliance'
+                                : 'full';
+            const cards = [
+              { key: 'full', icon: '📋', iconBg: 'from-rose-100 to-pink-100 text-rose-600',
+                title: 'Full event spreadsheet',
+                desc: 'Every event with all details.',
+                meta: loadingEvents ? 'Loading...' : `${filteredEvents.length} events`,
+              },
+              { key: 'spots', icon: '📅', iconBg: 'from-violet-100 to-purple-100 text-violet-600',
+                title: 'Quick spots & availability check',
+                desc: 'Just spots remaining + camp signup mode.',
+                meta: loadingEvents ? '' : (() => {
+                  const camps = filteredEvents.filter(e => e.type === 'CAMP').length;
+                  const sold = filteredEvents.filter(e => e.has_openings === false).length;
+                  return `${filteredEvents.length} events · ${sold} sold out`;
+                })(),
+              },
+              { key: 'compliance', icon: '📊', iconBg: 'from-blue-100 to-indigo-100 text-blue-600',
+                title: 'Monthly compliance report',
+                desc: 'Per-gym counts vs goals + gyms that missed.',
+                meta: missingCount > 0 ? `${missingCount} gym${missingCount === 1 ? '' : 's'} missing requirements` : 'All gyms meeting requirements ✓',
+              },
+              { key: 'audit', icon: '⚠', iconBg: 'from-amber-100 to-orange-100 text-amber-700',
+                title: 'Audit findings',
+                desc: 'Manager errors caught + past dismissed warnings.',
+                meta: auditCount > 0 ? `${auditCount} event${auditCount === 1 ? '' : 's'} with issues` : 'No issues found ✓',
+              },
+            ];
+            if (isAdmin) {
+              cards.push({
+                key: 'sync', icon: '🔒', iconBg: 'from-gray-100 to-slate-100 text-gray-600',
+                title: 'Sync log', desc: 'Admin only.',
+                meta: loadingSyncLog ? 'Loading...' : `${syncLog.length} sync records`,
+                badge: 'ADMIN ONLY',
+              });
+            }
+            return cards.map(card => {
+              const isSelected = useCase === card.key;
+              const isRecommended = card.key === recommendedKey;
+              return (
+                <label
+                  key={card.key}
+                  className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border-2 transition-all ${
+                    isSelected
+                      ? 'border-rose-300 bg-gradient-to-br from-rose-50 to-pink-50 shadow-md'
+                      : 'border-gray-200 bg-white hover:border-rose-200 hover:bg-rose-50/30 hover:shadow-sm'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="useCase"
+                    value={card.key}
+                    checked={isSelected}
+                    onChange={() => applyUseCase(card.key)}
+                    className="w-4 h-4 accent-rose-500 flex-shrink-0"
+                  />
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br ${card.iconBg} flex items-center justify-center text-lg shadow-sm`}>
+                    {card.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`font-semibold text-sm ${isSelected ? 'text-rose-900' : 'text-gray-800'}`}>{card.title}</span>
+                      {isRecommended && !isSelected && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700 border border-rose-200">
+                          Recommended
+                        </span>
+                      )}
+                      {card.badge && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-200 text-gray-700">
+                          🔒 {card.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">{card.desc}</div>
+                    {card.meta && (
+                      <div className={`text-[11px] mt-1 ${isSelected ? 'text-rose-700' : 'text-gray-400'}`}>{card.meta}</div>
+                    )}
+                  </div>
+                </label>
+              );
+            });
+          })()}
+
+          {/* ADVANCED — power-user customization (existing checkboxes hidden behind disclosure) */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full mt-2 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 flex items-center justify-center gap-1 border-t border-gray-100 pt-3"
+          >
+            {showAdvanced ? '▾' : '▸'} Advanced: customize included sections
+          </button>
+          {showAdvanced && (
+            <div className="space-y-2 pt-2 border-t border-gray-100">
+              <p className="text-[11px] text-gray-500 italic">Override the use-case selection. Pick exactly which sections to include.</p>
+              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
+                <input type="checkbox" checked={includeEvents} onChange={(e) => { setIncludeEvents(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                <span>📋 Event Details ({filteredEvents.length})</span>
               </label>
-            ) : (
-              <div className="flex items-center gap-2 p-2 rounded opacity-50 cursor-not-allowed">
-                <span className="text-gray-400 text-sm">
-                  🔒 Sync History (Admin Only - Press * to unlock)
-                </span>
-              </div>
-            )}
-          </div>
+              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
+                <input type="checkbox" checked={includeAnalytics} onChange={(e) => { setIncludeAnalytics(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                <span>📊 Analytics Dashboard</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
+                <input type="checkbox" checked={includeMissing} onChange={(e) => { setIncludeMissing(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                <span>⚠️ Missing Requirements</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
+                <input type="checkbox" checked={includeAuditCheck} onChange={(e) => { setIncludeAuditCheck(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                <span>🔍 Audit Check</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
+                <input type="checkbox" checked={includeDismissedWarnings} onChange={(e) => { setIncludeDismissedWarnings(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                <span>✓ Dismissed Warnings</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
+                <input type="checkbox" checked={includeSpotsSnapshot} onChange={(e) => { setIncludeSpotsSnapshot(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                <span>🟢 Spots &amp; Signup Snapshot</span>
+              </label>
+              {isAdmin && (
+                <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
+                  <input type="checkbox" checked={includeSyncHistory} onChange={(e) => { setIncludeSyncHistory(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                  <span>🔄 Sync History</span>
+                </label>
+              )}
+            </div>
+          )}
 
           {/* Preview of missing gyms - ONLY shows when checkbox is checked */}
           {includeMissing && !loadingEvents && (
