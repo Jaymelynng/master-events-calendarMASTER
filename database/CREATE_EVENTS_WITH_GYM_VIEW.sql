@@ -47,6 +47,10 @@ SELECT
   e.show_openings,
   e.registration_start_date,
   e.registration_end_date,
+  -- iClass camp metadata
+  e.allow_choose_days,
+  e.type_id,
+  e.program_name,
   -- Gym info
   g.name AS gym_name,
   g.id AS gym_code

@@ -396,7 +396,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     // Events section
     if (includeEvents && filteredEvents.length > 0) {
       csvContent += `EVENTS - ${monthName}\n`;
-      csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Full Day Daily,Full Day Weekly,Half Day Daily,Half Day Weekly,Ages,Description,Description Status,Has Openings,Spots Left,Openings Display,URL\n';
+      csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Full Day Daily,Full Day Weekly,Half Day Daily,Half Day Weekly,Ages,Description,Description Status,Has Openings,Spots Left,Openings Display,Signup Mode,iClass Program,Type ID,URL\n';
       filteredEvents.forEach(event => {
         const gym = gyms.find(g => g.id === event.gym_id);
         const ageDisplay = event.age_min && event.age_max
@@ -439,6 +439,9 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
           event.has_openings === false ? 'SOLD OUT' : 'Available',
           event.openings != null ? event.openings : '',
           event.openings_display ? `"${event.openings_display.replace(/"/g, '""')}"` : '',
+          event.allow_choose_days === true ? 'Per-Day' : (event.allow_choose_days === false ? 'Full Week Only' : ''),
+          event.program_name ? `"${event.program_name.replace(/"/g, '""')}"` : '',
+          event.type_id != null ? event.type_id : '',
           event.event_url || ''
         ].join(',') + '\n';
       });

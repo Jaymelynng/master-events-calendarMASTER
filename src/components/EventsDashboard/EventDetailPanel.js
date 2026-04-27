@@ -166,6 +166,32 @@ export default function EventDetailPanel({
           <CampQuickAccess event={event} gymLinks={gymLinks} />
         )}
 
+        {/* Camp Signup Mode — only show for camps where we have data */}
+        {event.type === 'CAMP' && event.allow_choose_days != null && (
+          <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
+            <div className="font-semibold text-xs text-gray-500 uppercase mb-2">📅 Signup Mode</div>
+            {event.allow_choose_days ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="font-bold text-blue-800 flex items-center gap-2">
+                  ✓ Per-Day Signup Allowed
+                </div>
+                <div className="text-sm text-blue-700 mt-1">
+                  Parents can register for individual days
+                </div>
+              </div>
+            ) : (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                <div className="font-bold text-purple-800 flex items-center gap-2">
+                  📦 Full Week Only
+                </div>
+                <div className="text-sm text-purple-700 mt-1">
+                  Parents must register for the entire camp (no day-by-day option)
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Availability Status */}
         {(event.has_openings === false || event.openings != null || event.registration_end_date) && (
           <AvailabilityStatus event={event} />
