@@ -31,6 +31,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const [includeAuditCheck, setIncludeAuditCheck] = useState(false);
   const [includeSyncHistory, setIncludeSyncHistory] = useState(false);
   const [includeDismissedWarnings, setIncludeDismissedWarnings] = useState(false);
+  const [includeSpotsSnapshot, setIncludeSpotsSnapshot] = useState(false);
   
   // Admin check for Sync History (hidden feature)
   // PIN from environment variable (fallback for local dev)
@@ -567,6 +568,37 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         csvContent += 'Status,Message\n';
         csvContent += `"✅ No Exceptions","No dismissed warnings found in the selected date range."\n`;
       }
+      csvContent += '\n';
+    }
+
+    // Spots & Signup Snapshot — isolated operational view
+    if (includeSpotsSnapshot && filteredEvents.length > 0) {
+      csvContent += `SPOTS & SIGNUP SNAPSHOT - ${monthName}\n`;
+      csvContent += `Quick at-a-glance: spots remaining + signup mode per event\n\n`;
+      csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Spots Left,Status,Signup Mode\n';
+      filteredEvents.forEach(event => {
+        const gym = gyms.find(g => g.id === event.gym_id);
+        const startDate = (event.start_date || event.date || '').split('T')[0];
+        const endDate = (event.end_date || event.start_date || event.date || '').split('T')[0];
+        const isMultiDay = startDate !== endDate;
+        let status = 'Available';
+        if (event.has_openings === false) status = 'SOLD OUT';
+        else if (event.openings != null && event.openings > 0 && event.openings <= 3) status = 'Almost Full';
+        const signup = event.allow_choose_days === true ? 'Per-Day'
+                     : event.allow_choose_days === false ? 'Full Week Only'
+                     : '';
+        csvContent += [
+          `"${(gym?.name || event.gym_id).replace(/"/g, '""')}"`,
+          event.gym_id || '',
+          `"${(event.title || '').replace(/"/g, '""')}"`,
+          event.type || '',
+          startDate,
+          isMultiDay ? endDate : '',
+          event.openings != null ? event.openings : '',
+          status,
+          signup
+        ].join(',') + '\n';
+      });
       csvContent += '\n';
     }
 
@@ -1351,6 +1383,19 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
                 {!loadingEvents && getDismissedWarnings().length > 0 && (
                   <span className="text-xs text-green-600 ml-1">({getDismissedWarnings().length} events)</span>
                 )}
+              </span>
+            </label>
+            {/* Spots & Signup Snapshot — isolated operational view */}
+            <label className="flex items-center gap-3 cursor-pointer px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-400 hover:bg-white transition-all">
+              <input
+                type="checkbox"
+                checked={includeSpotsSnapshot}
+                onChange={(e) => { setIncludeSpotsSnapshot(e.target.checked); setActivePreset(null); }}
+                className="w-4 h-4 text-amber-600"
+              />
+              <span className="text-gray-700">
+                🟢 Spots &amp; Signup Snapshot
+                <span className="text-xs text-gray-500 ml-1 block">Isolated: just spots remaining + per-day vs full-week per event</span>
               </span>
             </label>
             {/* Sync History - Admin Only */}
