@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import AdminAuditReview from './AdminAuditReview';
 import AdminGymRules from './AdminGymRules';
 import AdminPricing from './AdminPricing';
 import AdminQuickActions from './AdminQuickActions';
@@ -21,7 +20,7 @@ export default function AdminDashboard({
   onOpenBulkImport,
 }) {
   const [showEmailComposer, setShowEmailComposer] = useState(false);
-  const [activeTab, setActiveTab] = useState(initialTab || 'audit');
+  const [activeTab, setActiveTab] = useState(initialTab || 'rules');
   const [superAdminMode, setSuperAdminMode] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinInput, setPinInput] = useState('');
@@ -58,9 +57,8 @@ export default function AdminDashboard({
   };
 
   const tabs = [
-    { id: 'audit', label: '📋 Audit & Review', alwaysShow: true },
-    { id: 'pricing', label: '💰 Pricing', alwaysShow: true },
     { id: 'rules', label: '📏 Gym Rules', alwaysShow: true },
+    { id: 'pricing', label: '💰 Pricing', alwaysShow: true },
     { id: 'history', label: '📜 Change History', alwaysShow: true },
     { id: 'validations', label: '🔍 Audit Rules', alwaysShow: true },
     { id: 'plans', label: '📅 Future Plans', alwaysShow: true },
@@ -182,10 +180,6 @@ export default function AdminDashboard({
 
       {/* Content Area */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
-        {activeTab === 'audit' && (
-          <AdminAuditReview gyms={gyms} initialMonth={initialCalendarMonth} />
-        )}
-
         {activeTab === 'rules' && (
           <AdminGymRules gyms={gyms} />
         )}

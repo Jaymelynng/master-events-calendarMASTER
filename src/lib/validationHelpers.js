@@ -1,6 +1,6 @@
 /**
  * Shared validation helper functions
- * Used by SyncModal, EventsDashboard, and AdminAuditReview
+ * Used by SyncModal and EventsDashboard
  */
 
 // Check if an error has been acknowledged/dismissed (per-event or by pattern for "all in program")
