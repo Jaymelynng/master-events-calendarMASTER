@@ -37,6 +37,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
     { value: 'sibling_price', label: 'Sibling Pricing', desc: 'Different prices per kid (1st, 2nd, 3rd)' },
     { value: 'valid_time', label: 'Valid Time', desc: 'This time is correct (e.g., before care at 8:30 AM)' },
     { value: 'program_synonym', label: 'Program Name', desc: 'This name means a specific program (e.g., "Gym Fun Friday" = KNO)' },
+    { value: 'program_ignore', label: 'Ignore Keyword', desc: 'A keyword that mentions another program but should NOT trigger a mismatch (e.g., "open gym" inside a KNO description as a station)' },
     { value: 'exception', label: 'Exception', desc: 'This specific situation is OK, don\'t flag it' },
   ];
 
@@ -448,6 +449,24 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
             )}
             {ruleType === 'exception' && (
               <div><label className="text-sm text-gray-600 block mb-1">What's the exception?</label><input type="text" value={value} onChange={e => setValue(e.target.value)} placeholder="Describe what's OK about this" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" autoFocus /></div>
+            )}
+            {ruleType === 'program_ignore' && (
+              <div>
+                <label className="text-sm text-gray-600 block mb-1">Keyword to ignore:</label>
+                <input
+                  type="text"
+                  value={value}
+                  onChange={e => setValue(e.target.value.toLowerCase())}
+                  placeholder='e.g., "open gym"'
+                  className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm"
+                  autoFocus
+                />
+                <div className="mt-2 text-xs text-gray-500">
+                  This keyword will NOT trigger a program-mismatch error inside <strong>{program === 'ALL' ? 'any program' : program}</strong> events
+                  {selectedGyms.includes('ALL') ? ' at any gym' : ` at ${selectedGyms.join(', ')}`}.
+                  Common case: "open gym" mentioned as a station name inside a KNO event description.
+                </div>
+              </div>
             )}
 
             <div className="mt-4"><label className="text-sm text-gray-600 block mb-1">Label:</label><input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="Short description" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" /></div>

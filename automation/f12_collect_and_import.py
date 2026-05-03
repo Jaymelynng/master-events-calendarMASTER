@@ -489,6 +489,7 @@ def fetch_rules():
         'valid_time': 'time',
         'sibling_price': 'price',       # sibling prices are still valid prices
         'program_synonym': 'program_synonym',
+        'program_ignore': 'program_ignore',  # suppresses program-mismatch flags for a keyword in a given event_type
         # 'exception' and 'requirement_exception' are NOT used for validation — skip them
     }
 

@@ -362,6 +362,17 @@ def check_program_mismatch(ctx):
         elif target == 'CLINIC' and keyword not in clinic_keywords:
             clinic_keywords.append(keyword)
 
+    # program_ignore: keywords that should NOT trigger program-mismatch flags
+    # for THIS event_type. e.g., {program: 'KIDS NIGHT OUT', value: 'open gym'}
+    # → "open gym" is treated as an activity name inside KNO, not a program type.
+    # When no rules exist, ignored_keywords is empty and behavior is unchanged.
+    ignore_rules = ctx.get_rules_for_gym(ctx.gym_id, ctx.event_type).get('program_ignore', [])
+    ignored_keywords = {r.get('value', '').lower().strip() for r in ignore_rules if r.get('value')}
+    if ignored_keywords:
+        kno_keywords = [kw for kw in kno_keywords if kw not in ignored_keywords]
+        clinic_keywords = [kw for kw in clinic_keywords if kw not in ignored_keywords]
+        open_gym_keywords = [kw for kw in open_gym_keywords if kw not in ignored_keywords]
+
     title_has_kno = any(kw in ctx.title_lower for kw in kno_keywords)
     title_has_clinic = any(kw in ctx.title_lower for kw in clinic_keywords)
     title_has_open_gym = any(kw in ctx.title_lower for kw in open_gym_keywords)
@@ -404,17 +415,24 @@ def check_program_mismatch(ctx):
     desc_start = ctx.description_lower[:150]
     desc_start_no_apos = desc_start.replace("'", "").replace("\u2019", "")
 
+    # Helper for description-side literal-string checks: skip if the keyword
+    # is in the ignore list for this event_type.
+    def _ignored(kw):
+        return kw in ignored_keywords
+
     if ctx.event_type == 'KIDS NIGHT OUT':
-        has_clinic = 'clinic' in ctx.description_lower[:100]
+        has_clinic = (not _ignored('clinic')) and ('clinic' in ctx.description_lower[:100])
         if has_clinic:
             errors.append({"type": "program_mismatch", "severity": "error", "category": "data_error",
                           "message": "KNO event but description says 'Clinic'"})
 
     elif ctx.event_type == 'CLINIC':
-        has_kno = ('kids night out' in desc_start_no_apos or 'kid night out' in desc_start_no_apos or
-                   ctx.description_lower[:50].startswith('kno') or 'night out' in desc_start_no_apos or
-                   'parents night out' in desc_start_no_apos or 'ninja night out' in ctx.description_lower[:100])
-        has_open_gym = ctx.description_lower[:100].startswith('open gym')
+        kno_phrase_active = not (_ignored('kids night out') or _ignored('kno') or _ignored('night out'))
+        has_kno = kno_phrase_active and (
+            'kids night out' in desc_start_no_apos or 'kid night out' in desc_start_no_apos or
+            ctx.description_lower[:50].startswith('kno') or 'night out' in desc_start_no_apos or
+            'parents night out' in desc_start_no_apos or 'ninja night out' in ctx.description_lower[:100])
+        has_open_gym = (not _ignored('open gym')) and ctx.description_lower[:100].startswith('open gym')
 
         if has_kno:
             errors.append({"type": "program_mismatch", "severity": "error", "category": "data_error",
@@ -424,10 +442,13 @@ def check_program_mismatch(ctx):
                           "message": "CLINIC event but description starts with 'Open Gym'"})
 
     elif ctx.event_type == 'OPEN GYM':
-        has_clinic = ctx.description_lower[:100].startswith('clinic') or 'clinic' in ctx.description_lower[:50]
-        has_kno = ('kids night out' in desc_start_no_apos or 'kid night out' in desc_start_no_apos or
-                   'night out' in desc_start_no_apos or 'parents night out' in desc_start_no_apos or
-                   'ninja night out' in ctx.description_lower[:100])
+        has_clinic = (not _ignored('clinic')) and (
+            ctx.description_lower[:100].startswith('clinic') or 'clinic' in ctx.description_lower[:50])
+        kno_phrase_active = not (_ignored('kids night out') or _ignored('kno') or _ignored('night out'))
+        has_kno = kno_phrase_active and (
+            'kids night out' in desc_start_no_apos or 'kid night out' in desc_start_no_apos or
+            'night out' in desc_start_no_apos or 'parents night out' in desc_start_no_apos or
+            'ninja night out' in ctx.description_lower[:100])
 
         if has_clinic:
             errors.append({"type": "program_mismatch", "severity": "error", "category": "data_error",
@@ -437,12 +458,14 @@ def check_program_mismatch(ctx):
                           "message": "OPEN GYM event but description says 'Kids Night Out'"})
 
     elif ctx.event_type == 'CAMP':
-        has_clinic_start = ctx.description_lower[:50].startswith('clinic')
-        has_kno_start = (desc_start_no_apos.startswith('kids night out') or
-                        desc_start_no_apos.startswith('kid night out') or
-                        ctx.description_lower[:50].startswith('kno ') or
-                        desc_start_no_apos.startswith('parents night out') or
-                        desc_start_no_apos.startswith('ninja night out'))
+        has_clinic_start = (not _ignored('clinic')) and ctx.description_lower[:50].startswith('clinic')
+        kno_phrase_active = not (_ignored('kids night out') or _ignored('kno') or _ignored('night out'))
+        has_kno_start = kno_phrase_active and (
+            desc_start_no_apos.startswith('kids night out') or
+            desc_start_no_apos.startswith('kid night out') or
+            ctx.description_lower[:50].startswith('kno ') or
+            desc_start_no_apos.startswith('parents night out') or
+            desc_start_no_apos.startswith('ninja night out'))
 
         if has_clinic_start:
             errors.append({"type": "program_mismatch", "severity": "error", "category": "data_error",
@@ -518,6 +541,20 @@ def check_title_desc_mismatch(ctx):
                     desc_start.startswith('kno ') or 'night out' in desc_start_no_apos or
                     'parents night out' in desc_start_no_apos or 'ninja night out' in desc_start)
     desc_has_open_gym = desc_start.startswith('open gym')
+
+    # program_ignore: force any ignored program-keyword bool to False so the
+    # cross-check below won't fire on it. Empty rule set = no behavior change.
+    ignore_rules = ctx.get_rules_for_gym(ctx.gym_id, ctx.event_type).get('program_ignore', [])
+    ignored_keywords = {r.get('value', '').lower().strip() for r in ignore_rules if r.get('value')}
+    if 'open gym' in ignored_keywords:
+        title_has_open_gym = False
+        desc_has_open_gym = False
+    if 'clinic' in ignored_keywords:
+        title_has_clinic = False
+        desc_has_clinic = False
+    if ignored_keywords & {'kids night out', 'kno', 'night out'}:
+        title_has_kno = False
+        desc_has_kno = False
 
     cross_checks = [
         (title_has_clinic, desc_has_kno, "Title says 'Clinic' but description says 'Kids Night Out'"),
