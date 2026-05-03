@@ -1,7 +1,7 @@
 // ============================================================================
 // DASHBOARD HEADER - Top section with title, stats, and month navigation
 // ============================================================================
-import React from 'react';
+import React, { useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { theme } from './constants';
 
@@ -201,6 +201,25 @@ export function ActionButtons({
   onOpenAdminPortal,
   onOpenExportModal
 }) {
+  // Long-press to open Admin on touch devices (Shift+Click on desktop still works).
+  // Threshold: 600ms — comfortable hold without accidental triggers.
+  const pressTimerRef = useRef(null);
+  const longPressFiredRef = useRef(false);
+  const startWandPress = () => {
+    longPressFiredRef.current = false;
+    if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
+    pressTimerRef.current = setTimeout(() => {
+      longPressFiredRef.current = true;
+      onOpenAdminPortal();
+    }, 600);
+  };
+  const cancelWandPress = () => {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+  };
+
   return (
     <div className="flex justify-center items-center gap-4 mb-3">
       <button
@@ -263,17 +282,29 @@ export function ActionButtons({
         }} />
       </button>
 
-      {/* Magic Wand - Admin Dashboard */}
+      {/* Magic Wand - Admin Dashboard
+          Desktop: Shift+Click. Mobile/touch: long-press (600ms hold). */}
       <button
         onClick={(e) => {
+          // Suppress click if long-press already opened admin
+          if (longPressFiredRef.current) {
+            longPressFiredRef.current = false;
+            return;
+          }
           if (e.shiftKey) {
             onOpenAdminPortal();
           }
         }}
-        className="flex items-center justify-center w-10 h-10 bg-white rounded-lg border-2 border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group opacity-70 hover:opacity-100 hover:scale-105 active:scale-95"
-        title="🔐 Shift+Click for Admin Dashboard"
+        onPointerDown={startWandPress}
+        onPointerUp={cancelWandPress}
+        onPointerLeave={cancelWandPress}
+        onPointerCancel={cancelWandPress}
+        onContextMenu={(e) => e.preventDefault()}
+        className="flex items-center justify-center w-10 h-10 bg-white rounded-lg border-2 border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group opacity-70 hover:opacity-100 hover:scale-105 active:scale-95 select-none"
+        style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', touchAction: 'manipulation' }}
+        title="🔐 Shift+Click (desktop) or long-press (mobile) for Admin Dashboard"
       >
-        <span className="text-xl group-hover:scale-125 transition-transform">🪄</span>
+        <span className="text-xl group-hover:scale-125 transition-transform pointer-events-none">🪄</span>
       </button>
     </div>
   );
