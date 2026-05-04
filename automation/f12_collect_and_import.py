@@ -1256,6 +1256,28 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         
         # 2) future-only filter
         start_date = (ev.get("startDate") or "").strip()
+        end_date = (ev.get("endDate") or start_date).strip()
+
+        # iClass exposes two date concepts per camp:
+        #   startDate / endDate = the bookend date range (can include days
+        #                         the camp doesn't actually meet, e.g. when
+        #                         Monday is excluded for a federal holiday).
+        #   blocks              = the real scheduled meeting days.
+        # When blocks exist, use the first/last block date as the true start/end
+        # so the calendar, emails, and validation engine reflect when the camp
+        # actually starts. Without this, Memorial Day / Labor Day / Thanksgiving
+        # camps display the bookend (e.g. 5/25) instead of the real first day
+        # (e.g. 5/26), which has propagated wrong dates to customer-facing
+        # outputs (the calendar UI and Email Composer).
+        # Pricing logic below intentionally still uses the bookend dates for
+        # weekly-vs-daily distinction — that semantic doesn't change.
+        blocks = ev.get("blocks") or []
+        if blocks:
+            block_dates = sorted({(b.get("sqlDate") or "")[:10] for b in blocks if b.get("sqlDate")})
+            if block_dates:
+                start_date = block_dates[0]
+                end_date = block_dates[-1]
+
         if start_date and start_date < today_str:
             continue
         
@@ -1480,7 +1502,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 title=title,
                 description=description,
                 start_date=start_date,
-                end_date_str=(ev.get("endDate") or start_date),
+                end_date_str=end_date,
                 time_str=time_str,
                 age_min=age_min,
                 day_of_week=day_of_week,
@@ -1530,7 +1552,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "title": title,
             "date": start_date,
             "start_date": start_date,
-            "end_date": (ev.get("endDate") or start_date),
+            "end_date": end_date,
             "time": time_str,
             "price": price,
             "type": camp_type_label,
