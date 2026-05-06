@@ -103,16 +103,32 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
 
   return (
     <div
-      className="border-b"
-      style={{ background: 'rgba(255,255,255,0.55)', borderColor: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(6px)' }}
+      className="py-4 px-4 sm:px-6 lg:px-8"
+      style={{
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.10) 100%)',
+        borderTop: '1px solid rgba(255,255,255,0.18)',
+        borderBottom: '1px solid rgba(255,255,255,0.18)',
+      }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center flex-wrap gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-white/85 mr-2 flex-shrink-0">
+      <div
+        className="max-w-5xl mx-auto rounded-2xl px-5 py-4 flex items-center justify-center flex-wrap gap-3"
+        style={{
+          background: '#f7f3f3',
+          border: '1px solid #c5b4b4',
+          boxShadow: '0 10px 22px rgba(70,50,52,.22), inset 0 1px 0 rgba(255,255,255,.8)',
+        }}
+      >
+        <span
+          className="text-sm font-black uppercase tracking-wider mr-1 flex-shrink-0"
+          style={{ color: '#6e5658' }}
+        >
           📋 Monthly Requirements
         </span>
 
         {entries.length === 0 && !adding && (
-          <span className="text-xs text-white/70 italic">None configured yet</span>
+          <span className="text-sm italic" style={{ color: '#9a8b8b' }}>
+            None configured yet
+          </span>
         )}
 
         {entries.map(([type, count]) => {
@@ -125,8 +141,13 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
             return (
               <span
                 key={type}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-bold"
-                style={{ background: color.bg, borderColor: color.border, color: color.text }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-bold"
+                style={{
+                  background: color.bg,
+                  borderColor: color.border,
+                  color: color.text,
+                  boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)',
+                }}
               >
                 <span>{label}:</span>
                 <input
@@ -139,11 +160,11 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
                     if (e.key === 'Enter') handleSaveEdit(type);
                     if (e.key === 'Escape') setEditing(null);
                   }}
-                  className="w-12 px-1 py-0.5 rounded border text-center text-xs font-bold bg-white"
+                  className="w-14 px-1 py-0.5 rounded border text-center text-sm font-black bg-white"
                   style={{ borderColor: color.border, color: color.text }}
                   autoFocus
                 />
-                <button onClick={() => handleSaveEdit(type)} disabled={isSaving} className="text-green-700 font-bold px-1">✓</button>
+                <button onClick={() => handleSaveEdit(type)} disabled={isSaving} className="text-green-700 font-bold text-base px-1 disabled:opacity-30">✓</button>
                 <button onClick={() => setEditing(null)} className="text-gray-500 px-1">✕</button>
               </span>
             );
@@ -152,8 +173,13 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
           return (
             <span
               key={type}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold transition-shadow hover:shadow-sm"
-              style={{ background: color.bg, borderColor: color.border, color: color.text }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-sm font-bold transition-all hover:-translate-y-0.5"
+              style={{
+                background: color.bg,
+                borderColor: color.border,
+                color: color.text,
+                boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)',
+              }}
             >
               <button
                 onClick={() => { setEditing(type); setEditValue(String(count)); }}
@@ -161,12 +187,12 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
                 className="hover:underline cursor-pointer disabled:opacity-50"
                 title="Click to edit count"
               >
-                {label} <span className="font-black">{count}</span>
+                {label} <span className="font-black text-base ml-0.5">{count}</span>
               </button>
               <button
                 onClick={() => handleDelete(type)}
                 disabled={isSaving}
-                className="ml-0.5 text-[10px] opacity-50 hover:opacity-100 hover:text-red-700 disabled:opacity-30"
+                className="text-xs opacity-50 hover:opacity-100 hover:text-red-700 disabled:opacity-30"
                 title={`Remove ${label} from requirements`}
               >
                 ✕
@@ -176,11 +202,17 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
         })}
 
         {adding ? (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border bg-white text-xs font-bold text-gray-700" style={{ borderColor: '#aaa' }}>
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-white text-sm font-bold text-gray-700"
+            style={{
+              borderColor: '#aaa',
+              boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)',
+            }}
+          >
             <select
               value={newType}
               onChange={e => setNewType(e.target.value)}
-              className="text-xs font-bold bg-transparent outline-none"
+              className="text-sm font-bold bg-transparent outline-none"
               autoFocus
             >
               <option value="">Pick program…</option>
@@ -194,19 +226,19 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
               max="99"
               value={newCount}
               onChange={e => setNewCount(e.target.value)}
-              className="w-12 px-1 py-0.5 rounded border text-center text-xs font-bold"
+              className="w-14 px-1 py-0.5 rounded border text-center text-sm font-black"
               style={{ borderColor: '#ccc' }}
               placeholder="#"
             />
-            <button onClick={handleAdd} disabled={!newType} className="text-green-700 font-bold px-1 disabled:opacity-30">✓</button>
+            <button onClick={handleAdd} disabled={!newType} className="text-green-700 font-bold text-base px-1 disabled:opacity-30">✓</button>
             <button onClick={() => { setAdding(false); setNewType(''); setNewCount('1'); }} className="text-gray-500 px-1">✕</button>
           </span>
         ) : (
           availableToAdd.length > 0 && (
             <button
               onClick={() => setAdding(true)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed text-xs font-bold text-white/85 hover:text-white hover:bg-white/10 transition-colors"
-              style={{ borderColor: 'rgba(255,255,255,0.45)' }}
+              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full border-2 border-dashed text-sm font-bold transition-colors hover:bg-white"
+              style={{ borderColor: '#b48f8f', color: '#8b6f6f' }}
             >
               + Add Requirement
             </button>
