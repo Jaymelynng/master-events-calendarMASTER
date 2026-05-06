@@ -39,11 +39,16 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
 
   const entries = Object.entries(requirements || {});
   const configuredTypes = new Set(entries.map(([t]) => t));
-  // Event types from the DB that aren't yet in monthly_requirements
-  const availableToAdd = (eventTypes || [])
+
+  // Common program types we know about across the app — used as the picker
+  // dropdown so you can add a requirement even if event_types table is sparse.
+  // The custom text input below this list lets you add anything else.
+  const KNOWN_PROGRAMS = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM', 'CAMP', 'SPECIAL EVENT'];
+  const dbEventTypes = (eventTypes || [])
     .map(et => (typeof et === 'string' ? et : et.name || et.event_type))
-    .filter(Boolean)
-    .filter(t => !configuredTypes.has(t));
+    .filter(Boolean);
+  const allCandidateTypes = Array.from(new Set([...KNOWN_PROGRAMS, ...dbEventTypes]));
+  const availableToAdd = allCandidateTypes.filter(t => !configuredTypes.has(t));
 
   const refreshFromDb = async () => {
     const rows = await monthlyRequirementsApi.getAll();
@@ -173,7 +178,7 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
           return (
             <span
               key={type}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-sm font-bold transition-all hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 pl-3.5 pr-1.5 py-1.5 rounded-full border text-sm font-bold transition-all hover:-translate-y-0.5"
               style={{
                 background: color.bg,
                 borderColor: color.border,
@@ -181,21 +186,27 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
                 boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)',
               }}
             >
+              <span className="flex items-baseline gap-1.5">
+                <span>{label}</span>
+                <span className="font-black text-base">{count}</span>
+              </span>
               <button
                 onClick={() => { setEditing(type); setEditValue(String(count)); }}
                 disabled={isSaving}
-                className="hover:underline cursor-pointer disabled:opacity-50"
-                title="Click to edit count"
+                className="ml-1 inline-flex items-center justify-center w-6 h-6 rounded-full hover:bg-white/60 transition-colors disabled:opacity-50"
+                title={`Edit ${label} count`}
+                aria-label={`Edit ${label}`}
               >
-                {label} <span className="font-black text-base ml-0.5">{count}</span>
+                <span className="text-xs">✏️</span>
               </button>
               <button
                 onClick={() => handleDelete(type)}
                 disabled={isSaving}
-                className="text-xs opacity-50 hover:opacity-100 hover:text-red-700 disabled:opacity-30"
-                title={`Remove ${label} from requirements`}
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full hover:bg-red-100 transition-colors disabled:opacity-30"
+                title={`Remove ${label}`}
+                aria-label={`Remove ${label}`}
               >
-                ✕
+                <span className="text-xs">🗑️</span>
               </button>
             </span>
           );
@@ -203,23 +214,36 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
 
         {adding ? (
           <span
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-white text-sm font-bold text-gray-700"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white text-sm font-bold text-gray-700"
             style={{
-              borderColor: '#aaa',
+              borderColor: '#8b6f6f',
               boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)',
             }}
           >
             <select
               value={newType}
               onChange={e => setNewType(e.target.value)}
-              className="text-sm font-bold bg-transparent outline-none"
+              className="text-sm font-bold bg-transparent outline-none cursor-pointer"
               autoFocus
             >
-              <option value="">Pick program…</option>
+              <option value="">— pick program —</option>
               {availableToAdd.map(t => (
                 <option key={t} value={t}>{PROGRAM_LABELS[t] || t}</option>
               ))}
+              <option value="__custom__">Other (type below)…</option>
             </select>
+            {newType === '__custom__' && (
+              <input
+                type="text"
+                value={''}
+                onChange={e => setNewType(e.target.value.toUpperCase())}
+                placeholder="TYPE NAME"
+                className="w-32 px-2 py-0.5 rounded border text-sm font-bold uppercase"
+                style={{ borderColor: '#ccc' }}
+              />
+            )}
+            <span className="text-gray-400">·</span>
+            <span className="text-xs text-gray-500">Required:</span>
             <input
               type="number"
               min="0"
@@ -230,19 +254,31 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
               style={{ borderColor: '#ccc' }}
               placeholder="#"
             />
-            <button onClick={handleAdd} disabled={!newType} className="text-green-700 font-bold text-base px-1 disabled:opacity-30">✓</button>
-            <button onClick={() => { setAdding(false); setNewType(''); setNewCount('1'); }} className="text-gray-500 px-1">✕</button>
+            <button
+              onClick={handleAdd}
+              disabled={!newType || newType === '__custom__'}
+              className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-600 text-white text-xs font-black hover:bg-green-700 disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Save"
+            >
+              ✓
+            </button>
+            <button
+              onClick={() => { setAdding(false); setNewType(''); setNewCount('1'); }}
+              className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-300 text-gray-700 text-xs font-bold hover:bg-gray-400"
+              title="Cancel"
+            >
+              ✕
+            </button>
           </span>
         ) : (
-          availableToAdd.length > 0 && (
-            <button
-              onClick={() => setAdding(true)}
-              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full border-2 border-dashed text-sm font-bold transition-colors hover:bg-white"
-              style={{ borderColor: '#b48f8f', color: '#8b6f6f' }}
-            >
-              + Add Requirement
-            </button>
-          )
+          <button
+            onClick={() => setAdding(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border-2 border-dashed text-sm font-black transition-all hover:bg-white hover:-translate-y-0.5"
+            style={{ borderColor: '#8b6f6f', color: '#8b6f6f' }}
+          >
+            <span className="text-base leading-none">+</span>
+            <span>Add Requirement</span>
+          </button>
         )}
       </div>
     </div>
