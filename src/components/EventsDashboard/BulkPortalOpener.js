@@ -143,7 +143,7 @@ export default function BulkPortalOpener({ getAllUrlsForEventType, openMultipleT
 
   return (
     <div
-      className="rounded-lg shadow-lg p-4 mb-3 mx-2"
+      className="rounded-lg shadow-lg p-4"
       style={{ backgroundColor: '#e6e6e6', border: '1px solid #adb2c6' }}
     >
       {/* Title + popup-warning header (unchanged from prior version) */}

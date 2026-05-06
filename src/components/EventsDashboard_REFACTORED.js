@@ -272,11 +272,61 @@ const EventsDashboard = () => {
             onOpenExportModal={() => setShowExportModal(true)}
           />
 
-          {/* Bulk Portal Opener */}
-          <BulkPortalOpener
-            getAllUrlsForEventType={getAllUrlsForEventType}
-            openMultipleTabs={openMultipleTabs}
-          />
+          {/* Bulk Portal Opener + Monthly Requirements goals (side-by-side row to save vertical space) */}
+          <div className="grid gap-3 lg:grid-cols-[1.9fr_.8fr] mx-2 mb-3">
+            <BulkPortalOpener
+              getAllUrlsForEventType={getAllUrlsForEventType}
+              openMultipleTabs={openMultipleTabs}
+            />
+
+            <div
+              className="rounded-xl border p-3"
+              style={{
+                background: '#f7f3f3',
+                borderColor: '#c5b4b4',
+                boxShadow: '0 8px 18px rgba(90,70,70,.18), inset 0 1px 0 rgba(255,255,255,.8)',
+              }}
+            >
+              <div className="mb-2 text-sm font-black uppercase tracking-wide" style={{ color: '#6e5658' }}>
+                Monthly Requirements
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div
+                  className="rounded-lg border px-2 py-3 text-center"
+                  style={{ background: '#eadcf8', borderColor: '#e1cff1', boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)' }}
+                >
+                  <div className="text-[11px] font-black uppercase" style={{ color: '#6e5658' }}>Clinics</div>
+                  <div className="text-2xl font-black" style={{ color: '#263044' }}>
+                    {monthlyRequirements?.CLINIC ?? 1}
+                  </div>
+                </div>
+                <div
+                  className="rounded-lg border px-2 py-3 text-center"
+                  style={{ background: '#ffbfc0', borderColor: '#f1aaaa', boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)' }}
+                >
+                  <div className="text-[11px] font-black uppercase" style={{ color: '#6e5658' }}>KNOs</div>
+                  <div className="text-2xl font-black" style={{ color: '#263044' }}>
+                    {monthlyRequirements?.['KIDS NIGHT OUT'] ?? 2}
+                  </div>
+                </div>
+                <div
+                  className="rounded-lg border px-2 py-3 text-center"
+                  style={{ background: '#bee3c2', borderColor: '#add5b2', boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)' }}
+                >
+                  <div className="text-[11px] font-black uppercase" style={{ color: '#6e5658' }}>Open Gym</div>
+                  <div className="text-2xl font-black" style={{ color: '#263044' }}>
+                    {monthlyRequirements?.['OPEN GYM'] ?? 1}
+                  </div>
+                </div>
+              </div>
+              <div
+                className="mt-2 rounded-lg border px-3 py-2 text-center text-xs font-black"
+                style={{ background: 'rgba(255,255,255,.75)', borderColor: '#ded1d1', color: '#71585a', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.85)' }}
+              >
+                Required per gym each month
+              </div>
+            </div>
+          </div>
 
           {/* Monthly Requirements Table */}
           <MonthlyRequirementsTable
