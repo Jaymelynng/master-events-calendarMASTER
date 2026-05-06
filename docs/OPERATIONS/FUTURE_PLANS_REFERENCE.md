@@ -81,6 +81,17 @@ These were either resolved or made obsolete by other work:
 - Database-driven validation engine → ✅ Done (Mar 17, 2026)
 - Drop `gym_valid_values` table → ✅ Done (Mar 17, 2026)
 - Capture iClass openings count → ✅ Done (Apr 26, 2026)
+- Holiday-week camp dates wrong (bookend vs schedule blocks) → ✅ Done (May 4, 2026). Sync now derives `start_date` / `end_date` from `blocks[0]` / `blocks[-1]` for camps with a schedule, falling back to `startDate` / `endDate`. Discovered when boss rejected an email referencing 5/25 for a camp that actually started 5/26 (Memorial Day Tuesday). Affected ~18 camps across 8 gyms in production at time of fix.
+
+---
+
+## New gap surfaced May 4, 2026 (open)
+
+### 9. Day-number mismatch check (title day vs `start_date` day)
+- **Type:** New Feature · **Priority:** Medium · **Area:** Validation
+- **Why:** Engine compares months and years between title/description and `start_date`, but does NOT compare the day-of-month number. So a manager typing "May 25th" in the title for a camp whose `start_date` is May 26 would not be flagged. Discovered while diagnosing the holiday-week bookend bug — the case where the manager IS the source of error (not iClass) currently slips through.
+- **Note:** Could be a new check function `check_day_number_mismatch` registered in CHECK_REGISTRY. Skipped for camps would be sensible (camps span multiple days).
+- **Added by AI:** 5/4/2026
 
 ---
 

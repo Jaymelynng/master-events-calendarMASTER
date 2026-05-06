@@ -260,9 +260,9 @@ This section explains WHERE the "correct" data comes from for each field. This i
 
 | Data Field | Source of Truth | Where It Comes From | Can We Validate? |
 |------------|-----------------|---------------------|------------------|
-| **Date** | iClass API | `startDate` field | YES - compare to title/description |
-| **Year** | iClass API | Extracted from `startDate` | YES - compare to title |
-| **Day of Week** | Calculated | From `startDate` (e.g., "Saturday") | YES - compare to description |
+| **Date** | iClass API | `blocks[0].sqlDate` for camps with a schedule, falling back to `startDate`. Camps that exclude days inside the bookend (e.g. Memorial Day Mon when camp runs Tue–Fri) get the real first meeting day from `blocks`. (Fixed May 4, 2026.) | YES — compare to title/description |
+| **Year** | iClass API | Extracted from the date selected above | YES — compare to title |
+| **Day of Week** | Calculated | From the date selected above (e.g., "Saturday") | YES — compare to description |
 | **Time** | iClass API | `schedule.startTime` / `endTime` | YES - compare to title/description |
 | **Age** | iClass API | `minAge` / `maxAge` fields | YES - compare to title/description |
 | **Program Type** | iClass API | `link_type_id` field | YES - compare to title/description keywords |

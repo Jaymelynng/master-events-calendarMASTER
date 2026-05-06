@@ -396,8 +396,28 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             continue
         seen_ids.add(event_id)
         
-        # Filter future events only
+        # Resolve start/end dates.
+        # iClass exposes two date concepts per camp:
+        #   startDate / endDate = the bookend date range (can include days the
+        #                         camp doesn't actually meet, e.g. when Monday
+        #                         is excluded for a federal holiday)
+        #   blocks              = the real scheduled meeting days
+        # When blocks exist, use the first/last block date as the true start/end
+        # so the calendar, emails, and validation engine reflect when the camp
+        # actually starts. Falls back to bookend when blocks are absent.
+        # (Fixed May 4, 2026 — Memorial Day camps were syncing 5/25 instead of
+        # the real first day 5/26.)
         start_date = ev.get("startDate")
+        end_date = ev.get("endDate") or start_date
+        blocks = ev.get("blocks") or []
+        if blocks:
+            block_dates = sorted({(b.get("sqlDate") or "")[:10]
+                                  for b in blocks if b.get("sqlDate")})
+            if block_dates:
+                start_date = block_dates[0]
+                end_date = block_dates[-1]
+
+        # Filter future events only
         if start_date < today_str:
             continue
         
@@ -415,7 +435,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "title": ev.get("name", "Untitled Event"),
             "date": start_date,
             "start_date": start_date,
-            "end_date": ev.get("endDate") or start_date,
+            "end_date": end_date,
             "time": time_str,
             "price": price,
             "type": camp_type_label,

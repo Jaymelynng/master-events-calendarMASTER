@@ -93,7 +93,7 @@
 
 | Data Field | Source of Truth | Notes |
 |------------|-----------------|-------|
-| **Date** | iClass API (`startDate`) | We compare this to title/description |
+| **Date** | iClass API — `blocks[0].sqlDate` for camps with a schedule, falling back to `startDate` | For camps that exclude days inside the bookend (e.g. Memorial Day Mon when camp runs Tue–Fri), the real first meeting day comes from `blocks`, NOT the bookend `startDate`. Sync uses blocks first. (Fixed May 4, 2026.) |
 | **Time** | iClass API (`schedule.startTime`) | We compare this to title/description |
 | **Age Range** | iClass API (`minAge`, `maxAge`) | We compare this to title/description |
 | **Program Type** | iClass API (`link_type_id`) | Maps to KNO, CLINIC, CAMP, etc. |
@@ -196,7 +196,9 @@ Per-gym customization:
 | Gap | Description | Priority | Status |
 |-----|-------------|----------|--------|
 | Wrong year in DESCRIPTION | Now checks both title AND description for wrong year | Fixed | ✅ Fixed |
-| `program_ignore` not built | Can't ignore "open gym" when it's a station in KNO | Medium | ❌ Open |
+| Holiday-week camp dates wrong | Sync now derives camp `start_date` from `blocks[0].sqlDate` (real first meeting day), not iClass bookend `startDate` | Fixed May 4, 2026 | ✅ Fixed |
+| `program_ignore` not built | Can't ignore "open gym" when it's a station in KNO | Medium | ❌ Open (in flight on `claude/evaluate-code-tool-ArddH` branch) |
+| Day-number in title vs `start_date` day-number | Engine compares months/years but not day-of-month numbers (e.g. title "May 25th" vs start_date 5/26 not flagged) | Medium | ❌ Open |
 | Date ranges not validated | "Jan 15-17" not checked against actual dates | Low | ❌ Open |
 | Flyer-only events | Can't validate anything if only image, no text | Known limitation | ❌ Open |
 
