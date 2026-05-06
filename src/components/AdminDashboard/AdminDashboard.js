@@ -236,7 +236,7 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange, onEventTyp
           return (
             <span
               key={type}
-              className="inline-flex items-center gap-2 pl-3.5 pr-1.5 py-1.5 rounded-full border text-sm font-bold transition-all hover:-translate-y-0.5"
+              className="inline-flex items-center gap-1.5 pl-1 pr-1.5 py-1 rounded-full border text-sm font-bold transition-all hover:-translate-y-0.5"
               style={{
                 background: color.bg,
                 borderColor: color.border,
@@ -244,17 +244,11 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange, onEventTyp
                 boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)',
               }}
             >
-              <span className="flex items-baseline gap-1.5">
-                <span>{label}</span>
-                <span className="font-black text-base">{count}</span>
-              </span>
-              {/* Color swatch — click opens native HTML5 hex picker.
-                  Saves to event_types.color in Supabase, then refreshes
-                  eventTypes state so the pill (and any other consumer
-                  reading from event_types.color) updates immediately. */}
+              {/* 1. Color circle — click opens native HTML5 hex picker.
+                     Visually distinct (separate left side of pill, large touch target). */}
               <label
-                className={`relative ml-1 inline-flex items-center justify-center w-6 h-6 rounded-full border-2 cursor-pointer transition-transform hover:scale-110 ${isColorSaving ? 'animate-pulse' : ''} ${!canChangeColor ? 'opacity-50 cursor-not-allowed' : ''}`}
-                style={{ background: hex, borderColor: 'rgba(255,255,255,0.85)', boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(0,0,0,0.08)' }}
+                className={`relative inline-flex items-center justify-center w-7 h-7 rounded-full border-2 cursor-pointer transition-transform hover:scale-110 flex-shrink-0 ${isColorSaving ? 'animate-pulse' : ''} ${!canChangeColor ? 'opacity-50 cursor-not-allowed' : ''}`}
+                style={{ background: hex, borderColor: 'rgba(255,255,255,0.9)', boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(0,0,0,0.08)' }}
                 title={canChangeColor ? `Change ${label} color (currently ${hex})` : `${label} isn't in event_types — color can't be edited`}
               >
                 <input
@@ -266,23 +260,37 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange, onEventTyp
                   aria-label={`Color picker for ${label}`}
                 />
               </label>
+
+              {/* 2. Label + count — the COUNT itself is the click target for editing. */}
               <button
                 onClick={() => { setEditing(type); setEditValue(String(count)); }}
                 disabled={isSaving}
-                className="inline-flex items-center justify-center w-6 h-6 rounded-full hover:bg-white/60 transition-colors disabled:opacity-50"
-                title={`Edit ${label} count`}
-                aria-label={`Edit ${label}`}
+                className="inline-flex items-baseline gap-1.5 px-2 py-1 rounded-full hover:bg-white/60 transition-colors disabled:opacity-50 cursor-pointer"
+                title={`Click to change ${label} required count (currently ${count})`}
               >
-                <span className="text-xs">✏️</span>
+                <span>{label}</span>
+                <span
+                  className="font-black text-base px-1.5 rounded"
+                  style={{
+                    background: 'rgba(255,255,255,0.7)',
+                    boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+                    minWidth: '1.5rem',
+                    textAlign: 'center',
+                  }}
+                >
+                  {count}
+                </span>
               </button>
+
+              {/* 3. Remove button — separate red-hover trash, far right. */}
               <button
                 onClick={() => handleDelete(type)}
                 disabled={isSaving}
-                className="inline-flex items-center justify-center w-6 h-6 rounded-full hover:bg-red-100 transition-colors disabled:opacity-30"
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full hover:bg-red-100 transition-colors disabled:opacity-30 flex-shrink-0"
                 title={`Remove ${label}`}
                 aria-label={`Remove ${label}`}
               >
-                <span className="text-xs">🗑️</span>
+                <span className="text-sm">🗑️</span>
               </button>
             </span>
           );
