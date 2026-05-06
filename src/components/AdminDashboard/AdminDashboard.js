@@ -5,7 +5,28 @@ import AdminQuickActions from './AdminQuickActions';
 import AdminChangeHistory from './AdminChangeHistory';
 import EmailComposer from './EmailComposer';
 import AdminFuturePlans from './AdminFuturePlans';
-import { monthlyRequirementsApi } from '../../lib/api';
+import { monthlyRequirementsApi, eventTypesApi } from '../../lib/api';
+
+// ─── Color helpers ────────────────────────────────────────────────────────────
+// Derive a soft-tint background, medium border, and text color from a single
+// hex color stored in event_types.color. One color in DB → consistent triple
+// across pills/cards/badges everywhere (after consumers are refactored).
+function hexToRgba(hex, alpha) {
+  if (!hex) return `rgba(180,143,143,${alpha})`;
+  const clean = hex.replace('#', '');
+  const v = clean.length === 3
+    ? clean.split('').map(c => c + c).join('')
+    : clean;
+  const n = parseInt(v, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+function colorTriple(hex) {
+  return {
+    bg: hexToRgba(hex, 0.18),
+    border: hexToRgba(hex, 0.55),
+    text: hex || '#444',
+  };
+}
 
 // ─── Monthly Requirements Bar (lives at top of Admin, above the tabs) ─────────
 // Foundational concept: each gym must hit at least N events of certain
@@ -13,13 +34,14 @@ import { monthlyRequirementsApi } from '../../lib/api';
 // `monthly_requirements` Supabase table and bubbles the change up via
 // onChange so the calendar (summary card + per-gym table) recalculates
 // "complete vs missing" using the new threshold immediately.
-function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
+function MonthlyRequirementsBar({ requirements, eventTypes, onChange, onEventTypesChange }) {
   const [saving, setSaving] = useState(null); // event_type currently being saved
   const [editing, setEditing] = useState(null); // event_type being edited inline
   const [editValue, setEditValue] = useState('');
   const [adding, setAdding] = useState(false);
   const [newType, setNewType] = useState('');
   const [newCount, setNewCount] = useState('1');
+  const [savingColor, setSavingColor] = useState(null); // event_type whose color is saving
 
   const PROGRAM_LABELS = {
     'CLINIC': 'Clinics',
@@ -28,14 +50,46 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
     'CAMP': 'Camps',
     'SPECIAL EVENT': 'Special',
   };
-  const PROGRAM_COLORS = {
-    'CLINIC':         { bg: '#eadcf8', border: '#e1cff1', text: '#5a2980' },
-    'KIDS NIGHT OUT': { bg: '#ffbfc0', border: '#f1aaaa', text: '#7a2a2c' },
-    'OPEN GYM':       { bg: '#bee3c2', border: '#add5b2', text: '#1f6635' },
-    'CAMP':           { bg: '#fde6c4', border: '#f4cf91', text: '#7a4a13' },
-    'SPECIAL EVENT':  { bg: '#e0e7ef', border: '#c4cfdc', text: '#37475a' },
+  // Fallback colors used only when an event_type row doesn't exist in DB
+  // for that requirement (e.g. you added a custom requirement type that
+  // isn't in event_types yet). Once the DB has the row, we use its color.
+  const FALLBACK_COLORS = {
+    'CLINIC':         '#8B5CF6',
+    'KIDS NIGHT OUT': '#EC4899',
+    'OPEN GYM':       '#10B981',
+    'CAMP':           '#F59E0B',
+    'SPECIAL EVENT':  '#64748B',
   };
-  const fallbackColor = { bg: '#ececec', border: '#cfcfcf', text: '#444' };
+  const FALLBACK_DEFAULT = '#8b6f6f';
+
+  // Lookup helper: event_types DB rows keyed by name (uppercase to be safe)
+  const eventTypeByName = {};
+  (eventTypes || []).forEach(et => {
+    const key = (et.name || et.event_type || '').toUpperCase();
+    if (key) eventTypeByName[key] = et;
+  });
+  const colorForType = (type) => {
+    const dbRow = eventTypeByName[(type || '').toUpperCase()];
+    return dbRow?.color || FALLBACK_COLORS[type] || FALLBACK_DEFAULT;
+  };
+
+  const handleColorChange = async (type, newColor) => {
+    const dbRow = eventTypeByName[(type || '').toUpperCase()];
+    if (!dbRow?.id) {
+      alert(`"${type}" isn't in your event_types table yet — color can't be saved permanently. Add it via the database first.`);
+      return;
+    }
+    setSavingColor(type);
+    try {
+      await eventTypesApi.update(dbRow.id, { color: newColor });
+      const refreshed = await eventTypesApi.getAll();
+      onEventTypesChange?.(refreshed);
+    } catch (err) {
+      alert(`Failed to save color: ${err.message}`);
+    } finally {
+      setSavingColor(null);
+    }
+  };
 
   const entries = Object.entries(requirements || {});
   const configuredTypes = new Set(entries.map(([t]) => t));
@@ -137,11 +191,15 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
         )}
 
         {entries.map(([type, count]) => {
-          const color = PROGRAM_COLORS[type] || fallbackColor;
+          const hex = colorForType(type);
+          const color = colorTriple(hex);
           const label = PROGRAM_LABELS[type] || type;
           const isEditing = editing === type;
           const isSaving = saving === type;
-
+          const isColorSaving = savingColor === type;
+          const dbRow = eventTypeByName[(type || '').toUpperCase()];
+          const canChangeColor = !!dbRow?.id;
+          // (color triple computed above is used in both edit and display modes)
           if (isEditing) {
             return (
               <span
@@ -190,10 +248,28 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
                 <span>{label}</span>
                 <span className="font-black text-base">{count}</span>
               </span>
+              {/* Color swatch — click opens native HTML5 hex picker.
+                  Saves to event_types.color in Supabase, then refreshes
+                  eventTypes state so the pill (and any other consumer
+                  reading from event_types.color) updates immediately. */}
+              <label
+                className={`relative ml-1 inline-flex items-center justify-center w-6 h-6 rounded-full border-2 cursor-pointer transition-transform hover:scale-110 ${isColorSaving ? 'animate-pulse' : ''} ${!canChangeColor ? 'opacity-50 cursor-not-allowed' : ''}`}
+                style={{ background: hex, borderColor: 'rgba(255,255,255,0.85)', boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(0,0,0,0.08)' }}
+                title={canChangeColor ? `Change ${label} color (currently ${hex})` : `${label} isn't in event_types — color can't be edited`}
+              >
+                <input
+                  type="color"
+                  value={hex}
+                  disabled={!canChangeColor || isColorSaving}
+                  onChange={e => handleColorChange(type, e.target.value)}
+                  className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                  aria-label={`Color picker for ${label}`}
+                />
+              </label>
               <button
                 onClick={() => { setEditing(type); setEditValue(String(count)); }}
                 disabled={isSaving}
-                className="ml-1 inline-flex items-center justify-center w-6 h-6 rounded-full hover:bg-white/60 transition-colors disabled:opacity-50"
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full hover:bg-white/60 transition-colors disabled:opacity-50"
                 title={`Edit ${label} count`}
                 aria-label={`Edit ${label}`}
               >
@@ -289,6 +365,7 @@ export default function AdminDashboard({
   gyms,
   events,
   eventTypes,
+  onEventTypesChange,
   monthlyRequirements,
   onMonthlyRequirementsChange,
   currentMonth,
@@ -441,6 +518,7 @@ export default function AdminDashboard({
           requirements={monthlyRequirements}
           eventTypes={eventTypes}
           onChange={onMonthlyRequirementsChange}
+          onEventTypesChange={onEventTypesChange}
         />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

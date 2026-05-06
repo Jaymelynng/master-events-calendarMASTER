@@ -52,7 +52,7 @@ const EventsDashboard = () => {
   // Destructure for cleaner JSX
   const {
     // Data
-    events, gymsList, eventTypes, monthlyRequirements, setMonthlyRequirements, gymLinks,
+    events, gymsList, eventTypes, setEventTypes, monthlyRequirements, setMonthlyRequirements, gymLinks,
     // Loading
     loading,
     // View state
@@ -112,6 +112,7 @@ const EventsDashboard = () => {
         <AdminDashboard
           gyms={gymsList}
           eventTypes={eventTypes}
+          onEventTypesChange={setEventTypes}
           monthlyRequirements={monthlyRequirements}
           onMonthlyRequirementsChange={setMonthlyRequirements}
           onClose={() => setShowAdminPortal(false)}
