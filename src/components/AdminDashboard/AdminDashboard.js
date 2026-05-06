@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AdminGymRules from './AdminGymRules';
 import AdminPricing from './AdminPricing';
 import AdminQuickActions from './AdminQuickActions';
@@ -42,6 +42,39 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange, onEventTyp
   const [newType, setNewType] = useState('');
   const [newCount, setNewCount] = useState('1');
   const [savingColor, setSavingColor] = useState(null); // event_type whose color is saving
+  // Hex paste popover — opens when user clicks the color circle. We deliberately
+  // skipped the native <input type="color"> because Chrome's picker defaults to
+  // RGB sliders and hides the hex field behind a tab. Jayme's workflow is "paste
+  // a hex code and be done" — that's what this gives her.
+  const [colorPopoverFor, setColorPopoverFor] = useState(null); // event_type whose hex picker is open
+  const [hexInput, setHexInput] = useState('');                  // raw text the user is typing
+  const popoverRef = useRef(null);
+
+  // Accept "d5a36d", "#d5a36d", "DCE" etc. Returns "#d5a36d" or null if invalid.
+  const normalizeHex = (raw) => {
+    if (!raw) return null;
+    const v = String(raw).trim().replace(/^#/, '').toLowerCase();
+    if (/^[0-9a-f]{3}$/.test(v)) return '#' + v.split('').map(c => c + c).join('');
+    if (/^[0-9a-f]{6}$/.test(v)) return '#' + v;
+    return null;
+  };
+
+  // Close popover on outside click or Escape
+  useEffect(() => {
+    if (!colorPopoverFor) return;
+    const handleClickOutside = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        setColorPopoverFor(null);
+      }
+    };
+    const handleEsc = (e) => { if (e.key === 'Escape') setColorPopoverFor(null); };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [colorPopoverFor]);
 
   const PROGRAM_LABELS = {
     'CLINIC': 'Clinics',
@@ -244,22 +277,103 @@ function MonthlyRequirementsBar({ requirements, eventTypes, onChange, onEventTyp
                 boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)',
               }}
             >
-              {/* 1. Color circle — click opens native HTML5 hex picker.
-                     Visually distinct (separate left side of pill, large touch target). */}
-              <label
-                className={`relative inline-flex items-center justify-center w-7 h-7 rounded-full border-2 cursor-pointer transition-transform hover:scale-110 flex-shrink-0 ${isColorSaving ? 'animate-pulse' : ''} ${!canChangeColor ? 'opacity-50 cursor-not-allowed' : ''}`}
-                style={{ background: hex, borderColor: 'rgba(255,255,255,0.9)', boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(0,0,0,0.08)' }}
-                title={canChangeColor ? `Change ${label} color (currently ${hex})` : `${label} isn't in event_types — color can't be edited`}
-              >
-                <input
-                  type="color"
-                  value={hex}
+              {/* 1. Color circle — click opens a small popover with a HEX paste
+                     field (NOT Chrome's native color picker, which defaults to
+                     RGB sliders). Live preview as you type, Enter to save,
+                     Escape or click outside to cancel. */}
+              <div className="relative flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!canChangeColor || isColorSaving) return;
+                    if (colorPopoverFor === type) {
+                      setColorPopoverFor(null);
+                    } else {
+                      setColorPopoverFor(type);
+                      setHexInput(hex.replace('#', ''));
+                    }
+                  }}
                   disabled={!canChangeColor || isColorSaving}
-                  onChange={e => handleColorChange(type, e.target.value)}
-                  className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                  aria-label={`Color picker for ${label}`}
+                  className={`inline-flex items-center justify-center w-7 h-7 rounded-full border-2 cursor-pointer transition-transform hover:scale-110 ${isColorSaving ? 'animate-pulse' : ''} ${!canChangeColor ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={{ background: hex, borderColor: 'rgba(255,255,255,0.9)', boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(0,0,0,0.08)' }}
+                  title={canChangeColor ? `Change ${label} color (currently ${hex})` : `${label} isn't in event_types — color can't be edited`}
+                  aria-label={`Open color picker for ${label}`}
                 />
-              </label>
+
+                {colorPopoverFor === type && (
+                  <div
+                    ref={popoverRef}
+                    className="absolute top-full left-0 mt-2 z-50 rounded-lg border bg-white p-3 shadow-xl"
+                    style={{ minWidth: '14rem', borderColor: '#c5b4b4', boxShadow: '0 8px 24px rgba(70,50,52,.28)' }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div className="text-[11px] font-black uppercase tracking-wide mb-1.5" style={{ color: '#6e5658' }}>
+                      Paste a hex color for {label}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* Live preview swatch — reflects what the input currently parses to */}
+                      <div
+                        className="w-7 h-7 rounded-full border-2 flex-shrink-0"
+                        style={{
+                          background: normalizeHex(hexInput) || hex,
+                          borderColor: 'rgba(0,0,0,0.15)',
+                        }}
+                        title={normalizeHex(hexInput) ? `Preview: ${normalizeHex(hexInput)}` : 'Type a valid hex code'}
+                      />
+                      <span className="text-base font-black" style={{ color: '#6e5658' }}>#</span>
+                      <input
+                        type="text"
+                        value={hexInput}
+                        onChange={e => setHexInput(e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6))}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            const norm = normalizeHex(hexInput);
+                            if (norm) {
+                              handleColorChange(type, norm);
+                              setColorPopoverFor(null);
+                            }
+                          }
+                        }}
+                        placeholder="d5a36d"
+                        autoFocus
+                        spellCheck={false}
+                        className="flex-1 px-2 py-1 rounded border text-sm font-mono uppercase tracking-wider"
+                        style={{ borderColor: '#c5b4b4', minWidth: '6rem' }}
+                      />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <span className="text-[10px] italic" style={{ color: '#9a8b8b' }}>
+                        3 or 6 hex chars • Enter to save • Esc to cancel
+                      </span>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setColorPopoverFor(null)}
+                          className="px-2 py-1 rounded text-xs font-bold bg-gray-100 hover:bg-gray-200"
+                          style={{ color: '#6e5658' }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!normalizeHex(hexInput)}
+                          onClick={() => {
+                            const norm = normalizeHex(hexInput);
+                            if (norm) {
+                              handleColorChange(type, norm);
+                              setColorPopoverFor(null);
+                            }
+                          }}
+                          className="px-2 py-1 rounded text-xs font-black text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                          style={{ background: '#6e936f' }}
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* 2. Label + count — the COUNT itself is the click target for editing. */}
               <button
