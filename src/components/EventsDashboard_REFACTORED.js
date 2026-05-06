@@ -52,7 +52,7 @@ const EventsDashboard = () => {
   // Destructure for cleaner JSX
   const {
     // Data
-    events, gymsList, eventTypes, monthlyRequirements, gymLinks,
+    events, gymsList, eventTypes, monthlyRequirements, setMonthlyRequirements, gymLinks,
     // Loading
     loading,
     // View state
@@ -111,6 +111,9 @@ const EventsDashboard = () => {
       <Suspense fallback={<ModalLoader />}>
         <AdminDashboard
           gyms={gymsList}
+          eventTypes={eventTypes}
+          monthlyRequirements={monthlyRequirements}
+          onMonthlyRequirementsChange={setMonthlyRequirements}
           onClose={() => setShowAdminPortal(false)}
           onOpenSyncModal={() => {
             setShowAdminPortal(false);

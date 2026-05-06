@@ -5,11 +5,224 @@ import AdminQuickActions from './AdminQuickActions';
 import AdminChangeHistory from './AdminChangeHistory';
 import EmailComposer from './EmailComposer';
 import AdminFuturePlans from './AdminFuturePlans';
+import { monthlyRequirementsApi } from '../../lib/api';
+
+// ─── Monthly Requirements Bar (lives at top of Admin, above the tabs) ─────────
+// Foundational concept: each gym must hit at least N events of certain
+// program types per month. Adding/editing/removing here writes to the
+// `monthly_requirements` Supabase table and bubbles the change up via
+// onChange so the calendar (summary card + per-gym table) recalculates
+// "complete vs missing" using the new threshold immediately.
+function MonthlyRequirementsBar({ requirements, eventTypes, onChange }) {
+  const [saving, setSaving] = useState(null); // event_type currently being saved
+  const [editing, setEditing] = useState(null); // event_type being edited inline
+  const [editValue, setEditValue] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [newType, setNewType] = useState('');
+  const [newCount, setNewCount] = useState('1');
+
+  const PROGRAM_LABELS = {
+    'CLINIC': 'Clinics',
+    'KIDS NIGHT OUT': 'KNOs',
+    'OPEN GYM': 'Open Gym',
+    'CAMP': 'Camps',
+    'SPECIAL EVENT': 'Special',
+  };
+  const PROGRAM_COLORS = {
+    'CLINIC':         { bg: '#eadcf8', border: '#e1cff1', text: '#5a2980' },
+    'KIDS NIGHT OUT': { bg: '#ffbfc0', border: '#f1aaaa', text: '#7a2a2c' },
+    'OPEN GYM':       { bg: '#bee3c2', border: '#add5b2', text: '#1f6635' },
+    'CAMP':           { bg: '#fde6c4', border: '#f4cf91', text: '#7a4a13' },
+    'SPECIAL EVENT':  { bg: '#e0e7ef', border: '#c4cfdc', text: '#37475a' },
+  };
+  const fallbackColor = { bg: '#ececec', border: '#cfcfcf', text: '#444' };
+
+  const entries = Object.entries(requirements || {});
+  const configuredTypes = new Set(entries.map(([t]) => t));
+  // Event types from the DB that aren't yet in monthly_requirements
+  const availableToAdd = (eventTypes || [])
+    .map(et => (typeof et === 'string' ? et : et.name || et.event_type))
+    .filter(Boolean)
+    .filter(t => !configuredTypes.has(t));
+
+  const refreshFromDb = async () => {
+    const rows = await monthlyRequirementsApi.getAll();
+    const map = {};
+    rows.forEach(r => { map[r.event_type] = r.required_count; });
+    onChange?.(map);
+  };
+
+  const handleSaveEdit = async (eventType) => {
+    const count = parseInt(editValue, 10);
+    if (Number.isNaN(count) || count < 0) {
+      setEditing(null);
+      return;
+    }
+    setSaving(eventType);
+    try {
+      await monthlyRequirementsApi.upsert(eventType, count);
+      await refreshFromDb();
+      setEditing(null);
+    } catch (err) {
+      alert(`Failed to save: ${err.message}`);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleDelete = async (eventType) => {
+    if (!window.confirm(`Remove "${PROGRAM_LABELS[eventType] || eventType}" from monthly requirements?`)) return;
+    setSaving(eventType);
+    try {
+      await monthlyRequirementsApi.delete(eventType);
+      await refreshFromDb();
+    } catch (err) {
+      alert(`Failed to remove: ${err.message}`);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!newType) return;
+    const count = parseInt(newCount, 10);
+    if (Number.isNaN(count) || count < 0) return;
+    setSaving(newType);
+    try {
+      await monthlyRequirementsApi.upsert(newType, count);
+      await refreshFromDb();
+      setAdding(false);
+      setNewType('');
+      setNewCount('1');
+    } catch (err) {
+      alert(`Failed to add: ${err.message}`);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <div
+      className="border-b"
+      style={{ background: 'rgba(255,255,255,0.55)', borderColor: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(6px)' }}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center flex-wrap gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-white/85 mr-2 flex-shrink-0">
+          📋 Monthly Requirements
+        </span>
+
+        {entries.length === 0 && !adding && (
+          <span className="text-xs text-white/70 italic">None configured yet</span>
+        )}
+
+        {entries.map(([type, count]) => {
+          const color = PROGRAM_COLORS[type] || fallbackColor;
+          const label = PROGRAM_LABELS[type] || type;
+          const isEditing = editing === type;
+          const isSaving = saving === type;
+
+          if (isEditing) {
+            return (
+              <span
+                key={type}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-bold"
+                style={{ background: color.bg, borderColor: color.border, color: color.text }}
+              >
+                <span>{label}:</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="99"
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleSaveEdit(type);
+                    if (e.key === 'Escape') setEditing(null);
+                  }}
+                  className="w-12 px-1 py-0.5 rounded border text-center text-xs font-bold bg-white"
+                  style={{ borderColor: color.border, color: color.text }}
+                  autoFocus
+                />
+                <button onClick={() => handleSaveEdit(type)} disabled={isSaving} className="text-green-700 font-bold px-1">✓</button>
+                <button onClick={() => setEditing(null)} className="text-gray-500 px-1">✕</button>
+              </span>
+            );
+          }
+
+          return (
+            <span
+              key={type}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold transition-shadow hover:shadow-sm"
+              style={{ background: color.bg, borderColor: color.border, color: color.text }}
+            >
+              <button
+                onClick={() => { setEditing(type); setEditValue(String(count)); }}
+                disabled={isSaving}
+                className="hover:underline cursor-pointer disabled:opacity-50"
+                title="Click to edit count"
+              >
+                {label} <span className="font-black">{count}</span>
+              </button>
+              <button
+                onClick={() => handleDelete(type)}
+                disabled={isSaving}
+                className="ml-0.5 text-[10px] opacity-50 hover:opacity-100 hover:text-red-700 disabled:opacity-30"
+                title={`Remove ${label} from requirements`}
+              >
+                ✕
+              </button>
+            </span>
+          );
+        })}
+
+        {adding ? (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border bg-white text-xs font-bold text-gray-700" style={{ borderColor: '#aaa' }}>
+            <select
+              value={newType}
+              onChange={e => setNewType(e.target.value)}
+              className="text-xs font-bold bg-transparent outline-none"
+              autoFocus
+            >
+              <option value="">Pick program…</option>
+              {availableToAdd.map(t => (
+                <option key={t} value={t}>{PROGRAM_LABELS[t] || t}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min="0"
+              max="99"
+              value={newCount}
+              onChange={e => setNewCount(e.target.value)}
+              className="w-12 px-1 py-0.5 rounded border text-center text-xs font-bold"
+              style={{ borderColor: '#ccc' }}
+              placeholder="#"
+            />
+            <button onClick={handleAdd} disabled={!newType} className="text-green-700 font-bold px-1 disabled:opacity-30">✓</button>
+            <button onClick={() => { setAdding(false); setNewType(''); setNewCount('1'); }} className="text-gray-500 px-1">✕</button>
+          </span>
+        ) : (
+          availableToAdd.length > 0 && (
+            <button
+              onClick={() => setAdding(true)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed text-xs font-bold text-white/85 hover:text-white hover:bg-white/10 transition-colors"
+              style={{ borderColor: 'rgba(255,255,255,0.45)' }}
+            >
+              + Add Requirement
+            </button>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function AdminDashboard({
   gyms,
   events,
+  eventTypes,
   monthlyRequirements,
+  onMonthlyRequirementsChange,
   currentMonth,
   currentYear,
   initialCalendarMonth,
@@ -153,7 +366,16 @@ export default function AdminDashboard({
               )}
             </div>
           </div>
+        </div>
 
+        {/* Monthly Requirements bar — foundational config visible on every tab */}
+        <MonthlyRequirementsBar
+          requirements={monthlyRequirements}
+          eventTypes={eventTypes}
+          onChange={onMonthlyRequirementsChange}
+        />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-0.5 sm:gap-1 -mb-px overflow-x-auto pb-0 scrollbar-hide">
             {tabs.filter(t => t.alwaysShow).map(tab => (
               <button

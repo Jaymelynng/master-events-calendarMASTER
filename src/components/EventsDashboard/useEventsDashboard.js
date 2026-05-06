@@ -523,6 +523,7 @@ export default function useEventsDashboard() {
     gymsList,
     eventTypes,
     monthlyRequirements,
+    setMonthlyRequirements,
     gymLinks,
     gymRules,
     setGymRules,
