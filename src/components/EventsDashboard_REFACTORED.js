@@ -279,8 +279,12 @@ const EventsDashboard = () => {
               openMultipleTabs={openMultipleTabs}
             />
 
+            {/* Monthly Requirements goals — dynamic, driven by `monthly_requirements` table.
+                Add/edit/remove a row in admin and this card auto-adjusts (column count
+                follows the number of requirements). Color is assigned by a per-type lookup
+                with a neutral fallback for new types we haven't seen before. */}
             <div
-              className="rounded-xl border p-3"
+              className="rounded-xl border p-3 flex flex-col justify-center items-center text-center"
               style={{
                 background: '#f7f3f3',
                 borderColor: '#c5b4b4',
@@ -290,37 +294,63 @@ const EventsDashboard = () => {
               <div className="mb-2 text-sm font-black uppercase tracking-wide" style={{ color: '#6e5658' }}>
                 Monthly Requirements
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div
-                  className="rounded-lg border px-2 py-3 text-center"
-                  style={{ background: '#eadcf8', borderColor: '#e1cff1', boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)' }}
-                >
-                  <div className="text-[11px] font-black uppercase" style={{ color: '#6e5658' }}>Clinics</div>
-                  <div className="text-2xl font-black" style={{ color: '#263044' }}>
-                    {monthlyRequirements?.CLINIC ?? 1}
+
+              {(() => {
+                const REQ_LABELS = {
+                  'CLINIC': 'Clinics',
+                  'KIDS NIGHT OUT': 'KNOs',
+                  'OPEN GYM': 'Open Gym',
+                  'CAMP': 'Camps',
+                  'SPECIAL EVENT': 'Special',
+                };
+                const REQ_COLORS = {
+                  'CLINIC':         { bg: '#eadcf8', border: '#e1cff1' },
+                  'KIDS NIGHT OUT': { bg: '#ffbfc0', border: '#f1aaaa' },
+                  'OPEN GYM':       { bg: '#bee3c2', border: '#add5b2' },
+                  'CAMP':           { bg: '#fde6c4', border: '#f4cf91' },
+                  'SPECIAL EVENT':  { bg: '#e0e7ef', border: '#c4cfdc' },
+                };
+                const FALLBACK = { bg: '#ececec', border: '#cfcfcf' };
+
+                const entries = Object.entries(monthlyRequirements || {}).filter(([, v]) => v != null);
+                if (entries.length === 0) {
+                  return (
+                    <div className="text-xs italic" style={{ color: '#9a8b8b' }}>
+                      No monthly requirements configured. Add some in admin.
+                    </div>
+                  );
+                }
+                const cols = Math.min(entries.length, 4);
+
+                return (
+                  <div
+                    className="w-full grid gap-2"
+                    style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+                  >
+                    {entries.map(([type, count]) => {
+                      const c = REQ_COLORS[type] || FALLBACK;
+                      const label = REQ_LABELS[type] || type;
+                      return (
+                        <div
+                          key={type}
+                          className="rounded-lg border px-2 py-3 text-center"
+                          style={{
+                            background: c.bg,
+                            borderColor: c.border,
+                            boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)',
+                          }}
+                        >
+                          <div className="text-[11px] font-black uppercase" style={{ color: '#6e5658' }}>{label}</div>
+                          <div className="text-2xl font-black" style={{ color: '#263044' }}>{count}</div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
-                <div
-                  className="rounded-lg border px-2 py-3 text-center"
-                  style={{ background: '#ffbfc0', borderColor: '#f1aaaa', boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)' }}
-                >
-                  <div className="text-[11px] font-black uppercase" style={{ color: '#6e5658' }}>KNOs</div>
-                  <div className="text-2xl font-black" style={{ color: '#263044' }}>
-                    {monthlyRequirements?.['KIDS NIGHT OUT'] ?? 2}
-                  </div>
-                </div>
-                <div
-                  className="rounded-lg border px-2 py-3 text-center"
-                  style={{ background: '#bee3c2', borderColor: '#add5b2', boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)' }}
-                >
-                  <div className="text-[11px] font-black uppercase" style={{ color: '#6e5658' }}>Open Gym</div>
-                  <div className="text-2xl font-black" style={{ color: '#263044' }}>
-                    {monthlyRequirements?.['OPEN GYM'] ?? 1}
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
+
               <div
-                className="mt-2 rounded-lg border px-3 py-2 text-center text-xs font-black"
+                className="mt-2 w-full rounded-lg border px-3 py-2 text-center text-xs font-black"
                 style={{ background: 'rgba(255,255,255,.75)', borderColor: '#ded1d1', color: '#71585a', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.85)' }}
               >
                 Required per gym each month
