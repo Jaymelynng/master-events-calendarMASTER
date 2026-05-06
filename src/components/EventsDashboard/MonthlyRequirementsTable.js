@@ -174,7 +174,10 @@ export default function MonthlyRequirementsTable({
                     const requiredCount = monthlyRequirements[eventType];
                     const isDeficient = count < requiredCount;
                     const url = getGymLinkUrl(gym, eventType) || getGymLinkUrl(gym, 'BOOKING') || '#';
-                    const backgroundColor = getEventTypeColor(eventType);
+                    // Pass eventTypes (DB rows) so colors come from
+                    // event_types.color, not the static fallback. Single
+                    // source of truth = the event_types table.
+                    const backgroundColor = getEventTypeColor(eventType, eventTypes);
 
                     // Adjust background opacity for deficient counts
                     let adjustedBackgroundColor = backgroundColor;

@@ -300,6 +300,9 @@ const EventsDashboard = () => {
               </div>
 
               {(() => {
+                // Labels for human-readable display only. Colors come from
+                // event_types.color in Supabase — single source of truth.
+                // Change a color in Admin → it propagates here too.
                 const REQ_LABELS = {
                   'CLINIC': 'Clinics',
                   'KIDS NIGHT OUT': 'KNOs',
@@ -307,14 +310,23 @@ const EventsDashboard = () => {
                   'CAMP': 'Camps',
                   'SPECIAL EVENT': 'Special',
                 };
-                const REQ_COLORS = {
-                  'CLINIC':         { bg: '#eadcf8', border: '#e1cff1' },
-                  'KIDS NIGHT OUT': { bg: '#ffbfc0', border: '#f1aaaa' },
-                  'OPEN GYM':       { bg: '#bee3c2', border: '#add5b2' },
-                  'CAMP':           { bg: '#fde6c4', border: '#f4cf91' },
-                  'SPECIAL EVENT':  { bg: '#e0e7ef', border: '#c4cfdc' },
+
+                // Build hex lookup from live eventTypes (DB-driven)
+                const colorByType = {};
+                (eventTypes || []).forEach(et => {
+                  const key = (et.name || et.event_type || '').toUpperCase();
+                  if (key && et.color) colorByType[key] = et.color;
+                });
+
+                // Convert hex → soft-tint background + medium border
+                const hexToRgba = (hex, alpha) => {
+                  if (!hex) return `rgba(180,143,143,${alpha})`;
+                  const v = hex.replace('#', '');
+                  const full = v.length === 3 ? v.split('').map(c => c + c).join('') : v;
+                  const n = parseInt(full, 16);
+                  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
                 };
-                const FALLBACK = { bg: '#ececec', border: '#cfcfcf' };
+                const FALLBACK_HEX = '#b48f8f';
 
                 const entries = Object.entries(monthlyRequirements || {}).filter(([, v]) => v != null);
                 if (entries.length === 0) {
@@ -332,15 +344,15 @@ const EventsDashboard = () => {
                     style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
                   >
                     {entries.map(([type, count]) => {
-                      const c = REQ_COLORS[type] || FALLBACK;
+                      const hex = colorByType[type.toUpperCase()] || FALLBACK_HEX;
                       const label = REQ_LABELS[type] || type;
                       return (
                         <div
                           key={type}
                           className="rounded-lg border px-2 py-3 text-center"
                           style={{
-                            background: c.bg,
-                            borderColor: c.border,
+                            background: hexToRgba(hex, 0.18),
+                            borderColor: hexToRgba(hex, 0.55),
                             boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)',
                           }}
                         >
