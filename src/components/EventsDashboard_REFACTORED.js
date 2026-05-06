@@ -414,7 +414,7 @@ const EventsDashboard = () => {
 
           {/* Table View */}
           {viewMode === 'table' && (
-            <TableView filteredEvents={filteredEvents} />
+            <TableView filteredEvents={filteredEvents} eventTypes={eventTypes} />
           )}
 
           {/* Calendar View */}
@@ -467,6 +467,7 @@ const EventsDashboard = () => {
                   onDismissError={setDismissModalState}
                   onResetAcknowledgedErrors={resetAcknowledgedErrors}
                   isMatchedByRule={isMatchedByRule}
+                  eventTypes={eventTypes}
                 />
               )}
             </div>

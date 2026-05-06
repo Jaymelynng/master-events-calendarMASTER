@@ -6,7 +6,8 @@ import { theme, getEventTypeColor } from './constants';
 import { formatTime, parseYmdLocal } from './utils';
 
 export default function TableView({
-  filteredEvents
+  filteredEvents,
+  eventTypes = []
 }) {
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -55,7 +56,7 @@ export default function TableView({
                     <span
                       className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                       style={{
-                        backgroundColor: getEventTypeColor(event.type || event.event_type),
+                        backgroundColor: getEventTypeColor(event.type || event.event_type, eventTypes),
                         color: '#374151'
                       }}
                     >

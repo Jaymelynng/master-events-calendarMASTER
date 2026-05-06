@@ -18,7 +18,8 @@ export default function EventDetailPanel({
   onDismissError,
   onResetAcknowledgedErrors,
   isMatchedByRule,
-  acknowledgedPatterns = []
+  acknowledgedPatterns = [],
+  eventTypes = []
 }) {
   if (!event) return null;
 
@@ -66,7 +67,7 @@ export default function EventDetailPanel({
           <span
             className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-gray-700 border"
             style={{
-              backgroundColor: getEventTypeColor(event.type || event.event_type),
+              backgroundColor: getEventTypeColor(event.type || event.event_type, eventTypes),
               borderColor: 'rgba(0,0,0,0.1)'
             }}
           >
