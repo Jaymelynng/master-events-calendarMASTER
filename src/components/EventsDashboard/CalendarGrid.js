@@ -128,8 +128,18 @@ function GymCell({ gym, gymData, gymId, gymEvents, gridRow }) {
 
   return (
     <div
-      className="p-2 font-medium border-r-2 bg-gray-50 flex flex-col items-center justify-center gap-1"
-      style={{ borderColor: theme.colors.primary, gridRow }}
+      className="p-2 font-medium border-r-2 flex flex-col items-center justify-center gap-1"
+      style={{
+        borderColor: theme.colors.primary,
+        gridRow,
+        // Brand-tinted bg so the gym column visually anchors each row.
+        // Matches the calendar header's pink, creating an L-shape of brand
+        // identity (top header + left column).
+        backgroundColor: theme.colors.secondary,
+        // Soft outward shadow on the right edge gives the gym cell visual
+        // depth without competing with event content.
+        boxShadow: '3px 0 5px -2px rgba(140, 100, 100, 0.18)',
+      }}
       title={`${gym} - ${gymEvents.length} event${gymEvents.length !== 1 ? 's' : ''}`}
     >
       <div className="cursor-help flex flex-col items-center">
