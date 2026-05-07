@@ -1,6 +1,6 @@
 # 📁 Database Folder
 
-**Last Updated:** December 28, 2025
+**Last Updated:** May 6, 2026
 
 This folder contains SQL scripts for the Supabase PostgreSQL database.
 
@@ -36,6 +36,17 @@ These document schema changes over time:
 | `ADD_HALF_DAY_CAMP_LINKS.sql` | Half-day camp URL patterns |
 | `ADD_UNIQUE_CONSTRAINT_EVENT_URL.sql` | Prevent duplicate event URLs |
 | `CREATE_ACKNOWLEDGED_PATTERNS.sql` | Program-wide temp overrides (gym + event_type + error_message) |
+| `CREATE_RULES_TABLE.sql` | Unified validation rules system — replaced `gym_valid_values` (Feb 23, 2026) |
+| `CREATE_REQUIREMENT_NOTES.sql` | Status tracking for missing monthly requirements |
+| `CREATE_FUTURE_PLANS_TABLE.sql` | Admin-managed roadmap items |
+| `CREATE_EVENT_PRICING_TABLE.sql` | Per-event-type pricing with `effective_date` (CLINIC, KNO, OPEN GYM) |
+| `CREATE_MONTHLY_REQUIREMENTS_TABLE.sql` | Per-event-type compliance threshold (admin-editable). Adds the missing FOR ALL RLS policy that was blocking writes (May 6, 2026) |
+| `ENABLE_RLS_ON_UNGUARDED_TABLES.sql` | Closes 3 RLS gaps: `sync_log` gets FOR ALL policy (anon read+write), `camp_pricing_map` and `extractors` get RLS-on-no-policy lockdown (anon denied, service-role still works). May 6, 2026 |
+| `MIGRATE_GYM_VALID_VALUES_TO_RULES.sql` | One-time migration when `gym_valid_values` was retired |
+| `ADD_OPENINGS_COLUMNS.sql` | `openings`, `openings_display`, `show_openings` (Apr 26, 2026) |
+| `ADD_VERIFIED_ERRORS_COLUMN.sql` | `verified_errors` jsonb on events |
+| `ADD_MANAGER_CONTACTS.sql` | `manager_name`, `manager_email` on `gyms` |
+| `ARCHIVE_SOFT_DELETED_EVENTS.sql` + `CREATE_ARCHIVE_FUNCTION.sql` | Soft-delete + auto-archive pipeline |
 
 ### Utility Queries:
 | File | Purpose |
@@ -78,11 +89,14 @@ Use `FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql` - it has the complete, current view d
 | `event_audit_log` | Change history |
 | `event_types` | Event type definitions |
 | `link_types` | Link type definitions |
-| `monthly_requirements` | Compliance tracking |
-| `gym_valid_values` | Permanent validation rules (price, time, program synonyms) |
-| `event_pricing` | Base prices for CLINIC, KNO, OPEN GYM |
+| `monthly_requirements` | Compliance tracking — see `CREATE_MONTHLY_REQUIREMENTS_TABLE.sql` |
+| `rules` | Unified validation rules + system checks (replaces dropped `gym_valid_values`) |
+| `event_pricing` | Base prices for CLINIC, KNO, OPEN GYM (with `effective_date`) |
 | `camp_pricing` | Base prices for CAMP |
 | `acknowledged_patterns` | Temp overrides: "dismiss for all events of this program at this gym" |
+| `requirement_notes` | Status (In Progress / Late / Excused) for missing monthly requirements |
+| `future_plans` | Admin-managed roadmap |
+| `pricing_schedules`, `camp_type_mappings` | iClassPro pricing data (274 schedules, 243 type mappings) |
 
 ---
 
@@ -94,4 +108,6 @@ Use `FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql` - it has the complete, current view d
 | Dec 28, 2025 | Removed one-time fix files (FIX_RBA_OPEN_GYM.sql, MISSING_OCTOBER_1_21_INSERT.sql) |
 | Dec 28, 2025 | Updated CREATE_EVENTS_WITH_GYM_VIEW.sql with all current columns |
 | Dec 28, 2025 | Moved DATA_QUALITY_IMPROVEMENTS.md to docs/OPERATIONS/ |
+| May 6, 2026 | Added `CREATE_MONTHLY_REQUIREMENTS_TABLE.sql` (table existed in prod with read-only RLS — admin writes were failing). Refreshed table list to drop dropped `gym_valid_values` and add `rules`, `requirement_notes`, `future_plans`, `pricing_schedules`, `camp_type_mappings`. Repo is now the source of truth for every load-bearing Supabase object — anything required for the app to run must live in this folder. |
+| May 6, 2026 | Added `ENABLE_RLS_ON_UNGUARDED_TABLES.sql` — closes the 3 critical RLS-disabled gaps the Supabase advisor flagged. Verified by inspecting actual code usage and testing each table as the anon role. |
 

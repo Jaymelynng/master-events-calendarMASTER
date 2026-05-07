@@ -367,6 +367,32 @@ export const monthlyRequirementsApi = {
       .order('event_type');
     if (error) throw new Error(error.message);
     return data || [];
+  },
+
+  // event_type is the primary key — upsert handles add+edit in one method
+  async upsert(eventType, count) {
+    const parsed = parseInt(count, 10);
+    if (!eventType || Number.isNaN(parsed)) {
+      throw new Error('upsert requires non-empty eventType and numeric count');
+    }
+    const { data, error } = await supabase
+      .from('monthly_requirements')
+      .upsert(
+        { event_type: eventType, required_count: parsed },
+        { onConflict: 'event_type' }
+      )
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async delete(eventType) {
+    const { error } = await supabase
+      .from('monthly_requirements')
+      .delete()
+      .eq('event_type', eventType);
+    if (error) throw new Error(error.message);
   }
 };
 

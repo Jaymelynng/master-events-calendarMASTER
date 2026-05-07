@@ -87,7 +87,7 @@ export default function EventCard({
       <div
         className="text-xs rounded text-gray-700 text-center font-medium transition-all duration-200 border p-2 hover:shadow-md hover:scale-105 relative"
         style={{
-          backgroundColor: getEventTypeColor(eventTypeName),
+          backgroundColor: getEventTypeColor(eventTypeName, eventTypes),
           borderColor: 'rgba(0,0,0,0.1)'
         }}
       >

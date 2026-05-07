@@ -18,7 +18,8 @@ export default function EventDetailPanel({
   onDismissError,
   onResetAcknowledgedErrors,
   isMatchedByRule,
-  acknowledgedPatterns = []
+  acknowledgedPatterns = [],
+  eventTypes = []
 }) {
   if (!event) return null;
 
@@ -66,7 +67,7 @@ export default function EventDetailPanel({
           <span
             className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-gray-700 border"
             style={{
-              backgroundColor: getEventTypeColor(event.type || event.event_type),
+              backgroundColor: getEventTypeColor(event.type || event.event_type, eventTypes),
               borderColor: 'rgba(0,0,0,0.1)'
             }}
           >
@@ -83,6 +84,16 @@ export default function EventDetailPanel({
         <h4 className="font-bold text-xl mb-4 text-gray-800">
           {event.title || `${event.type || event.event_type} Event`}
         </h4>
+
+        {/* Registration Options — moved to top of panel (was at bottom) so
+            the register/copy buttons are immediately accessible without
+            scrolling past the description, flyer, etc. */}
+        <RegistrationOptions
+          event={event}
+          copiedUrl={copiedUrl}
+          onCopyUrl={onCopyUrl}
+          onEditEvent={onEditEvent}
+        />
 
         {/* Event Details */}
         <div className="space-y-3 mb-6 text-sm text-gray-700">
@@ -216,13 +227,8 @@ export default function EventDetailPanel({
           <FlyerImage event={event} />
         )}
 
-        {/* Registration Options */}
-        <RegistrationOptions
-          event={event}
-          copiedUrl={copiedUrl}
-          onCopyUrl={onCopyUrl}
-          onEditEvent={onEditEvent}
-        />
+        {/* (Registration Options moved to the top of the panel —
+             see right after Event Title above.) */}
       </div>
     </div>
   );

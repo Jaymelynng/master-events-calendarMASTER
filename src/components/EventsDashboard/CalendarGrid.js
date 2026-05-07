@@ -3,8 +3,13 @@
 // ============================================================================
 import React from 'react';
 import EventCard from './EventCard';
+import CampBand from './CampBand';
 import { theme, gymColors, multiDayEventTypes } from './constants';
 import { groupCampEventsForDisplay, eventFallsOnDate } from './utils';
+
+// Camps go to the CampBand below the day-cells row; everything else
+// (KNO, OPEN GYM, CLINIC, SPECIAL EVENT) renders in the day cells as before.
+const isCampType = (e) => multiDayEventTypes.includes((e.type || e.event_type || '').toUpperCase());
 
 export default function CalendarGrid({
   displayDates,
@@ -48,8 +53,10 @@ export default function CalendarGrid({
             ))}
           </div>
 
-          {/* Calendar Body */}
-          <div className="divide-y divide-gray-200 relative">
+          {/* Calendar Body — divide-y removed; each gym row gets its own
+              explicit borderBottom because the 1px gray divider was
+              invisible against the brand-pink GymCell. */}
+          <div className="relative">
             {allGymsFromList.map(gym => {
               // Find the gym data to get both name and id (gym code like "CRR")
               const gymData = gymsList.find(g => g.name === gym);
@@ -61,28 +68,60 @@ export default function CalendarGrid({
                 e.gym_id === gymId
               );
 
+              // Split: camps render as horizontal bars in the band below;
+              // everything else stays in the day cells.
+              const gymCampEvents = gymEvents.filter(isCampType);
+              const gymNonCampEvents = gymEvents.filter(e => !isCampType(e));
+              const hasCamps = gymCampEvents.length > 0;
+
               return (
                 <div
                   key={gym}
                   ref={el => gymRefs.current[gym] = el}
                   className="grid hover:bg-gray-50 transition-colors"
-                  style={{ gridTemplateColumns: `100px repeat(${displayDates.length}, 1fr)` }}
+                  style={{
+                    gridTemplateColumns: `100px repeat(${displayDates.length}, 1fr)`,
+                    // Strong row separator that's visible against BOTH the
+                    // brand-pink GymCell (left col) AND the white day cells.
+                    // Brand-tinted dusty rose (theme.colors.primary at low
+                    // opacity-feel) so it reads as part of the calendar's
+                    // visual language, not a generic gray line.
+                    borderBottom: '2px solid #c5b4b4',
+                  }}
                 >
-                  {/* Gym Logo Column */}
-                  <GymCell gym={gym} gymData={gymData} gymId={gymId} gymEvents={gymEvents} />
+                  {/* Gym Logo Column — spans both rows when there are camps so
+                      its background covers col 1 across the camp band too. */}
+                  <GymCell
+                    gym={gym}
+                    gymData={gymData}
+                    gymId={gymId}
+                    gymEvents={gymEvents}
+                    gridRow={hasCamps ? '1 / 3' : undefined}
+                  />
 
-                  {/* Date Columns */}
+                  {/* Date Columns (single-day events only) */}
                   {displayDates.map(date => (
                     <DateCell
                       key={`${gym}-${date}`}
                       date={date}
-                      gymEvents={gymEvents}
+                      gymEvents={gymNonCampEvents}
                       currentMonth={currentMonth}
                       currentYear={currentYear}
                       eventTypes={eventTypes}
                       onEventSelect={onEventSelect}
                     />
                   ))}
+
+                  {/* Camp Band (only renders when this gym has camps in view) */}
+                  {hasCamps && (
+                    <CampBand
+                      campEvents={gymCampEvents}
+                      displayDates={displayDates}
+                      currentYear={currentYear}
+                      currentMonth={currentMonth}
+                      onEventSelect={onEventSelect}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -94,13 +133,23 @@ export default function CalendarGrid({
 }
 
 // Gym cell with logo/badge
-function GymCell({ gym, gymData, gymId, gymEvents }) {
+function GymCell({ gym, gymData, gymId, gymEvents, gridRow }) {
   const logoUrl = gymData?.logo_url;
 
   return (
     <div
-      className="p-2 font-medium border-r-2 bg-gray-50 flex flex-col items-center justify-center gap-1"
-      style={{ borderColor: theme.colors.primary }}
+      className="p-2 font-medium border-r-2 flex flex-col items-center justify-center gap-1"
+      style={{
+        borderColor: theme.colors.primary,
+        gridRow,
+        // Brand-tinted bg so the gym column visually anchors each row.
+        // Matches the calendar header's pink, creating an L-shape of brand
+        // identity (top header + left column).
+        backgroundColor: theme.colors.secondary,
+        // Soft outward shadow on the right edge gives the gym cell visual
+        // depth without competing with event content.
+        boxShadow: '3px 0 5px -2px rgba(140, 100, 100, 0.18)',
+      }}
       title={`${gym} - ${gymEvents.length} event${gymEvents.length !== 1 ? 's' : ''}`}
     >
       <div className="cursor-help flex flex-col items-center">

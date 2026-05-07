@@ -30,20 +30,50 @@ export const gymColors = {
   'CMO': '#795548',    // Brown
 };
 
-// Event type colors for cards and badges
+// Static fallback colors. Used when an event_types DB row doesn't exist
+// for the given type, OR when a caller doesn't pass eventTypes through.
+// The PRIMARY source of truth is the event_types.color column in Supabase.
 export const eventTypeColors = {
-  'CLINIC': '#F3E8FF',       // Light purple
-  'KIDS NIGHT OUT': '#FFCCCB', // Light pink/coral
-  'OPEN GYM': '#C8E6C9',     // Light green
-  'CAMP': '#fde685',         // Light yellow
-  'SPECIAL EVENT': '#E3F2FD', // Light blue
-  'BOOKING': '#F5F5F5',      // Light gray
+  'CLINIC': '#F3E8FF',       // Light purple (fallback)
+  'KIDS NIGHT OUT': '#FFCCCB', // Light pink/coral (fallback)
+  'OPEN GYM': '#C8E6C9',     // Light green (fallback)
+  'CAMP': '#fde685',         // Light yellow (fallback)
+  'SPECIAL EVENT': '#E3F2FD', // Light blue (fallback)
+  'BOOKING': '#F5F5F5',      // Light gray (fallback)
 };
 
-// Get color for an event type (with fallback)
-export const getEventTypeColor = (type) => {
+// Convert a saturated hex (typical of event_types.color, e.g. #8B5CF6) into
+// the soft pastel tint the calendar UI expects for backgrounds. Picks ~18%
+// alpha over white so the resulting hex is readable on a light background.
+const hexToPastelHex = (hex) => {
+  if (!hex) return '#f0f0f0';
+  const v = hex.replace('#', '');
+  const full = v.length === 3 ? v.split('').map(c => c + c).join('') : v;
+  if (full.length !== 6) return hex; // already weird, return as-is
+  const n = parseInt(full, 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  // Mix with white at ~82% white / 18% color for a soft tint
+  const mix = (c) => Math.round(c * 0.18 + 255 * 0.82);
+  const toHex = (c) => c.toString(16).padStart(2, '0');
+  return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
+};
+
+// Get color for an event type. If `eventTypes` (DB rows) is provided AND
+// contains a matching row with a color, use that. Otherwise fall back to
+// the static eventTypeColors map. Returns a pastel-friendly hex suitable
+// for backgrounds on light surfaces.
+export const getEventTypeColor = (type, eventTypes = null) => {
   if (!type) return '#f0f0f0';
   const upperType = type.toUpperCase();
+
+  if (eventTypes && Array.isArray(eventTypes)) {
+    const dbRow = eventTypes.find(et => {
+      const name = (et.name || et.event_type || '').toUpperCase();
+      return name === upperType;
+    });
+    if (dbRow?.color) return hexToPastelHex(dbRow.color);
+  }
+
   return eventTypeColors[upperType] || '#f0f0f0';
 };
 
