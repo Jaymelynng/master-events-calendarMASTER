@@ -1,6 +1,6 @@
 # Current System Status
 
-**Last Updated:** April 26, 2026
+**Last Updated:** May 7, 2026
 
 ---
 
@@ -71,7 +71,7 @@
 - **Other prices:** `event_pricing` table with `effective_date` support (added Feb 2026)
 - Prices are parsed from event title/description and compared against these tables
 
-### Openings / Capacity (NEW April 26, 2026)
+### Openings / Capacity (April 26, 2026)
 - **Spot count on every event card** — `🟢 23` (green = 4+ open), `⚠️ 2` (orange = 1-3 left), `🔴 FULL` badge top-left when 0
 - **Source:** iClassPro `/api/open/v1/{slug}/camps/{id}` — `openings`, `openingsDisplay`, `showOpenings` fields
 - **All 10 gyms send the integer** — verified live; no iClass settings to change
@@ -79,6 +79,21 @@
 - **CSV export:** new `Spots Left` and `Openings Display` columns
 - **Time was removed from cards** in the same update — accessible via hover tooltip, Table View, side panel
 - **Full doc:** `docs/OPERATIONS/OPENINGS_CAPACITY_FEATURE.md`
+
+### Calendar Visual Overhaul (NEW May 7, 2026 — PR #16)
+- **Multi-day camps as long-narrow variant bars** — `src/components/EventsDashboard/CampBand.js` renders one bar per camp variant (Gym Full / Gym Half / Ninja Full / Ninja Half) spanning the actual camp days, instead of repeating the same boxy CAMP card on every day. Capacity status shown per variant.
+- **Brand-tinted gym row identity** — GymCell uses `theme.colors.secondary` (rose pink, same as the calendar header) + soft right shadow + 2px dusty-rose row divider so each gym row is visually distinct.
+- **Side panel re-order** — Registration Options (View / Copy / Edit buttons) moved to the top, right after the event title — no more scrolling past description and flyer to register.
+- **Admin Monthly Requirements bar (top of admin dashboard)** — live add / edit / remove of compliance categories with hex paste color picker; writes directly to `monthly_requirements` and `event_types.color`. Auto-propagates colors to admin pill, summary card, per-gym table, calendar event cards, side panel, table view.
+- **BulkPortalOpener** — grouped 3-card layout (General / School Year / Summer); Monthly Requirements summary card placed beside it to save vertical space.
+- **Database fixes** — `monthly_requirements` table got the missing FOR ALL RLS policy (writes were failing silently). 3 RLS gaps closed on `sync_log`, `camp_pricing_map`, `extractors`. SQL files committed for both — `database/CREATE_MONTHLY_REQUIREMENTS_TABLE.sql` + `database/ENABLE_RLS_ON_UNGUARDED_TABLES.sql`.
+
+### Color Source of Truth (May 7, 2026)
+- All event-type colors now flow from one place: **`event_types.color` column in Supabase**
+- Change a color in Admin → Monthly Requirements bar → it propagates to: admin pill, calendar summary card, per-gym table count cells, calendar event cards, event detail side panel header, table view
+- `hexToPastelHex` helper in `src/components/EventsDashboard/constants.js` mixes 18% saturated color + 82% white so the bright hex saved in the DB renders as a soft pastel tint suitable for cell backgrounds
+- The hex paste popover (replacing Chrome's native RGB picker) lives in `AdminDashboard.js` — paste a hex, hit Enter, done
+- Current values in DB: CLINIC `#b99396` (rose), KIDS NIGHT OUT `#d5a36d` (tan), OPEN GYM `#6e936f` (sage)
 
 ---
 
