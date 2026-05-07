@@ -142,8 +142,12 @@ export default function CampBand({
         gridTemplateColumns: `repeat(${displayDates.length}, 1fr)`,
         gridTemplateRows: `repeat(${totalRows}, 28px)`,
         gap: '3px',
-        padding: '6px 4px',
-        borderTop: '1.5px dashed #c5b4b4',
+        padding: '3px 4px 4px',
+        // Subtle bg tint that matches the gym cell's gray-50 — visually
+        // claims this strip as part of the same gym row rather than letting
+        // it look like a new row starting. No top border (dashed line was
+        // confusing — read as a row divider).
+        background: '#f9fafb',
       }}
     >
       {placements.map(({ variant, gridColumn, gridRow }) => {
