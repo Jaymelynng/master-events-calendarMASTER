@@ -53,8 +53,10 @@ export default function CalendarGrid({
             ))}
           </div>
 
-          {/* Calendar Body */}
-          <div className="divide-y divide-gray-200 relative">
+          {/* Calendar Body — divide-y removed; each gym row gets its own
+              explicit borderBottom because the 1px gray divider was
+              invisible against the brand-pink GymCell. */}
+          <div className="relative">
             {allGymsFromList.map(gym => {
               // Find the gym data to get both name and id (gym code like "CRR")
               const gymData = gymsList.find(g => g.name === gym);
@@ -77,7 +79,15 @@ export default function CalendarGrid({
                   key={gym}
                   ref={el => gymRefs.current[gym] = el}
                   className="grid hover:bg-gray-50 transition-colors"
-                  style={{ gridTemplateColumns: `100px repeat(${displayDates.length}, 1fr)` }}
+                  style={{
+                    gridTemplateColumns: `100px repeat(${displayDates.length}, 1fr)`,
+                    // Strong row separator that's visible against BOTH the
+                    // brand-pink GymCell (left col) AND the white day cells.
+                    // Brand-tinted dusty rose (theme.colors.primary at low
+                    // opacity-feel) so it reads as part of the calendar's
+                    // visual language, not a generic gray line.
+                    borderBottom: '2px solid #c5b4b4',
+                  }}
                 >
                   {/* Gym Logo Column — spans both rows when there are camps so
                       its background covers col 1 across the camp band too. */}
