@@ -60,8 +60,12 @@
 ## Key Files
 | File | Purpose |
 |------|---------|
-| `src/components/EventsDashboard.js` | Main dashboard UI, modals, buttons, requirement status notes |
-| `src/components/AdminDashboard/AdminDashboard.js` | Admin panel (Shift+Click magic wand) |
+| `src/components/EventsDashboard_REFACTORED.js` | **Active** main dashboard entry — thin assembler that pulls state/logic from `useEventsDashboard` hook and lazy-loads modals. NOTE: `src/components/EventsDashboard.js` (4151 lines) is legacy/dead code, scheduled for cleanup. |
+| `src/components/EventsDashboard/CalendarGrid.js` | Calendar grid orchestrator. Splits per-gym events into camps → CampBand and non-camps → DateCell. Renders gym-row layout with brand-pink GymCell + 2px row divider (May 2026). |
+| `src/components/EventsDashboard/CampBand.js` | Multi-day camps as long-narrow variant bars below day cells (May 2026). One bar per variant (Gym Full / Half / Ninja Full / Half) spanning the camp's actual days, with capacity status per variant. |
+| `src/components/EventsDashboard/EventCard.js` | Single-day event card (KNO / OPEN GYM / CLINIC / SPECIAL EVENT) — type label + spots count. Reads color from `event_types.color`. |
+| `src/components/EventsDashboard/EventDetailPanel.js` | Side panel. Registration Options (View / Copy / Edit) at the TOP, then details / availability / errors / description / flyer. (Re-ordered May 2026.) |
+| `src/components/AdminDashboard/AdminDashboard.js` | Admin panel (Shift+Click magic wand). Hosts `MonthlyRequirementsBar` at the top — live add/edit/remove categories with hex paste color picker. |
 | `src/components/AdminDashboard/RuleWizard.js` | Unified rule creation wizard (validation rules + requirement exceptions) |
 | `src/components/AdminDashboard/EmailComposer.js` | Email generation for managers (missing events + data errors) |
 | `automation/f12_collect_and_import.py` | Core Python script - collects events via Direct API (or Playwright fallback), runs validation |

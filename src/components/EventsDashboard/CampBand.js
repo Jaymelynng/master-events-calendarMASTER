@@ -87,27 +87,61 @@ export default function CampBand({
     run.slice().sort((a, b) => variantSortKey(a) - variantSortKey(b))
   );
 
-  // Compute placements: which grid column does each variant start/end at,
-  // and which row does it sit on.
-  const placements = [];
-  let nextRow = 0;
+  // Determine the "lane" a variant occupies. Same lane = same row in the
+  // band, regardless of which week it belongs to. This way a summer of
+  // 4 camp weeks (each with Gym Full / Gym Half / Ninja Full / Ninja Half)
+  // renders as 4 ROWS total, not 16 — every "Gym Full" bar sits on row 1,
+  // every "Gym Half" on row 2, etc., with their gridColumn anchored to
+  // each week's actual dates.
+  // Lane order: Gym Full, Gym Half, Ninja Full, Ninja Half, then anything
+  // unrecognized in insertion order beyond.
+  const KNOWN_LANES = {
+    'gym-full':   0,
+    'gym-half':   1,
+    'ninja-full': 2,
+    'ninja-half': 3,
+  };
+  const laneKeyForVariant = (event) => {
+    const text = `${event.title || ''} ${event.program_name || ''}`.toLowerCase();
+    const isNinja = text.includes('ninja');
+    const isHalf  = text.includes('half');
+    return `${isNinja ? 'ninja' : 'gym'}-${isHalf ? 'half' : 'full'}`;
+  };
+
+  // First pass: figure out which lanes are actually used and assign each a
+  // contiguous row index (so we don't render empty gaps).
+  const usedLaneKeys = new Set();
   for (const run of runs) {
     for (const variant of run) {
-      // start day number (use start_date, fall back to date)
+      usedLaneKeys.add(laneKeyForVariant(variant));
+    }
+  }
+  // Sort the used lane keys by KNOWN_LANES priority; unknown keys go after.
+  const sortedLaneKeys = Array.from(usedLaneKeys).sort((a, b) => {
+    const aRank = a in KNOWN_LANES ? KNOWN_LANES[a] : 100;
+    const bRank = b in KNOWN_LANES ? KNOWN_LANES[b] : 100;
+    return aRank - bRank;
+  });
+  const laneToRow = {};
+  sortedLaneKeys.forEach((key, idx) => { laneToRow[key] = idx + 1; });
+
+  // Second pass: place every variant in its lane's row, with the date-range
+  // gridColumn computed per-variant.
+  const placements = [];
+  for (const run of runs) {
+    for (const variant of run) {
       const startDateStr = variant.start_date || variant.date;
-      const endDateStr = variant.end_date || variant.date;
       if (!startDateStr) continue;
 
       const startObj = parseYmdLocal(startDateStr);
       const endObj = getActualEndDate(variant, parseYmdLocal);
 
-      // Day-of-month for start/end (only if same month as visible)
-      // For cross-month spans, clip to first/last visible day.
+      // Clip to visible range when the camp starts before / ends after the
+      // current month, so we always render something visible.
       let startIdx;
       if (startObj.getFullYear() === currentYear && startObj.getMonth() === currentMonth) {
         startIdx = displayDates.indexOf(startObj.getDate());
       }
-      // If start is before the visible range, clip to first column
       if (startIdx == null || startIdx === -1) startIdx = 0;
 
       let endIdx;
@@ -116,22 +150,20 @@ export default function CampBand({
       }
       if (endIdx == null || endIdx === -1) endIdx = displayDates.length - 1;
 
-      // Grid columns are 1-indexed; we add 1 because col 1 inside the band is
-      // the first day. End is exclusive in CSS grid, so we add 1 again.
+      // Grid columns 1-indexed; CSS grid end is exclusive so end is +2.
       const gridColumn = `${startIdx + 1} / ${endIdx + 2}`;
 
       placements.push({
         variant,
         gridColumn,
-        gridRow: nextRow + 1,
+        gridRow: laneToRow[laneKeyForVariant(variant)],
       });
-      nextRow++;
     }
   }
 
   if (placements.length === 0) return null;
 
-  const totalRows = nextRow;
+  const totalRows = sortedLaneKeys.length;
 
   return (
     <div

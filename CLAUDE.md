@@ -37,14 +37,19 @@
 | What | File |
 |------|------|
 | **Core UI** | |
-| Main UI | `src/components/EventsDashboard.js` (4000+ lines) |
+| Active main entry | `src/components/EventsDashboard_REFACTORED.js` ← THIS is the live one |
+| Legacy main UI | `src/components/EventsDashboard.js` (4151 lines, dead code, scheduled for cleanup) |
+| Calendar grid | `src/components/EventsDashboard/CalendarGrid.js` (gym rows, splits camps → CampBand) |
+| Camp variant bars | `src/components/EventsDashboard/CampBand.js` (NEW May 2026 — multi-day camps as long-narrow bars) |
 | Sync workflow | `src/components/EventsDashboard/SyncModal.js` (2000+ lines) |
 | Export options | `src/components/EventsDashboard/ExportModal.js` (1500+ lines) |
-| Event details | `src/components/EventsDashboard/EventDetailPanel.js` |
-| Event cards | `src/components/EventsDashboard/EventCard.js` |
-| Theme/colors | `src/components/EventsDashboard/constants.js` |
+| Event details (side panel) | `src/components/EventsDashboard/EventDetailPanel.js` (Registration Options at TOP, May 2026) |
+| Event cards | `src/components/EventsDashboard/EventCard.js` (reads color from event_types.color) |
+| Theme/colors | `src/components/EventsDashboard/constants.js` (getEventTypeColor + hexToPastelHex helper) |
+| Bulk Portal Opener | `src/components/EventsDashboard/BulkPortalOpener.js` (3-card grouped layout) |
+| Monthly Requirements table | `src/components/EventsDashboard/MonthlyRequirementsTable.js` |
 | **Admin Dashboard** | |
-| Tab orchestrator | `src/components/AdminDashboard/AdminDashboard.js` |
+| Tab orchestrator + MonthlyRequirementsBar | `src/components/AdminDashboard/AdminDashboard.js` (live category add/edit/remove + hex paste color picker, May 2026) |
 | Audit & Review tab | `src/components/AdminDashboard/AdminAuditReview.js` |
 | Gym Rules tab | `src/components/AdminDashboard/AdminGymRules.js` (1000+ lines) |
 | Pricing tab | `src/components/AdminDashboard/AdminPricing.js` |

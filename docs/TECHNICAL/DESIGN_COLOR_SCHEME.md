@@ -1,7 +1,39 @@
 # Design & Color Scheme — Master Events Calendar
 
-**Last updated:** Feb 2026  
-**Purpose:** Single source of truth for UI colors, shadows, and event-type styling. Use across main calendar, Admin Dashboard, and all documentation.
+**Last updated:** May 7, 2026
+**Purpose:** Source of truth for UI colors, shadows, and event-type styling.
+
+---
+
+## ⚠️ Event-type colors are now DATABASE-DRIVEN (May 7, 2026)
+
+**Don't hardcode event-type colors anywhere.** They live in `event_types.color` in Supabase. Change them in Admin → Monthly Requirements bar (click the color circle on a pill, paste a hex). One write, propagates everywhere: admin pill, calendar summary card, per-gym table, calendar event cards, side panel header, table view.
+
+### Current values in DB
+| Event Type | Saturated Hex (in DB) | What you see (after pastel-mix) |
+|------------|----------------------|---------------------------------|
+| **CLINIC** | `#b99396` | Soft rose card background |
+| **KIDS NIGHT OUT** | `#d5a36d` | Soft tan/peach card background |
+| **OPEN GYM** | `#6e936f` | Soft sage card background |
+| **CAMP** | (uses static fallback `#fde685`) | Warm yellow — no `event_types` row yet |
+| **SPECIAL EVENT** | (static fallback `#E3F2FD`) | Light blue — no `event_types` row yet |
+
+### How the conversion works
+The DB stores SATURATED hex values (e.g. `#b99396`). The frontend's `hexToPastelHex` helper in `src/components/EventsDashboard/constants.js` mixes 18% color + 82% white to produce the soft tint used as background. Borders use `rgba(hex, 0.55)` — same hex, medium opacity.
+
+### Static fallback list
+If a type isn't in `event_types`, the calendar falls back to `eventTypeColors` in `constants.js`:
+- `'CLINIC': '#F3E8FF'`
+- `'KIDS NIGHT OUT': '#FFCCCB'`
+- `'OPEN GYM': '#C8E6C9'`
+- `'CAMP': '#fde685'`
+- `'SPECIAL EVENT': '#E3F2FD'`
+- `'BOOKING': '#F5F5F5'`
+
+These only apply when an `event_types` row is missing or doesn't pass `eventTypes` through. The DB row wins when both exist.
+
+### Camp variant bars (CampBand)
+Camp variant bars use HARDCODED yellow / peach by program type (Gymnastics = yellow `#fff5d4`, Ninja = peach `#ffe5cc`) — INDEPENDENT of `event_types.color`. This is intentional: camp variants are not event types in their own right; they're a sub-classification within the CAMP type. If we ever want them DB-driven, add `program_type_colors` table or extend `event_types`.
 
 ---
 
@@ -10,23 +42,6 @@
 The Month filter shows **3 months back, 6 months forward** from today's date. The range shifts automatically as time passes.
 
 **When you open Admin from the calendar:** The filter defaults to the month you were viewing on the calendar (e.g. if you were on February 2026, "February 2026" is pre-selected).
-
----
-
-## Event Type Colors
-
-| Event Type | Hex | Tailwind | Use |
-|------------|-----|----------|-----|
-| **CLINIC** | `#F3E8FF` | lavender/purple-50 | Backgrounds, buttons, filters, cards |
-| **KIDS NIGHT OUT (KNO)** | `#FFCCCB` | coral rose / pink-200 | Backgrounds, buttons, filters, cards |
-| **OPEN GYM** | `#C8E6C9` | sage green / green-200 | Backgrounds, buttons, filters, cards |
-| **CAMP** | `#fde685` | warm yellow / yellow-200 | Backgrounds, buttons, filters, cards |
-| **SUMMER CAMP** | `#E1F5FE` | ice blue / sky-100 | Summer camp variants |
-| **SUMMER CAMP - GYMNASTICS** | `#B2DFDB` | seafoam / teal-200 | |
-| **SUMMER CAMP - NINJA** | `#DCEDC8` | light lime / lime-200 | |
-| **BIRTHDAY PARTY** | `#fce7f3` | light pink / pink-100 | |
-| **SPECIAL EVENT** | `#fef2f2` | light red / red-50 | |
-| **WORKSHOP** | `#eef2ff` | light indigo / indigo-50 | |
 
 ### Active/Border Accents (when selected or hover)
 
