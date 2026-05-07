@@ -85,6 +85,16 @@ export default function EventDetailPanel({
           {event.title || `${event.type || event.event_type} Event`}
         </h4>
 
+        {/* Registration Options — moved to top of panel (was at bottom) so
+            the register/copy buttons are immediately accessible without
+            scrolling past the description, flyer, etc. */}
+        <RegistrationOptions
+          event={event}
+          copiedUrl={copiedUrl}
+          onCopyUrl={onCopyUrl}
+          onEditEvent={onEditEvent}
+        />
+
         {/* Event Details */}
         <div className="space-y-3 mb-6 text-sm text-gray-700">
           <div className="flex items-start gap-3">
@@ -217,13 +227,8 @@ export default function EventDetailPanel({
           <FlyerImage event={event} />
         )}
 
-        {/* Registration Options */}
-        <RegistrationOptions
-          event={event}
-          copiedUrl={copiedUrl}
-          onCopyUrl={onCopyUrl}
-          onEditEvent={onEditEvent}
-        />
+        {/* (Registration Options moved to the top of the panel —
+             see right after Event Title above.) */}
       </div>
     </div>
   );
