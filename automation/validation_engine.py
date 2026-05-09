@@ -674,8 +674,34 @@ def check_camp_price(ctx):
     valid_prices = []
     price_labels = []
 
-    for key, label_prefix in [('full_day_daily', 'Full Day Daily'), ('full_day_weekly', 'Full Day Weekly'),
-                               ('half_day_daily', 'Half Day Daily'), ('half_day_weekly', 'Half Day Weekly')]:
+    # Detect duration (half-day vs full-day) from title and program_name so
+    # we constrain the valid prices to ONLY the matching subset. Without
+    # this, a half-day camp whose description shows the full-day price
+    # silently passes (the full-day price is "valid" for the gym, just for
+    # the wrong variant). Real bug Jayme found in May 2026: 12 CRR half-day
+    # camps had full-day prices in their descriptions and the engine never
+    # caught it.
+    title_lower = ctx.title_lower or ''
+    program_lower = (ctx.event.get('program_name') or '').lower() if ctx.event else ''
+    is_half = 'half' in title_lower or 'half' in program_lower
+    is_full = 'full' in title_lower or 'full' in program_lower
+
+    if is_half and not is_full:
+        allowed_keys = [('half_day_daily', 'Half Day Daily'),
+                        ('half_day_weekly', 'Half Day Weekly')]
+    elif is_full and not is_half:
+        allowed_keys = [('full_day_daily', 'Full Day Daily'),
+                        ('full_day_weekly', 'Full Day Weekly')]
+    else:
+        # No clear hint either way (or both present, e.g. a mixed-format
+        # event listing both options) — accept any of the 4. Original
+        # behaviour, preserved as the safe fallback.
+        allowed_keys = [('full_day_daily', 'Full Day Daily'),
+                        ('full_day_weekly', 'Full Day Weekly'),
+                        ('half_day_daily', 'Half Day Daily'),
+                        ('half_day_weekly', 'Half Day Weekly')]
+
+    for key, label_prefix in allowed_keys:
         if gym_prices.get(key):
             valid_prices.append(float(gym_prices[key]))
             price_labels.append(f"{label_prefix} ${gym_prices[key]}")
