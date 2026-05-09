@@ -1225,6 +1225,12 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
     seen_ids = set()
     today_str = date.today().isoformat()  # e.g. "2025-11-13"
 
+    # Aggregator: rule_id -> total hits across every event we process here.
+    # Written back to the rules table at end of batch so the admin UI can
+    # show "X caught" instead of always 0. Without this, the dashboard
+    # never updates last_hit_count / last_sync_at and looks broken.
+    hit_count_accumulator = {}
+
     # Fetch active validation checks from database (once per batch)
     try:
         checks_url = f"{SUPABASE_URL}/rest/v1/rules?select=*&is_active=eq.true&rule_type=like.check_%2A"
@@ -1511,7 +1517,11 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 get_camp_pricing_fn=get_camp_pricing,
                 get_event_pricing_fn=get_event_pricing
             )
-            validation_errors, _hit_counts = run_validation(ctx, active_checks)
+            validation_errors, per_event_hits = run_validation(ctx, active_checks)
+            # Accumulate hit counts across this batch so we can write them
+            # back to the rules table in one shot at the end.
+            for rule_id, count in per_event_hits.items():
+                hit_count_accumulator[rule_id] = hit_count_accumulator.get(rule_id, 0) + count
         
         # Registration status checks (not validation — informational)
         if registration_end_date:
@@ -1607,7 +1617,35 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             print(f"{'='*60}\n")
         else:
             print(f"\n✅ VALIDATION SUMMARY: {len(processed)} events checked, 0 errors found\n")
-    
+
+    # Write the per-rule hit counts back to the `rules` table so the admin
+    # UI can show "X caught" instead of always 0. Uses raw HTTP to match
+    # the rest of this file's Supabase-write pattern (no supabase Python
+    # client dep). Failures are logged but never crash the sync.
+    if hit_count_accumulator:
+        try:
+            from datetime import datetime as _dt
+            now_iso = _dt.utcnow().isoformat() + 'Z'
+            for rule_id, total_hits in hit_count_accumulator.items():
+                try:
+                    update_url = f"{SUPABASE_URL}/rest/v1/rules?id=eq.{rule_id}"
+                    payload = json.dumps({
+                        'last_hit_count': int(total_hits),
+                        'last_sync_at': now_iso,
+                    }).encode('utf-8')
+                    req = Request(update_url, data=payload, method='PATCH')
+                    req.add_header('apikey', SUPABASE_KEY)
+                    req.add_header('Authorization', f'Bearer {SUPABASE_KEY}')
+                    req.add_header('Content-Type', 'application/json')
+                    req.add_header('Prefer', 'return=minimal')
+                    with urlopen(req, timeout=10) as _resp:
+                        pass
+                except Exception as e:
+                    print(f"  [WARN] Failed to update last_hit_count for rule {rule_id}: {e}")
+            print(f"  ✓ Updated last_hit_count for {len(hit_count_accumulator)} rule(s) in DB")
+        except Exception as e:
+            print(f"  [WARN] Hit-count writeback failed: {e}")
+
     return processed
 
 # For backward compatibility
