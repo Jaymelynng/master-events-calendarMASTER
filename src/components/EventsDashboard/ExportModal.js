@@ -436,6 +436,24 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     onClose();
   };
 
+  // Build a filename that identifies the app + use case + month so Jayme
+  // can tell exports apart in her Downloads folder. Filename pattern:
+  //   master-calendar-{usecase}-{month-slug}-{YYYY-MM-DD}.{ext}
+  // e.g. "master-calendar-audit-issues-may-2026-2026-05-07.csv"
+  const buildExportFilename = (ext, monthName, timestamp) => {
+    const USE_CASE_LABELS = {
+      full: 'full-events',
+      spots: 'spots-snapshot',
+      compliance: 'compliance-report',
+      audit: 'audit-issues',
+      sync: 'sync-log',
+      custom: 'custom',
+    };
+    const useCaseSlug = USE_CASE_LABELS[useCase] || 'export';
+    const monthSlug = (monthName || 'all').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return `master-calendar-${useCaseSlug}-${monthSlug}-${timestamp}.${ext}`;
+  };
+
   const exportCSV = (monthName, timestamp) => {
     let csvContent = '';
 
@@ -647,7 +665,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       csvContent += '\n';
     }
 
-    downloadFile(csvContent, `export-${timestamp}.csv`, 'text/csv');
+    downloadFile(csvContent, buildExportFilename('csv', monthName, timestamp), 'text/csv');
   };
 
   const exportJSON = (monthName, timestamp) => {
@@ -696,7 +714,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     }
 
     const json = JSON.stringify(exportData, null, 2);
-    downloadFile(json, `export-${timestamp}.json`, 'application/json');
+    downloadFile(json, buildExportFilename('json', monthName, timestamp), 'application/json');
   };
 
   // NEW: HTML Report for Boss/Email
@@ -1142,7 +1160,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'master-events-report-${timestamp}.html';
+        a.download = '${buildExportFilename('html', monthName, timestamp)}';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
