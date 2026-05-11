@@ -223,11 +223,13 @@ function normalizeValue(value, fieldName = '') {
     return isNaN(num) || num === 0 ? null : num;
   }
   
-  // Special handling for age fields - convert to integer
+  // Special handling for age fields - convert to integer.
+  // age_min = 0 is VALID DATA (infant programs). Don't coerce 0 to null
+  // here — that caused real-data loss verified May 2026 (9 events with
+  // age_min = 0 in the DB representing actual programs for infants).
   if (fieldName === 'age_min' || fieldName === 'age_max') {
     const num = parseInt(value, 10);
-    // Treat 0 as null for age (no age = 0 = null)
-    return isNaN(num) || num === 0 ? null : num;
+    return isNaN(num) ? null : num;
   }
   
   // Special handling for date fields - normalize to YYYY-MM-DD format
