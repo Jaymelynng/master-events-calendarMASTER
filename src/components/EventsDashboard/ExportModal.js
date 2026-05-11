@@ -463,9 +463,14 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Full Day Daily,Full Day Weekly,Half Day Daily,Half Day Weekly,Ages,Description,Description Status,Has Openings,Spots Left,Openings Display,Signup Mode,iClass Program,Type ID,URL\n';
       filteredEvents.forEach(event => {
         const gym = gyms.find(g => g.id === event.gym_id);
-        const ageDisplay = event.age_min && event.age_max
+        // Use explicit null/undefined checks so age_min = 0 (infants) is
+        // preserved. The truthy-only check dropped 9 real infant-program
+        // events from CSV exports (verified May 2026).
+        const hasMin = event.age_min != null;
+        const hasMax = event.age_max != null;
+        const ageDisplay = hasMin && hasMax
           ? `"Ages ${event.age_min}-${event.age_max}"`
-          : (event.age_min ? `"Ages ${event.age_min}+"` : '');
+          : (hasMin ? `"Ages ${event.age_min}+"` : '');
 
         let fdDaily = '', fdWeekly = '', hdDaily = '', hdWeekly = '';
         if (event.type === 'CAMP' && campPricing[event.gym_id]) {
