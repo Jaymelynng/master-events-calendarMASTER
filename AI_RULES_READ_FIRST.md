@@ -1,9 +1,92 @@
 # 🚨 AI AGENT - READ THIS ENTIRE FILE FIRST - MANDATORY
 
-**Last Updated**: April 8, 2026
+**Last Updated**: May 7, 2026
 **Purpose**: This file contains EVERYTHING an AI needs to know about this system. Read it completely before doing ANYTHING.
 
 > **Quick Start:** Also see `CLAUDE.md` in the root for a condensed 2-minute onboarding guide with session workflow.
+
+---
+
+# PART 0: iCLASSPRO PLATFORM REALITY (read BEFORE proposing anything)
+
+**This project exists BECAUSE iClassPro deliberately limits programmatic access. Before you suggest any solution that involves iClassPro, read `docs/ICLASSPRO/PLATFORM_OVERVIEW.md` (full canonical KB embedded in the repo).**
+
+The hard, non-negotiable facts every AI agent must know:
+
+### 1. iClassPro has NO public REST API. Period.
+
+- Founded 2008. 17 years. Still no public API.
+- It's deliberate — not an oversight, not "coming soon," not something to email them about.
+- This is the SINGLE most important fact about the platform.
+- **Do NOT propose** "use the iClass API to pull X" or "connect via Zapier" or "email iClass for a partner API." None of those exist.
+
+### 2. What public iClass endpoints DO expose (no auth required)
+
+Used by `automation/f12_collect_and_import.py`:
+- `/api/v1/classes/{id}` — Regular weekly classes (RICH — includes tuition + everything)
+- `/api/open/v1/{slug}/camps/{id}` — Camps/events (BARE — title, dates, times, ages, openings, NO PRICE)
+- Programs / link_types / categories endpoints — for navigation
+
+### 3. What iClass does NOT expose anywhere publicly
+
+- **Camp prices** (you must scrape the description text or maintain manual `camp_pricing` / `event_pricing` tables)
+- `pricing_schedule_id` on event detail (the public detail endpoint does NOT include this field)
+- `billing_schedule_id` / `chargeCategoryId` (these fields exist in the cart-response schema but are NULL for events that don't use schedules)
+- Any setup-level admin data
+
+### 4. The narrow native integrations that DO exist
+
+These are the ONLY sanctioned outside-the-platform connections. None expose camp pricing.
+
+| Integration | What it does | What it does NOT do |
+|---|---|---|
+| MailChimp | Push family data to MailChimp audience | Expose pricing data |
+| QuickBooks Online | Sync charges/payments | Expose pricing data |
+| Stripe | Alternative payment processor | Expose pricing data |
+| ADP / QB Payroll | Time clock export | Anything unrelated to payroll |
+| Power BI (Enterprise tier ONLY) | Data Warehouse → Power BI with 24h lag | Real-time. Available only on Enterprise tier (custom pricing). |
+
+### 5. The Enterprise Data Warehouse
+
+The ONE iClass-sanctioned path that COULD give programmatic pricing access — but ONLY on the Enterprise pricing tier (custom price, not published) with a 24-hour data refresh lag. If Rise Athletics is not on Enterprise, this is not an option.
+
+### 6. The ONLY programmatic paths to live customer-facing prices
+
+(All require some form of authentication; none use a "real" API)
+
+1. **Service-account customer flow** — log in as a fake parent, `add-cart-item` → `validate-cart-item` to read price, `remove-all-cart-items`. Heavy build. Brittle (JWT expires hourly, captchas, ToS risk).
+2. **Admin-side pricing-schedules pull** — what we did in April to load 274 schedules into Supabase. Requires admin login. Could be re-run periodically (cron) for fresh data.
+3. **Manual** — `camp_pricing` and `event_pricing` tables, updated by you / managers (current state).
+
+### 7. Pricing data architecture in this project
+
+| Event type | How iClass stores pricing | Our table |
+|---|---|---|
+| Camps | Pricing schedules (per-day / per-week, full / half) | `camp_pricing` (manual) + `pricing_schedules` (April 274-row snapshot, unwired) |
+| KNO / Clinic / Open Gym | Single flat price per event | `event_pricing` (manual, supports `effective_date`) |
+
+### 8. Tier-locked features (don't suggest features the gym doesn't have)
+
+| Feature | Minimum plan |
+|---|---|
+| Appointments | Elite |
+| Party Booking | Elite |
+| Pro Insights Analytics | Premium |
+| Branded App | Premium (+ $250 setup, +$25/mo each) |
+| Branded Website Builder | Premium |
+| Enterprise Portal | Enterprise (custom) |
+| Data Warehouse / Power BI | Enterprise (custom) |
+
+### 9. Where to read more
+
+The full embedded KB lives in `docs/ICLASSPRO/`:
+- `PLATFORM_OVERVIEW.md` — the canonical iClassPro KB
+- `reference/api-and-integrations.md` — technical architecture, every integration point
+- `reference/limitations-and-workarounds.md` — every known pain point with context
+- `reference/platform-deep-dive.md` — full feature details
+- `reference/article-index.md` — full index of 569 support KB articles with URLs
+
+The doc-map hook will surface the iClassPro section at the top of every UserPromptSubmit. Read it. Every time.
 
 ---
 
