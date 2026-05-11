@@ -17,6 +17,19 @@
 
 import React from 'react';
 import { parseYmdLocal, getActualEndDate } from './utils';
+import { inferErrorCategory, isErrorAcknowledgedAnywhere } from '../../lib/validationHelpers';
+
+// Decide whether a variant should show the data-error indicator.
+// Mirrors the EventCard.js logic: filter out sold_out, drop anything
+// acknowledged via patterns, then keep only data_error category.
+function variantHasDataErrors(variant, acknowledgedPatterns) {
+  const all = variant.validation_errors || [];
+  if (all.length === 0) return false;
+  const active = all.filter(
+    err => err.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(variant, err.message, acknowledgedPatterns)
+  );
+  return active.some(err => inferErrorCategory(err) === 'data_error');
+}
 
 // Group variants by their (start_date, end_date) so all variants of the same
 // camp run land together in the same row block.
@@ -80,6 +93,7 @@ export default function CampBand({
   currentYear,
   currentMonth,
   onEventSelect,
+  acknowledgedPatterns = [],
 }) {
   if (!campEvents || campEvents.length === 0) return null;
 
@@ -186,6 +200,7 @@ export default function CampBand({
         const style = variantStyle(variant);
         const status = spotsStatus(variant);
         const statusColor = status ? STATUS_COLORS[status.kind] : null;
+        const hasErrors = variantHasDataErrors(variant, acknowledgedPatterns);
 
         return (
           <div
@@ -195,7 +210,10 @@ export default function CampBand({
               gridColumn,
               gridRow,
               borderRadius: '7px',
-              border: `1.5px solid ${style.border}`,
+              // When a variant has unresolved data errors, switch the border
+              // to red and add a soft red glow so the bar pops as "needs
+              // attention" without redrawing the whole bar.
+              border: hasErrors ? '2px solid #dc3545' : `1.5px solid ${style.border}`,
               background: style.bg,
               color: style.color,
               padding: '0 12px',
@@ -205,13 +223,37 @@ export default function CampBand({
               fontSize: '11px',
               fontWeight: 800,
               cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+              boxShadow: hasErrors
+                ? '0 0 0 2px rgba(220,53,69,0.18), 0 1px 2px rgba(0,0,0,0.06)'
+                : '0 1px 2px rgba(0,0,0,0.06)',
               minWidth: 0,
               overflow: 'hidden',
+              position: 'relative',
             }}
             onClick={() => onEventSelect && onEventSelect(variant)}
-            title={variant.title || variantLabel(variant)}
+            title={
+              hasErrors
+                ? `⚠️ Has data error(s) — click for details. ${variant.title || variantLabel(variant)}`
+                : (variant.title || variantLabel(variant))
+            }
           >
+            {hasErrors && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-5px',
+                  right: '-5px',
+                  width: '12px',
+                  height: '12px',
+                  background: '#dc3545',
+                  borderRadius: '50%',
+                  border: '1.5px solid white',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                  zIndex: 2,
+                }}
+                title="Data error — click to see what's wrong"
+              />
+            )}
             <div style={{
               display: 'flex',
               alignItems: 'center',
