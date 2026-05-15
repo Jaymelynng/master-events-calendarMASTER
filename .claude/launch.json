@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "React App (Calendar + Bulk Links)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": 3000
+    },
+    {
+      "name": "Flask API Server (iClassPro sync backend)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["automation/local_api_server.py"],
+      "port": 5000
+    }
+  ]
+}

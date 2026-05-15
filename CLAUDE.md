@@ -59,6 +59,14 @@
 | Quick Actions tab | `src/components/AdminDashboard/AdminQuickActions.js` |
 | Rule Wizard | `src/components/AdminDashboard/RuleWizard.js` |
 | Email Composer | `src/components/AdminDashboard/EmailComposer.js` |
+| **📦 Bulk Links (NEW May 14, 2026)** | Port of Bulk Link PRO into Calendar — see [`docs/TECHNICAL/BULK_LINKS_FEATURE.md`](docs/TECHNICAL/BULK_LINKS_FEATURE.md) |
+| Hub component (entry) | `src/components/BulkLinks/BulkLinksHub.js` — tab nav, global Open/Copy, renders one GymProfileCard per gym |
+| Per-gym card | `src/components/BulkLinks/GymProfileCard.js` — expandable sections, checkboxes, per-card counters |
+| Data access | `src/lib/bulkLinksApi.js` — `bulkPagesApi`, `bulkPageDataApi.getBySlug()`, `bulkValuesApi.upsert/delete/bulkFillAll` |
+| Schema | `database/CREATE_BULK_LINKS_TABLES.sql` — 4 tables (`bulk_pages` / `bulk_sections` / `bulk_fields` / `bulk_field_values`) |
+| One-time data migration | `scripts/migrate-blp-to-calendar.mjs` — copies remaining 1,044 field_values from BLP's Supabase to Calendar's |
+| Entry toggle | `src/App.js` — `MasterNav` at top of page renders 2 master tabs (📅 Calendar / 📦 Bulk Links) and owns the `view` state. **URL-routed**: `/` → Calendar, `/bulk-links` → Bulk Links. Uses History API (pushState/popstate), no react-router dependency. |
+| SPA routing | `vercel.json` — rewrites any non-asset path to `/index.html` so direct visits to `/bulk-links` don't 404. |
 | **Libraries** | |
 | API functions | `src/lib/api.js` |
 | Event comparison | `src/lib/eventComparison.js` |
@@ -233,4 +241,4 @@ docs/
 
 ---
 
-**Last Updated:** April 26, 2026
+**Last Updated:** May 14, 2026 (Bulk Links Slice 1 added)
