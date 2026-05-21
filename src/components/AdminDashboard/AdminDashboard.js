@@ -5,6 +5,7 @@ import AdminQuickActions from './AdminQuickActions';
 import AdminChangeHistory from './AdminChangeHistory';
 import EmailComposer from './EmailComposer';
 import AdminFuturePlans from './AdminFuturePlans';
+import AdminFormatRules from './AdminFormatRules';
 import { monthlyRequirementsApi, eventTypesApi } from '../../lib/api';
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
@@ -537,6 +538,7 @@ export default function AdminDashboard({
 
   const tabs = [
     { id: 'rules', label: '📏 Gym Rules', alwaysShow: true },
+    { id: 'formats', label: '📐 Format Rules', alwaysShow: true },
     { id: 'pricing', label: '💰 Pricing', alwaysShow: true },
     { id: 'history', label: '📜 Change History', alwaysShow: true },
     { id: 'plans', label: '📅 Future Plans', alwaysShow: true },
@@ -670,6 +672,10 @@ export default function AdminDashboard({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         {activeTab === 'rules' && (
           <AdminGymRules gyms={gyms} />
+        )}
+
+        {activeTab === 'formats' && (
+          <AdminFormatRules />
         )}
 
         {activeTab === 'pricing' && (

@@ -824,3 +824,73 @@ export const futurePlansApi = {
     if (error) throw new Error(error.message);
   }
 };
+
+// Format Patterns API — UI-managed catalog of date / time / price / age /
+// program / skill format variations the validation engine recognizes.
+// Each row = one pattern (regex or keyword) the engine looks for in
+// titles + descriptions. See database/CREATE_FORMAT_PATTERNS_TABLE.sql.
+export const formatPatternsApi = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('format_patterns')
+      .select('*')
+      .order('category')
+      .order('name');
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async getByCategory(category) {
+    const { data, error } = await supabase
+      .from('format_patterns')
+      .select('*')
+      .eq('category', category)
+      .order('name');
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async create(pattern) {
+    const { data, error } = await supabase
+      .from('format_patterns')
+      .insert([{
+        category: pattern.category,
+        name: pattern.name,
+        pattern: pattern.pattern,
+        match_type: pattern.match_type || 'regex',
+        example: pattern.example || null,
+        description: pattern.description || null,
+        is_active: pattern.is_active !== false,
+        gym_ids: pattern.gym_ids || ['ALL'],
+        program: pattern.program || 'ALL',
+        created_by: pattern.created_by || 'manual'
+      }])
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('format_patterns')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async toggle(id, isActive) {
+    return formatPatternsApi.update(id, { is_active: isActive });
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('format_patterns')
+      .delete()
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+};
