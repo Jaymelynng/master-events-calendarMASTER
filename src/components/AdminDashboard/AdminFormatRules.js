@@ -238,51 +238,67 @@ function PatternEditor({ pattern, onSave, onCancel, defaultCategory }) {
 }
 
 // ─── Pattern Row ─────────────────────────────────────────────────────────────
+// Designed for non-coders: the EXAMPLE (what gets caught) is the visual hero.
+// Internal name and the regex itself are hidden behind a small details toggle
+// for the rare moments a developer needs to see them.
 function PatternRow({ pattern, onToggle, onEdit, onDelete, toggling }) {
+  const [showDetails, setShowDetails] = useState(false);
+
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-b-0 hover:bg-gray-50/60 ${!pattern.is_active ? 'opacity-50' : ''}`}>
-      {/* Name + type badge */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-sm font-semibold text-gray-800">{pattern.name}</span>
-          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${pattern.match_type === 'regex' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-            {pattern.match_type}
-          </span>
-        </div>
-        {pattern.example && (
-          <div className="text-xs text-gray-500 truncate">
-            Example: <span className="font-mono text-gray-700">{pattern.example}</span>
+    <div
+      className={`px-4 py-3 border-b border-gray-50 last:border-b-0 hover:bg-gray-50/60 ${!pattern.is_active ? 'opacity-50' : ''}`}
+    >
+      <div className="flex items-center gap-3">
+        {/* Hero: the example. Big and readable — what this catches in real text. */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-base font-bold text-gray-900 font-mono">
+              {pattern.example || '(no example)'}
+            </span>
+            {pattern.description && (
+              <span className="text-sm text-gray-600">
+                — {pattern.description}
+              </span>
+            )}
           </div>
-        )}
-        {pattern.description && (
-          <div className="text-xs text-gray-400 truncate mt-0.5">{pattern.description}</div>
-        )}
-      </div>
+          {/* Internal name + match-type, small and gray — for developer reference */}
+          <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-2">
+            <span>Internal name: <code className="bg-gray-100 px-1 py-0.5 rounded">{pattern.name}</code></span>
+            <span>·</span>
+            <span>Type: {pattern.match_type}</span>
+            <button
+              type="button"
+              onClick={() => setShowDetails((v) => !v)}
+              className="ml-1 text-amber-700 hover:text-amber-900 underline"
+            >
+              {showDetails ? 'hide pattern' : 'view raw pattern'}
+            </button>
+          </div>
+          {showDetails && (
+            <div className="mt-2 rounded bg-gray-50 border border-gray-200 px-3 py-2">
+              <code className="text-[11px] text-gray-700 break-all">{pattern.pattern}</code>
+            </div>
+          )}
+        </div>
 
-      {/* Pattern preview (truncated) */}
-      <div className="hidden md:block max-w-xs">
-        <code className="text-[11px] bg-gray-100 px-2 py-1 rounded text-gray-700 truncate inline-block max-w-full" title={pattern.pattern}>
-          {pattern.pattern}
-        </code>
-      </div>
-
-      {/* Edit + Delete + Toggle */}
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <button
-          onClick={() => onEdit(pattern)}
-          className="text-xs text-gray-500 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100"
-          title="Edit"
-        >
-          ✏️
-        </button>
-        <button
-          onClick={() => onDelete(pattern)}
-          className="text-xs text-gray-500 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50"
-          title="Delete"
-        >
-          🗑️
-        </button>
-        <Toggle checked={pattern.is_active} onChange={() => onToggle(pattern)} disabled={toggling} />
+        {/* Actions */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={() => onEdit(pattern)}
+            className="text-xs text-gray-500 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100"
+            title="Edit"
+          >
+            ✏️
+          </button>
+          <button
+            onClick={() => onDelete(pattern)}
+            className="text-xs text-gray-500 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50"
+            title="Delete"
+          >
+            🗑️
+          </button>
+          <Toggle checked={pattern.is_active} onChange={() => onToggle(pattern)} disabled={toggling} />
+        </div>
       </div>
     </div>
   );
