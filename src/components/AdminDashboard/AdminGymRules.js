@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { rulesApi } from '../../lib/api';
 import RuleWizard from './RuleWizard';
+import RuleManager from './RuleManager';
 
 // ─── Toggle Switch ───────────────────────────────────────────────────────────
 function Toggle({ checked, onChange, disabled }) {
@@ -552,15 +553,25 @@ export default function AdminGymRules({ gyms }) {
         </div>
       </div>
 
-      {/* ── Detail Panel (slide in from right) ────────────────────────── */}
+      {/* ── Three-panel Rule Manager (replaces old DetailPanel — May 2026) ─── */}
       {detailRule && (
-        <DetailPanel
+        <RuleManager
           rule={detailRule}
+          gyms={gyms}
           onClose={() => setDetailRule(null)}
-          onEdit={(rule) => { setEditingRule(rule); setShowWizard(true); }}
-          onDelete={handleDelete}
-          onToggle={handleToggle}
-          toggling={togglingIds.has(detailRule.id)}
+          onSaved={(updated) => {
+            setRules((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+            setDetailRule(updated);
+          }}
+          onDeleted={(id) => {
+            setRules((prev) => prev.filter((r) => r.id !== id));
+            setDetailRule(null);
+          }}
+          onOpenWizard={(rule) => {
+            setDetailRule(null);
+            setEditingRule(rule);
+            setShowWizard(true);
+          }}
         />
       )}
 
