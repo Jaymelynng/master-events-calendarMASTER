@@ -1285,7 +1285,11 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 start_date = block_dates[0]
                 end_date = block_dates[-1]
 
-        if start_date and start_date < today_str:
+        # Keep camp as long as it hasn't fully ended yet (end_date in future).
+        # Was: start_date < today_str — which skipped mid-week camps that started
+        # yesterday but still meet for the rest of the week (e.g. Memorial Day
+        # camp starting Tue 5/26, viewed on Wed 5/27 — old filter dropped it).
+        if end_date and end_date < today_str:
             continue
         
         # 3) build URL from ID (your source of truth)
