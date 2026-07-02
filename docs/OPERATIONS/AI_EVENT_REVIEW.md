@@ -53,6 +53,8 @@ Past events are never reviewed (nothing to fix). SPECIAL EVENT is exempt (same a
 
 ## What to check per event (the rubric)
 
+**Jayme's core doctrine (July 2, 2026): there is NO "truth" side.** An event is three pieces — settings, title text, description text. A disagreement between ANY two of them, in any combination, is an error, regardless of which side is "right." Never assume the settings are correct and the text is wrong (or vice versa) — just report that they don't line up. Check every pair: settings↔title, settings↔description, title↔description.
+
 Compare all three sources — **iClass settings** (dates, time, day, ages, program type), **title**, **description**:
 
 1. **Dates incl. day numbers:** description/title dates that don't fall inside start–end (the engine only compares month names — the AI catches "event July 8, text says July 15"). Ignore registration/deadline/other-event mentions.
