@@ -15,6 +15,24 @@
 4. **Respect dismissals.** If a flag's message matches an entry in the event's `acknowledged_errors` (or an `acknowledged_patterns` row for that gym + type), do not re-flag it.
 5. **Suggestions, not verdicts.** Flags render in the Errors tab under 🤖 AI Review, clearly separated. Jayme verifies or dismisses; the AI never acts on its own flags.
 
+## Jayme's rules are LAW (load them first)
+
+Before reviewing, load Jayme's active rules and obey them like the engine does:
+
+```sql
+SELECT rule_type, gym_ids, program, scope, keyword, event_id, value, label
+FROM rules
+WHERE is_active = true AND rule_type NOT LIKE 'check_%'
+  AND (is_permanent = true OR end_date >= CURRENT_DATE);
+```
+
+How to apply them (a rule applies when its gym_ids contains the event's gym or 'ALL', and its program matches the event type or 'ALL'):
+- `program_synonym` — value (a keyword/title text) MEANS the program in label. e.g. value "gym fun friday" + label "OPEN GYM" → that title IS an open gym; never flag it as a program conflict.
+- `program_ignore` — the keyword in value is NOT a program signal for that event type (e.g. "open gym" as a station name inside KNO events). Never flag it.
+- `valid_time` — the time in value is an accepted extra time for that gym/program; don't flag text mentioning it.
+- `exception` / `requirement_exception` — Jayme has explicitly excused this; respect the scope (all_events / keyword / single event_id).
+- Any other user rule type: read its label/value and honor the obvious intent. When a rule seems to cover the situation, DON'T flag.
+
 ## Scope query (which events get reviewed)
 
 ```sql
