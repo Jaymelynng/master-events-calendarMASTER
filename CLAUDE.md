@@ -88,6 +88,7 @@
 - iClass API does NOT provide prices
 - **Camp prices:** `camp_pricing` table — still used by sync to SET the displayed price on events (display only, no validation)
 - **Other prices:** `event_pricing` table with `effective_date` support — same, display only
+- **Pricing admin tab REMOVED July 2, 2026 (Jayme's ask)** — `AdminPricing.js` deleted (recoverable from git). Edit prices directly in Supabase if a base price changes.
 - **April backend-discovery data** (`pricing_schedules`, `camp_type_mappings`) lives in the `archive` schema, out of `public`
 - **Raw pricing data:** `data/gym-pricing-raw/` has iClassPro enterprise pricing for EST + CCP (all 10 gyms collected)
 
@@ -128,10 +129,9 @@
 - **Runs:** daily scheduled Claude Code task + on demand ("run the AI event review" in any session).
 - **Procedure (the contract any session must follow):** `docs/OPERATIONS/AI_EVENT_REVIEW.md` — read it before touching this system. Hard rules: write only to the two ai_* columns, confident-only, no price flags, respect dismissals.
 
-### Admin Dashboard Tabs (6 tabs + Email button)
-- **🚨 Errors** (NEW July 1, 2026) — Errors Command Center: every caught error per gym / per topic / totals. Summary cards → horizontal topic tabs (Price / Time / Dates / Age / Program / Title-Desc / No Description) → three panels: gyms with counts | event cards | detail with iClass link + Dismiss / Make Rule. File: `AdminErrorsCenter.js`. Replaces the old Audit & Review tab deleted in June 2026.
-- **Gym Rules** — Rule Wizard, permanent/temporary rules, synonyms, exceptions, plus the 11 system checks with toggles (the old Audit Rules tab was merged into here)
-- **Pricing** — Manage event_pricing and camp_pricing
+### Admin Dashboard Tabs (5 tabs + Email button)
+- **🚨 Errors** (NEW July 1, 2026) — Errors Command Center: every caught error per gym / per topic / totals + the 🤖 AI Review lane. Summary cards → horizontal topic tabs (Time / Dates / Age / Program / Title-Desc / AI Review / No Description) → three panels: gyms with counts | event cards | detail with iClass link + Dismiss / Make Rule. File: `AdminErrorsCenter.js`. Replaces the old Audit & Review tab deleted in June 2026.
+- **Gym Rules** — Rule Wizard, permanent/temporary rules, synonyms, exceptions, plus the system checks with toggles (the old Audit Rules tab was merged into here)
 - **Change History** — Audit log with filters and CSV export
 - **Future Plans** — Track planned features, improvements, ideas (add/edit/delete from UI)
 - **Quick Actions** — Sync, import, super admin tools

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AdminErrorsCenter from './AdminErrorsCenter';
 import AdminGymRules from './AdminGymRules';
-import AdminPricing from './AdminPricing';
 import AdminQuickActions from './AdminQuickActions';
 import AdminChangeHistory from './AdminChangeHistory';
 import EmailComposer from './EmailComposer';
@@ -539,7 +538,6 @@ export default function AdminDashboard({
   const tabs = [
     { id: 'audit', label: '🚨 Errors', alwaysShow: true },
     { id: 'rules', label: '📏 Gym Rules', alwaysShow: true },
-    { id: 'pricing', label: '💰 Pricing', alwaysShow: true },
     { id: 'history', label: '📜 Change History', alwaysShow: true },
     { id: 'plans', label: '📅 Future Plans', alwaysShow: true },
     { id: 'actions', label: '⚡ Quick Actions', alwaysShow: true },
@@ -676,10 +674,6 @@ export default function AdminDashboard({
 
         {activeTab === 'rules' && (
           <AdminGymRules gyms={gyms} />
-        )}
-
-        {activeTab === 'pricing' && (
-          <AdminPricing gyms={gyms} />
         )}
 
         {activeTab === 'history' && (
