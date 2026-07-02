@@ -58,7 +58,8 @@ Past events are never reviewed (nothing to fix). SPECIAL EVENT is exempt (same a
 Compare all three sources — **iClass settings** (dates, time, day, ages, program type), **title**, **description**:
 
 1. **Dates incl. day numbers:** description/title dates that don't fall inside start–end (the engine only compares month names — the AI catches "event July 8, text says July 15"). Ignore registration/deadline/other-event mentions.
-   **Theme-vs-date-claim rule (Jayme, July 2):** a month/holiday functioning as a DATE CLAIM that disagrees with settings → always flag. A month clearly functioning as a NAME/THEME ("4th of July Party!", "Oktoberfest KNO") → quiet ONLY when the event's actual dates in title/description all correctly match settings — the other dates lining up is the proof it's a theme. **Ambiguous → FLAG. The tie always goes to flagging** (a missed mistake costs more than a one-click dismissal).
+   **Title-month rule (Jayme, July 2 — data-verified):** a month name in the TITLE that isn't one of the event's actual months → **ALWAYS flag, no theme exception.** We checked all ~900 month-mentioning titles in her full history: zero theme-style innocents ("4th of July Party" on a June event has never happened); the only 2 mismatches ever were both real copied-title mistakes. If a theme event ever appears, one dismissal handles it.
+   **Lesson from a real miss (July 2):** a reviewer read "Kids Night Out | June 24th" on a July 24 event and didn't flag it. Month-vs-month on the title is MECHANICAL, not judgment — explicitly compare every month name in every title against the event's months, every event, no skimming.
 2. **Day of week:** title AND description (engine checks description only).
 3. **Ages incl. max:** title/description ages vs `age_min`–`age_max`, handling months-units ("18 months") correctly.
 4. **Program:** does the text describe a different program than the iClass type? Use judgment, incl. camp-in-title on non-camps (engine only knows KNO/Clinic/Open Gym keywords).
@@ -89,6 +90,16 @@ Compare all three sources — **iClass settings** (dates, time, day, ages, progr
 ## Execution pattern
 
 1. Run the scope query. If 0 rows — report "nothing new to review" and stop.
+1b. **Mechanical title-month sweep (safety net — a deterministic query catches what a reader skims past).** Run this against the scoped events and treat every hit as a mandatory flag unless already flagged/dismissed:
+```sql
+WITH months(name, num) AS (VALUES ('january',1),('february',2),('march',3),('april',4),('may',5),('june',6),
+  ('july',7),('august',8),('september',9),('october',10),('november',11),('december',12))
+SELECT e.id, e.gym_id, e.title, e.start_date, e.end_date, m.name AS bad_month
+FROM events e JOIN months m ON e.title ~* ('\m' || m.name || '\M')
+WHERE e.deleted_at IS NULL AND e.end_date >= CURRENT_DATE
+  AND m.num <> EXTRACT(MONTH FROM e.start_date::date)
+  AND m.num <> EXTRACT(MONTH FROM COALESCE(e.end_date, e.start_date)::date);
+```
 2. For large batches (>30 events), fan out subagents (one per ~40 events, each returns flags as JSON; the main session sanity-checks before writing).
 3. Write per event: `UPDATE events SET ai_review_flags = <flags>, ai_reviewed_at = now() WHERE id = <id>;`
 4. Report to Jayme: how many reviewed, how many flagged, the flags in plain English.
