@@ -30,8 +30,9 @@ const TOPICS = [
   { id: 'time',        label: 'Time',           icon: '🕐', types: ['time_mismatch'] },
   { id: 'date',        label: 'Dates',          icon: '📅', types: ['date_mismatch', 'day_mismatch', 'year_mismatch', 'impossible_date'] },
   { id: 'age',         label: 'Age',            icon: '👶', types: ['age_mismatch'] },
-  { id: 'program',     label: 'Program',        icon: '🏷️', types: ['program_mismatch', 'missing_program_in_title', 'skill_mismatch'] },
-  { id: 'title_desc',  label: 'Title vs Desc',  icon: '📝', types: ['title_desc_mismatch'] },
+  // Program = ONE topic in Jayme's head: settings↔text (program_mismatch) AND
+  // text↔text (title_desc_mismatch) are two halves of the same question.
+  { id: 'program',     label: 'Program',        icon: '🏷️', types: ['program_mismatch', 'missing_program_in_title', 'skill_mismatch', 'title_desc_mismatch'] },
   { id: 'ai',          label: 'AI Review',      icon: '🤖', types: [] }, // special: ai_review_flags (suggestions, own lane)
   { id: 'description', label: 'No Description', icon: '📄', types: [] }, // special: description_status issues
 ];
