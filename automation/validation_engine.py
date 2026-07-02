@@ -267,6 +267,12 @@ def check_age_mismatch(ctx):
         if not text:
             return None
         text_lower = text.lower()[:char_limit]
+        # Pre-clean ages expressed in MONTHS ("ages 18 months to 4 years",
+        # "12 mos+") \u2014 iClass age_min is in years, so a months number is not
+        # comparable and produced false positives (real case: OAS preschool
+        # open gym, "ages 18 months to 4 years" flagged as "says 18" vs min 1).
+        text_lower = re.sub(r'ages?\s*\d{1,2}\s*(?:months?|mos?)\b', ' ', text_lower)
+        text_lower = re.sub(r'\b\d{1,2}\s*(?:months?|mos?)\b', ' ', text_lower)
         age_patterns = re.findall(
             r'ages?\s*(\d{1,2})\s*[-\u2013to+]|ages?\s*(\d{1,2})\b|(\d{1,2})\s*[-\u2013]\s*\d{1,2}\s*(?:years?|yrs?)',
             text_lower
