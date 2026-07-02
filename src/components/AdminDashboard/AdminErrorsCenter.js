@@ -32,6 +32,7 @@ const TOPICS = [
   { id: 'age',         label: 'Age',            icon: '👶', types: ['age_mismatch'] },
   { id: 'program',     label: 'Program',        icon: '🏷️', types: ['program_mismatch', 'missing_program_in_title', 'skill_mismatch'] },
   { id: 'title_desc',  label: 'Title vs Desc',  icon: '📝', types: ['title_desc_mismatch'] },
+  { id: 'ai',          label: 'AI Review',      icon: '🤖', types: [] }, // special: ai_review_flags (suggestions, own lane)
   { id: 'description', label: 'No Description', icon: '📄', types: [] }, // special: description_status issues
 ];
 
@@ -69,16 +70,22 @@ export default function AdminErrorsCenter({ gyms, events }) {
         const allErrors = (ev.validation_errors || []).filter(e => e.type !== 'sold_out');
         const active = allErrors.filter(e => !isErrorAcknowledgedAnywhere(evWithAcks, e.message, patterns));
         const dismissed = allErrors.filter(e => isErrorAcknowledgedAnywhere(evWithAcks, e.message, patterns));
+        // AI review suggestions live in their own lane (ai_review_flags) —
+        // same dismiss mechanism (acknowledged_errors keyed by message)
+        const allAiFlags = ev.ai_review_flags || [];
+        const activeAiFlags = allAiFlags.filter(f => !isErrorAcknowledgedAnywhere(evWithAcks, f.message, patterns));
+        const dismissedAiFlags = allAiFlags.filter(f => isErrorAcknowledgedAnywhere(evWithAcks, f.message, patterns));
         const descIssue = ev.description_status === 'none' || ev.description_status === 'flyer_only';
-        return { ...evWithAcks, activeErrors: active, dismissedErrors: dismissed, descIssue };
+        return { ...evWithAcks, activeErrors: active, dismissedErrors: dismissed, activeAiFlags, dismissedAiFlags, descIssue };
       })
-      .filter(ev => ev.activeErrors.length > 0 || ev.dismissedErrors.length > 0 || ev.descIssue);
+      .filter(ev => ev.activeErrors.length > 0 || ev.dismissedErrors.length > 0 || ev.activeAiFlags.length > 0 || ev.dismissedAiFlags.length > 0 || ev.descIssue);
   }, [events, patterns, ackOverride]);
 
   // ── Topic + gym filtering ──────────────────────────────────────────────────
   const topicMatches = (ev, topicId) => {
-    if (topicId === 'all') return ev.activeErrors.length > 0 || ev.descIssue || (showDismissed && ev.dismissedErrors.length > 0);
+    if (topicId === 'all') return ev.activeErrors.length > 0 || ev.activeAiFlags.length > 0 || ev.descIssue || (showDismissed && (ev.dismissedErrors.length > 0 || ev.dismissedAiFlags.length > 0));
     if (topicId === 'description') return ev.descIssue;
+    if (topicId === 'ai') return ev.activeAiFlags.length > 0 || (showDismissed && ev.dismissedAiFlags.length > 0);
     const topic = TOPICS.find(t => t.id === topicId);
     const pool = showDismissed ? [...ev.activeErrors, ...ev.dismissedErrors] : ev.activeErrors;
     return pool.some(e => topic?.types?.includes(e.type));
@@ -89,7 +96,8 @@ export default function AdminErrorsCenter({ gyms, events }) {
     issueEvents.forEach(ev => {
       if (!topicMatches(ev, topicFilter)) return;
       counts[ev.gym_id] = (counts[ev.gym_id] || 0) +
-        ev.activeErrors.length + (ev.descIssue ? 1 : 0) + (showDismissed ? ev.dismissedErrors.length : 0);
+        ev.activeErrors.length + ev.activeAiFlags.length + (ev.descIssue ? 1 : 0) +
+        (showDismissed ? ev.dismissedErrors.length + ev.dismissedAiFlags.length : 0);
     });
     return counts;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,9 +110,11 @@ export default function AdminErrorsCenter({ gyms, events }) {
       issueEvents.forEach(ev => {
         if (gymFilter !== 'all' && ev.gym_id !== gymFilter) return;
         if (t.id === 'all') {
-          counts.all += ev.activeErrors.length + (ev.descIssue ? 1 : 0);
+          counts.all += ev.activeErrors.length + ev.activeAiFlags.length + (ev.descIssue ? 1 : 0);
         } else if (t.id === 'description') {
           if (ev.descIssue) counts.description += 1;
+        } else if (t.id === 'ai') {
+          counts.ai += ev.activeAiFlags.length;
         } else {
           counts[t.id] += ev.activeErrors.filter(e => t.types.includes(e.type)).length;
         }
@@ -126,13 +136,14 @@ export default function AdminErrorsCenter({ gyms, events }) {
 
   // ── Summary numbers (respect nothing — always the global truth) ───────────
   const summary = useMemo(() => {
-    let errors = 0, warnings = 0, descIssues = 0, dismissed = 0;
+    let errors = 0, warnings = 0, descIssues = 0, dismissed = 0, aiFlags = 0;
     issueEvents.forEach(ev => {
       ev.activeErrors.forEach(e => (e.severity === 'warning' ? warnings++ : errors++));
+      aiFlags += ev.activeAiFlags.length;
       if (ev.descIssue) descIssues++;
-      dismissed += ev.dismissedErrors.length;
+      dismissed += ev.dismissedErrors.length + ev.dismissedAiFlags.length;
     });
-    return { events: issueEvents.filter(e => e.activeErrors.length > 0 || e.descIssue).length, errors, warnings, descIssues, dismissed };
+    return { events: issueEvents.filter(e => e.activeErrors.length > 0 || e.activeAiFlags.length > 0 || e.descIssue).length, errors, warnings, descIssues, dismissed, aiFlags };
   }, [issueEvents]);
 
   // ── Dismiss / rule writes (same contract as the calendar side panel) ──────
@@ -214,6 +225,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
           { label: 'Events needing attention', value: summary.events, color: '#6e5658', bg: '#f7f3f3' },
           { label: 'Errors (wrong info)', value: summary.errors, color: '#991b1b', bg: '#fef2f2' },
           { label: 'Warnings', value: summary.warnings, color: '#9a3412', bg: '#fff7ed' },
+          { label: 'AI suggestions', value: summary.aiFlags, color: '#3730a3', bg: '#eef2ff' },
           { label: 'No description', value: summary.descIssues, color: '#374151', bg: '#f3f4f6' },
           { label: 'Dismissed', value: summary.dismissed, color: '#166534', bg: '#f0fdf4' },
         ].map(card => (
@@ -352,6 +364,13 @@ export default function AdminErrorsCenter({ gyms, events }) {
                       </span>
                     );
                   })}
+                  {(topicFilter === 'all' || topicFilter === 'ai') && ev.activeAiFlags.map((f, i) => (
+                    <span key={`ai-${i}`} className="px-2 py-0.5 rounded-full text-[11px] font-bold border"
+                      style={{ background: '#eef2ff', borderColor: '#a5b4fc', color: '#3730a3' }}
+                      title={f.message}>
+                      🤖 {f.message.length > 42 ? f.message.slice(0, 42) + '…' : f.message}
+                    </span>
+                  ))}
                   {ev.descIssue && (topicFilter === 'all' || topicFilter === 'description') && (
                     <span className="px-2 py-0.5 rounded-full text-[11px] font-bold border bg-gray-100 border-gray-300 text-gray-600">
                       📄 {ev.description_status === 'none' ? 'No description' : 'Flyer only'}
@@ -437,6 +456,41 @@ export default function AdminErrorsCenter({ gyms, events }) {
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* AI review suggestions — separate lane, clearly labeled */}
+              {selectedEvent.activeAiFlags.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {selectedEvent.activeAiFlags.map((f, i) => (
+                    <div key={`aif-${i}`} className="rounded-lg border p-2.5" style={{ background: '#eef2ff', borderColor: '#a5b4fc' }}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-black" style={{ color: '#3730a3' }}>🤖 AI Review</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black text-white" style={{ background: '#6366f1' }}>
+                          SUGGESTION
+                        </span>
+                      </div>
+                      <div className="text-xs mt-1 font-semibold" style={{ color: '#3730a3' }}>{f.message}</div>
+                      {f.reason && (
+                        <div className="text-[11px] mt-1 italic" style={{ color: '#4f46e5' }}>{f.reason}</div>
+                      )}
+                      <button
+                        onClick={() => setDismissModal({
+                          eventId: selectedEvent.id,
+                          errorMessage: f.message,
+                          errorObj: f,
+                          gymId: selectedEvent.gym_id,
+                          eventType: selectedEvent.type || selectedEvent.event_type || 'CAMP',
+                          ruleEligible: false,
+                          ruleInfo: null,
+                        })}
+                        className="mt-2 px-2.5 py-1 rounded-md text-xs font-bold bg-white border transition-colors hover:bg-green-50 cursor-pointer"
+                        style={{ borderColor: '#a5b4fc', color: '#3730a3' }}
+                      >
+                        ✓ Dismiss
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
 

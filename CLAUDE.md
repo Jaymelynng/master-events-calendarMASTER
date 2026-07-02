@@ -121,6 +121,13 @@
 - Level 2: Shift+Click magic wand → Admin Dashboard
 - Level 3: Press `*` + PIN (set via `REACT_APP_ADMIN_PIN` env var) → Super Admin (Quick Actions)
 
+### AI Event Review (NEW July 1, 2026)
+- **What:** Claude reviews every new/changed upcoming event like a gymnastics-literate human — title vs description vs iClass settings. Catches what regexes can't: wrong skills on clinics (knows BHS = back handspring), same-month wrong day-numbers, leftover copy from other events.
+- **Where flags live:** `events.ai_review_flags` (jsonb) + `events.ai_reviewed_at` — its own lane. NEVER writes to `validation_errors` (sync owns that and overwrites it every run).
+- **UI:** 🤖 AI Review topic in the Errors tab. Flags are labeled SUGGESTION with a plain-English reason; dismiss uses the standard acknowledged_errors flow and sticks across runs.
+- **Runs:** daily scheduled Claude Code task + on demand ("run the AI event review" in any session).
+- **Procedure (the contract any session must follow):** `docs/OPERATIONS/AI_EVENT_REVIEW.md` — read it before touching this system. Hard rules: write only to the two ai_* columns, confident-only, no price flags, respect dismissals.
+
 ### Admin Dashboard Tabs (6 tabs + Email button)
 - **🚨 Errors** (NEW July 1, 2026) — Errors Command Center: every caught error per gym / per topic / totals. Summary cards → horizontal topic tabs (Price / Time / Dates / Age / Program / Title-Desc / No Description) → three panels: gyms with counts | event cards | detail with iClass link + Dismiss / Make Rule. File: `AdminErrorsCenter.js`. Replaces the old Audit & Review tab deleted in June 2026.
 - **Gym Rules** — Rule Wizard, permanent/temporary rules, synonyms, exceptions, plus the 11 system checks with toggles (the old Audit Rules tab was merged into here)
