@@ -24,7 +24,9 @@ import {
 // Topic groups — same groupings as validationHelpers filter groups
 const TOPICS = [
   { id: 'all',         label: 'All',            icon: '🗂️', types: null },
-  { id: 'price',       label: 'Price',          icon: '💰', types: ['price_mismatch', 'camp_price_mismatch', 'event_price_mismatch'] },
+  // NOTE: 'price' topic removed July 1, 2026 — Jayme removed all pricing
+  // validation (checks deleted from rules table, stored errors stripped).
+  // See database/REMOVED_PRICING_VALIDATION_2026_07_01.sql to restore.
   { id: 'time',        label: 'Time',           icon: '🕐', types: ['time_mismatch'] },
   { id: 'date',        label: 'Dates',          icon: '📅', types: ['date_mismatch', 'day_mismatch', 'year_mismatch', 'impossible_date'] },
   { id: 'age',         label: 'Age',            icon: '👶', types: ['age_mismatch'] },

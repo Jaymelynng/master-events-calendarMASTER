@@ -77,16 +77,18 @@
 
 ### Validation System
 - **DATA errors** (red) = something is WRONG (mismatch between sources)
-- **All validation is database-driven** — 11 check rules in the `rules` table, executed by `validation_engine.py`
+- **All validation is database-driven** — 8 check rules in the `rules` table, executed by `validation_engine.py` (was 11 — the 3 pricing checks were removed July 1, 2026, see below)
 - **Python has zero hardcoded validation** — `f12_collect_and_import.py` calls the engine, which reads active checks from the database
 - **User rules** (valid_price, valid_time, exception, etc.) also live in the `rules` table
 - **Format errors were never implemented** — the old SHOW_FORMAT_ERRORS toggle was hiding nothing (dead code, now removed)
 - **What gets compared:** See `docs/OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md` for the complete comparison table
 
 ### Pricing
+- **⚠️ PRICE VALIDATION REMOVED July 1, 2026 (Jayme's decision)** — the 3 pricing checks (`check_camp_price`, `check_event_price`, `check_price_mismatch`) are deleted from the `rules` table and stored pricing errors were stripped. Too many weird situations; Jayme is exploring an authenticated-backend connection before rebuilding. Do NOT re-add pricing validation without her explicit go. Restore path: `database/REMOVED_PRICING_VALIDATION_2026_07_01.sql`. Full context: `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md`.
 - iClass API does NOT provide prices
-- **Camp prices:** `camp_pricing` table (we built this)
-- **Other prices:** `event_pricing` table with `effective_date` support (we built this Feb 2026)
+- **Camp prices:** `camp_pricing` table — still used by sync to SET the displayed price on events (display only, no validation)
+- **Other prices:** `event_pricing` table with `effective_date` support — same, display only
+- **April backend-discovery data** (`pricing_schedules`, `camp_type_mappings`) lives in the `archive` schema, out of `public`
 - **Raw pricing data:** `data/gym-pricing-raw/` has iClassPro enterprise pricing for EST + CCP (all 10 gyms collected)
 
 ### Rules System (Unified March 2026)

@@ -1,0 +1,55 @@
+-- ============================================================================
+-- PRICING VALIDATION REMOVED — July 1, 2026 (Jayme's decision)
+-- ============================================================================
+-- Jayme: "the current way to verify the price is wrong or right does not work
+-- ... too many weird situations ... for now delete pricing rules, I want to
+-- focus first on general errors (program vs text, age vs settings, title vs
+-- description)."
+--
+-- WHAT WAS REMOVED:
+--   1. The 3 pricing check rules from the `rules` table (deleted below,
+--      restore INSERTs at the bottom of this file).
+--   2. Stored pricing errors stripped from events.validation_errors
+--      (types: camp_price_mismatch, event_price_mismatch, price_mismatch).
+--   3. pricing_schedules (274 rows) + camp_type_mappings (243 rows) MOVED to
+--      the `archive` schema — NOT destroyed, because the original
+--      pricing-full-{slug}-2026-04-08.json exports no longer exist in
+--      Downloads, so these tables are the only copy of the April backend
+--      discovery data. Restore: ALTER TABLE archive.pricing_schedules SET SCHEMA public;
+--      camp_pricing_map (0 rows, empty) was DROPPED outright.
+--      Only standalone scripts used these — sync and the app never read them.
+--
+-- WHAT WAS KEPT (on purpose — do not delete):
+--   - camp_pricing + event_pricing tables and the Admin Pricing tab.
+--     Sync uses them to SET the displayed price on every event
+--     (f12_collect_and_import.py ~line 1308: "Get price from SOURCE OF
+--     TRUTH"). iClass's public camps API sends NO price at all — drop these
+--     and every event card goes priceless.
+--   - The check functions in validation_engine.py (check_camp_price /
+--     check_event_price / check_price_mismatch). They are dead code while no
+--     rules row references them — the engine only runs checks that exist as
+--     active rows in `rules`.
+--
+-- TO RESTORE PRICE VALIDATION LATER: run the INSERTs below.
+-- ============================================================================
+
+-- ── The DELETE that was executed ─────────────────────────────────────────────
+-- DELETE FROM rules WHERE rule_type IN
+--   ('check_camp_price','check_event_price','check_price_mismatch',
+--    'valid_price','sibling_price');
+
+-- ── The stored-error strip that was executed ─────────────────────────────────
+-- UPDATE events
+-- SET validation_errors = COALESCE(
+--   (SELECT jsonb_agg(e) FROM jsonb_array_elements(validation_errors) e
+--    WHERE e->>'type' NOT IN ('camp_price_mismatch','event_price_mismatch','price_mismatch')),
+--   '[]'::jsonb)
+-- WHERE jsonb_typeof(validation_errors) = 'array'
+--   AND EXISTS (SELECT 1 FROM jsonb_array_elements(validation_errors) e
+--               WHERE e->>'type' IN ('camp_price_mismatch','event_price_mismatch','price_mismatch'));
+
+-- ── RESTORE: re-create the 3 pricing check rules exactly as they were ────────
+-- INSERT INTO rules (id, rule_type, gym_ids, program, scope, value, label, is_active, is_permanent, created_by, created_at) VALUES
+-- ('78ab7c23-112c-4bd6-9444-c2ec587dd77e', 'check_camp_price',     '{ALL}', 'CAMP', 'all_events', 'system_check', 'Camp Price vs Pricing Table',            true, true, 'system', '2026-04-27 03:17:11.975664+00'),
+-- ('6ca35f5a-9421-4b05-897e-c17d4c66cd3f', 'check_event_price',    '{ALL}', 'ALL',  'all_events', 'system_check', 'Event Price vs Pricing Table',           true, true, 'system', '2026-04-27 03:17:11.975664+00'),
+-- ('7258d3d0-21c7-435f-a0c6-db8cf5516cdc', 'check_price_mismatch', '{ALL}', 'ALL',  'all_events', 'system_check', 'Price Mismatch (Title vs Description)',  true, true, 'system', '2026-04-27 03:17:11.975664+00');
