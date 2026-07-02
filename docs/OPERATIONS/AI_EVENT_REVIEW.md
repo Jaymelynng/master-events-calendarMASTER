@@ -19,8 +19,10 @@
 
 ```sql
 SELECT id, gym_id, type, title, description, start_date, end_date, "time",
-       day_of_week, age_min, age_max, program_name, validation_errors,
-       acknowledged_errors
+       day_of_week, age_min, age_max, program_name,
+       registration_start_date, registration_end_date,
+       openings, show_openings, allow_choose_days,
+       validation_errors, acknowledged_errors
 FROM events
 WHERE deleted_at IS NULL
   AND end_date >= CURRENT_DATE
@@ -41,7 +43,11 @@ Compare all three sources — **iClass settings** (dates, time, day, ages, progr
 4. **Program:** does the text describe a different program than the iClass type? Use judgment, incl. camp-in-title on non-camps (engine only knows KNO/Clinic/Open Gym keywords).
 5. **Skills (clinics):** does the title's skill match what the description teaches? Use real gymnastics knowledge — BHS = back handspring = flip-flop; kip ≠ pullover; recognize skills no list contains. Multi-skill clinics are fine if the description covers them.
 6. **Common sense:** leftover text from a different event/gym/season, contradictions, nonsense. NOT grammar/typos/style — data errors only.
-7. **Never flag prices.** Pricing validation was removed July 1, 2026 (Jayme's decision).
+7. **Registration window (settings):** `registration_end_date` before `registration_start_date`; registration closing suspiciously long before the event or after it ends; text like "register by July 5" contradicting the actual registration dates; registration not open for an imminent event.
+8. **Signup mode (settings):** `allow_choose_days` vs the text — description says "choose your days" or "$70/day" while the setting is full-week-only (false), or "must register for the entire week" while per-day signup is on (true). Flag only clear contradictions.
+9. **Openings sanity (settings):** text claims "sold out" while `openings` > 0; text claims specific spots left ("only 5 spots!") wildly off from `openings`; `openings` = 0 while text urges immediate signup without a waitlist mention. Note: iClass gives NO total capacity (maxStudents is always null) — `openings` = spots remaining is all we have; never invent a capacity number.
+10. **Program name (settings):** `program_name` (the iClass backend program) vs `type` vs what the text sells — e.g. program_name says half-day but everything else says full-day.
+11. **Never flag prices.** Pricing validation was removed July 1, 2026 (Jayme's decision). Exception: a price APPEARING in a signup-mode contradiction (rule 8's "$70/day") is about the signup mode, not the amount — never judge whether a dollar amount is correct.
 
 ## Flag format (written to `ai_review_flags` as a jsonb array)
 
