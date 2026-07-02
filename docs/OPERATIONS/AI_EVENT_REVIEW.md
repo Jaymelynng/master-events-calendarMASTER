@@ -58,6 +58,7 @@ Past events are never reviewed (nothing to fix). SPECIAL EVENT is exempt (same a
 Compare all three sources — **iClass settings** (dates, time, day, ages, program type), **title**, **description**:
 
 1. **Dates incl. day numbers:** description/title dates that don't fall inside start–end (the engine only compares month names — the AI catches "event July 8, text says July 15"). Ignore registration/deadline/other-event mentions.
+   **Theme-vs-date-claim rule (Jayme, July 2):** a month/holiday functioning as a DATE CLAIM that disagrees with settings → always flag. A month clearly functioning as a NAME/THEME ("4th of July Party!", "Oktoberfest KNO") → quiet ONLY when the event's actual dates in title/description all correctly match settings — the other dates lining up is the proof it's a theme. **Ambiguous → FLAG. The tie always goes to flagging** (a missed mistake costs more than a one-click dismissal).
 2. **Day of week:** title AND description (engine checks description only).
 3. **Ages incl. max:** title/description ages vs `age_min`–`age_max`, handling months-units ("18 months") correctly.
 4. **Program:** does the text describe a different program than the iClass type? Use judgment, incl. camp-in-title on non-camps (engine only knows KNO/Clinic/Open Gym keywords).
