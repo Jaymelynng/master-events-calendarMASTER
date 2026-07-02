@@ -50,11 +50,10 @@
 | Monthly Requirements table | `src/components/EventsDashboard/MonthlyRequirementsTable.js` |
 | **Admin Dashboard** | |
 | Tab orchestrator + MonthlyRequirementsBar | `src/components/AdminDashboard/AdminDashboard.js` (live category add/edit/remove + hex paste color picker, May 2026) |
-| Audit & Review tab | `src/components/AdminDashboard/AdminAuditReview.js` |
+| Errors tab (command center) | `src/components/AdminDashboard/AdminErrorsCenter.js` (NEW July 2026 — per gym / per topic / totals, three panels) |
 | Gym Rules tab | `src/components/AdminDashboard/AdminGymRules.js` (1000+ lines) |
 | Pricing tab | `src/components/AdminDashboard/AdminPricing.js` |
 | Change History tab | `src/components/AdminDashboard/AdminChangeHistory.js` |
-| Audit Rules tab | `src/components/AdminDashboard/AdminAuditRulesReference.js` |
 | Future Plans tab | `src/components/AdminDashboard/AdminFuturePlans.js` |
 | Quick Actions tab | `src/components/AdminDashboard/AdminQuickActions.js` |
 | Rule Wizard | `src/components/AdminDashboard/RuleWizard.js` |
@@ -120,14 +119,15 @@
 - Level 2: Shift+Click magic wand → Admin Dashboard
 - Level 3: Press `*` + PIN (set via `REACT_APP_ADMIN_PIN` env var) → Super Admin (Quick Actions)
 
-### Admin Dashboard Tabs (7 tabs + Email button)
-- **Audit & Review** — View/filter/dismiss validation errors
+### Admin Dashboard Tabs (6 tabs + Email button)
+- **🚨 Errors** (NEW July 1, 2026) — Errors Command Center: every caught error per gym / per topic / totals. Summary cards → horizontal topic tabs (Price / Time / Dates / Age / Program / Title-Desc / No Description) → three panels: gyms with counts | event cards | detail with iClass link + Dismiss / Make Rule. File: `AdminErrorsCenter.js`. Replaces the old Audit & Review tab deleted in June 2026.
+- **Gym Rules** — Rule Wizard, permanent/temporary rules, synonyms, exceptions, plus the 11 system checks with toggles (the old Audit Rules tab was merged into here)
 - **Pricing** — Manage event_pricing and camp_pricing
-- **Gym Rules** — Rule Wizard, permanent/temporary rules, synonyms, exceptions
 - **Change History** — Audit log with filters and CSV export
-- **Audit Rules** — Reference table of all validation checks (all database-driven via rules table)
 - **Future Plans** — Track planned features, improvements, ideas (add/edit/delete from UI)
 - **Quick Actions** — Sync, import, super admin tools
+
+**Gotcha (learned July 1, 2026):** the app renders `EventsDashboard_REFACTORED.js` (see `App.js`), NOT the 4000-line `EventsDashboard.js`. AdminDashboard props must be wired in the REFACTORED file — a missing `events` prop there was why Email Composer (and the new Errors tab) received no event data.
 
 ---
 

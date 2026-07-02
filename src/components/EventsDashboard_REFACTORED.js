@@ -111,10 +111,13 @@ const EventsDashboard = () => {
       <Suspense fallback={<ModalLoader />}>
         <AdminDashboard
           gyms={gymsList}
+          events={events}
           eventTypes={eventTypes}
           onEventTypesChange={setEventTypes}
           monthlyRequirements={monthlyRequirements}
           onMonthlyRequirementsChange={setMonthlyRequirements}
+          currentMonth={currentMonth}
+          currentYear={currentYear}
           onClose={() => setShowAdminPortal(false)}
           onOpenSyncModal={() => {
             setShowAdminPortal(false);

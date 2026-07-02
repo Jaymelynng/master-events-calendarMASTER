@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import AdminErrorsCenter from './AdminErrorsCenter';
 import AdminGymRules from './AdminGymRules';
 import AdminPricing from './AdminPricing';
 import AdminQuickActions from './AdminQuickActions';
@@ -536,6 +537,7 @@ export default function AdminDashboard({
   };
 
   const tabs = [
+    { id: 'audit', label: '🚨 Errors', alwaysShow: true },
     { id: 'rules', label: '📏 Gym Rules', alwaysShow: true },
     { id: 'pricing', label: '💰 Pricing', alwaysShow: true },
     { id: 'history', label: '📜 Change History', alwaysShow: true },
@@ -668,6 +670,10 @@ export default function AdminDashboard({
 
       {/* Content Area */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {activeTab === 'audit' && (
+          <AdminErrorsCenter gyms={gyms} events={events} />
+        )}
+
         {activeTab === 'rules' && (
           <AdminGymRules gyms={gyms} />
         )}
