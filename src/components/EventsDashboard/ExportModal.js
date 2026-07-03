@@ -460,7 +460,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     // Events section
     if (includeEvents && filteredEvents.length > 0) {
       csvContent += `EVENTS - ${monthName}\n`;
-      csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Full Day Daily,Full Day Weekly,Half Day Daily,Half Day Weekly,Ages,Description,Description Status,Has Openings,Spots Left,Openings Display,Signup Mode,iClass Program,Type ID,URL\n';
+      csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Daily Schedule,Full Day Daily,Full Day Weekly,Half Day Daily,Half Day Weekly,Ages,Description,Description Status,Has Openings,Spots Left,Openings Display,Signup Mode,iClass Program,Type ID,URL\n';
       filteredEvents.forEach(event => {
         const gym = gyms.find(g => g.id === event.gym_id);
         // Use explicit null/undefined checks so age_min = 0 (infants) is
@@ -496,6 +496,14 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
           isMultiDay ? endDate : '',
           event.day_of_week || '',
           event.time || '',
+          Array.isArray(event.daily_schedule) && event.daily_schedule.length
+            ? `"${event.daily_schedule.map(d => {
+                const label = d.day || '';
+                const hrs = d.start_time ? `${d.start_time}${d.end_time ? '-' + d.end_time : ''}` : '';
+                const dur = (d.duration != null && d.duration !== '') ? ` (${d.duration}hr)` : '';
+                return `${label} ${hrs}${dur}`.trim();
+              }).join(' | ').replace(/"/g, '""')}"`
+            : '',
           fdDaily,
           fdWeekly,
           hdDaily,

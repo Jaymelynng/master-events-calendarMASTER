@@ -117,6 +117,13 @@
 - **Capacity total NOT available** — iClass `maxStudents` is always null; can't show "23/40" fraction format without manual entry
 - **Full doc:** `docs/OPERATIONS/OPENINGS_CAPACITY_FEATURE.md`
 
+### Daily Schedule (NEW July 2, 2026)
+- **Per-weekday camp hours captured.** Sync used to keep only the first day's time in `events.time`; now the whole schedule is stored in `events.daily_schedule` (jsonb array of `{day, start_time, end_time, duration}`).
+- **Why:** a camp can have a mis-set single day (real case: SGT "Half Day" camp with Monday = 1hr while Tue–Fri = 3hr) that was invisible when only day 1 was kept.
+- **Where it shows:** side panel "📅 Daily Schedule" section (flags the odd day red), CSV export "Daily Schedule" column, and the AI review "one day doesn't match its siblings" check.
+- **Additive only** — `time` unchanged. Captured in f12 step 4b, allowlisted in local_api_server, persisted through SyncModal's 4 write spots, view-exposed. SQL record: `database/ADD_DAILY_SCHEDULE_COLUMN.sql`.
+- **Per-day signup:** `allow_choose_days` (true = per-day, false = full-week-only) — the "✓ Per-Day Signup / 📦 Full Week Only" tag. Combined with pricing-schedule per-block rates (archive schema) it's how iClass decides single-day enrollment. Public API gives the net result only, not the admin toggle names.
+
 ### Admin Access
 - Level 1: Everyone sees calendar
 - Level 2: Shift+Click magic wand → Admin Dashboard

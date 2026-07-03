@@ -394,6 +394,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                 allow_choose_days: changed.incoming.allow_choose_days !== undefined ? changed.incoming.allow_choose_days : null,
                 type_id: changed.incoming.type_id !== undefined ? changed.incoming.type_id : null,
                 program_name: changed.incoming.program_name || null,
+                daily_schedule: changed.incoming.daily_schedule !== undefined ? changed.incoming.daily_schedule : null,
                 registration_start_date: changed.incoming.registration_start_date || null,
                 registration_end_date: changed.incoming.registration_end_date || null,
                 deleted_at: null
@@ -432,6 +433,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                 allow_choose_days: incoming.allow_choose_days !== undefined ? incoming.allow_choose_days : null,
                 type_id: incoming.type_id !== undefined ? incoming.type_id : null,
                 program_name: incoming.program_name || null,
+                daily_schedule: incoming.daily_schedule !== undefined ? incoming.daily_schedule : null,
                 registration_start_date: incoming.registration_start_date || null,
                 registration_end_date: incoming.registration_end_date || null
               });
@@ -757,6 +759,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                 allow_choose_days: changed.incoming.allow_choose_days !== undefined ? changed.incoming.allow_choose_days : null,
                 type_id: changed.incoming.type_id !== undefined ? changed.incoming.type_id : null,
                 program_name: changed.incoming.program_name || null,
+                daily_schedule: changed.incoming.daily_schedule !== undefined ? changed.incoming.daily_schedule : null,
                 registration_start_date: changed.incoming.registration_start_date || null,
                 registration_end_date: changed.incoming.registration_end_date || null,
                 deleted_at: null  // Ensure it's not marked as deleted
@@ -824,6 +827,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
               allow_choose_days: incomingEvent.allow_choose_days !== undefined ? incomingEvent.allow_choose_days : null,
               type_id: incomingEvent.type_id !== undefined ? incomingEvent.type_id : null,
               program_name: incomingEvent.program_name || null,
+              daily_schedule: incomingEvent.daily_schedule !== undefined ? incomingEvent.daily_schedule : null,
               registration_start_date: incomingEvent.registration_start_date || null,
               registration_end_date: incomingEvent.registration_end_date || null
             });

@@ -1300,7 +1300,34 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             end_time = (sched.get("endTime") or "").strip()
             if start_time and end_time:
                 time_str = f"{start_time} - {end_time}"
-        
+
+        # 4b) Full daily schedule — ADDITIVE capture (July 2, 2026).
+        # A camp can have a different start/duration per weekday (real case: a
+        # SGT half-day camp where Monday was mis-set to 1 hour while Tue-Fri ran
+        # 3 hours). Sync historically kept only schedule[0], so a wrong day
+        # beyond Monday was invisible. We now keep the whole array so the side
+        # panel can show every day and the AI can catch a single day that
+        # doesn't match its siblings. `time_str` above is UNCHANGED (still the
+        # first day) — nothing downstream shifts.
+        daily_schedule = None
+        if schedule_list:
+            normalized_days = []
+            for s in schedule_list:
+                day_label = (s.get("dayName") or s.get("day") or s.get("weekday")
+                             or s.get("dayOfWeek") or "").strip()
+                s_start = (s.get("startTime") or "").strip()
+                s_end = (s.get("endTime") or "").strip()
+                s_dur = s.get("duration")
+                if s_start or s_end or day_label:
+                    normalized_days.append({
+                        "day": day_label or None,
+                        "start_time": s_start or None,
+                        "end_time": s_end or None,
+                        "duration": s_dur,
+                    })
+            if normalized_days:
+                daily_schedule = normalized_days
+
         # 5) title
         title = (ev.get("name") or "Untitled Event").strip()
         title = " ".join(title.split())
@@ -1571,6 +1598,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "age_min": age_min,
             "age_max": age_max,
             "day_of_week": day_of_week,
+            "daily_schedule": daily_schedule,
             "description": description,
             "has_flyer": has_flyer,
             "flyer_url": flyer_url,

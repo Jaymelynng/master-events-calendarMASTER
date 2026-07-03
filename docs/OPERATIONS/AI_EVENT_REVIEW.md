@@ -39,7 +39,7 @@ How to apply them (a rule applies when its gym_ids contains the event's gym or '
 SELECT id, gym_id, type, title, description, start_date, end_date, "time",
        day_of_week, age_min, age_max, program_name,
        registration_start_date, registration_end_date,
-       openings, show_openings, allow_choose_days,
+       openings, show_openings, allow_choose_days, daily_schedule,
        validation_errors, acknowledged_errors
 FROM events
 WHERE deleted_at IS NULL
@@ -68,6 +68,7 @@ Compare all three sources — **iClass settings** (dates, time, day, ages, progr
 7. **Registration window (settings):** `registration_end_date` before `registration_start_date`; registration closing suspiciously long before the event or after it ends; text like "register by July 5" contradicting the actual registration dates; registration not open for an imminent event.
 8. **Signup mode (settings):** `allow_choose_days` vs the text — description says "choose your days" or "$70/day" while the setting is full-week-only (false), or "must register for the entire week" while per-day signup is on (true). Flag only clear contradictions.
 9. **Openings sanity (settings):** text claims "sold out" while `openings` > 0; text claims specific spots left ("only 5 spots!") wildly off from `openings`; `openings` = 0 while text urges immediate signup without a waitlist mention. Note: iClass gives NO total capacity (maxStudents is always null) — `openings` = spots remaining is all we have; never invent a capacity number.
+9b. **Daily schedule consistency (settings, camps):** `daily_schedule` is the per-weekday array {day, start_time, end_time, duration}. Flag a single day whose hours/duration differ from its siblings — real case: a "Half Day" camp where Monday was mis-set to a 1-hour block (9-10 AM) while Tue-Fri ran 3 hours (9-12). Also flag when the whole schedule contradicts the title ("Half Day" but every day is a full 9-3, or vice versa). Sync stores only the FIRST day in the `time` column, so the mechanical time check can't see days 2-5 — this is the AI's job.
 10. **Program name (settings):** `program_name` (the iClass backend program) vs `type` vs what the text sells — e.g. program_name says half-day but everything else says full-day.
 11. **Scheduling plausibility (wrong-year settings catch):** an event whose iClass date sits implausibly far in the future for its type is almost certainly a wrong-year settings mistake — e.g. a KNO / Clinic / Open Gym scheduled 10+ months out (these are scheduled weeks-to-months ahead, never a year), or a "Summer Camp" dated in the wrong season's year. Camps for next season CAN legitimately be listed ~6-9 months ahead — use judgment, flag only clear outliers. Also read 2-digit years in text ("7/15/25" on a 2026 event) — the mechanical year check only sees 4-digit years.
 12. **Never flag prices.** Pricing validation was removed July 1, 2026 (Jayme's decision). Exception: a price APPEARING in a signup-mode contradiction (rule 8's "$70/day") is about the signup mode, not the amount — never judge whether a dollar amount is correct.
