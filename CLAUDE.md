@@ -4,6 +4,18 @@
 
 ---
 
+## ⛔ JAYME'S #1 LAW — NO HARDCODING (read before touching anything)
+
+**Nothing that controls how the app behaves may be hardcoded in code.** Every category mapping, keyword list, synonym, program name, threshold, tolerance, valid value, skill list, CC email — ALL of it must live in the **database** and be **manageable by Jayme from the Admin UI**. She is non-technical: a value she can't change from a screen is a value she can't own.
+
+- If you find hardcoded behavior, **FLAG IT as a bug** (file+line) and move it to DB + a UI screen. Never frame it as optional "future polish" — that reaction enrages her because she has said this a million times.
+- **Never ADD a new hardcoded list/mapping/keyword.** Build it as a table + admin screen from the start.
+- Moving code→DB is **additive/safe**: sync/engine reads the table, falls back to the old code list only if the table is empty/unreachable, so nothing breaks.
+- Her model: **universal/core rules** (apply to all) + **gym rules** that are **permanent or temporary** for one-offs — all created and managed in the workflow HERE, in the app.
+- Migration status + full offender list: `memory/project_no_hardcoding_law.md`. In-progress: `category_mappings` table (replaces `BOOKING_TITLE_TO_EVENT_TYPE` in f12) — finish wiring f12 + build the Admin UI.
+
+---
+
 ## 🚨 MANDATORY FIRST STEPS (Do these BEFORE any work)
 
 1. **Read `AI_RULES_READ_FIRST.md`** — Critical rules, system architecture, validation logic
