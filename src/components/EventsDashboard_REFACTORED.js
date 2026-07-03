@@ -57,7 +57,7 @@ const EventsDashboard = () => {
     loading,
     // View state
     currentMonth, currentYear, calendarView, viewMode, displayDates,
-    setCalendarView, setViewMode,
+    setCalendarView, setViewMode, errorFocus, setErrorFocus,
     // Filters
     selectedGym, setSelectedGym, selectedEventType, setSelectedEventType,
     searchTerm, setSearchTerm,
@@ -428,6 +428,8 @@ const EventsDashboard = () => {
                 calendarView={calendarView}
                 onCalendarViewChange={handleCalendarViewChange}
                 theme={theme}
+                errorFocus={errorFocus}
+                onErrorFocusToggle={() => setErrorFocus(f => !f)}
               />
 
               {/* Calendar Legend */}
@@ -446,6 +448,7 @@ const EventsDashboard = () => {
                 gymRefs={gymRefs}
                 selectedEventForPanel={selectedEventForPanel}
                 onEventSelect={setSelectedEventForPanel}
+                errorFocus={errorFocus}
               />
 
               {/* Bottom Navigation & Add Event */}
