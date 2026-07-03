@@ -15,7 +15,6 @@ import { acknowledgedPatternsApi, rulesApi } from '../../lib/api';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
 import {
   isErrorAcknowledgedAnywhere,
-  inferErrorCategory,
   canAddAsRule,
   extractRuleValue,
   getErrorLabel,
