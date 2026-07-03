@@ -31,14 +31,11 @@ function variantHasDataErrors(variant, acknowledgedPatterns) {
   return active.some(err => inferErrorCategory(err) === 'data_error');
 }
 
-// Broader "needs attention" check for Errors Focus mode: data errors OR
-// active AI suggestions OR a missing/flyer-only description.
+// "Needs attention" check for Errors Focus mode: data errors OR a
+// missing/flyer-only description. AI review lives in the Errors tab, not the
+// calendar (Jayme, July 2).
 function variantHasIssue(variant, acknowledgedPatterns) {
   if (variantHasDataErrors(variant, acknowledgedPatterns)) return true;
-  const aiFlags = (variant.ai_review_flags || []).filter(
-    f => !isErrorAcknowledgedAnywhere(variant, f.message, acknowledgedPatterns)
-  );
-  if (aiFlags.length > 0) return true;
   return variant.description_status === 'none' || variant.description_status === 'flyer_only';
 }
 

@@ -262,17 +262,13 @@ export function CalendarLegend({ theme }) {
   return (
     <div className="mt-4 text-xs text-center" style={{ color: theme.colors.textSecondary }}>
       <p>• Click any event card to open the side panel with full details and registration links</p>
-      {/* Legend mirrors the actual corner dots in EventCard.js. "Formatting"
-          and "Both" were removed July 2026 — formatting errors don't exist
-          (never generated). AI Suggestion (indigo) added with the AI review. */}
+      {/* Legend mirrors the actual corner dots in EventCard.js. "Formatting" /
+          "Both" removed July 2026 (formatting errors never existed). AI review
+          lives in the Errors tab, NOT the calendar — no dot here. */}
       <div className="mt-2 flex items-center justify-center flex-wrap gap-x-4 gap-y-1 text-[10px]">
         <span className="flex items-center gap-1">
           <span className="w-3 h-3 bg-red-500 rounded-full border border-red-700 inline-block"></span>
           Data Error
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: '#6366f1', border: '1px solid #4338ca' }}></span>
-          AI Suggestion
         </span>
         <span className="flex items-center gap-1">
           <span className="w-2.5 h-2.5 border-2 border-red-500 rounded-full inline-block bg-white"></span>
