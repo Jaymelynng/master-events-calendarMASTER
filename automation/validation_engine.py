@@ -213,6 +213,13 @@ def check_time_mismatch(ctx):
         text_cleaned = re.sub(r'ages?\s*\d{1,2}\s*[-\u2013to]+\s*\d{1,2}', ' ', text_cleaned)
         text_cleaned = re.sub(r'\d{1,2}\s*[-\u2013]\s*\d{1,2}\s*(?:years?|yrs?)', ' ', text_cleaned)
         text_cleaned = re.sub(r'\$\d+(?:\.\d{2})?\s+a(?!\s*m)', ' ', text_cleaned)
+        # Drop-off / pick-up / before-after care times are NOT the event time \u2014
+        # e.g. "Complementary 8:30am Early Drop Off Available" on a 9am camp.
+        # Strip the time when a care/drop/pick keyword sits right before or
+        # after it (real false positive, ~10 RBA/RBK camps, July 2026).
+        _care = r'(?:early\s+|late\s+)?(?:drop[\s-]?off|pick[\s-]?up|before[\s-]*care|after[\s-]*care|doors?\s+open|extended\s+care)'
+        text_cleaned = re.sub(r'\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?\s*' + _care, ' ', text_cleaned)
+        text_cleaned = re.sub(_care + r'[^.\n]{0,15}?\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?', ' ', text_cleaned)
 
         found_times = re.findall(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.|a|p)(?:\b|(?=\s|-))', text_cleaned)
         for found_time in found_times:
