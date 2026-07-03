@@ -432,8 +432,10 @@ const EventsDashboard = () => {
                 onErrorFocusToggle={() => setErrorFocus(f => !f)}
               />
 
-              {/* Calendar Legend */}
-              <CalendarLegend theme={theme} />
+              {/* Calendar Legend — only in Errors Focus mode. Normal view is
+                  events + spots; the error-dot legend only matters when you're
+                  hunting errors. */}
+              {errorFocus && <CalendarLegend theme={theme} />}
 
               {/* Calendar Grid */}
               <CalendarGrid
