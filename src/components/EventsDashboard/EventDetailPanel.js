@@ -1,11 +1,13 @@
 // ============================================================================
 // EVENT DETAIL PANEL - Slide-out panel showing full event details
 // ============================================================================
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, Calendar, Clock, DollarSign, Users, Copy, CheckCircle } from 'lucide-react';
 import { theme, getEventTypeColor, getErrorLabel } from './constants';
 import { parseYmdLocal, formatTime, formatTimeShort, parseCampOptionFromTitle } from './utils';
 import { isErrorAcknowledgedAnywhere, inferErrorCategory, canAddAsRule, extractRuleValue } from '../../lib/validationHelpers';
+import { appConfigApi, errorEmailLogApi } from '../../lib/api';
+import { buildErrorEmailUrl, fmtSentStamp } from '../../lib/errorEmail';
 
 export default function EventDetailPanel({
   event,
@@ -21,6 +23,43 @@ export default function EventDetailPanel({
   acknowledgedPatterns = [],
   eventTypes = []
 }) {
+  // Contacts + notification settings for the "Email the Gym" button, and the
+  // send history so an already-emailed error shows "Emailed N days ago".
+  const [appConfig, setAppConfig] = useState({});
+  const [emailLog, setEmailLog] = useState([]);
+  useEffect(() => {
+    appConfigApi.getAll().then(setAppConfig).catch(() => setAppConfig({}));
+    errorEmailLogApi.getAll().then(setEmailLog).catch(() => setEmailLog([]));
+  }, []);
+  const followupDays = parseInt(appConfig.error_email_followup_days, 10) || 3;
+  const sendsForError = (eventId, msg) =>
+    emailLog.filter(r => r.event_id === eventId && r.error_message === msg);
+
+  // Open a pre-filled email to this gym about one error, and record the send.
+  const emailErrorToGym = (ev, errorMessage) => {
+    const gym = (gymsList || []).find(g => g.id === ev.gym_id) || {};
+    const cc = (appConfig.error_email_cc || '').trim();
+    const fromName = appConfig.error_email_from_name || 'Jayme';
+    const { url, recipients } = buildErrorEmailUrl({ event: ev, errorMessage, gym, cc, fromName });
+    if (!url) {
+      alert(`No email on file for ${ev.gym_id}. Add the manager / front desk email in the Contacts tab (Admin) first.`);
+      return;
+    }
+    window.open(url, '_blank');
+    const optimistic = {
+      id: `tmp-${ev.id}-${Date.now()}`,
+      event_id: ev.id, gym_id: ev.gym_id, event_title: ev.title || null,
+      error_message: errorMessage, recipients: recipients.join('; '), cc: cc || null,
+      sent_at: new Date().toISOString(),
+    };
+    setEmailLog(prev => [optimistic, ...prev]);
+    errorEmailLogApi.log({
+      event_id: ev.id, gym_id: ev.gym_id, event_title: ev.title,
+      error_message: errorMessage, recipients: recipients.join('; '), cc,
+    }).then(saved => setEmailLog(prev => [saved, ...prev.filter(r => r.id !== optimistic.id)]))
+      .catch(() => {});
+  };
+
   if (!event) return null;
 
   // Get validation status — rules apply everywhere (per-event + patterns)
@@ -215,6 +254,9 @@ export default function EventDetailPanel({
             onDismiss={handleDismissWithNote}
             onResetAcknowledged={() => onResetAcknowledgedErrors(event.id)}
             isMatchedByRule={isMatchedByRule}
+            onEmailError={(msg) => emailErrorToGym(event, msg)}
+            sendsForError={(msg) => sendsForError(event.id, msg)}
+            followupDays={followupDays}
           />
         )}
 
@@ -393,7 +435,10 @@ function ValidationIssues({
   acknowledgedErrors,
   onDismiss,
   onResetAcknowledged,
-  isMatchedByRule
+  isMatchedByRule,
+  onEmailError,
+  sendsForError,
+  followupDays = 3
 }) {
   return (
     <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
@@ -430,6 +475,9 @@ function ValidationIssues({
                 labelBgColor="bg-red-600"
                 icon="🚨"
                 onDismiss={onDismiss}
+                onEmail={onEmailError}
+                sendsFor={sendsForError}
+                followupDays={followupDays}
               />
             )}
 
@@ -522,7 +570,7 @@ function ValidationIssues({
 }
 
 // Error section component for different error types
-function ErrorSection({ title, errors, bgColor, borderColor, labelBgColor, textColor = 'text-red-700', icon, onDismiss }) {
+function ErrorSection({ title, errors, bgColor, borderColor, labelBgColor, textColor = 'text-red-700', icon, onDismiss, onEmail, sendsFor, followupDays = 3 }) {
   return (
     <li className="pt-1">
       <div className={`text-xs font-semibold ${textColor} uppercase mb-1 flex items-center gap-1`}>
@@ -532,24 +580,48 @@ function ErrorSection({ title, errors, bgColor, borderColor, labelBgColor, textC
         {title}:
       </div>
       <ul className="space-y-1 ml-2">
-        {errors.map((error, idx) => (
-          <li key={idx} className={`flex items-center justify-between gap-2 p-1.5 ${bgColor} rounded border-l-4 ${borderColor} ${textColor}`}>
-            <span className="flex-1">
-              {icon} <strong>{getErrorLabel(error.type)}</strong>
-              <span className="text-xs block mt-0.5 opacity-80">{error.message}</span>
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDismiss(error.message, error);
-              }}
-              className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
-              title="Create a custom rule for this"
-            >
-              ＋ Rule
-            </button>
+        {errors.map((error, idx) => {
+          const sends = sendsFor ? sendsFor(error.message) : [];
+          const emailed = sends.length > 0;
+          const overdue = emailed && fmtSentStamp(sends[0].sent_at).days >= followupDays;
+          return (
+          <li key={idx} className={`p-1.5 ${bgColor} rounded border-l-4 ${borderColor} ${textColor}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex-1">
+                {icon} <strong>{getErrorLabel(error.type)}</strong>
+                <span className="text-xs block mt-0.5 opacity-80">{error.message}</span>
+              </span>
+              <div className="flex-shrink-0 flex flex-col gap-1">
+                {onEmail && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onEmail(error.message); }}
+                    className="px-2 py-1 text-xs rounded-md transition-colors font-bold text-white"
+                    style={{ background: !emailed ? '#2563eb' : overdue ? '#d97706' : '#6b7280' }}
+                    title={emailed ? 'Send another email — the gym hasn’t fixed it yet' : 'Email this gym’s manager + front desk (opens in your Outlook)'}
+                  >
+                    {emailed ? '📧 Follow-up' : '📧 Email'}
+                  </button>
+                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDismiss(error.message, error); }}
+                  className="px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
+                  title="Create a custom rule for this"
+                >
+                  ＋ Rule
+                </button>
+              </div>
+            </div>
+            {emailed && (
+              <div className="mt-1 text-[11px] font-semibold flex items-center gap-1 flex-wrap"
+                   style={{ color: overdue ? '#b45309' : '#6b7280' }}>
+                <span>📧 Emailed {fmtSentStamp(sends[0].sent_at).dateStr} · {fmtSentStamp(sends[0].sent_at).ago}</span>
+                {sends.length > 1 && <span>· {sends.length} emails sent</span>}
+                {overdue && <span className="font-black">· follow-up overdue</span>}
+              </div>
+            )}
           </li>
-        ))}
+          );
+        })}
       </ul>
     </li>
   );

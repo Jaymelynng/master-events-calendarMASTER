@@ -12,6 +12,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { acknowledgedPatternsApi, rulesApi, appConfigApi, errorEmailLogApi } from '../../lib/api';
+import { buildErrorEmailUrl, fmtSentStamp } from '../../lib/errorEmail';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
 import {
   isErrorAcknowledgedAnywhere,
@@ -81,40 +82,14 @@ export default function AdminErrorsCenter({ gyms, events }) {
   // configured notification CC (managed in Contacts).
   const emailErrorToGym = (ev, errorMessage) => {
     const gym = gyms?.find(g => g.id === ev.gym_id) || {};
-    const toList = [gym.manager_email, gym.front_desk_email].filter(Boolean);
-    if (toList.length === 0) {
+    const cc = (appConfig.error_email_cc || '').trim();
+    const fromName = appConfig.error_email_from_name || 'Jayme';
+    const { url, recipients } = buildErrorEmailUrl({ event: ev, errorMessage, gym, cc, fromName });
+    if (!url) {
       alert(`No email on file for ${ev.gym_id}. Add the manager / front desk email in the Contacts tab first.`);
       return;
     }
-    const cc = (appConfig.error_email_cc || '').trim();
-    const fromName = appConfig.error_email_from_name || 'Jayme';
-    const evDate = fmtDate(ev.start_date || ev.date);
-    const subject = `Heads up — Notification of event error — ${ev.gym_id} — ${ev.title || 'Event'}`;
-    const bodyLines = [
-      `Hi ${gym.manager_name || 'team'},`,
-      ``,
-      `A data error was flagged on one of your events. Please take a look and update it in iClassPro when you get a chance:`,
-      ``,
-      `Event: ${ev.title || '(no title)'}`,
-      `Type: ${ev.type || ev.event_type || ''}`,
-      `Date: ${evDate}`,
-      `Gym: ${gym.name || ev.gym_id}`,
-      ``,
-      `What to update: ${errorMessage}`,
-      ``,
-      ev.event_url ? `Open in iClassPro: ${ev.event_url}` : '',
-      ``,
-      `Thanks,`,
-      fromName,
-    ].filter(l => l !== null && l !== undefined);
-    const to = encodeURIComponent(toList.join(';'));
-    const ccEnc = encodeURIComponent(cc);
-    const subj = encodeURIComponent(subject);
-    const body = encodeURIComponent(bodyLines.join('\n'));
-    window.open(
-      `https://outlook.office.com/mail/deeplink/compose?to=${to}${cc ? `&cc=${ccEnc}` : ''}&subject=${subj}&body=${body}`,
-      '_blank'
-    );
+    window.open(url, '_blank');
 
     // Record the send so it shows on the error until the gym fixes it (which
     // makes the error disappear on the next sync). Optimistic local update
@@ -125,7 +100,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
       gym_id: ev.gym_id,
       event_title: ev.title || null,
       error_message: errorMessage,
-      recipients: toList.join('; '),
+      recipients: recipients.join('; '),
       cc: cc || null,
       sent_at: new Date().toISOString(),
     };
@@ -135,21 +110,12 @@ export default function AdminErrorsCenter({ gyms, events }) {
       gym_id: ev.gym_id,
       event_title: ev.title,
       error_message: errorMessage,
-      recipients: toList.join('; '),
+      recipients: recipients.join('; '),
       cc,
     }).then(saved => {
       // Swap the optimistic row for the real saved one.
       setEmailLog(prev => [saved, ...prev.filter(r => r.id !== optimistic.id)]);
     }).catch(() => {/* keep optimistic row; a refresh will reconcile */});
-  };
-
-  // "Emailed Jul 4 · 2 days ago" style stamp for the most recent send.
-  const fmtSentStamp = (iso) => {
-    const then = new Date(iso);
-    const days = Math.floor((Date.now() - then.getTime()) / 86400000);
-    const dateStr = then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const ago = days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
-    return { dateStr, ago, days };
   };
 
   // The blue email button — label flips to "Send follow-up" once it's been
