@@ -48,8 +48,10 @@ export default function EventCard({
     || (event.description_status === 'none' ? 'No description'
         : event.description_status === 'flyer_only' ? 'Flyer only — no text' : null);
 
-  // Get validation status indicators — rules apply everywhere (per-event + patterns)
+  // Get validation status indicators — ONLY shown in Errors Focus mode.
+  // Normal calendar view = events + spots, no error dots (Jayme).
   const getValidationIndicator = () => {
+    if (!errorFocus) return null;
     const hasDataErrors = dataErrors.length > 0;
 
     // Show colored dot for data errors

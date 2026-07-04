@@ -209,7 +209,9 @@ export default function CampBand({
         const style = variantStyle(variant);
         const status = spotsStatus(variant);
         const statusColor = status ? STATUS_COLORS[status.kind] : null;
-        const hasErrors = variantHasDataErrors(variant, acknowledgedPatterns);
+        // Error indicators (red border / dot) ONLY in Errors Focus mode —
+        // normal calendar view stays clean (Jayme).
+        const hasErrors = errorFocus && variantHasDataErrors(variant, acknowledgedPatterns);
         // Errors Focus: dim clean variants, leave flagged ones bright.
         const hasIssue = errorFocus ? variantHasIssue(variant, acknowledgedPatterns) : false;
         const dimmed = errorFocus && !hasIssue;
