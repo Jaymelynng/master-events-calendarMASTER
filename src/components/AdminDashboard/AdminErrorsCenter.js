@@ -11,7 +11,7 @@
 // ============================================================================
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
-import { acknowledgedPatternsApi, rulesApi, appConfigApi } from '../../lib/api';
+import { acknowledgedPatternsApi, rulesApi, appConfigApi, errorEmailLogApi } from '../../lib/api';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
 import {
   isErrorAcknowledgedAnywhere,
@@ -58,11 +58,22 @@ export default function AdminErrorsCenter({ gyms, events }) {
   const [dismissModal, setDismissModal] = useState(null); // { eventId, errorMessage, errorObj, gymId, eventType, ruleEligible, ruleInfo }
 
   const [appConfig, setAppConfig] = useState({});
+  // Every "Email the Gym" send, newest first. Used to show "you emailed them
+  // on X" next to a still-active error and to offer a follow-up.
+  const [emailLog, setEmailLog] = useState([]);
 
   useEffect(() => {
     acknowledgedPatternsApi.getAll().then(setPatterns).catch(() => setPatterns([]));
     appConfigApi.getAll().then(setAppConfig).catch(() => setAppConfig({}));
+    errorEmailLogApi.getAll().then(setEmailLog).catch(() => setEmailLog([]));
   }, []);
+
+  // How many days before we nudge a follow-up (configurable, no hardcoding).
+  const followupDays = parseInt(appConfig.error_email_followup_days, 10) || 3;
+
+  // Find the send history for one event + exact error message (newest first).
+  const sendsForError = (eventId, errorMessage) =>
+    emailLog.filter(r => r.event_id === eventId && r.error_message === errorMessage);
 
   // Build a pre-filled Outlook compose link for one error and open it. The
   // email sends from Jayme's own Powers account (she's signed into Outlook);
@@ -103,6 +114,78 @@ export default function AdminErrorsCenter({ gyms, events }) {
     window.open(
       `https://outlook.office.com/mail/deeplink/compose?to=${to}${cc ? `&cc=${ccEnc}` : ''}&subject=${subj}&body=${body}`,
       '_blank'
+    );
+
+    // Record the send so it shows on the error until the gym fixes it (which
+    // makes the error disappear on the next sync). Optimistic local update
+    // first so the "Emailed just now" line appears immediately.
+    const optimistic = {
+      id: `tmp-${ev.id}-${Date.now()}`,
+      event_id: ev.id,
+      gym_id: ev.gym_id,
+      event_title: ev.title || null,
+      error_message: errorMessage,
+      recipients: toList.join('; '),
+      cc: cc || null,
+      sent_at: new Date().toISOString(),
+    };
+    setEmailLog(prev => [optimistic, ...prev]);
+    errorEmailLogApi.log({
+      event_id: ev.id,
+      gym_id: ev.gym_id,
+      event_title: ev.title,
+      error_message: errorMessage,
+      recipients: toList.join('; '),
+      cc,
+    }).then(saved => {
+      // Swap the optimistic row for the real saved one.
+      setEmailLog(prev => [saved, ...prev.filter(r => r.id !== optimistic.id)]);
+    }).catch(() => {/* keep optimistic row; a refresh will reconcile */});
+  };
+
+  // "Emailed Jul 4 · 2 days ago" style stamp for the most recent send.
+  const fmtSentStamp = (iso) => {
+    const then = new Date(iso);
+    const days = Math.floor((Date.now() - then.getTime()) / 86400000);
+    const dateStr = then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const ago = days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+    return { dateStr, ago, days };
+  };
+
+  // The blue email button — label flips to "Send follow-up" once it's been
+  // emailed at least once, and goes amber when it's past the follow-up window.
+  const emailButton = (ev, msg) => {
+    const sends = sendsForError(ev.id, msg);
+    const emailed = sends.length > 0;
+    const overdue = emailed && fmtSentStamp(sends[0].sent_at).days >= followupDays;
+    const bg = !emailed ? '#2563eb' : overdue ? '#d97706' : '#6b7280';
+    return (
+      <button
+        onClick={() => emailErrorToGym(ev, msg)}
+        className="px-2.5 py-1 rounded-md text-xs font-bold text-white transition-colors cursor-pointer"
+        style={{ background: bg }}
+        title={emailed
+          ? 'Send another email about this — the gym hasn’t fixed it yet'
+          : 'Open a pre-filled email to this gym’s manager + front desk (sends from your Outlook)'}
+      >
+        {emailed ? '📧 Send follow-up' : '📧 Email the Gym'}
+      </button>
+    );
+  };
+
+  // The "Emailed Jul 4 · 2 days ago (2 emails sent)" line under the buttons.
+  const sentStamp = (ev, msg) => {
+    const sends = sendsForError(ev.id, msg);
+    if (sends.length === 0) return null;
+    const { dateStr, ago, days } = fmtSentStamp(sends[0].sent_at);
+    const overdue = days >= followupDays;
+    return (
+      <div className="mt-1.5 text-[11px] font-semibold flex items-center gap-1 flex-wrap"
+           style={{ color: overdue ? '#b45309' : '#6b7280' }}>
+        <span>📧 Emailed {dateStr} · {ago}</span>
+        {sends.length > 1 && <span>· {sends.length} emails sent</span>}
+        {overdue && <span className="font-black">· follow-up overdue</span>}
+      </div>
     );
   };
 
@@ -484,14 +567,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
                         </div>
                         <div className="text-xs mt-1" style={{ color: c.text }}>{e.message}</div>
                         <div className="mt-2 flex flex-wrap gap-1.5">
-                          <button
-                            onClick={() => emailErrorToGym(selectedEvent, e.message)}
-                            className="px-2.5 py-1 rounded-md text-xs font-bold text-white transition-colors cursor-pointer"
-                            style={{ background: '#2563eb' }}
-                            title="Open a pre-filled email to this gym's manager + front desk (sends from your Outlook)"
-                          >
-                            📧 Email the Gym
-                          </button>
+                          {emailButton(selectedEvent, e.message)}
                           <button
                             onClick={() => setDismissModal({
                               eventId: selectedEvent.id,
@@ -508,6 +584,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
                             ＋ Create Custom Rule
                           </button>
                         </div>
+                        {sentStamp(selectedEvent, e.message)}
                       </div>
                     );
                   })}
@@ -530,14 +607,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
                         <div className="text-[11px] mt-1 italic" style={{ color: '#4f46e5' }}>{f.reason}</div>
                       )}
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        <button
-                          onClick={() => emailErrorToGym(selectedEvent, f.message)}
-                          className="px-2.5 py-1 rounded-md text-xs font-bold text-white cursor-pointer"
-                          style={{ background: '#2563eb' }}
-                          title="Open a pre-filled email to this gym (sends from your Outlook)"
-                        >
-                          📧 Email the Gym
-                        </button>
+                        {emailButton(selectedEvent, f.message)}
                         <button
                           onClick={() => setDismissModal({
                             eventId: selectedEvent.id,
@@ -554,6 +624,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
                           ＋ Create Custom Rule
                         </button>
                       </div>
+                      {sentStamp(selectedEvent, f.message)}
                     </div>
                   ))}
                 </div>

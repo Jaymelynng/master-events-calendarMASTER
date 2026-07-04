@@ -735,6 +735,36 @@ export const acknowledgedPatternsApi = {
   }
 };
 
+// Error Email Log API - records every "Email the Gym" send so we can show
+// "you emailed them on X" next to a still-active error and offer a follow-up.
+export const errorEmailLogApi = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('error_email_log')
+      .select('*')
+      .order('sent_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async log(row) {
+    const { data, error } = await supabase
+      .from('error_email_log')
+      .insert([{
+        event_id: row.event_id || null,
+        gym_id: row.gym_id || null,
+        event_title: row.event_title || null,
+        error_message: row.error_message || null,
+        recipients: row.recipients || null,
+        cc: row.cc || null,
+      }])
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+};
+
 // Requirement Notes API - tracks status of missing requirements
 export const requirementNotesApi = {
   async getAll() {
