@@ -10,7 +10,8 @@ export default function EventCard({
   event,
   eventTypes,
   onClick,
-  acknowledgedPatterns = []
+  acknowledgedPatterns = [],
+  errorFocus = false
 }) {
   const eventTypeName = event.type || event.event_type;
   const eventTypeData = eventTypes.find(et => et.name === eventTypeName);
@@ -33,14 +34,22 @@ export default function EventCard({
     ? `${totalOpenings} spots open across ${event.optionCount} options`
     : `${totalOpenings} spots open`;
 
+  // What counts as "needs attention" on the CALENDAR — data errors or a
+  // missing/flyer-only description. The AI review lives in the Errors tab,
+  // NOT on the calendar (Jayme, July 2). Drives the corner dots + Errors Focus.
+  const activeErrors = (event.validation_errors || []).filter(
+    err => err.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(event, err.message, acknowledgedPatterns)
+  );
+  const dataErrors = activeErrors.filter(err => inferErrorCategory(err) === 'data_error');
+  const hasDescIssue = event.description_status === 'none' || event.description_status === 'flyer_only';
+  const hasIssue = dataErrors.length > 0 || hasDescIssue;
+  // The single line we surface on the card in Errors Focus mode.
+  const focusReason = dataErrors[0]?.message
+    || (event.description_status === 'none' ? 'No description'
+        : event.description_status === 'flyer_only' ? 'Flyer only — no text' : null);
+
   // Get validation status indicators — rules apply everywhere (per-event + patterns)
   const getValidationIndicator = () => {
-    const activeErrors = (event.validation_errors || []).filter(
-      err => err.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(event, err.message, acknowledgedPatterns)
-    );
-
-    // Separate by category
-    const dataErrors = activeErrors.filter(err => inferErrorCategory(err) === 'data_error');
     const hasDataErrors = dataErrors.length > 0;
 
     // Show colored dot for data errors
@@ -78,17 +87,23 @@ export default function EventCard({
   if (event.has_openings === false) tooltipParts.push('SOLD OUT');
   const cardTooltip = tooltipParts.join(' · ');
 
+  // Errors Focus mode: clean events fade back, issue events pop with a red ring.
+  const dimmed = errorFocus && !hasIssue;
+  const spotlit = errorFocus && hasIssue;
+
   return (
     <div
-      className="relative group cursor-pointer"
+      className="relative group cursor-pointer transition-all duration-200"
       onClick={() => onClick(event)}
       title={cardTooltip}
+      style={dimmed ? { opacity: 0.25, filter: 'grayscale(1)' } : {}}
     >
       <div
         className="text-xs rounded text-gray-700 text-center font-medium transition-all duration-200 border p-2 hover:shadow-md hover:scale-105 relative"
         style={{
           backgroundColor: getEventTypeColor(eventTypeName, eventTypes),
-          borderColor: 'rgba(0,0,0,0.1)'
+          borderColor: spotlit ? '#dc2626' : 'rgba(0,0,0,0.1)',
+          ...(spotlit ? { boxShadow: '0 0 0 2px #dc2626, 0 3px 10px rgba(220,38,38,.3)' } : {})
         }}
       >
         {/* SOLD OUT badge - top left */}
@@ -111,13 +126,20 @@ export default function EventCard({
             {event.optionCount} opts
           </div>
         )}
-        {/* Openings count line */}
-        {showCount && (
-          <div
-            className={`mt-0.5 leading-tight text-xs font-semibold ${isLow ? 'text-orange-700' : 'text-green-700'}`}
-          >
-            {isLow ? '⚠️' : '🟢'} {totalOpenings}
+        {/* Errors Focus: show WHY it's flagged instead of the spot count. */}
+        {spotlit && focusReason ? (
+          <div className="mt-0.5 leading-tight text-[10px] font-semibold text-red-700 line-clamp-2">
+            {focusReason}
           </div>
+        ) : (
+          /* Openings count line (normal mode) */
+          showCount && (
+            <div
+              className={`mt-0.5 leading-tight text-xs font-semibold ${isLow ? 'text-orange-700' : 'text-green-700'}`}
+            >
+              {isLow ? '⚠️' : '🟢'} {totalOpenings}
+            </div>
+          )
         )}
       </div>
     </div>

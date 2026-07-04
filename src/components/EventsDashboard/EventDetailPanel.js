@@ -186,6 +186,12 @@ export default function EventDetailPanel({
           )}
         </div>
 
+        {/* Daily Schedule — per-weekday hours for camps (shows when iClass
+            gives a multi-day schedule; makes a single mis-set day obvious) */}
+        {Array.isArray(event.daily_schedule) && event.daily_schedule.length > 0 && (
+          <DailySchedule days={event.daily_schedule} />
+        )}
+
         {/* Camp Quick Access Links */}
         {event.type === 'CAMP' && (
           <CampQuickAccess event={event} gymLinks={gymLinks} />
@@ -229,6 +235,58 @@ export default function EventDetailPanel({
 
         {/* (Registration Options moved to the top of the panel —
              see right after Event Title above.) */}
+      </div>
+    </div>
+  );
+}
+
+// Daily schedule component — one row per weekday. Highlights any day whose
+// hours differ from the majority (a mis-set day like Monday at 1hr while the
+// rest run 3hr) so a settings mistake beyond day 1 is impossible to miss.
+function DailySchedule({ days }) {
+  // Build an "hours" key per day to detect the odd one out.
+  const hoursOf = (d) => {
+    if (d.duration != null && d.duration !== '') return String(d.duration);
+    if (d.start_time && d.end_time) return `${d.start_time}-${d.end_time}`;
+    return '';
+  };
+  // Find the majority hours value; anything different gets flagged.
+  const counts = {};
+  days.forEach(d => { const k = hoursOf(d); if (k) counts[k] = (counts[k] || 0) + 1; });
+  const majority = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const anyOddDay = days.length > 1 && Object.keys(counts).length > 1;
+
+  return (
+    <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
+      <div className="font-semibold text-xs text-gray-500 uppercase mb-2 flex items-center justify-between">
+        <span>📅 Daily Schedule</span>
+        {anyOddDay && (
+          <span className="text-[10px] font-bold text-red-700 bg-red-100 px-1.5 py-0.5 rounded normal-case">
+            ⚠️ A day doesn't match the rest
+          </span>
+        )}
+      </div>
+      <div className="rounded-lg border border-gray-200 overflow-hidden">
+        {days.map((d, i) => {
+          const isOdd = anyOddDay && majority && hoursOf(d) !== majority;
+          return (
+            <div
+              key={i}
+              className={`flex items-center justify-between px-3 py-1.5 text-sm ${i > 0 ? 'border-t border-gray-100' : ''}`}
+              style={isOdd ? { background: '#fef2f2' } : {}}
+            >
+              <span className={`font-medium ${isOdd ? 'text-red-800' : 'text-gray-700'}`}>
+                {d.day || `Day ${i + 1}`}
+              </span>
+              <span className={isOdd ? 'text-red-800 font-semibold' : 'text-gray-600'}>
+                {d.start_time || '—'}{d.end_time ? ` – ${d.end_time}` : ''}
+                {d.duration != null && d.duration !== '' && (
+                  <span className="text-xs text-gray-400 ml-1.5">({d.duration} hr)</span>
+                )}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -408,7 +466,7 @@ function ValidationIssues({
       {acknowledgedErrors.length > 0 && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
           <div className="font-semibold text-green-800 mb-2 flex items-center justify-between">
-            <span className="flex items-center gap-2">✓ Dismissed Warnings ({acknowledgedErrors.length})</span>
+            <span className="flex items-center gap-2">✓ Accepted ({acknowledgedErrors.length})</span>
             <button
               onClick={onResetAcknowledged}
               className="text-xs text-red-600 hover:text-red-800 underline"
@@ -450,7 +508,7 @@ function ValidationIssues({
                   )}
                   {dismissedAt && (
                     <div className="ml-4 text-green-500 text-[10px]">
-                      Dismissed on {dismissedAt}
+                      Accepted on {dismissedAt}
                     </div>
                   )}
                 </li>
@@ -486,9 +544,9 @@ function ErrorSection({ title, errors, bgColor, borderColor, labelBgColor, textC
                 onDismiss(error.message, error);
               }}
               className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
-              title="Dismiss with optional note"
+              title="Create a custom rule for this"
             >
-              ✓ OK
+              ＋ Rule
             </button>
           </li>
         ))}

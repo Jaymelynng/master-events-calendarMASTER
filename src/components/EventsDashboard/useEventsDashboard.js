@@ -28,6 +28,9 @@ export default function useEventsDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('calendar');
   const [calendarView, setCalendarView] = useState('full');
+  // Errors focus: dims clean events + spotlights ones with issues, so you can
+  // scan a busy calendar for what needs attention without losing your place.
+  const [errorFocus, setErrorFocus] = useState(false);
 
   // Modal state
   const [showAddEventModal, setShowAddEventModal] = useState(false);
@@ -539,6 +542,8 @@ export default function useEventsDashboard() {
     setCurrentYear,
     calendarView,
     setCalendarView,
+    errorFocus,
+    setErrorFocus,
     viewMode,
     setViewMode,
     displayDates,

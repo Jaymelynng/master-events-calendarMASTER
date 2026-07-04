@@ -4,6 +4,18 @@
 
 ---
 
+## ⛔ JAYME'S #1 LAW — NO HARDCODING (read before touching anything)
+
+**Nothing that controls how the app behaves may be hardcoded in code.** Every category mapping, keyword list, synonym, program name, threshold, tolerance, valid value, skill list, CC email — ALL of it must live in the **database** and be **manageable by Jayme from the Admin UI**. She is non-technical: a value she can't change from a screen is a value she can't own.
+
+- If you find hardcoded behavior, **FLAG IT as a bug** (file+line) and move it to DB + a UI screen. Never frame it as optional "future polish" — that reaction enrages her because she has said this a million times.
+- **Never ADD a new hardcoded list/mapping/keyword.** Build it as a table + admin screen from the start.
+- Moving code→DB is **additive/safe**: sync/engine reads the table, falls back to the old code list only if the table is empty/unreachable, so nothing breaks.
+- Her model: **universal/core rules** (apply to all) + **gym rules** that are **permanent or temporary** for one-offs — all created and managed in the workflow HERE, in the app.
+- Migration status + full offender list: `memory/project_no_hardcoding_law.md`. In-progress: `category_mappings` table (replaces `BOOKING_TITLE_TO_EVENT_TYPE` in f12) — finish wiring f12 + build the Admin UI.
+
+---
+
 ## 🚨 MANDATORY FIRST STEPS (Do these BEFORE any work)
 
 1. **Read `AI_RULES_READ_FIRST.md`** — Critical rules, system architecture, validation logic
@@ -50,11 +62,10 @@
 | Monthly Requirements table | `src/components/EventsDashboard/MonthlyRequirementsTable.js` |
 | **Admin Dashboard** | |
 | Tab orchestrator + MonthlyRequirementsBar | `src/components/AdminDashboard/AdminDashboard.js` (live category add/edit/remove + hex paste color picker, May 2026) |
-| Audit & Review tab | `src/components/AdminDashboard/AdminAuditReview.js` |
+| Errors tab (command center) | `src/components/AdminDashboard/AdminErrorsCenter.js` (NEW July 2026 — per gym / per topic / totals, three panels) |
 | Gym Rules tab | `src/components/AdminDashboard/AdminGymRules.js` (1000+ lines) |
 | Pricing tab | `src/components/AdminDashboard/AdminPricing.js` |
 | Change History tab | `src/components/AdminDashboard/AdminChangeHistory.js` |
-| Audit Rules tab | `src/components/AdminDashboard/AdminAuditRulesReference.js` |
 | Future Plans tab | `src/components/AdminDashboard/AdminFuturePlans.js` |
 | Quick Actions tab | `src/components/AdminDashboard/AdminQuickActions.js` |
 | Rule Wizard | `src/components/AdminDashboard/RuleWizard.js` |
@@ -78,16 +89,19 @@
 
 ### Validation System
 - **DATA errors** (red) = something is WRONG (mismatch between sources)
-- **All validation is database-driven** — 11 check rules in the `rules` table, executed by `validation_engine.py`
+- **All validation is database-driven** — 8 check rules in the `rules` table, executed by `validation_engine.py` (was 11 — the 3 pricing checks were removed July 1, 2026, see below)
 - **Python has zero hardcoded validation** — `f12_collect_and_import.py` calls the engine, which reads active checks from the database
 - **User rules** (valid_price, valid_time, exception, etc.) also live in the `rules` table
 - **Format errors were never implemented** — the old SHOW_FORMAT_ERRORS toggle was hiding nothing (dead code, now removed)
 - **What gets compared:** See `docs/OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md` for the complete comparison table
 
 ### Pricing
+- **⚠️ PRICE VALIDATION REMOVED July 1, 2026 (Jayme's decision)** — the 3 pricing checks (`check_camp_price`, `check_event_price`, `check_price_mismatch`) are deleted from the `rules` table and stored pricing errors were stripped. Too many weird situations; Jayme is exploring an authenticated-backend connection before rebuilding. Do NOT re-add pricing validation without her explicit go. Restore path: `database/REMOVED_PRICING_VALIDATION_2026_07_01.sql`. Full context: `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md`.
 - iClass API does NOT provide prices
-- **Camp prices:** `camp_pricing` table (we built this)
-- **Other prices:** `event_pricing` table with `effective_date` support (we built this Feb 2026)
+- **Camp prices:** `camp_pricing` table — still used by sync to SET the displayed price on events (display only, no validation)
+- **Other prices:** `event_pricing` table with `effective_date` support — same, display only
+- **Pricing admin tab REMOVED July 2, 2026 (Jayme's ask)** — `AdminPricing.js` deleted (recoverable from git). Edit prices directly in Supabase if a base price changes.
+- **April backend-discovery data** (`pricing_schedules`, `camp_type_mappings`) lives in the `archive` schema, out of `public`
 - **Raw pricing data:** `data/gym-pricing-raw/` has iClassPro enterprise pricing for EST + CCP (all 10 gyms collected)
 
 ### Rules System (Unified March 2026)
@@ -115,19 +129,33 @@
 - **Capacity total NOT available** — iClass `maxStudents` is always null; can't show "23/40" fraction format without manual entry
 - **Full doc:** `docs/OPERATIONS/OPENINGS_CAPACITY_FEATURE.md`
 
+### Daily Schedule (NEW July 2, 2026)
+- **Per-weekday camp hours captured.** Sync used to keep only the first day's time in `events.time`; now the whole schedule is stored in `events.daily_schedule` (jsonb array of `{day, start_time, end_time, duration}`).
+- **Why:** a camp can have a mis-set single day (real case: SGT "Half Day" camp with Monday = 1hr while Tue–Fri = 3hr) that was invisible when only day 1 was kept.
+- **Where it shows:** side panel "📅 Daily Schedule" section (flags the odd day red), CSV export "Daily Schedule" column, and the AI review "one day doesn't match its siblings" check.
+- **Additive only** — `time` unchanged. Captured in f12 step 4b, allowlisted in local_api_server, persisted through SyncModal's 4 write spots, view-exposed. SQL record: `database/ADD_DAILY_SCHEDULE_COLUMN.sql`.
+- **Per-day signup:** `allow_choose_days` (true = per-day, false = full-week-only) — the "✓ Per-Day Signup / 📦 Full Week Only" tag. Combined with pricing-schedule per-block rates (archive schema) it's how iClass decides single-day enrollment. Public API gives the net result only, not the admin toggle names.
+
 ### Admin Access
 - Level 1: Everyone sees calendar
 - Level 2: Shift+Click magic wand → Admin Dashboard
 - Level 3: Press `*` + PIN (set via `REACT_APP_ADMIN_PIN` env var) → Super Admin (Quick Actions)
 
-### Admin Dashboard Tabs (7 tabs + Email button)
-- **Audit & Review** — View/filter/dismiss validation errors
-- **Pricing** — Manage event_pricing and camp_pricing
-- **Gym Rules** — Rule Wizard, permanent/temporary rules, synonyms, exceptions
+### AI Event Review (NEW July 1, 2026)
+- **What:** Claude reviews every new/changed upcoming event like a gymnastics-literate human — title vs description vs iClass settings. Catches what regexes can't: wrong skills on clinics (knows BHS = back handspring), same-month wrong day-numbers, leftover copy from other events.
+- **Where flags live:** `events.ai_review_flags` (jsonb) + `events.ai_reviewed_at` — its own lane. NEVER writes to `validation_errors` (sync owns that and overwrites it every run).
+- **UI:** 🤖 AI Review topic in the Errors tab. Flags are labeled SUGGESTION with a plain-English reason; dismiss uses the standard acknowledged_errors flow and sticks across runs.
+- **Runs:** daily scheduled Claude Code task + on demand ("run the AI event review" in any session).
+- **Procedure (the contract any session must follow):** `docs/OPERATIONS/AI_EVENT_REVIEW.md` — read it before touching this system. Hard rules: write only to the two ai_* columns, confident-only, no price flags, respect dismissals.
+
+### Admin Dashboard Tabs (5 tabs + Email button)
+- **🚨 Errors** (NEW July 1, 2026) — Errors Command Center: every caught error per gym / per topic / totals + the 🤖 AI Review lane. Summary cards → horizontal topic tabs (Time / Dates / Age / Program / Title-Desc / AI Review / No Description) → three panels: gyms with counts | event cards | detail with iClass link + Dismiss / Make Rule. File: `AdminErrorsCenter.js`. Replaces the old Audit & Review tab deleted in June 2026.
+- **Gym Rules** — Rule Wizard, permanent/temporary rules, synonyms, exceptions, plus the system checks with toggles (the old Audit Rules tab was merged into here)
 - **Change History** — Audit log with filters and CSV export
-- **Audit Rules** — Reference table of all validation checks (all database-driven via rules table)
 - **Future Plans** — Track planned features, improvements, ideas (add/edit/delete from UI)
 - **Quick Actions** — Sync, import, super admin tools
+
+**Gotcha (learned July 1, 2026):** the app renders `EventsDashboard_REFACTORED.js` (see `App.js`), NOT the 4000-line `EventsDashboard.js`. AdminDashboard props must be wired in the REFACTORED file — a missing `events` prop there was why Email Composer (and the new Errors tab) received no event data.
 
 ---
 

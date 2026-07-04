@@ -22,7 +22,8 @@ export default function CalendarGrid({
   calendarRef,
   gymRefs,
   selectedEventForPanel,
-  onEventSelect
+  onEventSelect,
+  errorFocus = false
 }) {
   return (
     <div className={`mx-2 mb-20 pb-20 transition-all duration-300 ${selectedEventForPanel ? 'mr-[400px]' : ''}`}>
@@ -109,6 +110,7 @@ export default function CalendarGrid({
                       currentYear={currentYear}
                       eventTypes={eventTypes}
                       onEventSelect={onEventSelect}
+                      errorFocus={errorFocus}
                     />
                   ))}
 
@@ -120,6 +122,7 @@ export default function CalendarGrid({
                       currentYear={currentYear}
                       currentMonth={currentMonth}
                       onEventSelect={onEventSelect}
+                      errorFocus={errorFocus}
                     />
                   )}
                 </div>
@@ -181,7 +184,7 @@ function GymCell({ gym, gymData, gymId, gymEvents, gridRow }) {
 }
 
 // Individual date cell with events
-function DateCell({ date, gymEvents, currentMonth, currentYear, eventTypes, onEventSelect }) {
+function DateCell({ date, gymEvents, currentMonth, currentYear, eventTypes, onEventSelect, errorFocus }) {
   // Filter events that fall on this date
   const dateEvents = gymEvents.filter(event =>
     eventFallsOnDate(event, date, currentYear, currentMonth, multiDayEventTypes)
@@ -208,6 +211,7 @@ function DateCell({ date, gymEvents, currentMonth, currentYear, eventTypes, onEv
               event={event}
               eventTypes={eventTypes}
               onClick={onEventSelect}
+              errorFocus={errorFocus}
             />
           ))
         ) : (

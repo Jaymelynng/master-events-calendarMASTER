@@ -139,7 +139,9 @@ ALLOWED_EVENT_FIELDS = {
     # iClassPro camp fields for pricing schedule matching
     'type_id',
     'allow_choose_days',
-    'program_name'
+    'program_name',
+    # Full per-day schedule (all weekdays, not just day 1)
+    'daily_schedule'
 }
 
 def sanitize_event_payload(event: dict, gym_id: str, event_type: str) -> dict:

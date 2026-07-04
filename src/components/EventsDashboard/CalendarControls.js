@@ -181,13 +181,30 @@ export default function CalendarControls({
 export function CalendarViewToggle({
   calendarView,
   onCalendarViewChange,
-  theme
+  theme,
+  errorFocus,
+  onErrorFocusToggle
 }) {
   return (
     <div className="text-center mb-2">
       <h3 className="text-base font-semibold mb-2" style={{ color: theme.colors.textPrimary }}>
         Calendar View:
       </h3>
+
+      {/* Errors focus toggle — flips the whole calendar between "show me the
+          data (spots, etc.)" and "show me only what's wrong". */}
+      <div className="flex justify-center mb-2">
+        <button
+          onClick={onErrorFocusToggle}
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold border-2 transition-all duration-200 cursor-pointer"
+          style={errorFocus
+            ? { background: '#dc2626', borderColor: '#dc2626', color: '#ffffff', boxShadow: '0 3px 10px rgba(220,38,38,.35)' }
+            : { background: '#ffffff', borderColor: '#e5b4b4', color: '#8b4a4a' }}
+          title={errorFocus ? 'Showing only events that need attention — click to see all event data again' : 'Dim clean events and spotlight the ones with errors'}
+        >
+          {errorFocus ? '🚨 Errors Focus: ON' : '🔍 Focus on Errors'}
+        </button>
+      </div>
 
       {/* Main view buttons */}
       <div className="flex justify-center gap-2 mb-2">
@@ -245,19 +262,17 @@ export function CalendarLegend({ theme }) {
   return (
     <div className="mt-4 text-xs text-center" style={{ color: theme.colors.textSecondary }}>
       <p>• Click any event card to open the side panel with full details and registration links</p>
-      <div className="mt-2 flex items-center justify-center gap-4 text-[10px]">
+      {/* Legend mirrors the actual corner dots in EventCard.js. "Formatting" /
+          "Both" removed July 2026 (formatting errors never existed). AI review
+          lives in the Errors tab, NOT the calendar — no dot here. */}
+      <div className="mt-2 flex items-center justify-center flex-wrap gap-x-4 gap-y-1 text-[10px]">
         <span className="flex items-center gap-1">
           <span className="w-3 h-3 bg-red-500 rounded-full border border-red-700 inline-block"></span>
           Data Error
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 bg-orange-400 rounded-full border border-orange-600 inline-block"></span>
-          Formatting
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 bg-red-500 rounded-full border border-red-700 inline-block"></span>
-          <span className="w-2 h-2 bg-orange-400 rounded-full border border-orange-600 inline-block -ml-1.5"></span>
-          Both
+          <span className="w-2.5 h-2.5 border-2 border-red-500 rounded-full inline-block bg-white"></span>
+          No Description
         </span>
         <span className="flex items-center gap-1">
           <span className="w-2 h-2 bg-gray-400 rounded-full inline-block"></span>

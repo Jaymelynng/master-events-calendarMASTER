@@ -57,7 +57,7 @@ const EventsDashboard = () => {
     loading,
     // View state
     currentMonth, currentYear, calendarView, viewMode, displayDates,
-    setCalendarView, setViewMode,
+    setCalendarView, setViewMode, errorFocus, setErrorFocus,
     // Filters
     selectedGym, setSelectedGym, selectedEventType, setSelectedEventType,
     searchTerm, setSearchTerm,
@@ -111,10 +111,13 @@ const EventsDashboard = () => {
       <Suspense fallback={<ModalLoader />}>
         <AdminDashboard
           gyms={gymsList}
+          events={events}
           eventTypes={eventTypes}
           onEventTypesChange={setEventTypes}
           monthlyRequirements={monthlyRequirements}
           onMonthlyRequirementsChange={setMonthlyRequirements}
+          currentMonth={currentMonth}
+          currentYear={currentYear}
           onClose={() => setShowAdminPortal(false)}
           onOpenSyncModal={() => {
             setShowAdminPortal(false);
@@ -425,10 +428,14 @@ const EventsDashboard = () => {
                 calendarView={calendarView}
                 onCalendarViewChange={handleCalendarViewChange}
                 theme={theme}
+                errorFocus={errorFocus}
+                onErrorFocusToggle={() => setErrorFocus(f => !f)}
               />
 
-              {/* Calendar Legend */}
-              <CalendarLegend theme={theme} />
+              {/* Calendar Legend — only in Errors Focus mode. Normal view is
+                  events + spots; the error-dot legend only matters when you're
+                  hunting errors. */}
+              {errorFocus && <CalendarLegend theme={theme} />}
 
               {/* Calendar Grid */}
               <CalendarGrid
@@ -443,6 +450,7 @@ const EventsDashboard = () => {
                 gymRefs={gymRefs}
                 selectedEventForPanel={selectedEventForPanel}
                 onEventSelect={setSelectedEventForPanel}
+                errorFocus={errorFocus}
               />
 
               {/* Bottom Navigation & Add Event */}

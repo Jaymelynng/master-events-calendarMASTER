@@ -31,6 +31,14 @@ function variantHasDataErrors(variant, acknowledgedPatterns) {
   return active.some(err => inferErrorCategory(err) === 'data_error');
 }
 
+// "Needs attention" check for Errors Focus mode: data errors OR a
+// missing/flyer-only description. AI review lives in the Errors tab, not the
+// calendar (Jayme, July 2).
+function variantHasIssue(variant, acknowledgedPatterns) {
+  if (variantHasDataErrors(variant, acknowledgedPatterns)) return true;
+  return variant.description_status === 'none' || variant.description_status === 'flyer_only';
+}
+
 // Group variants by their (start_date, end_date) so all variants of the same
 // camp run land together in the same row block.
 function groupCampsByRun(campEvents) {
@@ -94,6 +102,7 @@ export default function CampBand({
   currentMonth,
   onEventSelect,
   acknowledgedPatterns = [],
+  errorFocus = false,
 }) {
   if (!campEvents || campEvents.length === 0) return null;
 
@@ -201,6 +210,9 @@ export default function CampBand({
         const status = spotsStatus(variant);
         const statusColor = status ? STATUS_COLORS[status.kind] : null;
         const hasErrors = variantHasDataErrors(variant, acknowledgedPatterns);
+        // Errors Focus: dim clean variants, leave flagged ones bright.
+        const hasIssue = errorFocus ? variantHasIssue(variant, acknowledgedPatterns) : false;
+        const dimmed = errorFocus && !hasIssue;
 
         return (
           <div
@@ -210,6 +222,7 @@ export default function CampBand({
               gridColumn,
               gridRow,
               borderRadius: '7px',
+              ...(dimmed ? { opacity: 0.25, filter: 'grayscale(1)' } : {}),
               // When a variant has unresolved data errors, switch the border
               // to red and add a soft red glow so the bar pops as "needs
               // attention" without redrawing the whole bar.
