@@ -1,5 +1,23 @@
 import { supabase } from './supabase'
 
+// App-wide settings the UI manages (e.g. the CC email for error notifications).
+// Key/value so nothing is hardcoded.
+export const appConfigApi = {
+  async getAll() {
+    const { data, error } = await supabase.from('app_config').select('*')
+    if (error) throw new Error(error.message)
+    const map = {}
+    ;(data || []).forEach(r => { map[r.key] = r.value })
+    return map
+  },
+  async set(key, value) {
+    const { error } = await supabase
+      .from('app_config')
+      .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    if (error) throw new Error(error.message)
+  }
+}
+
 // Gyms API
 export const gymsApi = {
   async getAll() {

@@ -11,7 +11,7 @@
 // ============================================================================
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
-import { acknowledgedPatternsApi, rulesApi } from '../../lib/api';
+import { acknowledgedPatternsApi, rulesApi, appConfigApi } from '../../lib/api';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
 import {
   isErrorAcknowledgedAnywhere,
@@ -57,9 +57,54 @@ export default function AdminErrorsCenter({ gyms, events }) {
   const [ackOverride, setAckOverride] = useState({}); // { eventId: [acks] }
   const [dismissModal, setDismissModal] = useState(null); // { eventId, errorMessage, errorObj, gymId, eventType, ruleEligible, ruleInfo }
 
+  const [appConfig, setAppConfig] = useState({});
+
   useEffect(() => {
     acknowledgedPatternsApi.getAll().then(setPatterns).catch(() => setPatterns([]));
+    appConfigApi.getAll().then(setAppConfig).catch(() => setAppConfig({}));
   }, []);
+
+  // Build a pre-filled Outlook compose link for one error and open it. The
+  // email sends from Jayme's own Powers account (she's signed into Outlook);
+  // she reviews and hits Send. To = gym manager + front desk, CC = the
+  // configured notification CC (managed in Contacts).
+  const emailErrorToGym = (ev, errorMessage) => {
+    const gym = gyms?.find(g => g.id === ev.gym_id) || {};
+    const toList = [gym.manager_email, gym.front_desk_email].filter(Boolean);
+    if (toList.length === 0) {
+      alert(`No email on file for ${ev.gym_id}. Add the manager / front desk email in the Contacts tab first.`);
+      return;
+    }
+    const cc = (appConfig.error_email_cc || '').trim();
+    const fromName = appConfig.error_email_from_name || 'Jayme';
+    const evDate = fmtDate(ev.start_date || ev.date);
+    const subject = `Event Error — ${ev.gym_id} — ${ev.title || 'Event'}`;
+    const bodyLines = [
+      `Hi ${gym.manager_name || 'team'},`,
+      ``,
+      `A data error was flagged on one of your events. Please take a look and fix it in iClassPro:`,
+      ``,
+      `Event: ${ev.title || '(no title)'}`,
+      `Type: ${ev.type || ev.event_type || ''}`,
+      `Date: ${evDate}`,
+      `Gym: ${gym.name || ev.gym_id}`,
+      ``,
+      `Issue: ${errorMessage}`,
+      ``,
+      ev.event_url ? `Open in iClassPro: ${ev.event_url}` : '',
+      ``,
+      `Thanks,`,
+      fromName,
+    ].filter(l => l !== null && l !== undefined);
+    const to = encodeURIComponent(toList.join(';'));
+    const ccEnc = encodeURIComponent(cc);
+    const subj = encodeURIComponent(subject);
+    const body = encodeURIComponent(bodyLines.join('\n'));
+    window.open(
+      `https://outlook.office.com/mail/deeplink/compose?to=${to}${cc ? `&cc=${ccEnc}` : ''}&subject=${subj}&body=${body}`,
+      '_blank'
+    );
+  };
 
   // ── Build the working set: every event with at least one issue ────────────
   const issueEvents = useMemo(() => {
@@ -438,21 +483,31 @@ export default function AdminErrorsCenter({ gyms, events }) {
                           </span>
                         </div>
                         <div className="text-xs mt-1" style={{ color: c.text }}>{e.message}</div>
-                        <button
-                          onClick={() => setDismissModal({
-                            eventId: selectedEvent.id,
-                            errorMessage: e.message,
-                            errorObj: e,
-                            gymId: selectedEvent.gym_id,
-                            eventType: selectedEvent.type || selectedEvent.event_type || 'CAMP',
-                            ruleEligible: canAddAsRule(e.type),
-                            ruleInfo: extractRuleValue(e, selectedEvent),
-                          })}
-                          className="mt-2 px-2.5 py-1 rounded-md text-xs font-bold bg-white border transition-colors hover:bg-green-50 cursor-pointer"
-                          style={{ borderColor: c.border, color: c.text }}
-                        >
-                          ＋ Create Custom Rule
-                        </button>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <button
+                            onClick={() => emailErrorToGym(selectedEvent, e.message)}
+                            className="px-2.5 py-1 rounded-md text-xs font-bold text-white transition-colors cursor-pointer"
+                            style={{ background: '#2563eb' }}
+                            title="Open a pre-filled email to this gym's manager + front desk (sends from your Outlook)"
+                          >
+                            📧 Email the Gym
+                          </button>
+                          <button
+                            onClick={() => setDismissModal({
+                              eventId: selectedEvent.id,
+                              errorMessage: e.message,
+                              errorObj: e,
+                              gymId: selectedEvent.gym_id,
+                              eventType: selectedEvent.type || selectedEvent.event_type || 'CAMP',
+                              ruleEligible: canAddAsRule(e.type),
+                              ruleInfo: extractRuleValue(e, selectedEvent),
+                            })}
+                            className="px-2.5 py-1 rounded-md text-xs font-bold bg-white border transition-colors hover:bg-green-50 cursor-pointer"
+                            style={{ borderColor: c.border, color: c.text }}
+                          >
+                            ＋ Create Custom Rule
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -474,21 +529,31 @@ export default function AdminErrorsCenter({ gyms, events }) {
                       {f.reason && (
                         <div className="text-[11px] mt-1 italic" style={{ color: '#4f46e5' }}>{f.reason}</div>
                       )}
-                      <button
-                        onClick={() => setDismissModal({
-                          eventId: selectedEvent.id,
-                          errorMessage: f.message,
-                          errorObj: f,
-                          gymId: selectedEvent.gym_id,
-                          eventType: selectedEvent.type || selectedEvent.event_type || 'CAMP',
-                          ruleEligible: false,
-                          ruleInfo: null,
-                        })}
-                        className="mt-2 px-2.5 py-1 rounded-md text-xs font-bold bg-white border transition-colors hover:bg-green-50 cursor-pointer"
-                        style={{ borderColor: '#a5b4fc', color: '#3730a3' }}
-                      >
-                        ＋ Create Custom Rule
-                      </button>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <button
+                          onClick={() => emailErrorToGym(selectedEvent, f.message)}
+                          className="px-2.5 py-1 rounded-md text-xs font-bold text-white cursor-pointer"
+                          style={{ background: '#2563eb' }}
+                          title="Open a pre-filled email to this gym (sends from your Outlook)"
+                        >
+                          📧 Email the Gym
+                        </button>
+                        <button
+                          onClick={() => setDismissModal({
+                            eventId: selectedEvent.id,
+                            errorMessage: f.message,
+                            errorObj: f,
+                            gymId: selectedEvent.gym_id,
+                            eventType: selectedEvent.type || selectedEvent.event_type || 'CAMP',
+                            ruleEligible: false,
+                            ruleInfo: null,
+                          })}
+                          className="px-2.5 py-1 rounded-md text-xs font-bold bg-white border transition-colors hover:bg-green-50 cursor-pointer"
+                          style={{ borderColor: '#a5b4fc', color: '#3730a3' }}
+                        >
+                          ＋ Create Custom Rule
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
