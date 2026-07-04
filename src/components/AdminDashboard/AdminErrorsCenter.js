@@ -78,18 +78,18 @@ export default function AdminErrorsCenter({ gyms, events }) {
     const cc = (appConfig.error_email_cc || '').trim();
     const fromName = appConfig.error_email_from_name || 'Jayme';
     const evDate = fmtDate(ev.start_date || ev.date);
-    const subject = `Event Error — ${ev.gym_id} — ${ev.title || 'Event'}`;
+    const subject = `Heads up — ${ev.gym_id} event to update — ${ev.title || 'Event'}`;
     const bodyLines = [
       `Hi ${gym.manager_name || 'team'},`,
       ``,
-      `A data error was flagged on one of your events. Please take a look and fix it in iClassPro:`,
+      `A data error was flagged on one of your events. Please take a look and update it in iClassPro when you get a chance:`,
       ``,
       `Event: ${ev.title || '(no title)'}`,
       `Type: ${ev.type || ev.event_type || ''}`,
       `Date: ${evDate}`,
       `Gym: ${gym.name || ev.gym_id}`,
       ``,
-      `Issue: ${errorMessage}`,
+      `What to update: ${errorMessage}`,
       ``,
       ev.event_url ? `Open in iClassPro: ${ev.event_url}` : '',
       ``,
