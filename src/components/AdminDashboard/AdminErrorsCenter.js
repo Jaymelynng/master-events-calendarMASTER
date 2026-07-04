@@ -72,34 +72,29 @@ export default function AdminErrorsCenter({ gyms, events }) {
   // How many days before we nudge a follow-up (configurable, no hardcoding).
   const followupDays = parseInt(appConfig.error_email_followup_days, 10) || 3;
 
-  // Find the send history for one event + exact error message (newest first).
-  const sendsForError = (eventId, errorMessage) =>
-    emailLog.filter(r => r.event_id === eventId && r.error_message === errorMessage);
+  // Send history for a whole EVENT (one email per event, not per error).
+  const sendsForEvent = (eventId) => emailLog.filter(r => r.event_id === eventId);
 
-  // Build a pre-filled Outlook compose link for one error and open it. The
-  // email sends from Jayme's own Powers account (she's signed into Outlook);
-  // she reviews and hits Send. To = gym manager + front desk, CC = the
-  // configured notification CC (managed in Contacts).
-  const emailErrorToGym = (ev, errorMessage) => {
+  // Open ONE pre-filled Outlook compose listing ALL the event's errors, and
+  // record the send against the event. Sends from Jayme's own Powers account
+  // (she's signed into Outlook); she reviews and hits Send.
+  const emailEventErrors = (ev, errorLines) => {
     const gym = gyms?.find(g => g.id === ev.gym_id) || {};
     const cc = (appConfig.error_email_cc || '').trim();
     const fromName = appConfig.error_email_from_name || 'Jayme';
-    const { url, recipients } = buildErrorEmailUrl({ event: ev, errorMessage, gym, cc, fromName });
+    const { url, recipients, summary } = buildErrorEmailUrl({ event: ev, errorLines, gym, cc, fromName });
     if (!url) {
       alert(`No email on file for ${ev.gym_id}. Add the manager / front desk email in the Contacts tab first.`);
       return;
     }
     window.open(url, '_blank');
 
-    // Record the send so it shows on the error until the gym fixes it (which
-    // makes the error disappear on the next sync). Optimistic local update
-    // first so the "Emailed just now" line appears immediately.
     const optimistic = {
       id: `tmp-${ev.id}-${Date.now()}`,
       event_id: ev.id,
       gym_id: ev.gym_id,
       event_title: ev.title || null,
-      error_message: errorMessage,
+      error_message: summary,
       recipients: recipients.join('; '),
       cc: cc || null,
       sent_at: new Date().toISOString(),
@@ -109,48 +104,43 @@ export default function AdminErrorsCenter({ gyms, events }) {
       event_id: ev.id,
       gym_id: ev.gym_id,
       event_title: ev.title,
-      error_message: errorMessage,
+      error_message: summary,
       recipients: recipients.join('; '),
       cc,
     }).then(saved => {
-      // Swap the optimistic row for the real saved one.
       setEmailLog(prev => [saved, ...prev.filter(r => r.id !== optimistic.id)]);
     }).catch(() => {/* keep optimistic row; a refresh will reconcile */});
   };
 
-  // The blue email button — label flips to "Send follow-up" once it's been
-  // emailed at least once, and goes amber when it's past the follow-up window.
-  const emailButton = (ev, msg) => {
-    const sends = sendsForError(ev.id, msg);
+  // ONE event-level email button + "Emailed N days ago" stamp. `lines` is the
+  // formatted "Label: message" list of every error on the event.
+  const eventEmailBlock = (ev, lines) => {
+    const sends = sendsForEvent(ev.id);
     const emailed = sends.length > 0;
-    const overdue = emailed && fmtSentStamp(sends[0].sent_at).days >= followupDays;
-    const bg = !emailed ? '#2563eb' : overdue ? '#d97706' : '#6b7280';
+    const stamp = emailed ? fmtSentStamp(sends[0].sent_at) : null;
+    const overdue = stamp && stamp.days >= followupDays;
     return (
-      <button
-        onClick={() => emailErrorToGym(ev, msg)}
-        className="px-2.5 py-1 rounded-md text-xs font-bold text-white transition-colors cursor-pointer"
-        style={{ background: bg }}
-        title={emailed
-          ? 'Send another email about this — the gym hasn’t fixed it yet'
-          : 'Open a pre-filled email to this gym’s manager + front desk (sends from your Outlook)'}
-      >
-        {emailed ? '📧 Send follow-up' : '📧 Email the Gym'}
-      </button>
-    );
-  };
-
-  // The "Emailed Jul 4 · 2 days ago (2 emails sent)" line under the buttons.
-  const sentStamp = (ev, msg) => {
-    const sends = sendsForError(ev.id, msg);
-    if (sends.length === 0) return null;
-    const { dateStr, ago, days } = fmtSentStamp(sends[0].sent_at);
-    const overdue = days >= followupDays;
-    return (
-      <div className="mt-1.5 text-[11px] font-semibold flex items-center gap-1 flex-wrap"
-           style={{ color: overdue ? '#b45309' : '#6b7280' }}>
-        <span>📧 Emailed {dateStr} · {ago}</span>
-        {sends.length > 1 && <span>· {sends.length} emails sent</span>}
-        {overdue && <span className="font-black">· follow-up overdue</span>}
+      <div className="mb-3">
+        <button
+          onClick={() => emailEventErrors(ev, lines)}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 cursor-pointer"
+          style={{ background: !emailed ? '#2563eb' : overdue ? '#d97706' : '#6b7280' }}
+          title={emailed
+            ? 'Send another email about this event — not fixed yet'
+            : 'Email this gym’s manager + front desk about all the issues on this event'}
+        >
+          {emailed
+            ? '📧 Send follow-up email'
+            : `📧 Email the Gym${lines.length > 1 ? ` (all ${lines.length} issues)` : ''}`}
+        </button>
+        {emailed && (
+          <div className="mt-1.5 text-[11px] font-semibold flex items-center gap-1 flex-wrap"
+               style={{ color: overdue ? '#b45309' : '#6b7280' }}>
+            <span>📧 Emailed {stamp.dateStr} · {stamp.ago}</span>
+            {sends.length > 1 && <span>· {sends.length} emails sent</span>}
+            {overdue && <span className="font-black">· follow-up overdue</span>}
+          </div>
+        )}
       </div>
     );
   };
@@ -518,6 +508,15 @@ export default function AdminErrorsCenter({ gyms, events }) {
                 </a>
               )}
 
+              {/* ONE email for the whole event, listing every data error. The
+                  + Create Custom Rule buttons stay per-error below. (Jayme:
+                  one event = one email, not one email per error.) */}
+              {selectedEvent.activeErrors.length > 0 &&
+                eventEmailBlock(
+                  selectedEvent,
+                  selectedEvent.activeErrors.map(e => `${getErrorLabel(e.type)}: ${e.message}`)
+                )}
+
               {/* Active errors with actions */}
               {selectedEvent.activeErrors.length > 0 && (
                 <div className="space-y-2 mb-3">
@@ -533,7 +532,6 @@ export default function AdminErrorsCenter({ gyms, events }) {
                         </div>
                         <div className="text-xs mt-1" style={{ color: c.text }}>{e.message}</div>
                         <div className="mt-2 flex flex-wrap gap-1.5">
-                          {emailButton(selectedEvent, e.message)}
                           <button
                             onClick={() => setDismissModal({
                               eventId: selectedEvent.id,
@@ -550,7 +548,6 @@ export default function AdminErrorsCenter({ gyms, events }) {
                             ＋ Create Custom Rule
                           </button>
                         </div>
-                        {sentStamp(selectedEvent, e.message)}
                       </div>
                     );
                   })}
@@ -573,7 +570,6 @@ export default function AdminErrorsCenter({ gyms, events }) {
                         <div className="text-[11px] mt-1 italic" style={{ color: '#4f46e5' }}>{f.reason}</div>
                       )}
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        {emailButton(selectedEvent, f.message)}
                         <button
                           onClick={() => setDismissModal({
                             eventId: selectedEvent.id,
@@ -590,7 +586,6 @@ export default function AdminErrorsCenter({ gyms, events }) {
                           ＋ Create Custom Rule
                         </button>
                       </div>
-                      {sentStamp(selectedEvent, f.message)}
                     </div>
                   ))}
                 </div>
