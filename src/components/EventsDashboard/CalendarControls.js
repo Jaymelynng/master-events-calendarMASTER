@@ -196,13 +196,13 @@ export function CalendarViewToggle({
       <div className="flex justify-center mb-2">
         <button
           onClick={onErrorFocusToggle}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold border-2 transition-all duration-200 cursor-pointer"
+          className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold text-white transition-all duration-200 cursor-pointer hover:-translate-y-0.5"
           style={errorFocus
-            ? { background: '#dc2626', borderColor: '#dc2626', color: '#ffffff', boxShadow: '0 3px 10px rgba(220,38,38,.35)' }
-            : { background: '#ffffff', borderColor: '#e5b4b4', color: '#8b4a4a' }}
-          title={errorFocus ? 'Showing only events that need attention — click to see all event data again' : 'Dim clean events and spotlight the ones with errors'}
+            ? { background: '#8b6f6f', boxShadow: '0 3px 10px rgba(139,111,111,.35)' }
+            : { background: '#dc2626', boxShadow: '0 3px 10px rgba(220,38,38,.35)' }}
+          title={errorFocus ? 'Go back to the normal calendar (events + spots)' : 'See only the events with errors'}
         >
-          {errorFocus ? '🚨 Errors Focus: ON' : '🔍 Focus on Errors'}
+          {errorFocus ? '📅 Switch to Calendar View' : '🚨 Switch to Error View'}
         </button>
       </div>
 
