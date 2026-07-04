@@ -73,7 +73,7 @@ export default function DismissRuleModal({
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            ✓ Dismiss Warning
+            ＋ Create Custom Rule
           </h3>
           <button
             onClick={onCancel}
@@ -155,7 +155,7 @@ export default function DismissRuleModal({
                 >
                   This event only
                   <span className="block text-xs font-normal text-green-600 mt-0.5">
-                    Dismiss for this one event
+                    Accept this one event
                   </span>
                 </button>
                 <button
@@ -164,7 +164,7 @@ export default function DismissRuleModal({
                 >
                   All {eventType || 'events'} at {gymId}
                   <span className="block text-xs font-normal text-teal-600 mt-0.5">
-                    Dismiss for this entire program at gym
+                    Accept for this whole program at the gym
                   </span>
                 </button>
               </>
@@ -173,9 +173,9 @@ export default function DismissRuleModal({
                 onClick={() => handleAcceptException('event_only')}
                 className="flex-1 px-4 py-3 bg-green-100 border-2 border-green-400 text-green-800 rounded-lg hover:bg-green-200 hover:border-green-500 transition-colors font-semibold text-sm cursor-pointer"
               >
-                Accept Exception
+                Accept This Event
                 <span className="block text-xs font-normal text-green-600 mt-0.5">
-                  Dismiss this one time
+                  Mark this one event OK
                 </span>
               </button>
             )}

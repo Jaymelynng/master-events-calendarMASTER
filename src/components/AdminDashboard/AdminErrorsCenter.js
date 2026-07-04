@@ -227,7 +227,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
           { label: 'Warnings', value: summary.warnings, color: '#9a3412', bg: '#fff7ed' },
           { label: 'AI suggestions', value: summary.aiFlags, color: '#3730a3', bg: '#eef2ff' },
           { label: 'No description', value: summary.descIssues, color: '#374151', bg: '#f3f4f6' },
-          { label: 'Dismissed', value: summary.dismissed, color: '#166534', bg: '#f0fdf4' },
+          { label: 'Accepted', value: summary.dismissed, color: '#166534', bg: '#f0fdf4' },
         ].map(card => (
           <div key={card.label} className="flex-1 min-w-[140px] rounded-xl px-4 py-3 border"
             style={{ background: card.bg, borderColor: 'rgba(0,0,0,0.08)', boxShadow: '0 2px 8px rgba(70,50,52,.08)' }}>
@@ -263,7 +263,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
         })}
         <label className="ml-auto flex items-center gap-1.5 text-xs font-semibold cursor-pointer select-none" style={{ color: '#6e5658' }}>
           <input type="checkbox" checked={showDismissed} onChange={e => setShowDismissed(e.target.checked)} />
-          Show dismissed
+          Show accepted
         </label>
       </div>
 
@@ -378,7 +378,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
                   )}
                   {showDismissed && ev.dismissedErrors.length > 0 && (
                     <span className="px-2 py-0.5 rounded-full text-[11px] font-bold border bg-green-50 border-green-300 text-green-700">
-                      ✓ {ev.dismissedErrors.length} dismissed
+                      ✓ {ev.dismissedErrors.length} accepted
                     </span>
                   )}
                 </div>
@@ -395,7 +395,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
               <div className="text-4xl mb-2">👈</div>
               <div className="font-bold text-sm" style={{ color: '#6e5658' }}>Pick an event</div>
               <div className="text-xs mt-1" style={{ color: '#9a8b8b' }}>
-                Click any card to see its errors, open it in iClassPro, dismiss, or make a rule.
+                Click any card to see its errors, open it in iClassPro, or create a custom rule.
               </div>
             </div>
           ) : (
@@ -451,7 +451,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
                           className="mt-2 px-2.5 py-1 rounded-md text-xs font-bold bg-white border transition-colors hover:bg-green-50 cursor-pointer"
                           style={{ borderColor: c.border, color: c.text }}
                         >
-                          ✓ Dismiss / Make Rule
+                          ＋ Create Custom Rule
                         </button>
                       </div>
                     );
@@ -487,7 +487,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
                         className="mt-2 px-2.5 py-1 rounded-md text-xs font-bold bg-white border transition-colors hover:bg-green-50 cursor-pointer"
                         style={{ borderColor: '#a5b4fc', color: '#3730a3' }}
                       >
-                        ✓ Dismiss
+                        ＋ Create Custom Rule
                       </button>
                     </div>
                   ))}
@@ -510,7 +510,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
               {selectedEvent.dismissedErrors.length > 0 && (
                 <div className="rounded-lg border bg-green-50 border-green-200 p-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-green-800">✓ Dismissed ({selectedEvent.dismissedErrors.length})</span>
+                    <span className="text-xs font-black text-green-800">✓ Accepted ({selectedEvent.dismissedErrors.length})</span>
                     <button onClick={() => handleUndoAll(selectedEvent.id)}
                       className="text-[11px] font-bold text-red-600 hover:text-red-800 underline cursor-pointer">
                       Undo all

@@ -466,7 +466,7 @@ function ValidationIssues({
       {acknowledgedErrors.length > 0 && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
           <div className="font-semibold text-green-800 mb-2 flex items-center justify-between">
-            <span className="flex items-center gap-2">✓ Dismissed Warnings ({acknowledgedErrors.length})</span>
+            <span className="flex items-center gap-2">✓ Accepted ({acknowledgedErrors.length})</span>
             <button
               onClick={onResetAcknowledged}
               className="text-xs text-red-600 hover:text-red-800 underline"
@@ -508,7 +508,7 @@ function ValidationIssues({
                   )}
                   {dismissedAt && (
                     <div className="ml-4 text-green-500 text-[10px]">
-                      Dismissed on {dismissedAt}
+                      Accepted on {dismissedAt}
                     </div>
                   )}
                 </li>
@@ -544,9 +544,9 @@ function ErrorSection({ title, errors, bgColor, borderColor, labelBgColor, textC
                 onDismiss(error.message, error);
               }}
               className="flex-shrink-0 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors font-medium"
-              title="Dismiss with optional note"
+              title="Create a custom rule for this"
             >
-              ✓ OK
+              ＋ Rule
             </button>
           </li>
         ))}
