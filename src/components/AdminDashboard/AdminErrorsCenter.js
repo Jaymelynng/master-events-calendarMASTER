@@ -78,7 +78,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
     const cc = (appConfig.error_email_cc || '').trim();
     const fromName = appConfig.error_email_from_name || 'Jayme';
     const evDate = fmtDate(ev.start_date || ev.date);
-    const subject = `Heads up — ${ev.gym_id} event to update — ${ev.title || 'Event'}`;
+    const subject = `Heads up — Notification of event error — ${ev.gym_id} — ${ev.title || 'Event'}`;
     const bodyLines = [
       `Hi ${gym.manager_name || 'team'},`,
       ``,
