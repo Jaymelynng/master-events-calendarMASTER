@@ -271,15 +271,22 @@ def check_age_mismatch(ctx):
     errors = []
 
     def extract_min_age(text, char_limit=300):
+        """Return (years_value, label) for the stated MIN age, or None.
+
+        Ages given in MONTHS are converted to years for comparison but keep the
+        "N months" wording in the message. iClass age_min is in years, so
+        "18 months" = 1.5 years \u2014 still a mismatch vs an iClass min of 1, and it
+        must READ as "18 months" not "18" (real case: OAS preschool open gym,
+        "ages 18 months to 4 years" vs iClass min age 1)."""
         if not text:
             return None
         text_lower = text.lower()[:char_limit]
-        # Pre-clean ages expressed in MONTHS ("ages 18 months to 4 years",
-        # "12 mos+") \u2014 iClass age_min is in years, so a months number is not
-        # comparable and produced false positives (real case: OAS preschool
-        # open gym, "ages 18 months to 4 years" flagged as "says 18" vs min 1).
-        text_lower = re.sub(r'ages?\s*\d{1,2}\s*(?:months?|mos?)\b', ' ', text_lower)
-        text_lower = re.sub(r'\b\d{1,2}\s*(?:months?|mos?)\b', ' ', text_lower)
+        # Months-based age FIRST (e.g. "ages 18 months to 4 years", "12 mos+").
+        m = re.search(r'(\d{1,2})\s*(?:months?|mos?)\b', text_lower)
+        if m:
+            n = int(m.group(1))
+            return (n / 12.0, f"{n} months")
+        # Years-based age.
         age_patterns = re.findall(
             r'ages?\s*(\d{1,2})\s*[-\u2013to+]|ages?\s*(\d{1,2})\b|(\d{1,2})\s*[-\u2013]\s*\d{1,2}\s*(?:years?|yrs?)',
             text_lower
@@ -287,34 +294,38 @@ def check_age_mismatch(ctx):
         for age_match in age_patterns:
             for group in age_match:
                 if group:
-                    return int(group)
+                    n = int(group)
+                    return (float(n), str(n))
         return None
 
-    title_age = extract_min_age(ctx.title, char_limit=200)
-    desc_age = extract_min_age(ctx.description, char_limit=300)
+    title_res = extract_min_age(ctx.title, char_limit=200)
+    desc_res = extract_min_age(ctx.description, char_limit=300)
+    title_val, title_label = title_res if title_res else (None, None)
+    desc_val, desc_label = desc_res if desc_res else (None, None)
+    age_min_val = float(ctx.age_min) if ctx.age_min is not None else None
 
-    if ctx.age_min is not None and title_age is not None and ctx.age_min != title_age:
+    if age_min_val is not None and title_val is not None and age_min_val != title_val:
         errors.append({
             "type": "age_mismatch",
             "severity": "warning",
             "category": "data_error",
-            "message": f"iClass min age is {ctx.age_min} but title says {title_age}"
+            "message": f"iClass min age is {ctx.age_min} but title says {title_label}"
         })
 
-    if ctx.age_min is not None and desc_age is not None and ctx.age_min != desc_age:
+    if age_min_val is not None and desc_val is not None and age_min_val != desc_val:
         errors.append({
             "type": "age_mismatch",
             "severity": "warning",
             "category": "data_error",
-            "message": f"iClass min age is {ctx.age_min} but description says {desc_age}"
+            "message": f"iClass min age is {ctx.age_min} but description says {desc_label}"
         })
 
-    if title_age is not None and desc_age is not None and title_age != desc_age:
+    if title_val is not None and desc_val is not None and title_val != desc_val:
         errors.append({
             "type": "age_mismatch",
             "severity": "warning",
             "category": "data_error",
-            "message": f"Title says age {title_age} but description says {desc_age}"
+            "message": f"Title says age {title_label} but description says {desc_label}"
         })
 
     return errors
