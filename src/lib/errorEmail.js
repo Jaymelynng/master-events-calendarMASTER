@@ -26,6 +26,12 @@ export function buildErrorEmailUrl({ event, errorLines = [], gym, cc = '', fromN
   const summary = lines.join('\n');
   if (toList.length === 0) return { url: null, recipients: [], summary };
 
+  // Outlook's deeplink/compose IGNORES the cc/bcc params (Microsoft limitation),
+  // so a configured CC (e.g. Kim) would silently drop off. Fold it into the To
+  // line instead so she's guaranteed on every email. All recipients:
+  const ccList = (cc || '').split(/[;,]/).map(s => s.trim()).filter(Boolean);
+  const allTo = [...toList, ...ccList];
+
   const evDate = fmtDate(event.start_date || event.date);
   const many = lines.length > 1;
   const subject = `Heads up — Notification of event error — ${event.gym_id} — ${event.title || 'Event'}`;
@@ -44,18 +50,17 @@ export function buildErrorEmailUrl({ event, errorLines = [], gym, cc = '', fromN
     `What to update:`,
     ...lines.map(l => `  • ${l}`),
     ``,
-    event.event_url ? `Open in iClassPro: ${event.event_url}` : '',
+    event.event_url ? `Event link: ${event.event_url}` : '',
     ``,
     `Thanks,`,
     fromName,
   ].filter(l => l !== null && l !== undefined);
 
-  const to = encodeURIComponent(toList.join(';'));
-  const ccEnc = encodeURIComponent((cc || '').trim());
+  const to = encodeURIComponent(allTo.join(';'));
   const subj = encodeURIComponent(subject);
   const body = encodeURIComponent(bodyLines.join('\n'));
-  const url = `https://outlook.office.com/mail/deeplink/compose?to=${to}${cc ? `&cc=${ccEnc}` : ''}&subject=${subj}&body=${body}`;
-  return { url, recipients: toList, summary };
+  const url = `https://outlook.office.com/mail/deeplink/compose?to=${to}&subject=${subj}&body=${body}`;
+  return { url, recipients: allTo, summary };
 }
 
 // "Emailed Jul 4 · 2 days ago" pieces for the most recent send timestamp.
