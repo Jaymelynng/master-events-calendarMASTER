@@ -36,7 +36,7 @@ export function buildErrorEmailUrl({ event, errorLines = [], gym, cc = '', fromN
   const many = lines.length > 1;
   const subject = `Heads up — Notification of event error — ${event.gym_id} — ${event.title || 'Event'}`;
   const bodyLines = [
-    `Hi ${gym?.manager_name || 'team'},`,
+    `Hello!`,
     ``,
     many
       ? `A few data errors were flagged on one of your events. Please take a look and update them in iClassPro when you get a chance:`
