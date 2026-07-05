@@ -63,6 +63,18 @@ export function buildErrorEmailUrl({ event, errorLines = [], gym, cc = '', fromN
   return { url, recipients: allTo, summary };
 }
 
+// A "What to update" line for a missing/flyer-only description, so the email
+// (and the button) also cover no-description events. Returns null otherwise.
+export function descriptionIssueLine(status) {
+  if (status === 'none') {
+    return 'No description: this event has no description text — please add one in iClassPro';
+  }
+  if (status === 'flyer_only') {
+    return 'No text description: the event has a flyer image but no typed text — please add a text description in iClassPro';
+  }
+  return null;
+}
+
 // "Emailed Jul 4 · 2 days ago" pieces for the most recent send timestamp.
 export function fmtSentStamp(iso) {
   const then = new Date(iso);

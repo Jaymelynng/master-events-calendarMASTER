@@ -12,7 +12,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { acknowledgedPatternsApi, rulesApi, appConfigApi, errorEmailLogApi } from '../../lib/api';
-import { buildErrorEmailUrl, fmtSentStamp } from '../../lib/errorEmail';
+import { buildErrorEmailUrl, fmtSentStamp, descriptionIssueLine } from '../../lib/errorEmail';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
 import {
   isErrorAcknowledgedAnywhere,
@@ -508,13 +508,16 @@ export default function AdminErrorsCenter({ gyms, events }) {
                 </a>
               )}
 
-              {/* ONE email for the whole event, listing every data error. The
-                  + Create Custom Rule buttons stay per-error below. (Jayme:
-                  one event = one email, not one email per error.) */}
-              {selectedEvent.activeErrors.length > 0 &&
+              {/* ONE email for the whole event, listing every data error AND a
+                  missing-description issue. The + Create Custom Rule buttons
+                  stay per-error below. (Jayme: one event = one email.) */}
+              {(selectedEvent.activeErrors.length > 0 || selectedEvent.descIssue) &&
                 eventEmailBlock(
                   selectedEvent,
-                  selectedEvent.activeErrors.map(e => `${getErrorLabel(e.type)}: ${e.message}`)
+                  [
+                    ...selectedEvent.activeErrors.map(e => `${getErrorLabel(e.type)}: ${e.message}`),
+                    ...(selectedEvent.descIssue ? [descriptionIssueLine(selectedEvent.description_status)].filter(Boolean) : []),
+                  ]
                 )}
 
               {/* Active errors with actions */}

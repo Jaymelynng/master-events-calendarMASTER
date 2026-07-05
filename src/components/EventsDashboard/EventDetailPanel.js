@@ -7,7 +7,7 @@ import { theme, getEventTypeColor, getErrorLabel } from './constants';
 import { parseYmdLocal, formatTime, formatTimeShort, parseCampOptionFromTitle } from './utils';
 import { isErrorAcknowledgedAnywhere, inferErrorCategory, canAddAsRule, extractRuleValue } from '../../lib/validationHelpers';
 import { appConfigApi, errorEmailLogApi } from '../../lib/api';
-import { buildErrorEmailUrl, fmtSentStamp } from '../../lib/errorEmail';
+import { buildErrorEmailUrl, fmtSentStamp, descriptionIssueLine } from '../../lib/errorEmail';
 
 export default function EventDetailPanel({
   event,
@@ -494,13 +494,18 @@ function ValidationIssues({
             )}
           </ul>
 
-          {/* ONE email for the whole event — lists every data error. (Not one
-              email per error — Jayme.) The + Rule buttons stay per-error above. */}
-          {dataErrors.length > 0 && onEmailEvent && (() => {
+          {/* ONE email for the whole event — lists every data error AND a
+              missing-description issue. (Not one email per error — Jayme.) The
+              + Rule buttons stay per-error above. */}
+          {(dataErrors.length > 0 || hasDescriptionIssue) && onEmailEvent && (() => {
             const emailed = eventSends.length > 0;
             const stamp = emailed ? fmtSentStamp(eventSends[0].sent_at) : null;
             const overdue = stamp && stamp.days >= followupDays;
-            const lines = dataErrors.map(e => `${getErrorLabel(e.type)}: ${e.message}`);
+            const descLine = hasDescriptionIssue ? descriptionIssueLine(event.description_status) : null;
+            const lines = [
+              ...dataErrors.map(e => `${getErrorLabel(e.type)}: ${e.message}`),
+              ...(descLine ? [descLine] : []),
+            ];
             return (
               <div className="mt-3">
                 <button
