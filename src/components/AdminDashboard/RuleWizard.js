@@ -27,6 +27,18 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
   const [keyword, setKeyword] = useState(prefill.keyword || '');
   const [ruleType, setRuleType] = useState(prefill.rule_type || 'valid_price');
   const [value, setValue] = useState(prefill.value || '');
+  // Valid Time can hold SEVERAL times in one rule (e.g. before + after care).
+  // Stored as a comma-joined string; edited here as a list of inputs.
+  const [timeList, setTimeList] = useState(
+    prefill.rule_type === 'valid_time' && prefill.value
+      ? prefill.value.split(',').map(s => s.trim()).filter(Boolean)
+      : ['']
+  );
+  const setTimeAt = (i, v) => setTimeList(prev => prev.map((t, idx) => idx === i ? v : t));
+  const addTime = () => setTimeList(prev => [...prev, '']);
+  const removeTime = (i) => setTimeList(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev);
+  const isTimeRule = () => ruleType === 'valid_time' || ruleType === 'time';
+  const joinedTimes = () => timeList.map(t => t.trim()).filter(Boolean).join(', ');
   const [valueKid2, setValueKid2] = useState(prefill.value_kid2 || '');
   const [valueKid3, setValueKid3] = useState(prefill.value_kid3 || '');
   const [label, setLabel] = useState(prefill.label || '');
@@ -100,7 +112,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
       scope,
       keyword: scope === 'keyword' ? keyword : null,
       rule_type: ruleType,
-      value,
+      value: isTimeRule() ? joinedTimes() : value,
       value_kid2: ruleType === 'sibling_price' ? valueKid2 : null,
       value_kid3: ruleType === 'sibling_price' ? valueKid3 : null,
       label,
@@ -286,7 +298,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
     if (step === 1) return true;
     if (step === 2) return selectedGyms.length > 0;
     if (step === 3) return program !== '';
-    if (step === 4) return ruleType && value.trim();
+    if (step === 4) return ruleType && (isTimeRule() ? timeList.some(t => t.trim()) : value.trim());
     return false;
   };
 
@@ -296,7 +308,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
     parts.push(selectedGyms.includes('ALL') ? 'All gyms' : selectedGyms.join(', '));
     parts.push(program === 'ALL' ? 'All programs' : program);
     if (scope === 'keyword') parts.push(`"${keyword}"`);
-    parts.push(`${ruleType}: ${value}`);
+    parts.push(`${ruleType}: ${isTimeRule() ? joinedTimes() : value}`);
     return parts.join(' → ');
   };
 
@@ -414,7 +426,21 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
               </div>
             )}
             {(ruleType === 'valid_time' || ruleType === 'time') && (
-              <div><label className="text-sm text-gray-600 block mb-1">Valid time:</label><input type="text" value={value} onChange={e => setValue(e.target.value)} placeholder="e.g., 8:30 AM" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" autoFocus /></div>
+              <div>
+                <label className="text-sm text-gray-600 block mb-1">Allowed time(s):</label>
+                <div className="space-y-2">
+                  {timeList.map((t, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <input type="text" value={t} onChange={e => setTimeAt(i, e.target.value)} placeholder="e.g., 8:30 AM" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" autoFocus={i === 0} />
+                      {timeList.length > 1 && (
+                        <button onClick={() => removeTime(i)} className="w-8 h-8 flex-shrink-0 rounded-lg text-red-500 hover:bg-red-50 text-xl font-bold" title="Remove this time">×</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={addTime} className="mt-2 text-sm font-bold text-purple-600 hover:text-purple-800">＋ Add another time</button>
+                <div className="text-xs text-gray-400 mt-1">e.g. before care 8:30 AM and after care 5:30 PM in one rule</div>
+              </div>
             )}
             {ruleType === 'program_synonym' && (
               <div className="space-y-3">

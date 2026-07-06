@@ -249,8 +249,14 @@ def check_time_mismatch(ctx):
         return mismatches
 
     # Valid times from the gym's visible valid_time rules (space-insensitive).
+    # ONE rule can list several times, comma-separated ("8:30 am, 5:30 pm").
     extra_time_rules = ctx.get_rules_for_gym(ctx.gym_id, ctx.event_type).get('time', [])
-    valid_norms = set((t.get('value') or '').lower().replace(' ', '').strip() for t in extra_time_rules)
+    valid_norms = set()
+    for t in extra_time_rules:
+        for part in (t.get('value') or '').split(','):
+            p = part.lower().replace(' ', '').strip()
+            if p:
+                valid_norms.add(p)
 
     # Check title \u2014 one error per distinct off-time still standing.
     for tm in find_mismatched_times(ctx.title, valid_norms, char_limit=200):
