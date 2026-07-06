@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 
 export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
-  // Step 0: What are you doing?
-  const [purpose, setPurpose] = useState(prefill.rule_type === 'requirement_exception' ? 'requirement' : (prefill.rule_type ? 'validation' : ''));
+  // Always open straight into the Validation Rule flow. The old "What do you
+  // need?" gate (Requirement Exception vs Validation Rule) was confusing and
+  // requirement exceptions are handled from the Monthly Requirements area, not
+  // here (Jayme, July 2026). `purpose` kept only so the shared code compiles.
+  const [purpose, setPurpose] = useState('validation');
   
   // Requirement exception fields
   const [reqGym, setReqGym] = useState(prefill.gym_ids?.[0] || '');
@@ -476,7 +479,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
         )}
 
         <div className="flex justify-between mt-6 pt-4 border-t border-gray-200">
-          <button onClick={() => step > 1 ? setStep(step - 1) : setPurpose('')} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800">{step > 1 ? '← Back' : '← Back'}</button>
+          <button onClick={() => step > 1 ? setStep(step - 1) : onCancel()} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800">{step > 1 ? '← Back' : 'Cancel'}</button>
           {step < 5 ? (
             <button onClick={() => setStep(step + 1)} disabled={!canProceed()} className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${canProceed() ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>Next →</button>
           ) : (
