@@ -205,23 +205,26 @@ def check_time_mismatch(ctx):
     if not event_hours:
         return errors
 
-    def find_mismatched_time(text, char_limit=300):
-        """Find a time in text that doesn't match event times."""
+    def find_mismatched_times(text, valid_norms, char_limit=300):
+        """Every time in text that doesn't match the event time AND isn't on the
+        gym's valid_time list. Returns a list of formatted times (e.g. '5:30 pm').
+
+        Before/after-care times (8:30am drop-off, 5:30pm after-care) are NOT
+        silently ignored \u2014 they surface as mismatches so Jayme SEES them and
+        clears each with a visible valid_time gym rule. Nothing is hidden; every
+        override is a rule she can see and change (her decision, July 2026)."""
         text_lower = text.lower()[:char_limit]
-        # Pre-clean false positives
+        # Pre-clean things that are NOT times at all (would be misread as one):
+        # "$62 a day", "$250 a week", "Ages 4-13", "3-4 years". This is parser
+        # noise, not an override \u2014 no rule needed for it.
         text_cleaned = re.sub(r'\$\d+(?:\.\d{2})?\s*(?:a\s+day|a\s+week|/day|/week|per\s+day|per\s+week)', ' ', text_lower)
         text_cleaned = re.sub(r'ages?\s*\d{1,2}\s*[-\u2013to]+\s*\d{1,2}', ' ', text_cleaned)
         text_cleaned = re.sub(r'\d{1,2}\s*[-\u2013]\s*\d{1,2}\s*(?:years?|yrs?)', ' ', text_cleaned)
         text_cleaned = re.sub(r'\$\d+(?:\.\d{2})?\s+a(?!\s*m)', ' ', text_cleaned)
-        # Drop-off / pick-up / before-after care times are NOT the event time \u2014
-        # e.g. "Complementary 8:30am Early Drop Off Available" on a 9am camp.
-        # Strip the time when a care/drop/pick keyword sits right before or
-        # after it (real false positive, ~10 RBA/RBK camps, July 2026).
-        _care = r'(?:early\s+|late\s+)?(?:drop[\s-]?off|pick[\s-]?up|before[\s-]*care|after[\s-]*care|doors?\s+open|extended\s+care)'
-        text_cleaned = re.sub(r'\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?\s*' + _care, ' ', text_cleaned)
-        text_cleaned = re.sub(_care + r'[^.\n]{0,15}?\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?', ' ', text_cleaned)
 
         found_times = re.findall(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.|a|p)(?:\b|(?=\s|-))', text_cleaned)
+        mismatches = []
+        seen = set()
         for found_time in found_times:
             found_hour = int(found_time[0])
             raw_ampm = found_time[2].replace('.', '') if found_time[2] else ''
@@ -230,37 +233,41 @@ def check_time_mismatch(ctx):
                 found_hour += 12
             elif found_ampm == 'am' and found_hour == 12:
                 found_hour = 0
+            if any(found_hour == eh for eh in event_hours):
+                continue
+            time_str_formatted = f"{found_time[0]}"
+            if found_time[1]:
+                time_str_formatted += f":{found_time[1]}"
+            time_str_formatted += f" {found_ampm}"
+            # Skip any time the gym has whitelisted via a valid_time rule.
+            # Space-insensitive so "5:30pm" and "5:30 pm" both match her rule.
+            norm = time_str_formatted.lower().replace(' ', '')
+            if norm in valid_norms or norm in seen:
+                continue
+            seen.add(norm)
+            mismatches.append(time_str_formatted)
+        return mismatches
 
-            if not any(found_hour == eh for eh in event_hours):
-                time_str_formatted = f"{found_time[0]}"
-                if found_time[1]:
-                    time_str_formatted += f":{found_time[1]}"
-                time_str_formatted += f" {raw_ampm}"
-                return time_str_formatted
-        return None
-
-    # Get extra valid times from rules
+    # Valid times from the gym's visible valid_time rules (space-insensitive).
     extra_time_rules = ctx.get_rules_for_gym(ctx.gym_id, ctx.event_type).get('time', [])
-    extra_time_values = [t['value'].lower().strip() for t in extra_time_rules]
+    valid_norms = set((t.get('value') or '').lower().replace(' ', '').strip() for t in extra_time_rules)
 
-    # Check title
-    title_mismatch = find_mismatched_time(ctx.title, char_limit=200)
-    if title_mismatch and title_mismatch.lower().strip() not in extra_time_values:
+    # Check title \u2014 one error per distinct off-time still standing.
+    for tm in find_mismatched_times(ctx.title, valid_norms, char_limit=200):
         errors.append({
             "type": "time_mismatch",
             "severity": "warning",
             "category": "data_error",
-            "message": f"iClass time is {ctx.time_str} but title says {title_mismatch}"
+            "message": f"iClass time is {ctx.time_str} but title says {tm}"
         })
 
-    # Check description
-    desc_mismatch = find_mismatched_time(ctx.description, char_limit=300)
-    if desc_mismatch and desc_mismatch.lower().strip() not in extra_time_values:
+    # Check description \u2014 one error per distinct off-time still standing.
+    for dm in find_mismatched_times(ctx.description, valid_norms, char_limit=300):
         errors.append({
             "type": "time_mismatch",
             "severity": "warning",
             "category": "data_error",
-            "message": f"iClass time is {ctx.time_str} but description says {desc_mismatch}"
+            "message": f"iClass time is {ctx.time_str} but description says {dm}"
         })
 
     return errors
