@@ -286,11 +286,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
     if (step === 1) return true;
     if (step === 2) return selectedGyms.length > 0;
     if (step === 3) return program !== '';
-    if (step === 4) {
-      if (scope === 'keyword' && !keyword.trim()) return false;
-      return true;
-    }
-    if (step === 5) return ruleType && value.trim();
+    if (step === 4) return ruleType && value.trim();
     return false;
   };
 
@@ -308,12 +304,12 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-60" onClick={onCancel}>
       <div className="bg-white rounded-none sm:rounded-xl p-4 sm:p-6 w-full sm:max-w-lg mx-0 sm:mx-4 shadow-2xl min-h-screen sm:min-h-0 max-h-screen sm:max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-base sm:text-lg font-bold text-gray-800">Validation Rule — Step {step} of 5</h3>
+          <h3 className="text-base sm:text-lg font-bold text-gray-800">Validation Rule — Step {step} of 4</h3>
           <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 text-xl font-bold w-8 h-8 rounded-full flex items-center justify-center">×</button>
         </div>
 
         <div className="flex gap-1 mb-6">
-          {[1,2,3,4,5].map(s => (
+          {[1,2,3,4].map(s => (
             <div key={s} className={`h-1.5 flex-1 rounded-full ${s <= step ? 'bg-purple-500' : 'bg-gray-200'}`} />
           ))}
         </div>
@@ -396,28 +392,6 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
 
         {step === 4 && (
           <div>
-            <h4 className="font-semibold text-gray-700 mb-3">How specific?</h4>
-            <div className="space-y-3">
-              <button onClick={() => { setScope('all_events'); setKeyword(''); }} className={`w-full p-4 rounded-lg border-2 text-left transition-all ${scope === 'all_events' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'}`}>
-                <div className="font-bold text-gray-800">All events in this program</div>
-                <div className="text-xs text-gray-500 mt-1">Applies to every event matching above selections</div>
-              </button>
-              <button onClick={() => setScope('keyword')} className={`w-full p-4 rounded-lg border-2 text-left transition-all ${scope === 'keyword' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'}`}>
-                <div className="font-bold text-gray-800">Events with a specific keyword in the title</div>
-                <div className="text-xs text-gray-500 mt-1">Only events whose title contains a word you specify</div>
-              </button>
-            </div>
-            {scope === 'keyword' && (
-              <div className="mt-4">
-                <label className="text-sm text-gray-600 block mb-1">Title must contain:</label>
-                <input type="text" value={keyword} onChange={e => setKeyword(e.target.value)} placeholder='e.g., "homeschool" or "movie night"' className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" autoFocus />
-              </div>
-            )}
-          </div>
-        )}
-
-        {step === 5 && (
-          <div>
             <h4 className="font-semibold text-gray-700 mb-3">What's the rule?</h4>
             <div className="flex flex-wrap gap-2 mb-4">
               {ruleTypes.map(rt => (
@@ -480,7 +454,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
 
         <div className="flex justify-between mt-6 pt-4 border-t border-gray-200">
           <button onClick={() => step > 1 ? setStep(step - 1) : onCancel()} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800">{step > 1 ? '← Back' : 'Cancel'}</button>
-          {step < 5 ? (
+          {step < 4 ? (
             <button onClick={() => setStep(step + 1)} disabled={!canProceed()} className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${canProceed() ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>Next →</button>
           ) : (
             <button onClick={handleSaveValidation} disabled={!canProceed()} className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${canProceed() ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>Save Rule</button>
