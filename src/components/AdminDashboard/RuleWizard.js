@@ -472,8 +472,8 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
               </div>
             )}
 
-            <div className="mt-4"><label className="text-sm text-gray-600 block mb-1">Label:</label><input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="Short description" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" /></div>
-            <div className="mt-3"><label className="text-sm text-gray-600 block mb-1">Note (optional):</label><input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Additional context" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" /></div>
+            <div className="mt-4"><label className="text-sm text-gray-600 block mb-1">What is this? <span className="text-gray-400 font-normal">(short name)</span></label><input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g., Before care" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" /></div>
+            <div className="mt-3"><label className="text-sm text-gray-600 block mb-1">Why is it OK? <span className="text-gray-400 font-normal">(so future-you remembers)</span></label><input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="e.g., After care runs 3–5:30pm, separate signup — not the camp time" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" /></div>
             <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600"><div className="font-semibold mb-1">Summary:</div>{getSummary()}</div>
           </div>
         )}

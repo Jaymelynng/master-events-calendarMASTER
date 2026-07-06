@@ -116,6 +116,15 @@ function isExceptionRule(rule) {
   return rule.rule_type === 'exception' || rule.rule_type === 'requirement_exception';
 }
 
+// Which override rule a System Check's false alarm is fixed with. Only checks
+// that have a real value-override are listed — Time → Valid Time, Program →
+// Program Name synonym. (Age/Date have no value override yet, so no button.)
+const CHECK_TO_OVERRIDE = {
+  check_time_mismatch:       { type: 'valid_time',      label: 'an allowed time' },
+  check_program_mismatch:    { type: 'program_synonym', label: 'a program name' },
+  check_title_desc_mismatch: { type: 'program_synonym', label: 'a program name' },
+};
+
 function ruleMatchesGym(rule, gymId) {
   if (!rule.gym_ids || rule.gym_ids.length === 0) return true;
   if (rule.gym_ids.includes('ALL')) return true;
@@ -189,7 +198,7 @@ export default function AdminGymRules({ gyms }) {
   // ─── Save Rule (create or update via wizard) ─────────────────────────────
   const handleSaveRule = async (ruleData) => {
     try {
-      if (editingRule) {
+      if (editingRule && editingRule.id) {
         const updated = await rulesApi.update(editingRule.id, ruleData);
         setRules(prev => prev.map(r => r.id === editingRule.id ? updated : r));
         if (detailRule && detailRule.id === editingRule.id) setDetailRule(updated);
@@ -737,19 +746,40 @@ function DetailPanel({ rule, onClose, onEdit, onDelete, onToggle, toggling }) {
 
         {/* Footer actions */}
         <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
-          <button
-            onClick={() => { onClose(); onEdit(rule); }}
-            className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all text-white hover:translate-y-[-1px]"
-            style={{ background: 'linear-gradient(135deg, #8b6f6f, #b48f8f)', boxShadow: '0 2px 8px rgba(139,111,111,0.3)' }}
-          >
-            Edit Rule
-          </button>
-          <button
-            onClick={() => onDelete(rule.id)}
-            className="px-4 py-2.5 rounded-lg text-sm font-semibold transition-all text-red-600 bg-red-50 hover:bg-red-100"
-          >
-            Delete
-          </button>
+          {isSystemRule(rule) ? (
+            // A built-in check can't be edited/deleted — the ON/OFF toggle above
+            // controls it. Instead, let her add an exception straight from the
+            // check that's over-firing, with the rule type already chosen.
+            CHECK_TO_OVERRIDE[rule.rule_type] ? (
+              <button
+                onClick={() => { onClose(); onEdit({ rule_type: CHECK_TO_OVERRIDE[rule.rule_type].type }); }}
+                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all text-white hover:translate-y-[-1px]"
+                style={{ background: 'linear-gradient(135deg, #6b8e6b, #86ad86)', boxShadow: '0 2px 8px rgba(107,142,107,0.3)' }}
+              >
+                ＋ Add {CHECK_TO_OVERRIDE[rule.rule_type].label} it should allow
+              </button>
+            ) : (
+              <div className="flex-1 text-xs text-gray-500 py-2">
+                To silence this on a specific event, use “Accept this event” from the Errors tab.
+              </div>
+            )
+          ) : (
+            <>
+              <button
+                onClick={() => { onClose(); onEdit(rule); }}
+                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all text-white hover:translate-y-[-1px]"
+                style={{ background: 'linear-gradient(135deg, #8b6f6f, #b48f8f)', boxShadow: '0 2px 8px rgba(139,111,111,0.3)' }}
+              >
+                Edit Rule
+              </button>
+              <button
+                onClick={() => onDelete(rule.id)}
+                className="px-4 py-2.5 rounded-lg text-sm font-semibold transition-all text-red-600 bg-red-50 hover:bg-red-100"
+              >
+                Delete
+              </button>
+            </>
+          )}
         </div>
       </div>
 
