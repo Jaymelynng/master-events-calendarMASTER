@@ -14,6 +14,7 @@ import useEventsDashboard from './EventsDashboard/useEventsDashboard';
 
 // Constants and utilities
 import { theme } from './EventsDashboard/constants';
+import { rulesApi } from '../lib/api';
 
 // Components
 import DashboardHeader, { ActionButtons } from './EventsDashboard/DashboardHeader';
@@ -225,6 +226,7 @@ const EventsDashboard = () => {
           <DismissRuleModal
             errorMessage={dismissModalState.errorMessage}
             gymId={dismissModalState.gymId}
+            eventType={dismissModalState.eventType}
             ruleEligible={dismissModalState.ruleEligible}
             ruleInfo={dismissModalState.ruleInfo}
             onCancel={() => setDismissModalState(null)}
@@ -232,9 +234,32 @@ const EventsDashboard = () => {
               await acknowledgeValidationError(dismissModalState.eventId, dismissModalState.errorMessage, note);
               setDismissModalState(null);
             }}
-            onDismissAndRule={async (note, label) => {
+            onDismissAndRule={async (note, label, eventType, duration = {}) => {
               await acknowledgeValidationError(dismissModalState.eventId, dismissModalState.errorMessage, note, true);
-              // The rule creation logic would go here - keeping it simple for now
+              // Actually create the rule (this was previously a stub) so a rule
+              // made off a calendar error is real — with Permanent/Temporary dates.
+              const ri = dismissModalState.ruleInfo;
+              if (ri && dismissModalState.gymId) {
+                const temporary = duration.isPermanent === false;
+                const isProgramSynonym = ri.ruleType === 'program_synonym';
+                const ruleTypeMap = { price: 'valid_price', time: 'valid_time', program_synonym: 'program_synonym' };
+                try {
+                  await rulesApi.create({
+                    is_permanent: !temporary,
+                    start_date: temporary ? duration.startDate : null,
+                    end_date: temporary ? duration.endDate : null,
+                    gym_ids: [dismissModalState.gymId],
+                    program: isProgramSynonym ? label.toUpperCase() : (eventType || dismissModalState.eventType || 'CAMP'),
+                    scope: 'all_events',
+                    rule_type: ruleTypeMap[ri.ruleType] || ri.ruleType,
+                    value: isProgramSynonym ? String(ri.value).toLowerCase() : ri.value,
+                    label,
+                    created_by: 'calendar_panel',
+                  });
+                } catch (err) {
+                  alert(`Accepted, but the rule couldn't be saved: ${err.message}. Add it in Gym Rules.`);
+                }
+              }
               setDismissModalState(null);
             }}
           />

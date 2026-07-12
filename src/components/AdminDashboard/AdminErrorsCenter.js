@@ -260,8 +260,9 @@ export default function AdminErrorsCenter({ gyms, events }) {
     setDismissModal(null);
   };
 
-  const handleDismissAndRule = async (note, label) => {
+  const handleDismissAndRule = async (note, label, _eventType, duration = {}) => {
     const { eventId, errorMessage, gymId, eventType, ruleInfo } = dismissModal;
+    const temporary = duration.isPermanent === false;
     try {
       const updated = await writeAcknowledgment(eventId, errorMessage, note, true);
       setAckOverride(o => ({ ...o, [eventId]: updated }));
@@ -269,7 +270,9 @@ export default function AdminErrorsCenter({ gyms, events }) {
         const isProgramSynonym = ruleInfo.ruleType === 'program_synonym';
         const ruleTypeMap = { price: 'valid_price', time: 'valid_time', program_synonym: 'program_synonym' };
         await rulesApi.create({
-          is_permanent: true,
+          is_permanent: !temporary,
+          start_date: temporary ? duration.startDate : null,
+          end_date: temporary ? duration.endDate : null,
           gym_ids: [gymId],
           program: isProgramSynonym ? label.toUpperCase() : (eventType || 'CAMP'),
           scope: 'all_events',

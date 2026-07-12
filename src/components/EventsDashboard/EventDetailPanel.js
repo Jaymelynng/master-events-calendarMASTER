@@ -81,7 +81,8 @@ export default function EventDetailPanel({
     const gymId = event?.gym_id || '';
     const ruleEligible = errorObj ? canAddAsRule(errorObj.type) : false;
     const ruleInfo = errorObj ? extractRuleValue(errorObj, event) : null;
-    onDismissError({ eventId: event.id, errorMessage, errorObj, gymId, ruleEligible, ruleInfo });
+    const eventType = event?.type || event?.event_type || 'CAMP';
+    onDismissError({ eventId: event.id, errorMessage, errorObj, gymId, ruleEligible, ruleInfo, eventType });
   };
 
   return (

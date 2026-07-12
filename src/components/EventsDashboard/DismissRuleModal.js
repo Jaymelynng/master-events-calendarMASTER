@@ -34,6 +34,12 @@ export default function DismissRuleModal({
   const [note, setNote] = useState('');
   const [showLabelInput, setShowLabelInput] = useState(false);
   const [label, setLabel] = useState(ruleInfo?.suggestedLabel || '');
+  // Permanent vs Temporary (with dates) — so a rule made right off an error can
+  // be time-boxed (e.g. summer-only before/after care) without the full wizard.
+  const [isPermanent, setIsPermanent] = useState(true);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const datesOk = isPermanent || (startDate && endDate);
 
   const isProgramSynonym = ruleInfo?.ruleType === 'program_synonym';
   const displayValue = ruleInfo
@@ -55,10 +61,14 @@ export default function DismissRuleModal({
   };
 
   const handleSaveRule = () => {
-    if (!label.trim()) {
-      return; // Don't save without a label
+    if (!label.trim() || !datesOk) {
+      return; // Need a label, and dates if temporary
     }
-    onDismissAndRule(note || null, label.trim(), eventType);
+    onDismissAndRule(note || null, label.trim(), eventType, {
+      isPermanent,
+      startDate: isPermanent ? null : startDate,
+      endDate: isPermanent ? null : endDate,
+    });
   };
 
   return (
@@ -125,16 +135,54 @@ export default function DismissRuleModal({
               className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && label.trim()) {
+                if (e.key === 'Enter' && label.trim() && datesOk) {
                   handleSaveRule();
                 }
               }}
             />
+
+            {/* Permanent vs Temporary */}
+            <div className="mt-3">
+              <div className="text-xs font-semibold text-blue-800 mb-1">How long should it apply?</div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPermanent(true)}
+                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold border-2 transition-colors ${isPermanent ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-300 hover:border-blue-400'}`}
+                >
+                  Permanent
+                  <span className={`block text-[10px] font-normal mt-0.5 ${isPermanent ? 'text-blue-100' : 'text-blue-400'}`}>Until you remove it</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPermanent(false)}
+                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold border-2 transition-colors ${!isPermanent ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-300 hover:border-blue-400'}`}
+                >
+                  Temporary
+                  <span className={`block text-[10px] font-normal mt-0.5 ${!isPermanent ? 'text-blue-100' : 'text-blue-400'}`}>Only between dates</span>
+                </button>
+              </div>
+              {!isPermanent && (
+                <div className="flex gap-2 mt-2">
+                  <div className="flex-1">
+                    <label className="block text-[11px] text-blue-800 mb-0.5">Start</label>
+                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full px-2 py-1.5 border border-blue-300 rounded-lg text-sm focus:border-blue-500 focus:outline-none" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[11px] text-blue-800 mb-0.5">End</label>
+                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full px-2 py-1.5 border border-blue-300 rounded-lg text-sm focus:border-blue-500 focus:outline-none" />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleSaveRule}
-              disabled={!label.trim()}
-              className={`mt-2 w-full px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                label.trim()
+              disabled={!label.trim() || !datesOk}
+              className={`mt-3 w-full px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                label.trim() && datesOk
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
