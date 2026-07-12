@@ -11,7 +11,7 @@
 // ============================================================================
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
-import { acknowledgedPatternsApi, rulesApi, appConfigApi, errorEmailLogApi, verifiedEventsApi } from '../../lib/api';
+import { acknowledgedPatternsApi, rulesApi, appConfigApi, errorEmailLogApi, verifiedEventsApi, eventsApi } from '../../lib/api';
 import { buildErrorEmailUrl, buildBulkGymEmailUrl, fmtSentStamp, descriptionIssueLine } from '../../lib/errorEmail';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
 import {
@@ -55,6 +55,11 @@ export default function AdminErrorsCenter({ gyms, events }) {
   const [checkedIds, setCheckedIds] = useState(new Set()); // multi-select for bulk email
   const [verifiedIds, setVerifiedIds] = useState(new Set()); // Jayme's personal "I checked this" marks
   const [copyDone, setCopyDone] = useState(false);
+  // The Errors page loads its OWN full event set (ALL upcoming events, every
+  // month) — NOT the calendar's month-limited `events` prop. The calendar only
+  // pulls the visible month to stay fast; the Errors command center must be
+  // complete. Seeded from the prop so it isn't empty for the first render.
+  const [allEvents, setAllEvents] = useState(events || []);
   const [showDismissed, setShowDismissed] = useState(false);
   // Local overlay of acknowledged_errors edits so the UI updates instantly
   // without waiting for the calendar's realtime refresh to reach this prop.
@@ -71,6 +76,9 @@ export default function AdminErrorsCenter({ gyms, events }) {
     appConfigApi.getAll().then(setAppConfig).catch(() => setAppConfig({}));
     errorEmailLogApi.getAll().then(setEmailLog).catch(() => setEmailLog([]));
     verifiedEventsApi.getAll().then(ids => setVerifiedIds(new Set(ids))).catch(() => setVerifiedIds(new Set()));
+    // Pull EVERY upcoming event (no date window) — past events are already
+    // archived off the table, so this is current + all future months.
+    eventsApi.getAll().then(data => setAllEvents(data || [])).catch(() => {});
   }, []);
 
   // Toggle Jayme's personal "verified" mark on an event (optimistic).
@@ -265,8 +273,9 @@ export default function AdminErrorsCenter({ gyms, events }) {
   };
 
   // ── Build the working set: every event with at least one issue ────────────
+  // Uses allEvents (the full, all-months set), NOT the month-limited prop.
   const issueEvents = useMemo(() => {
-    return (events || [])
+    return (allEvents || [])
       .map(ev => {
         const acks = ackOverride[ev.id] !== undefined ? ackOverride[ev.id] : (ev.acknowledged_errors || []);
         const evWithAcks = { ...ev, acknowledged_errors: acks };
@@ -282,7 +291,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
         return { ...evWithAcks, activeErrors: active, dismissedErrors: dismissed, activeAiFlags, dismissedAiFlags, descIssue };
       })
       .filter(ev => ev.activeErrors.length > 0 || ev.dismissedErrors.length > 0 || ev.activeAiFlags.length > 0 || ev.dismissedAiFlags.length > 0 || ev.descIssue);
-  }, [events, patterns, ackOverride]);
+  }, [allEvents, patterns, ackOverride]);
 
   // ── Topic + gym filtering ──────────────────────────────────────────────────
   const topicMatches = (ev, topicId) => {
