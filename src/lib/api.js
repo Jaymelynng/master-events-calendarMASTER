@@ -765,6 +765,27 @@ export const errorEmailLogApi = {
   }
 };
 
+// Verified Events API - Jayme's personal "I checked this flag" marker.
+// Row exists = verified. Does not touch validation or acknowledgments.
+export const verifiedEventsApi = {
+  async getAll() {
+    const { data, error } = await supabase.from('verified_events').select('event_id');
+    if (error) throw new Error(error.message);
+    return (data || []).map(r => r.event_id);
+  },
+  async setVerified(eventId, on) {
+    if (on) {
+      const { error } = await supabase
+        .from('verified_events')
+        .upsert({ event_id: eventId }, { onConflict: 'event_id' });
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabase.from('verified_events').delete().eq('event_id', eventId);
+      if (error) throw new Error(error.message);
+    }
+  }
+};
+
 // Requirement Notes API - tracks status of missing requirements
 export const requirementNotesApi = {
   async getAll() {

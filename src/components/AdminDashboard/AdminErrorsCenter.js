@@ -11,7 +11,7 @@
 // ============================================================================
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
-import { acknowledgedPatternsApi, rulesApi, appConfigApi, errorEmailLogApi } from '../../lib/api';
+import { acknowledgedPatternsApi, rulesApi, appConfigApi, errorEmailLogApi, verifiedEventsApi } from '../../lib/api';
 import { buildErrorEmailUrl, buildBulkGymEmailUrl, fmtSentStamp, descriptionIssueLine } from '../../lib/errorEmail';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
 import {
@@ -53,6 +53,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
   const [topicFilter, setTopicFilter] = useState('all');
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [checkedIds, setCheckedIds] = useState(new Set()); // multi-select for bulk email
+  const [verifiedIds, setVerifiedIds] = useState(new Set()); // Jayme's personal "I checked this" marks
   const [showDismissed, setShowDismissed] = useState(false);
   // Local overlay of acknowledged_errors edits so the UI updates instantly
   // without waiting for the calendar's realtime refresh to reach this prop.
@@ -68,7 +69,26 @@ export default function AdminErrorsCenter({ gyms, events }) {
     acknowledgedPatternsApi.getAll().then(setPatterns).catch(() => setPatterns([]));
     appConfigApi.getAll().then(setAppConfig).catch(() => setAppConfig({}));
     errorEmailLogApi.getAll().then(setEmailLog).catch(() => setEmailLog([]));
+    verifiedEventsApi.getAll().then(ids => setVerifiedIds(new Set(ids))).catch(() => setVerifiedIds(new Set()));
   }, []);
+
+  // Toggle Jayme's personal "verified" mark on an event (optimistic).
+  const toggleVerified = (eventId) => {
+    const on = !verifiedIds.has(eventId);
+    setVerifiedIds(prev => {
+      const n = new Set(prev);
+      on ? n.add(eventId) : n.delete(eventId);
+      return n;
+    });
+    verifiedEventsApi.setVerified(eventId, on).catch(() => {
+      // revert on failure
+      setVerifiedIds(prev => {
+        const n = new Set(prev);
+        on ? n.delete(eventId) : n.add(eventId);
+        return n;
+      });
+    });
+  };
 
   // How many days before we nudge a follow-up (configurable, no hardcoding).
   const followupDays = parseInt(appConfig.error_email_followup_days, 10) || 3;
@@ -522,12 +542,28 @@ export default function AdminErrorsCenter({ gyms, events }) {
                   outline: isSelected ? '2px solid #6e5658' : 'none',
                 }}
               >
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-1.5 py-0.5 rounded text-[11px] font-black text-white flex-shrink-0" style={{ background: '#8b6f6f' }}>
-                    {ev.gym_id}
-                  </span>
-                  <span className="text-xs font-semibold flex-shrink-0" style={{ color: '#9a8b8b' }}>
-                    {ev.type || ev.event_type || 'EVENT'} · {fmtDate(ev.start_date || ev.date)}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    <span className="px-1.5 py-0.5 rounded text-[11px] font-black text-white flex-shrink-0" style={{ background: '#8b6f6f' }}>
+                      {ev.gym_id}
+                    </span>
+                    <span className="text-xs font-semibold flex-shrink-0" style={{ color: '#9a8b8b' }}>
+                      {ev.type || ev.event_type || 'EVENT'} · {fmtDate(ev.start_date || ev.date)}
+                    </span>
+                  </div>
+                  {/* Personal "I checked this" mark — just Jayme's tracking, does
+                      not accept/dismiss the error. */}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); toggleVerified(ev.id); }}
+                    className="flex-shrink-0 px-2 py-0.5 rounded-full text-[11px] font-bold cursor-pointer transition-colors"
+                    style={verifiedIds.has(ev.id)
+                      ? { background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }
+                      : { background: '#fff', color: '#9a8b8b', border: '1px solid #e5dada' }}
+                    title={verifiedIds.has(ev.id) ? 'You marked this verified — click to unmark' : 'Mark as verified (your personal note)'}
+                  >
+                    {verifiedIds.has(ev.id) ? '✓ Verified' : '○ Verify'}
                   </span>
                 </div>
                 <div className="font-bold text-sm mt-1 truncate" style={{ color: '#4a4a4a' }}>
