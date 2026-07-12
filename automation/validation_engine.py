@@ -875,6 +875,37 @@ def check_event_price(ctx):
     return errors
 
 
+def check_ordinal_typo(ctx):
+    """Catch invalid date-ordinal typos in the title/description, e.g.
+    "July 29nd" (should be 29th), "22th" (should be 22nd), "31nd". Pure
+    format check — 29 ends in 9 so it must be "th", etc."""
+    errors = []
+
+    def correct_suffix(n):
+        if 11 <= (n % 100) <= 13:
+            return 'th'
+        return {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+
+    text = f"{ctx.title or ''}  {ctx.description[:400] if ctx.description else ''}"
+    seen = set()
+    for m in re.finditer(r'\b(\d{1,2})(st|nd|rd|th)\b', text, re.IGNORECASE):
+        n = int(m.group(1))
+        suffix = m.group(2).lower()
+        good = correct_suffix(n)
+        if suffix != good:
+            token = m.group(0)
+            if token.lower() in seen:
+                continue
+            seen.add(token.lower())
+            errors.append({
+                "type": "ordinal_typo",
+                "severity": "warning",
+                "category": "data_error",
+                "message": f"Typo: \"{token}\" should be \"{n}{good}\""
+            })
+    return errors
+
+
 # ============================================================
 # CHECK REGISTRY — maps rule_type to check function
 # ============================================================
@@ -896,6 +927,7 @@ CHECK_REGISTRY = {
 # Skill mismatch is part of program_mismatch check (runs inside check_program_mismatch context)
 # We register it separately so it can be toggled independently in the future
 CHECK_REGISTRY['check_skill_mismatch'] = check_skill_mismatch
+CHECK_REGISTRY['check_ordinal_typo'] = check_ordinal_typo
 
 
 # ============================================================

@@ -157,6 +157,7 @@ export const getErrorLabel = (type) => {
     'year_mismatch': '📅 Year Mismatch',
     'date_mismatch': '📅 Date Mismatch',
     'day_mismatch': '📅 Day Mismatch',
+    'ordinal_typo': '✍️ Date Typo',
     'time_mismatch': '🕐 Time Mismatch',
     'age_mismatch': '👶 Age Mismatch',
     'program_mismatch': '🏷️ Program Mismatch',
