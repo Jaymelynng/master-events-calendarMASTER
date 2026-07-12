@@ -294,36 +294,32 @@ export default function AdminErrorsCenter({ gyms, events }) {
     return pool.some(e => topic?.types?.includes(e.type));
   };
 
+  // Count EVENTS per gym (one per card in the list), NOT individual flags — so
+  // the badge matches the number of cards shown. A camp with 2 age mismatches
+  // is still ONE event needing attention.
   const gymCounts = useMemo(() => {
     const counts = {};
     issueEvents.forEach(ev => {
       if (!topicMatches(ev, topicFilter)) return;
-      counts[ev.gym_id] = (counts[ev.gym_id] || 0) +
-        ev.activeErrors.length + ev.activeAiFlags.length + (ev.descIssue ? 1 : 0) +
-        (showDismissed ? ev.dismissedErrors.length + ev.dismissedAiFlags.length : 0);
+      counts[ev.gym_id] = (counts[ev.gym_id] || 0) + 1;
     });
     return counts;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issueEvents, topicFilter, showDismissed]);
 
+  // Count EVENTS per topic (how many cards you'd see if you clicked it), NOT
+  // individual flags — so every badge matches the list.
   const topicCounts = useMemo(() => {
     const counts = {};
     TOPICS.forEach(t => {
       counts[t.id] = 0;
       issueEvents.forEach(ev => {
         if (gymFilter !== 'all' && ev.gym_id !== gymFilter) return;
-        if (t.id === 'all') {
-          counts.all += ev.activeErrors.length + ev.activeAiFlags.length + (ev.descIssue ? 1 : 0);
-        } else if (t.id === 'description') {
-          if (ev.descIssue) counts.description += 1;
-        } else if (t.id === 'ai') {
-          counts.ai += ev.activeAiFlags.length;
-        } else {
-          counts[t.id] += ev.activeErrors.filter(e => t.types.includes(e.type)).length;
-        }
+        if (topicMatches(ev, t.id)) counts[t.id] += 1;
       });
     });
     return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issueEvents, gymFilter]);
 
   const visibleEvents = useMemo(() => {
