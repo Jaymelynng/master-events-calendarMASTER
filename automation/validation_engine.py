@@ -27,7 +27,8 @@ class ValidationContext:
 
     def __init__(self, event_dict, gym_id, event_type, title, description,
                  start_date, end_date_str, time_str, age_min, day_of_week,
-                 get_rules_for_gym_fn, get_camp_pricing_fn, get_event_pricing_fn):
+                 get_rules_for_gym_fn, get_camp_pricing_fn, get_event_pricing_fn,
+                 age_max=None):
         self.event = event_dict
         self.gym_id = gym_id
         self.event_type = event_type  # e.g. 'CAMP', 'CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'
@@ -37,6 +38,7 @@ class ValidationContext:
         self.end_date_str = end_date_str or start_date
         self.time_str = time_str
         self.age_min = age_min
+        self.age_max = age_max
         self.day_of_week = day_of_week
 
         # Lowercase versions (used by almost every check)
@@ -311,11 +313,37 @@ def check_age_mismatch(ctx):
                     return (float(n), str(n))
         return None
 
+    def extract_max_age(text, char_limit=300):
+        """Return the stated MAX age (the top of a range), or None.
+
+        Handles "Ages 5-13", "5 to 13", "Walking Age-4 Years", "18 months to
+        4 years". An open range like "Ages 5+" has NO max, so returns None (a
+        "5+" title against a capped setting is intentional, not an error)."""
+        if not text:
+            return None
+        t = text.lower()[:char_limit]
+        # "18 months to 4 years" / "walking age - 4 years" -> the YEARS number.
+        m = re.search(r'(?:months?|mos?|age)\b[^.\n]{0,6}?(?:to|[-–])\s*(\d{1,2})\s*years?', t)
+        if m:
+            return int(m.group(1))
+        # Standard "ages 5-13" / "5 to 13" (not "5+").
+        m = re.search(r'ages?\s*\d{1,2}\s*(?:to|[-–])\s*(\d{1,2})\b', t)
+        if m:
+            return int(m.group(1))
+        m = re.search(r'\b\d{1,2}\s*[-–]\s*(\d{1,2})\s*(?:years?|yrs?)\b', t)
+        if m:
+            return int(m.group(1))
+        return None
+
     title_res = extract_min_age(ctx.title, char_limit=200)
     desc_res = extract_min_age(ctx.description, char_limit=300)
     title_val, title_label = title_res if title_res else (None, None)
     desc_val, desc_label = desc_res if desc_res else (None, None)
     age_min_val = float(ctx.age_min) if ctx.age_min is not None else None
+
+    title_max = extract_max_age(ctx.title, char_limit=200)
+    desc_max = extract_max_age(ctx.description, char_limit=300)
+    age_max_val = float(ctx.age_max) if ctx.age_max is not None else None
 
     if age_min_val is not None and title_val is not None and age_min_val != title_val:
         errors.append({
@@ -339,6 +367,33 @@ def check_age_mismatch(ctx):
             "severity": "warning",
             "category": "data_error",
             "message": f"Title says age {title_label} but description says {desc_label}"
+        })
+
+    # ── MAX age (the top of a range). New July 2026 — the check used to only
+    # look at the MIN age, so "title 5-12 vs setting/description 5-13" slipped
+    # through on every summer camp. "Ages 5+" has no max, so it never trips.
+    if age_max_val is not None and title_max is not None and age_max_val != title_max:
+        errors.append({
+            "type": "age_mismatch",
+            "severity": "warning",
+            "category": "data_error",
+            "message": f"iClass max age is {ctx.age_max} but title says {title_max}"
+        })
+
+    if age_max_val is not None and desc_max is not None and age_max_val != desc_max:
+        errors.append({
+            "type": "age_mismatch",
+            "severity": "warning",
+            "category": "data_error",
+            "message": f"iClass max age is {ctx.age_max} but description says {desc_max}"
+        })
+
+    if title_max is not None and desc_max is not None and title_max != desc_max:
+        errors.append({
+            "type": "age_mismatch",
+            "severity": "warning",
+            "category": "data_error",
+            "message": f"Title max age {title_max} but description max age {desc_max}"
         })
 
     return errors

@@ -1539,6 +1539,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 end_date_str=end_date,
                 time_str=time_str,
                 age_min=age_min,
+                age_max=age_max,
                 day_of_week=day_of_week,
                 get_rules_for_gym_fn=get_rules_for_gym,
                 get_camp_pricing_fn=get_camp_pricing,
