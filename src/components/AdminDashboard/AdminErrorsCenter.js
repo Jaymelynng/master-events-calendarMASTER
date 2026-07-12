@@ -54,6 +54,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [checkedIds, setCheckedIds] = useState(new Set()); // multi-select for bulk email
   const [verifiedIds, setVerifiedIds] = useState(new Set()); // Jayme's personal "I checked this" marks
+  const [copyDone, setCopyDone] = useState(false);
   const [showDismissed, setShowDismissed] = useState(false);
   // Local overlay of acknowledged_errors edits so the UI updates instantly
   // without waiting for the calendar's realtime refresh to reach this prop.
@@ -215,6 +216,52 @@ export default function AdminErrorsCenter({ gyms, events }) {
     });
     if (optimistic.length) setEmailLog(prev => [...optimistic, ...prev]);
     setCheckedIds(new Set());
+  };
+
+  // Full sidebar detail for one event as a readable text block.
+  const eventDetailText = (ev) => {
+    const parts = [
+      `${ev.gym_id} — ${ev.title || '(no title)'}`,
+      `${ev.type || ev.event_type || 'EVENT'} · ${fmtDate(ev.start_date || ev.date)}`,
+    ];
+    const lines = eventIssueLines(ev);
+    if (lines.length) { parts.push('Issues:'); lines.forEach(l => parts.push(`  • ${l}`)); }
+    if (ev.event_url) parts.push(`iClass: ${ev.event_url}`);
+    return parts.join('\n');
+  };
+
+  // Copy the checked events' full detail to the clipboard.
+  const copyChecked = async (chosen) => {
+    if (!chosen || chosen.length === 0) return;
+    const text = chosen.map(eventDetailText).join('\n\n──────────\n\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyDone(true);
+      setTimeout(() => setCopyDone(false), 1500);
+    } catch {
+      alert('Copy failed — your browser blocked clipboard access.');
+    }
+  };
+
+  // Download the checked events as a CSV (one row per event).
+  const downloadChecked = (chosen) => {
+    if (!chosen || chosen.length === 0) return;
+    const esc = (s) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+    const rows = [['Gym', 'Event', 'Type', 'Date', 'iClass Link', 'Issues'].map(esc).join(',')];
+    chosen.forEach(ev => {
+      rows.push([
+        ev.gym_id, ev.title || '', ev.type || ev.event_type || '',
+        fmtDate(ev.start_date || ev.date), ev.event_url || '',
+        eventIssueLines(ev).join(' | '),
+      ].map(esc).join(','));
+    });
+    const blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `event-errors-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   // ── Build the working set: every event with at least one issue ────────────
@@ -490,14 +537,32 @@ export default function AdminErrorsCenter({ gyms, events }) {
                   {allChecked ? '✕ Clear selection' : `☑ Select all (${visibleEvents.length})`}
                 </button>
                 {visibleChecked.length > 0 && (
-                  <button
-                    onClick={() => emailChecked(visibleChecked)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-black text-white cursor-pointer"
-                    style={{ background: '#2563eb', boxShadow: '0 2px 8px rgba(37,99,235,.3)' }}
-                    title="Open one pre-filled email per gym listing the checked events (sends from your Outlook)"
-                  >
-                    📧 Email selected ({visibleChecked.length})
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => copyChecked(visibleChecked)}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer border transition-colors"
+                      style={{ borderColor: '#d8cccc', color: copyDone ? '#15803d' : '#6e5658', background: '#fff' }}
+                      title="Copy the checked events' full detail (issues + iClass links) to your clipboard"
+                    >
+                      {copyDone ? '✓ Copied' : `📋 Copy (${visibleChecked.length})`}
+                    </button>
+                    <button
+                      onClick={() => downloadChecked(visibleChecked)}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer border"
+                      style={{ borderColor: '#d8cccc', color: '#6e5658', background: '#fff' }}
+                      title="Download the checked events as a CSV"
+                    >
+                      ⬇ CSV
+                    </button>
+                    <button
+                      onClick={() => emailChecked(visibleChecked)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-black text-white cursor-pointer"
+                      style={{ background: '#2563eb', boxShadow: '0 2px 8px rgba(37,99,235,.3)' }}
+                      title="Open one pre-filled email per gym listing the checked events (sends from your Outlook)"
+                    >
+                      📧 Email selected ({visibleChecked.length})
+                    </button>
+                  </div>
                 )}
               </div>
             );
