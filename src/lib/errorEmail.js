@@ -63,6 +63,40 @@ export function buildErrorEmailUrl({ event, errorLines = [], gym, cc = '', fromN
   return { url, recipients: allTo, summary };
 }
 
+// ONE email to a gym covering SEVERAL of its flagged events. `items` is
+// [{ title, date, url, lines: [...] }]. Returns { url, recipients }.
+export function buildBulkGymEmailUrl({ gym, items = [], cc = '', fromName = 'Jayme' }) {
+  const toList = [gym?.manager_email, gym?.front_desk_email].filter(Boolean);
+  if (toList.length === 0) return { url: null, recipients: [] };
+  const ccList = (cc || '').split(/[;,]/).map(s => s.trim()).filter(Boolean);
+  const allTo = [...toList, ...ccList];
+  const many = items.length > 1;
+
+  const bodyLines = [
+    `Hello!`,
+    ``,
+    many
+      ? `A few of your events have something to update. Please take a look in iClassPro when you get a chance:`
+      : `One of your events has something to update. Please take a look in iClassPro when you get a chance:`,
+    ``,
+  ];
+  items.forEach((it, idx) => {
+    bodyLines.push(`${idx + 1}) ${it.title || '(no title)'}${it.date ? ' — ' + it.date : ''}`);
+    (it.lines || []).forEach(l => bodyLines.push(`   • ${l}`));
+    if (it.url) bodyLines.push(`   Event link: ${it.url}`);
+    bodyLines.push('');
+  });
+  bodyLines.push(`Thanks,`);
+  bodyLines.push(fromName);
+
+  const subject = `Heads up — ${items.length} event${many ? 's' : ''} to update — ${gym?.id || ''}`;
+  const to = encodeURIComponent(allTo.join(';'));
+  const subj = encodeURIComponent(subject);
+  const body = encodeURIComponent(bodyLines.join('\n'));
+  const url = `https://outlook.office.com/mail/deeplink/compose?to=${to}&subject=${subj}&body=${body}`;
+  return { url, recipients: allTo };
+}
+
 // A "What to update" line for a missing/flyer-only description, so the email
 // (and the button) also cover no-description events. Returns null otherwise.
 export function descriptionIssueLine(status) {

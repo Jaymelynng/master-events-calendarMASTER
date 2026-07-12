@@ -12,7 +12,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { acknowledgedPatternsApi, rulesApi, appConfigApi, errorEmailLogApi } from '../../lib/api';
-import { buildErrorEmailUrl, fmtSentStamp, descriptionIssueLine } from '../../lib/errorEmail';
+import { buildErrorEmailUrl, buildBulkGymEmailUrl, fmtSentStamp, descriptionIssueLine } from '../../lib/errorEmail';
 import DismissRuleModal from '../EventsDashboard/DismissRuleModal';
 import {
   isErrorAcknowledgedAnywhere,
@@ -52,6 +52,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
   const [gymFilter, setGymFilter] = useState('all');
   const [topicFilter, setTopicFilter] = useState('all');
   const [selectedEventId, setSelectedEventId] = useState(null);
+  const [checkedIds, setCheckedIds] = useState(new Set()); // multi-select for bulk email
   const [showDismissed, setShowDismissed] = useState(false);
   // Local overlay of acknowledged_errors edits so the UI updates instantly
   // without waiting for the calendar's realtime refresh to reach this prop.
@@ -143,6 +144,57 @@ export default function AdminErrorsCenter({ gyms, events }) {
         )}
       </div>
     );
+  };
+
+  // Every issue on an event as "What to update" lines (errors + AI + no-desc).
+  const eventIssueLines = (ev) => {
+    const lines = (ev.activeErrors || []).map(e => `${getErrorLabel(e.type)}: ${e.message}`);
+    (ev.activeAiFlags || []).forEach(f => lines.push(f.message));
+    if (ev.descIssue) {
+      const d = descriptionIssueLine(ev.description_status);
+      if (d) lines.push(d);
+    }
+    return lines;
+  };
+
+  // Bulk email: for the CHECKED events, group by gym and open ONE pre-filled
+  // email per gym listing all their events. Logs each send (documents when).
+  const emailChecked = (chosen) => {
+    if (!chosen || chosen.length === 0) return;
+    const cc = (appConfig.error_email_cc || '').trim();
+    const fromName = appConfig.error_email_from_name || 'Jayme';
+    const byGym = {};
+    chosen.forEach(e => { (byGym[e.gym_id] = byGym[e.gym_id] || []).push(e); });
+    const optimistic = [];
+    Object.entries(byGym).forEach(([gymId, evs]) => {
+      const gym = gyms?.find(g => g.id === gymId) || { id: gymId };
+      const items = evs.map(e => ({
+        title: e.title,
+        date: fmtDate(e.start_date || e.date),
+        url: e.event_url,
+        lines: eventIssueLines(e),
+      }));
+      const { url, recipients } = buildBulkGymEmailUrl({ gym, items, cc, fromName });
+      if (!url) {
+        alert(`No email on file for ${gymId}. Add the manager / front desk email in the Contacts tab first.`);
+        return;
+      }
+      window.open(url, '_blank');
+      evs.forEach((e, i) => {
+        const summary = eventIssueLines(e).join('\n');
+        optimistic.push({
+          id: `tmp-${e.id}-${i}`, event_id: e.id, gym_id: gymId, event_title: e.title || null,
+          error_message: summary, recipients: recipients.join('; '), cc: cc || null,
+          sent_at: new Date().toISOString(),
+        });
+        errorEmailLogApi.log({
+          event_id: e.id, gym_id: gymId, event_title: e.title,
+          error_message: summary, recipients: recipients.join('; '), cc,
+        }).catch(() => {});
+      });
+    });
+    if (optimistic.length) setEmailLog(prev => [...optimistic, ...prev]);
+    setCheckedIds(new Set());
   };
 
   // ── Build the working set: every event with at least one issue ────────────
@@ -403,6 +455,33 @@ export default function AdminErrorsCenter({ gyms, events }) {
 
         {/* MIDDLE — event cards */}
         <div className="flex-1 min-w-0 space-y-2">
+          {/* Bulk-email toolbar: check the events you verified, send one email
+              per gym listing them all. */}
+          {visibleEvents.length > 0 && (() => {
+            const visibleChecked = visibleEvents.filter(e => checkedIds.has(e.id));
+            const allChecked = visibleChecked.length === visibleEvents.length;
+            return (
+              <div className="flex items-center justify-between gap-2 mb-1 px-1">
+                <button
+                  onClick={() => setCheckedIds(allChecked ? new Set() : new Set(visibleEvents.map(e => e.id)))}
+                  className="text-xs font-bold cursor-pointer hover:underline"
+                  style={{ color: '#6e5658' }}
+                >
+                  {allChecked ? '✕ Clear selection' : `☑ Select all (${visibleEvents.length})`}
+                </button>
+                {visibleChecked.length > 0 && (
+                  <button
+                    onClick={() => emailChecked(visibleChecked)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-black text-white cursor-pointer"
+                    style={{ background: '#2563eb', boxShadow: '0 2px 8px rgba(37,99,235,.3)' }}
+                    title="Open one pre-filled email per gym listing the checked events (sends from your Outlook)"
+                  >
+                    📧 Email selected ({visibleChecked.length})
+                  </button>
+                )}
+              </div>
+            );
+          })()}
           {visibleEvents.length === 0 && (
             <div className="rounded-xl border-2 border-dashed p-10 text-center" style={{ borderColor: '#d8cccc' }}>
               <div className="text-4xl mb-2">🎉</div>
@@ -419,11 +498,24 @@ export default function AdminErrorsCenter({ gyms, events }) {
             const shownErrors = topicFilter === 'all' || topicFilter === 'description'
               ? ev.activeErrors
               : ev.activeErrors.filter(e => topic?.types?.includes(e.type));
+            const isChecked = checkedIds.has(ev.id);
             return (
+              <div key={ev.id} className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={() => setCheckedIds(prev => {
+                  const n = new Set(prev);
+                  n.has(ev.id) ? n.delete(ev.id) : n.add(ev.id);
+                  return n;
+                })}
+                className="mt-4 w-4 h-4 flex-shrink-0 cursor-pointer"
+                style={{ accentColor: '#2563eb' }}
+                title="Check to include in a bulk email"
+              />
               <button
-                key={ev.id}
                 onClick={() => setSelectedEventId(isSelected ? null : ev.id)}
-                className="w-full text-left rounded-xl border bg-white px-4 py-3 cursor-pointer transition-all hover:-translate-y-0.5"
+                className="flex-1 min-w-0 text-left rounded-xl border bg-white px-4 py-3 cursor-pointer transition-all hover:-translate-y-0.5"
                 style={{
                   borderColor: isSelected ? '#6e5658' : '#e5dada',
                   boxShadow: isSelected ? '0 6px 16px rgba(110,86,88,.25)' : '0 2px 8px rgba(70,50,52,.08)',
@@ -470,6 +562,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
                   )}
                 </div>
               </button>
+              </div>
             );
           })}
         </div>
