@@ -713,11 +713,15 @@ export default function AdminErrorsCenter({ gyms, events }) {
               {/* ONE email for the whole event, listing every data error AND a
                   missing-description issue. The + Create Custom Rule buttons
                   stay per-error below. (Jayme: one event = one email.) */}
-              {(selectedEvent.activeErrors.length > 0 || selectedEvent.descIssue) &&
+              {(selectedEvent.activeErrors.length > 0 || (selectedEvent.activeAiFlags && selectedEvent.activeAiFlags.length > 0) || selectedEvent.descIssue) &&
                 eventEmailBlock(
                   selectedEvent,
                   [
                     ...selectedEvent.activeErrors.map(e => `${getErrorLabel(e.type)}: ${e.message}`),
+                    // AI-found problems (wrong movie, wrong event name, wrong skill, etc.)
+                    // go in the SAME email as a plain correction — the manager never
+                    // sees the internal "suggestion" wording, just what to fix.
+                    ...(selectedEvent.activeAiFlags || []).map(f => f.message),
                     ...(selectedEvent.descIssue ? [descriptionIssueLine(selectedEvent.description_status)].filter(Boolean) : []),
                   ]
                 )}
