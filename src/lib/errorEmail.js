@@ -13,6 +13,33 @@ function fmtDate(s) {
   return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// Outlook's compose deeplink body is PLAIN TEXT only (no bold/HTML), so the
+// best we can do is keep it tight. Camps often carry the same problem worded
+// three ways (two structural age errors + the AI age note) — the manager needs
+// the fix ONCE, not three restatements. Collapse to the first line per topic.
+const MONTH_RE = /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/;
+function topicOf(line) {
+  const t = line.toLowerCase();
+  if (t.includes('age')) return 'age';
+  if (t.includes('time') || /\d\s*(am|pm)\b/.test(t)) return 'time';
+  if (t.includes('year')) return 'year';
+  if (t.includes('day of week') || t.includes('day mismatch')) return 'day';
+  if (t.includes('date') || MONTH_RE.test(t)) return 'date';
+  if (t.includes('program')) return 'program';
+  return line; // anything else is its own bucket — never collapsed
+}
+function dedupeByTopic(lines) {
+  const seen = new Set();
+  const out = [];
+  for (const l of (lines || []).filter(Boolean)) {
+    const k = topicOf(l);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(l);
+  }
+  return out;
+}
+
 // Build ONE Outlook deeplink for a whole event, listing ALL its errors in a
 // single email. `errorLines` is an array of already-formatted strings, e.g.
 //   "Title vs Description Conflict: Title says 'Open Gym' but description says 'Clinic'"
@@ -22,7 +49,7 @@ function fmtDate(s) {
 // send log so history shows what was flagged at send time.
 export function buildErrorEmailUrl({ event, errorLines = [], gym, cc = '', fromName = 'Jayme' }) {
   const toList = [gym?.manager_email, gym?.front_desk_email].filter(Boolean);
-  const lines = (errorLines || []).filter(Boolean);
+  const lines = dedupeByTopic(errorLines);
   const summary = lines.join('\n');
   if (toList.length === 0) return { url: null, recipients: [], summary };
 
@@ -72,6 +99,7 @@ export function buildBulkGymEmailUrl({ gym, items = [], cc = '', fromName = 'Jay
   const allTo = [...toList, ...ccList];
   const many = items.length > 1;
 
+  const DIV = '──────────────────────────────';
   const bodyLines = [
     `Hello!`,
     ``,
@@ -81,11 +109,20 @@ export function buildBulkGymEmailUrl({ gym, items = [], cc = '', fromName = 'Jay
     ``,
   ];
   items.forEach((it, idx) => {
-    bodyLines.push(`${idx + 1}) ${it.title || '(no title)'}${it.date ? ' — ' + it.date : ''}`);
-    (it.lines || []).forEach(l => bodyLines.push(`   • ${l}`));
-    if (it.url) bodyLines.push(`   Event link: ${it.url}`);
-    bodyLines.push('');
+    bodyLines.push(DIV);
+    // Title in CAPS so each event stands out — plain text can't do bold.
+    bodyLines.push(`${idx + 1}) ${(it.title || '(no title)').toUpperCase()}`);
+    if (it.date) bodyLines.push(`   ${it.date}`);
+    bodyLines.push(``);
+    dedupeByTopic(it.lines).forEach(l => bodyLines.push(`   • ${l}`));
+    if (it.url) {
+      bodyLines.push(``);
+      bodyLines.push(`   Event link: ${it.url}`);
+    }
+    bodyLines.push(``);
   });
+  bodyLines.push(DIV);
+  bodyLines.push(``);
   bodyLines.push(`Thanks,`);
   bodyLines.push(fromName);
 
