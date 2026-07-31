@@ -33,49 +33,42 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const [includeDismissedWarnings, setIncludeDismissedWarnings] = useState(false);
   const [includeSpotsSnapshot, setIncludeSpotsSnapshot] = useState(false);
 
-  // NEW: Use-case picker (drives which underlying section toggles get checked)
-  // 'full' | 'spots' | 'compliance' | 'audit' | 'sync' | 'custom'
-  const [useCase, setUseCase] = useState('full');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Apply a use-case → set the right combination of underlying include* flags
-  const applyUseCase = (uc) => {
-    setUseCase(uc);
+  // Each "What are you exporting for?" card maps to one or more underlying
+  // section flags. Cards are MULTI-SELECT — check any combination (some or all)
+  // and the export bundles every checked section into a single file.
+  const USE_CASE_FLAGS = {
+    full: ['includeEvents'],
+    spots: ['includeSpotsSnapshot'],
+    compliance: ['includeAnalytics', 'includeMissing'],
+    audit: ['includeAuditCheck', 'includeDismissedWarnings'],
+    sync: ['includeSyncHistory'],
+  };
+
+  // A card is "on" when every underlying flag it controls is on.
+  const isUseCaseOn = (key) => {
+    const values = {
+      includeEvents, includeAnalytics, includeMissing, includeAuditCheck,
+      includeDismissedWarnings, includeSpotsSnapshot, includeSyncHistory,
+    };
+    return (USE_CASE_FLAGS[key] || []).every(flag => values[flag]);
+  };
+
+  // Toggle a card on/off — flips all of its underlying section flags together.
+  const toggleUseCase = (key) => {
+    const turnOn = !isUseCaseOn(key);
+    const setters = {
+      includeEvents: setIncludeEvents,
+      includeAnalytics: setIncludeAnalytics,
+      includeMissing: setIncludeMissing,
+      includeAuditCheck: setIncludeAuditCheck,
+      includeDismissedWarnings: setIncludeDismissedWarnings,
+      includeSpotsSnapshot: setIncludeSpotsSnapshot,
+      includeSyncHistory: setIncludeSyncHistory,
+    };
+    (USE_CASE_FLAGS[key] || []).forEach(flag => setters[flag](turnOn));
     setActivePreset(null);
-    // Reset all
-    setIncludeEvents(false);
-    setIncludeAnalytics(false);
-    setIncludeMissing(false);
-    setIncludeAuditCheck(false);
-    setIncludeDismissedWarnings(false);
-    setIncludeSyncHistory(false);
-    setIncludeSpotsSnapshot(false);
-    // Apply preset combo
-    switch (uc) {
-      case 'full':
-        setIncludeEvents(true);
-        break;
-      case 'spots':
-        setIncludeSpotsSnapshot(true);
-        break;
-      case 'compliance':
-        setIncludeAnalytics(true);
-        setIncludeMissing(true);
-        break;
-      case 'audit':
-        setIncludeAuditCheck(true);
-        setIncludeDismissedWarnings(true);
-        break;
-      case 'sync':
-        setIncludeSyncHistory(true);
-        break;
-      case 'custom':
-        // Don't auto-toggle — let user pick freely in advanced section
-        setShowAdvanced(true);
-        break;
-      default:
-        setIncludeEvents(true);
-    }
   };
 
   // Admin check for Sync History (hidden feature)
@@ -441,15 +434,18 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   //   master-calendar-{usecase}-{month-slug}-{YYYY-MM-DD}.{ext}
   // e.g. "master-calendar-audit-issues-may-2026-2026-05-07.csv"
   const buildExportFilename = (ext, monthName, timestamp) => {
-    const USE_CASE_LABELS = {
-      full: 'full-events',
-      spots: 'spots-snapshot',
-      compliance: 'compliance-report',
-      audit: 'audit-issues',
-      sync: 'sync-log',
-      custom: 'custom',
-    };
-    const useCaseSlug = USE_CASE_LABELS[useCase] || 'export';
+    // Name the file from whatever sections are actually included. With
+    // multi-select a file can bundle several sections, so build the slug from
+    // the live flags (3+ sections → "combined" to keep the name short).
+    const parts = [];
+    if (includeEvents) parts.push('events');
+    if (includeSpotsSnapshot) parts.push('spots');
+    if (includeAnalytics || includeMissing) parts.push('compliance');
+    if (includeAuditCheck || includeDismissedWarnings) parts.push('audit');
+    if (includeSyncHistory) parts.push('sync');
+    const useCaseSlug = parts.length === 0 ? 'export'
+                      : parts.length > 2 ? 'combined'
+                      : parts.join('-');
     const monthSlug = (monthName || 'all').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     return `master-calendar-${useCaseSlug}-${monthSlug}-${timestamp}.${ext}`;
   };
@@ -1203,7 +1199,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
     URL.revokeObjectURL(url);
   };
 
-  const canExport = (includeEvents || includeAnalytics || includeMissing || includeAuditCheck || includeSyncHistory || includeDismissedWarnings) && 
+  const canExport = (includeEvents || includeAnalytics || includeMissing || includeAuditCheck || includeSyncHistory || includeDismissedWarnings || includeSpotsSnapshot) &&
                    (selectedGyms.length > 0 || includeMissing || includeSyncHistory || includeDismissedWarnings);
 
   // Calculate audit check issues count for display (matches "Audit Check" column in main dashboard)
@@ -1402,9 +1398,10 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-600 text-sm">⏱</span>
               What are you exporting for?
             </h3>
+            <p className="text-xs text-gray-500 mt-1">Check one or more — everything you pick downloads together in a single file.</p>
           </div>
           <div className="p-4 space-y-2.5">
-          {/* USE-CASE OPTION CARDS — radio-style, exclusive */}
+          {/* USE-CASE OPTION CARDS — multi-select, bundle into one file */}
           {(() => {
             const auditCount = getAuditCheckIssues().length;
             const dismissedCount = getDismissedWarnings().length;
@@ -1448,7 +1445,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
               });
             }
             return cards.map(card => {
-              const isSelected = useCase === card.key;
+              const isSelected = isUseCaseOn(card.key);
               const isRecommended = card.key === recommendedKey;
               return (
                 <label
@@ -1460,11 +1457,10 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
                   }`}
                 >
                   <input
-                    type="radio"
-                    name="useCase"
+                    type="checkbox"
                     value={card.key}
                     checked={isSelected}
-                    onChange={() => applyUseCase(card.key)}
+                    onChange={() => toggleUseCase(card.key)}
                     className="w-4 h-4 accent-rose-500 flex-shrink-0"
                   />
                   <div className={`flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br ${card.iconBg} flex items-center justify-center text-lg shadow-sm`}>
@@ -1506,32 +1502,32 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             <div className="space-y-2 pt-2 border-t border-gray-100">
               <p className="text-[11px] text-gray-500 italic">Override the use-case selection. Pick exactly which sections to include.</p>
               <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                <input type="checkbox" checked={includeEvents} onChange={(e) => { setIncludeEvents(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                <input type="checkbox" checked={includeEvents} onChange={(e) => { setIncludeEvents(e.target.checked); }} className="w-3 h-3" />
                 <span>📋 Event Details ({filteredEvents.length})</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                <input type="checkbox" checked={includeAnalytics} onChange={(e) => { setIncludeAnalytics(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                <input type="checkbox" checked={includeAnalytics} onChange={(e) => { setIncludeAnalytics(e.target.checked); }} className="w-3 h-3" />
                 <span>📊 Analytics Dashboard</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                <input type="checkbox" checked={includeMissing} onChange={(e) => { setIncludeMissing(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                <input type="checkbox" checked={includeMissing} onChange={(e) => { setIncludeMissing(e.target.checked); }} className="w-3 h-3" />
                 <span>⚠️ Missing Requirements</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                <input type="checkbox" checked={includeAuditCheck} onChange={(e) => { setIncludeAuditCheck(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                <input type="checkbox" checked={includeAuditCheck} onChange={(e) => { setIncludeAuditCheck(e.target.checked); }} className="w-3 h-3" />
                 <span>🔍 Audit Check</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                <input type="checkbox" checked={includeDismissedWarnings} onChange={(e) => { setIncludeDismissedWarnings(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                <input type="checkbox" checked={includeDismissedWarnings} onChange={(e) => { setIncludeDismissedWarnings(e.target.checked); }} className="w-3 h-3" />
                 <span>✓ Dismissed Warnings</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                <input type="checkbox" checked={includeSpotsSnapshot} onChange={(e) => { setIncludeSpotsSnapshot(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                <input type="checkbox" checked={includeSpotsSnapshot} onChange={(e) => { setIncludeSpotsSnapshot(e.target.checked); }} className="w-3 h-3" />
                 <span>🟢 Spots &amp; Signup Snapshot</span>
               </label>
               {isAdmin && (
                 <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                  <input type="checkbox" checked={includeSyncHistory} onChange={(e) => { setIncludeSyncHistory(e.target.checked); setUseCase('custom'); }} className="w-3 h-3" />
+                  <input type="checkbox" checked={includeSyncHistory} onChange={(e) => { setIncludeSyncHistory(e.target.checked); }} className="w-3 h-3" />
                   <span>🔄 Sync History</span>
                 </label>
               )}
