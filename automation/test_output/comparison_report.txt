@@ -1,0 +1,994 @@
+COMPARISON REPORT — 2026-03-09 10:03:27
+======================================================================
+
+
+============================================================
+  CCP — Capital Gymnastics Cedar Park
+============================================================
+
+  API events: 36
+  Supabase events: 36
+
+  --- CCP Summary ---
+  Matched: 36
+  New (API only): 0
+  Missing from API (DB only): 0
+  Events with field differences: 32
+
+  Field differences:
+    Kids Night Out | Ages 4-13 | March 13, 2026 | 6:30-9:30 pm
+      flyer_url: DIFFERENT (both exist but don't match)
+    Gym Fun Fridays | Open Gym | Ages 1-5 |March 20, 2026 | 10:3
+      flyer_url: DIFFERENT (both exist but don't match)
+    Gym Fun Fridays | Open Gym | Ages 1-5 |March 27, 2026 | 10:3
+      flyer_url: DIFFERENT (both exist but don't match)
+    Gym Fun Fridays | Open Gym | Ages 1-5 |April 3, 2026 | 10:30
+      flyer_url: DIFFERENT (both exist but don't match)
+    Gym Fun Fridays | Open Gym | Ages 1-5 |April 10, 2026 | 10:3
+      flyer_url: DIFFERENT (both exist but don't match)
+    Gym Fun Fridays | Open Gym | Ages 1-5 |April 17, 2026 | 10:3
+      flyer_url: DIFFERENT (both exist but don't match)
+    Gym Fun Fridays | Open Gym | Ages 1-5 |April 24, 2026 | 10:3
+      flyer_url: DIFFERENT (both exist but don't match)
+    Gym Fun Fridays | Open Gym | Ages 1-5 |May 1, 2026 | 10:30am
+      flyer_url: DIFFERENT (both exist but don't match)
+    Spring into Action | School Year Camp | Ages 4-13 | March 16
+      flyer_url: API has image, DB is empty
+    Bloom and Bounce | School Year Camp | Ages 4-13 | Monday, Ma
+      flyer_url: API has image, DB is empty
+    ... and 22 more
+
+============================================================
+  CPF — Capital Gymnastics Pflugerville
+============================================================
+
+  API events: 55
+  Supabase events: 31
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2463
+    Name: Spring Break Camp | After Care | 3-6pm | $16
+    Dates: 2026-03-16 to 2026-03-20
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2457
+    Name: After Care | April 3rd | 3-6pm | $16
+    Dates: 2026-04-03 to 2026-04-03
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2509
+    Name: Beach Bash Summer Camp | After Care | Week 1 | May 26- May 29| 3-6pm
+    Dates: 2026-05-26 to 2026-05-29
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2506
+    Name: Big Inventors Week Summer Camp | After Care | Week 2 | June 1- June 5 
+    Dates: 2026-06-01 to 2026-06-05
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2510
+    Name: Around The World Summer Camp | After Care | Week 3 | June 8- June 12 |
+    Dates: 2026-06-08 to 2026-06-12
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2513
+    Name: Camping & Survival Summer Camp | After Care | Week 4 | June 15- June 1
+    Dates: 2026-06-15 to 2026-06-19
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2516
+    Name: Ultimate Games Week Summer Camp | After Care | Week 5 | June 22- June 
+    Dates: 2026-06-22 to 2026-06-26
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2519
+    Name: Experiment & Cooking Week Summer Camp | After Care | Week 6 | June 29-
+    Dates: 2026-06-29 to 2026-07-03
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2522
+    Name: Art Week Summer Camp | After Care | Week 7 | July 6- July 10 | 3-6pm
+    Dates: 2026-07-06 to 2026-07-10
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2525
+    Name: Lights, Camera, ACTION! Summer Camp | After Care | Week 8 | July 13- J
+    Dates: 2026-07-13 to 2026-07-17
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2528
+    Name: Roller Week Summer Camp | After Care | Week 9 | July 20- July 24 | 3-6
+    Dates: 2026-07-20 to 2026-07-24
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2530
+    Name: Mad Scientist Summer Camp | After Care | Week 10 | July 27- July 31 | 
+    Dates: 2026-07-27 to 2026-07-31
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2531
+    Name: Peace Out Summer Camp | After Care | Week 11 |August 3- August 7| 3-6p
+    Dates: 2026-08-03 to 2026-08-07
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2561
+    Name: Beach Bash Summer Camp | Before Care | Week 1 | May 26- May 29| 8am
+    Dates: 2026-05-26 to 2026-05-29
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2562
+    Name: Big Inventors Week Summer Camp | Before Care | Week 2 | June 1- June 5
+    Dates: 2026-06-01 to 2026-06-05
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2564
+    Name: Around The World Summer Camp | Before Care | Week 3 | June 8- June 12 
+    Dates: 2026-06-08 to 2026-06-12
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2565
+    Name: Camping & Survival Summer Camp | Before Care | Week 4 | June 15- June 
+    Dates: 2026-06-15 to 2026-06-19
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2566
+    Name: Ultimate Games Week Summer Camp |Before Care | Week 5 | June 22- June 
+    Dates: 2026-06-22 to 2026-06-26
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2567
+    Name: Experiment & Cooking Week Summer Camp | Before Care | Week 6 | June 29
+    Dates: 2026-06-29 to 2026-07-03
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2569
+    Name: Art Week Summer Camp | Before Care | Week 7 | July 6- July 10 | 8am
+    Dates: 2026-07-06 to 2026-07-10
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2570
+    Name: Lights, Camera, ACTION! Summer Camp | before Care | Week 8 | July 13- 
+    Dates: 2026-07-13 to 2026-07-17
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2571
+    Name: Roller Week Summer Camp | Before Care | Week 9 | July 20- July 24 |8am
+    Dates: 2026-07-20 to 2026-07-24
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2572
+    Name: Mad Scientist Summer Camp |Before Care | Week 10 | July 27- July 31 | 
+    Dates: 2026-07-27 to 2026-07-31
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymhp/camp-details/2573
+    Name: Peace Out Summer Camp | Before Care | Week 11 |August 3- August 7| 8am
+    Dates: 2026-08-03 to 2026-08-07
+    Category: CAMP BEFORE CARE
+
+  --- CPF Summary ---
+  Matched: 31
+  New (API only): 24
+  Missing from API (DB only): 0
+  Events with field differences: 26
+
+  Field differences:
+    Beam and Cartwheel Clinic:  March 20th: 6:30-7:30pm  $30
+      title: API='Beam and Cartwheel Clinic:  March 20th: 6:30-7:30pm  $30' vs DB='Beam and Cartwheel Clinic: March 20th: 6:30-7:30pm $30'
+    🧱 MINECRAFT Kid's Night Out |March 13th | 6:30-9:30 | $40 (s
+      flyer_url: API has image, DB is empty
+    🍀 Kid's Night Out Lucky clover |March 27th | 6:30-9:30 | $40
+      flyer_url: API has image, DB is empty
+    Spring Break | March 16th-March 20th | Full Day (9-3) | $70/
+      flyer_url: API has image, DB is empty
+    Beach Bash Summer Camp | Week 1 | May 26- May 29 | Full Day 
+      flyer_url: API has image, DB is empty
+    Big Inventors Week Summer Camp | Week 2 | June 1- June 5 | F
+      flyer_url: API has image, DB is empty
+    Around The World Summer Camp | Week 3 | June 8- June 12 | Fu
+      flyer_url: API has image, DB is empty
+    Camping & Survival Summer Camp | Week 4 | June 15- June 19 |
+      flyer_url: API has image, DB is empty
+    Ultimate Games Week Summer Camp | Week 5 | June 22- June 26 
+      flyer_url: API has image, DB is empty
+    Experiment & Cooking Week Summer Camp | Week 6 | June 29- Ju
+      flyer_url: API has image, DB is empty
+    ... and 16 more
+
+============================================================
+  CRR — Capital Gymnastics Round Rock
+============================================================
+
+  API events: 58
+  Supabase events: 31
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1699
+    Name: Springbreak Camp | AFTER CARE | Ages 4+ |March 16 - 20 | $16 per day
+    Dates: 2026-03-16 to 2026-03-20
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1653
+    Name: Summer Camp | AFTER CARE | Ages 4+ |WK1 May 26 - 29 |🌟 Team Spirit & G
+    Dates: 2026-05-26 to 2026-05-29
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1654
+    Name: Summer Camp | AFTER CARE | Ages 4+ |WK2 June 1 - 5|🧠 STEM Builders & B
+    Dates: 2026-06-01 to 2026-06-05
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1655
+    Name: Summer Camp | AFTER CARE | Ages 4+ |WK3 June 8 - 12|🍽️ Cooking & Kitch
+    Dates: 2026-06-08 to 2026-06-12
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1656
+    Name: Summer Camp | AFTER CARE | Ages 4+ |WK4 June 15 - 19 |🏕️ Camping & Sur
+    Dates: 2026-06-15 to 2026-06-19
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1657
+    Name: Summer Camp | AFTER CARE | Ages 4+ |WK5 June 22 - 26 |🎨 Art Attack: Pa
+    Dates: 2026-06-22 to 2026-06-26
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1658
+    Name: Summer Camp | AFTER CARE | Ages 4+ |WK6 June 29 - July 3 |🚀 Space & Fl
+    Dates: 2026-06-29 to 2026-07-03
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1647
+    Name: Summer Camp | AFTER CARE | Ages 4+ |WK7 July 6 - 10 |💡 Inventors & Ent
+    Dates: 2026-07-06 to 2026-07-10
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1660
+    Name: Summer Camp | AFTER CARE | Ages 4+ |WK8 July 13 - 17 |✅ Ultimate Game 
+    Dates: 2026-07-13 to 2026-07-17
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1661
+    Name: Summer Camp | AFTER CARE | Ages 4+ |WK9 July 20 - 24 |🥷 Ninja & Obstac
+    Dates: 2026-07-20 to 2026-07-24
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1662
+    Name: Summer Camp | AFTER CARE | Ages 4+ |WK10 July 27 - 31 | 🧪 Mad Scientis
+    Dates: 2026-07-27 to 2026-07-31
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1663
+    Name: Summer Camp | AFTER CARE | Ages 4+ |WK11 Aug 3 - 7| 🌊 Ocean & Eco Week
+    Dates: 2026-08-03 to 2026-08-07
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1664
+    Name: Summer Camp | AFTER CARE | Ages 4+ |WK12 Aug 10 - 14| 🎭 Showtime! Tale
+    Dates: 2026-08-10 to 2026-08-14
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1592
+    Name: Springbreak Camp | BEFORE CARE | Ages 4+ |March 16 - 20 | $8 per day
+    Dates: 2026-03-16 to 2026-03-20
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1593
+    Name: Schools Out Camp | BEFORE CARE | Ages 4+ |April 3
+    Dates: 2026-04-03 to 2026-04-03
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1641
+    Name: Summer Camp | BEFORE CARE | Ages 4+ |WK1 May 26 - 29 |🌟 Team Spirit & 
+    Dates: 2026-05-26 to 2026-05-29
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1642
+    Name: Summer Camp | BEFORE CARE | Ages 4+ |WK2 June 1 - 5|🧠 STEM Builders & 
+    Dates: 2026-06-01 to 2026-06-05
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1643
+    Name: Summer Camp | BEFORE CARE | Ages 4+ |WK3 June 8 - 12|🍽️ Cooking & Kitc
+    Dates: 2026-06-08 to 2026-06-12
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1644
+    Name: Summer Camp | BEFORE CARE | Ages 4+ |WK4 June 15 - 19 |🏕️ Camping & Su
+    Dates: 2026-06-15 to 2026-06-19
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1645
+    Name: Summer Camp | BEFORE CARE | Ages 4+ |WK5 June 22 - 26 |🎨 Art Attack: P
+    Dates: 2026-06-22 to 2026-06-26
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1646
+    Name: Summer Camp | BEFORE CARE | Ages 4+ |WK6 June 29 - July 3 |🚀 Space & F
+    Dates: 2026-06-29 to 2026-07-03
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1659
+    Name: Summer Camp | BEFORE CARE | Ages 4+ |WK7 July 6 - 10 |💡 Inventors & En
+    Dates: 2026-07-06 to 2026-07-10
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1648
+    Name: Summer Camp |BEFOER CARE | Ages 4+ |WK8 July 13 - 17 |✅ Ultimate Game 
+    Dates: 2026-07-13 to 2026-07-17
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1649
+    Name: Summer Camp | BEFORE CARE | Ages 4+ |WK9 July 20 - 24 |🥷 Ninja & Obsta
+    Dates: 2026-07-20 to 2026-07-24
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1650
+    Name: Summer Camp | BEFORE CARE | Ages 4+ |WK10 July 27 - 31 | 🧪 Mad Scienti
+    Dates: 2026-07-27 to 2026-07-31
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1651
+    Name: Summer Camp | BEFORE CARE | Ages 4+ |WK11 Aug 3 - 7| 🌊 Ocean & Eco Wee
+    Dates: 2026-08-03 to 2026-08-07
+    Category: CAMP BEFORE CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/capgymroundrock/camp-details/1652
+    Name: Summer Camp | BEFORE CARE | Ages 4+ |WK12 Aug 10 - 14| 🎭 Showtime! Tal
+    Dates: 2026-08-10 to 2026-08-14
+    Category: CAMP BEFORE CARE
+
+  --- CRR Summary ---
+  Matched: 31
+  New (API only): 27
+  Missing from API (DB only): 0
+  Events with field differences: 29
+
+  Field differences:
+    Bridge Kickover & Back Walkover Clinic | March 20th | $30
+      flyer_url: API has image, DB is empty
+    Kids Night Out | Ages 4+ | March 13th | Lucky Charm Night | 
+      flyer_url: API has image, DB is empty
+    Kids Night Out | Ages 4+ | March 27th | Spring Fling | $40 (
+      flyer_url: API has image, DB is empty
+    Springbreak Camp | FULL DAY | Ages 4+ |March 16 - 20 | $70 p
+      flyer_url: API has image, DB is empty
+    Schools Out Camp | FULL DAY | Ages 4+ |April 3
+      flyer_url: API has image, DB is empty
+    Summer Camp | FULL DAY | Ages 4+ |WK1 May 26 - 29 |🌟 Team Sp
+      flyer_url: API has image, DB is empty
+    Summer Camp | FULL DAY | Ages 4+ |WK2 June 1 - 5|🧠 STEM Buil
+      flyer_url: API has image, DB is empty
+    Summer Camp | FULL DAY | Ages 4+ |WK3 June 8 - 12|🍽️ Cooking
+      flyer_url: API has image, DB is empty
+    Summer Camp | FULL DAY | Ages 4+ |WK4 June 15 - 19 |🏕️ Campi
+      flyer_url: API has image, DB is empty
+    Summer Camp | FULL DAY | Ages 4+ |WK5 June 22 - 26 |🎨 Art At
+      flyer_url: API has image, DB is empty
+    ... and 19 more
+
+============================================================
+  HGA — Houston Gymnastics Academy
+============================================================
+
+  API events: 51
+  Supabase events: 38
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/898
+    Name: Sports Spectacular | Summer Camp | Aftercare | Ages 4-12 | June 1-5
+    Dates: 2026-06-01 to 2026-06-05
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/899
+    Name: Music Mania | Summer Camp | Aftercare | Ages 4-12 | June 8-12
+    Dates: 2026-06-08 to 2026-06-12
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/900
+    Name: Animal Planet | Summer Camp | Aftercare | Ages 4-12 | June 15-19
+    Dates: 2026-06-15 to 2026-06-19
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/901
+    Name: Pirates & Princess | Summer Camp | Aftercare | Ages 4-12 | June 22-26
+    Dates: 2026-06-22 to 2026-06-26
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/902
+    Name: Stars & Stripes | Summer Camp | Aftercare | Ages 4-12 | June 29- July 
+    Dates: 2026-06-29 to 2026-07-03
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/903
+    Name: Superheroes | Summer Camp | Aftercare | Ages 4-12 | July 6-10
+    Dates: 2026-07-06 to 2026-07-10
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/904
+    Name: Disney Dreamers | Summer Camp | Aftercare | Ages 4-12 | July 13-17
+    Dates: 2026-07-13 to 2026-07-17
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/905
+    Name: Wet N Wild | Summer Camp | Aftercare | Ages 4-12 | July 20-24
+    Dates: 2026-07-20 to 2026-07-24
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/906
+    Name: Holiday Mashup | Summer Camp | Aftercare | Ages 4-12 | July 27-31
+    Dates: 2026-07-27 to 2026-07-31
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/907
+    Name: Dino-Mite Summer | Summer Camp | Aftercare | Ages 4-12 |Aug 3-7
+    Dates: 2026-08-03 to 2026-08-07
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/908
+    Name: Ready Set Glow | Summer Camp | Aftercare | Ages 4-12 |Aug 10-14
+    Dates: 2026-08-10 to 2026-08-14
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/909
+    Name: Color Wars | Summer Camp | Aftercare | Ages 4-12 |Aug 17-21
+    Dates: 2026-08-17 to 2026-08-21
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/houstongymnastics/camp-details/896
+    Name: Color Wars | Summer Camp | Ninja | Ages 7-12 | Aug 17-21
+    Dates: 2026-08-17 to 2026-08-21
+    Category: SUMMER CAMP - FULL DAY
+
+  --- HGA Summary ---
+  Matched: 38
+  New (API only): 13
+  Missing from API (DB only): 0
+  Events with field differences: 38
+
+  Field differences:
+    Beam Clinic | Ages 5-17 | Mar 14 | 12pm
+      flyer_url: API has image, DB is empty
+    Wild West | Kids Night Out | Ages 4-12 | Mar 14
+      flyer_url: API has image, DB is empty
+    EGGstravaganza | Kids Night Out | Ages 4-12 | Mar 28
+      flyer_url: API has image, DB is empty
+    Neon Night| Kids Night Out | Ages 4-12 | Apr 11
+      flyer_url: API has image, DB is empty
+    Pajama Jam | Kids Night Out | Ages 4-12 | Apr 25
+      flyer_url: API has image, DB is empty
+    Flips Fiesta | Kids Night Out | Ages 4-12 | May 2
+      flyer_url: API has image, DB is empty
+    Animal Planet | Kids Night Out | Ages 4-12 | May 16
+      flyer_url: API has image, DB is empty
+    Summer Kick Off | Kids Night Out | Ages 4-12 | May 30
+      flyer_url: API has image, DB is empty
+    Open Gym | Ages 7-17 | Mar 20
+      flyer_url: API has image, DB is empty
+    Open Gym | Ages 7-17 | Apr 17
+      flyer_url: API has image, DB is empty
+    ... and 28 more
+
+============================================================
+  RBA — Rowland Ballard Atascocita
+============================================================
+
+  API events: 30
+  Supabase events: 14
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2144
+    Name: CALIBER CHEER TRYOUTS 2026 (5 yrs - 18 yrs) - May 11th - May 14th
+    Dates: 2026-05-11 to 2026-05-14
+    Category: CALIBER CHEER TRYOUT
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2101
+    Name: After Care School's Out - Spring Break Camp| Ages 4+ | March 16th-20th
+    Dates: 2026-03-16 to 2026-03-20
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2119
+    Name: After Care: Summer Camp 2026 - Week 1 | 3PM-5:30PM (June 1)
+    Dates: 2026-06-01 to 2026-06-05
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2120
+    Name: After Care: Summer Camp 2026 - Week 2 | 3PM-5:30PM (June 8)
+    Dates: 2026-06-08 to 2026-06-12
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2121
+    Name: After Care: Summer Camp 2026 - Week 3 | 3PM-5:30PM (June 15)
+    Dates: 2026-06-15 to 2026-06-19
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2122
+    Name: After Care: Summer Camp 2026 - Week 4 | 3PM-5:30PM (June 22)
+    Dates: 2026-06-22 to 2026-06-26
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2123
+    Name: After Care: Summer Camp 2026 - Week 5 | 3PM-5:30PM (June 29)
+    Dates: 2026-06-29 to 2026-07-03
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2124
+    Name: After Care: Summer Camp 2026 - Week 6 | 3PM-5:30PM (July 6)
+    Dates: 2026-07-06 to 2026-07-10
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2125
+    Name: After Care: Summer Camp 2026 - Week 7 | 3PM-5:30PM (July 13)
+    Dates: 2026-07-13 to 2026-07-17
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2126
+    Name: After Care: Summer Camp 2026 - Week 8 | 3PM-5:30PM (July 20)
+    Dates: 2026-07-20 to 2026-07-24
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2127
+    Name: After Care: Summer Camp 2026 - Week 9 | 3PM-5:30PM (July 27)
+    Dates: 2026-07-27 to 2026-07-31
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2128
+    Name: After Care: Summer Camp 2026 - Week 10 | 3PM-5:30PM August 3)
+    Dates: 2026-08-03 to 2026-08-07
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2148
+    Name: Tumbling |Clinic| Ages 6+| April 18
+    Dates: 2026-04-18 to 2026-04-18
+    Category: CLINIC
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2145
+    Name: Slime Fun |Kids Night Out | Ages 4-13 |April 10
+    Dates: 2026-04-10 to 2026-04-10
+    Category: KIDS NIGHT OUT
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2146
+    Name: Neon Night |Kids Night Out | Ages 4-13 |April 24
+    Dates: 2026-04-24 to 2026-04-24
+    Category: KIDS NIGHT OUT
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbatascocita/camp-details/2147
+    Name: Open Tumble |Open Gym| Ages 6+| April 4
+    Dates: 2026-04-04 to 2026-04-04
+    Category: OPEN GYM
+
+  --- RBA Summary ---
+  Matched: 14
+  New (API only): 16
+  Missing from API (DB only): 0
+  Events with field differences: 14
+
+  Field differences:
+    Tumbling |Clinic| Ages 6+| March 21
+      flyer_url: API has image, DB is empty
+    Tie Die Fun |Kids Night Out | Ages 4-13 |March 13
+      flyer_url: API has image, DB is empty
+    Easter Egg Hunt |Kids Night Out | Ages 4-13 |March 27
+      flyer_url: API has image, DB is empty
+    School's Out - Spring Break Camp| Ages 4+ |March 16th-20th
+      flyer_url: API has image, DB is empty
+    Gymnastics/Ninja Summer Camp 2026 - Week 1: Splash Into Summ
+      flyer_url: API has image, DB is empty
+    Gymnastics/Ninja Summer Camp 2026 - Week 2: Mad Scientist! |
+      flyer_url: API has image, DB is empty
+    Gymnastics/Ninja Summer Camp 2026 - Week 3: Survivor Challen
+      flyer_url: API has image, DB is empty
+    Gymnastics/Ninja Summer Camp 2026 - Week 4: Beach Blast! | 9
+      flyer_url: API has image, DB is empty
+    Gymnastics/Ninja Summer Camp 2026 - Week 5: Lights, Camera, 
+      flyer_url: API has image, DB is empty
+    Gymnastics/Ninja Summer Camp 2026 - Week 6: Wild Explorer | 
+      flyer_url: API has image, DB is empty
+    ... and 4 more
+
+============================================================
+  RBK — Rowland Ballard Kingwood
+============================================================
+
+  API events: 29
+  Supabase events: 17
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbkingwood/camp-details/1573
+    Name: AFTER CARE: HISD Spring Break 2026| Mar. 16-20 | 3PM-5:30PM
+    Dates: 2026-03-16 to 2026-03-20
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbkingwood/camp-details/1575
+    Name: AFTER CARE: NCISD Spring Break 2026| April 6-10 | 3PM-5:30PM
+    Dates: 2026-04-06 to 2026-04-10
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbkingwood/camp-details/1584
+    Name: AFTER CARE: Summer Camp Week 1 | June 1-5 | 3PM-5:30PM
+    Dates: 2026-06-01 to 2026-06-05
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbkingwood/camp-details/1594
+    Name: AFTER CARE: Summer Camp Week 2| June 8-12 | 3PM-5:30PM
+    Dates: 2026-06-08 to 2026-06-12
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbkingwood/camp-details/1595
+    Name: AFTER CARE: Summer Camp Week 3| June 15-19| 3PM-5:30PM
+    Dates: 2026-06-15 to 2026-06-19
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbkingwood/camp-details/1596
+    Name: AFTER CARE: Summer Camp Week 4| June 22-26| 3PM-5:30PM
+    Dates: 2026-06-22 to 2026-06-26
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbkingwood/camp-details/1597
+    Name: AFTER CARE: Summer Camp Week 5| June 29-July 3| 3PM-5:30PM
+    Dates: 2026-06-29 to 2026-07-03
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbkingwood/camp-details/1598
+    Name: AFTER CARE: Summer Camp Week 6| July 6-10| 3PM-5:30PM
+    Dates: 2026-07-06 to 2026-07-10
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbkingwood/camp-details/1599
+    Name: AFTER CARE: Summer Camp Week 7| July 13-17| 3PM-5:30PM
+    Dates: 2026-07-13 to 2026-07-17
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbkingwood/camp-details/1600
+    Name: AFTER CARE: Summer Camp Week 8| July 20-24| 3PM-5:30PM
+    Dates: 2026-07-20 to 2026-07-24
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbkingwood/camp-details/1601
+    Name: AFTER CARE: Summer Camp Week 9 | July 27-31| 3PM-5:30PM
+    Dates: 2026-07-27 to 2026-07-31
+    Category: CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/rbkingwood/camp-details/1602
+    Name: AFTER CARE: Summer Camp Week 10 | Aug 3-7| 3PM-5:30PM
+    Dates: 2026-08-03 to 2026-08-07
+    Category: CAMP AFTER CARE
+
+  --- RBK Summary ---
+  Matched: 17
+  New (API only): 12
+  Missing from API (DB only): 0
+  Events with field differences: 15
+
+  Field differences:
+    Back Handspring  Clinic| Mar. 28 | Saturday 12:30-2pm
+      title: API='Back Handspring  Clinic| Mar. 28 | Saturday 12:30-2pm' vs DB='Back Handspring Clinic| Mar. 28 | Saturday 12:30-2pm'
+      flyer_url: API has image, DB is empty
+    EASTER KIDS NIGHT OUT! | March 27 | Friday | 7:00pm-9:30pm
+      flyer_url: API has image, DB is empty
+    EASTER Preschool Fun Gym! | March 27 | Friday | 11:00AM -12:
+      flyer_url: API has image, DB is empty
+    HISD Spring Break Camp 2026| Mar. 16-20 | 9AM - 3PM
+      flyer_url: API has image, DB is empty
+    NCISD Spring Break Camp 2026| April 6-10 | 9AM - 3PM
+      flyer_url: API has image, DB is empty
+    Splash into Summer Camp 2026 - Week 1 | June 1-5| 9AM - 3PM
+      flyer_url: API has image, DB is empty
+    Pirates and Treasure Hunters Summer Camp 2026 - Week 2 | Jun
+      flyer_url: API has image, DB is empty
+    Mad Scientist Summer Camp 2026 - Week 3 | June 15-19| 9AM - 
+      flyer_url: API has image, DB is empty
+    Junior Detectives Summer Camp 2026 - Week 4| June 22-26| 9AM
+      flyer_url: API has image, DB is empty
+    Super Hero Training Summer Camp 2026 - Week 5 | June 29-July
+      flyer_url: API has image, DB is empty
+    ... and 5 more
+
+============================================================
+  EST — Estrella Gymnastics
+============================================================
+
+  API events: 54
+  Supabase events: 54
+
+  --- EST Summary ---
+  Matched: 54
+  New (API only): 0
+  Missing from API (DB only): 0
+  Events with field differences: 54
+
+  Field differences:
+    Clinic | Walkovers  Friday, March 13th
+      title: API='Clinic | Walkovers  Friday, March 13th' vs DB='Clinic | Walkovers Friday, March 13th'
+      flyer_url: API has image, DB is empty
+    Clinic |Cartwheels and Aerials , Saturday March 14th
+      flyer_url: API has image, DB is empty
+    Clinic |Pullover , Saturday April 4th
+      flyer_url: API has image, DB is empty
+    Clinic |Cartwheel and Round off, Saturday April 25th
+      flyer_url: API has image, DB is empty
+    Pot o' Gold: Kids Night Out| Friday, March 20th
+      flyer_url: API has image, DB is empty
+    The Great Garden Party: Kids Night Out| Friday, April 3rd
+      flyer_url: API has image, DB is empty
+    Treasure Island Takeover: Kids Night Out| Friday, April 17th
+      flyer_url: API has image, DB is empty
+    Homeschool Open Gym| Thursday, March 26th
+      flyer_url: API has image, DB is empty
+    Homeschool Open Gym| Thursday, April 9th
+      flyer_url: API has image, DB is empty
+    Open Gym| Friday, April 24th
+      flyer_url: API has image, DB is empty
+    ... and 44 more
+
+============================================================
+  OAS — Oasis Gymnastics
+============================================================
+
+  API events: 49
+  Supabase events: 49
+
+  --- OAS Summary ---
+  Matched: 49
+  New (API only): 0
+  Missing from API (DB only): 0
+  Events with field differences: 42
+
+  Field differences:
+    Spring Break | Girls Gymnastics Camp Full Day | Ages 5-13 | 
+      flyer_url: API has image, DB is empty
+    Spring Break | Co-ed Ninja Warrior Camp Full Day | Ages 5-13
+      flyer_url: API has image, DB is empty
+    Week 1: Tropical Vacation | Girls Gymnastics Summer Camp Ful
+      flyer_url: API has image, DB is empty
+    Week 1: Tropical Vacation| Ninja Warrior Summer Camp Full Da
+      flyer_url: API has image, DB is empty
+    Week 2: Oasis's Got Talent | Girls Gymnastics Summer Camp Fu
+      flyer_url: API has image, DB is empty
+    Week 2: Oasis's Got Talent | Ninja Warrior Summer Camp Full 
+      flyer_url: API has image, DB is empty
+    Week 3: Idol Quest (K-Pop)| Girls Gymnastics Summer Camp Ful
+      has_openings: API=False vs DB=True
+      flyer_url: API has image, DB is empty
+    Week 3: Idol Quest (K-Pop) | Ninja Warrior Summer Camp Full 
+      flyer_url: API has image, DB is empty
+    Week 4: Under the Sea| Girls Gymnastics Summer Camp Full Day
+      flyer_url: API has image, DB is empty
+    Week 4: Under the Sea | Ninja Warrior Summer Camp Full Day |
+      flyer_url: API has image, DB is empty
+    ... and 32 more
+
+============================================================
+  SGT — Scottsdale Gymnastics
+============================================================
+
+  API events: 61
+  Supabase events: 51
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1967
+    Name: Week 1: Beach Bash|After Care| Summer Camp 2026  | Ages 5+ | May 26th-
+    Dates: 2026-05-25 to 2026-05-29
+    Category: SUMMER CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1968
+    Name: Week 2: Harry Potter|After Care| Summer Camp 2026  | Ages 5+ | June 1s
+    Dates: 2026-06-01 to 2026-06-05
+    Category: SUMMER CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1969
+    Name: Week 3: Mission Impossible|After Care| Summer Camp 2026  | Ages 5+ | J
+    Dates: 2026-06-08 to 2026-06-12
+    Category: SUMMER CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1970
+    Name: Week 4: Color Wars|After Care| Summer Camp 2026  | Ages 5+ | June 15th
+    Dates: 2026-06-15 to 2026-06-19
+    Category: SUMMER CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1971
+    Name: Week 5: What's Trending|After Care| Summer Camp 2026  | Ages 5+ | June
+    Dates: 2026-06-22 to 2026-06-26
+    Category: SUMMER CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1972
+    Name: Week 6: Sports Mania|After Care| Summer Camp 2026  | Ages 5+ | June 29
+    Dates: 2026-06-29 to 2026-07-03
+    Category: SUMMER CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1973
+    Name: Week 7: Disney Magic|After Care| Summer Camp 2026  | Ages 5+ | July 6t
+    Dates: 2026-07-06 to 2026-07-10
+    Category: SUMMER CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1974
+    Name: Week 8: Candyland |After Care| Summer Camp 2026  | Ages 5+ | July 13th
+    Dates: 2026-07-13 to 2026-07-17
+    Category: SUMMER CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1975
+    Name: Week 9: Level Up Gamers|After Care| Summer Camp 2026  | Ages 5+ | July
+    Dates: 2026-07-20 to 2026-07-24
+    Category: SUMMER CAMP AFTER CARE
+
+  NEW (not in Supabase):
+    URL: https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1976
+    Name: Week 10: Rockin' Summer |After Care| Summer Camp 2026  | Ages 5+ | Jul
+    Dates: 2026-07-27 to 2026-07-31
+    Category: SUMMER CAMP AFTER CARE
+
+  --- SGT Summary ---
+  Matched: 51
+  New (API only): 10
+  Missing from API (DB only): 0
+  Events with field differences: 51
+
+  Field differences:
+    Clinic |Cartwheels & Handstands| Ages 5+ |March 11th
+      flyer_url: API has image, DB is empty
+    Clinic |Aerial| Ages 5+ | April 4th
+      flyer_url: API has image, DB is empty
+    Kids Night Out | Pot of Gold | Ages 5-12 | 03/13
+      flyer_url: API has image, DB is empty
+    Movie Night | Zootopia 2 | Ages 5-12 | 03/20
+      flyer_url: API has image, DB is empty
+    Kids Night Out | Color Wars | Ages 5-12 | 03/27
+      flyer_url: API has image, DB is empty
+    Kids Night Out | Mystery of the Golden Egg | Ages 5-12 | Apr
+      flyer_url: API has image, DB is empty
+    Movie Night | Descendants 2 | Ages 5-12 | April 17th
+      flyer_url: API has image, DB is empty
+    Kids Night Out | TIE DYE | Ages 5-12 | April 24th
+      flyer_url: API has image, DB is empty
+    Girls Gymnastics Spring Break Camp 2026 | Ages 5+ | March 16
+      flyer_url: API has image, DB is empty
+    Parkour & Ninja Spring Break Camp 2026 | Ages 5+ | March 16t
+      flyer_url: API has image, DB is empty
+    ... and 41 more
+
+============================================================
+  TIG — Tigar Gymnastics
+============================================================
+
+  API events: 34
+  Supabase events: 34
+
+  --- TIG Summary ---
+  Matched: 34
+  New (API only): 0
+  Missing from API (DB only): 0
+  Events with field differences: 26
+
+  Field differences:
+    Girls Gymnastics Spring Break Camp | 3/23 - 3/27 | 9:00a - 3
+      flyer_url: API has image, DB is empty
+    COED Ninja Spring Break Camp | 3/23 - 3/27 | 9:00a - 3:00p
+      flyer_url: API has image, DB is empty
+    Girls Gymnastics Summer Camp 2026 | 9a-3p | 4-Day Camp (5/26
+      flyer_url: API has image, DB is empty
+    COED Ninja Summer Camp 2026 | 9a-3p | 4-Day Camp (5/26-5/29)
+      flyer_url: API has image, DB is empty
+    Girls Gymnastics Summer Camp 2026 | 9a-3p | (6/1 - 6/5) | WE
+      flyer_url: API has image, DB is empty
+    COED Ninja Summer Camp 2026 | 9a-3p | (6/1 - 6/5) | WEEK #2 
+      flyer_url: API has image, DB is empty
+    Girls Gymnastics Summer Camp 2026 | 9a-3p | (6/8 - 6/12) | W
+      has_openings: API=False vs DB=True
+      flyer_url: API has image, DB is empty
+    COED Ninja Summer Camp 2026 | 9a-3p | (6/8 - 6/12) | WEEK #3
+      flyer_url: API has image, DB is empty
+    Girls Gymnastics Summer Camp 2026 | 9a-3p | (6/15 - 6/19) | 
+      flyer_url: API has image, DB is empty
+    COED Ninja Summer Camp 2026 | 9a-3p | (6/15 - 6/19) | WEEK #
+      flyer_url: API has image, DB is empty
+    ... and 16 more
+
+
+======================================================================
+  FINAL SUMMARY
+======================================================================
+
+  Total API events:         457
+  Total Supabase events:    355
+  Matched (same event_url): 355
+  New (API only):           102
+  DB only (not in API):     0
+  Field differences:        333
+
+  Verdict:
+  DIFFERENCES FOUND — Review the details above before swapping

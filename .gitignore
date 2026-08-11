@@ -80,3 +80,4 @@ nul
 # Python cache
 __pycache__/
 *.pyc
+.claude/settings.local.json

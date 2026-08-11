@@ -140,6 +140,8 @@ ALLOWED_EVENT_FIELDS = {
     'type_id',
     'allow_choose_days',
     'program_name',
+    # iClass Camp Type / booking category (School Year vs Summer etc.)
+    'camp_type',
     # Full per-day schedule (all weekdays, not just day 1)
     'daily_schedule'
 }

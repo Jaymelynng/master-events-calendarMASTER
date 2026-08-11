@@ -376,6 +376,13 @@ def _collect_events_direct_api(gym_id, event_type_filter=None):
             detail = _get_event_detail_api(slug, event_id)
 
             if detail:
+                # Stamp the iClass Camp Type (booking category title, e.g.
+                # "SCHOOL YEAR CAMP - FULL DAY") onto the camp. This is the
+                # field families browse by, and it's the reliable signal for
+                # what kind of camp this is — the Program (programName) can
+                # drift out of sync with it. Grouped into our_type ('CAMP')
+                # loses cat_title otherwise, so capture it here.
+                detail['campTypeTitle'] = cat_title
                 global_seen_ids.add(event_id)
                 all_results[our_type].append(detail)
                 # Log same debug info as Playwright version for consistency
@@ -1292,35 +1299,56 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         event_url = f"https://portal.iclasspro.com/{portal_slug}/camp-details/{event_id}"
         
         # 4) time from schedule (None if no schedule data — skips time validation)
-        time_str = None
+        # iClass returns the schedule blocks in a NON-chronological order and
+        # tags each with dayNumber (1=Sun … 7=Sat). We MUST sort by day so the
+        # headline time is the real first meeting day, not whatever block the
+        # API happened to list first. (Bug fixed Aug 3 2026: an odd Friday 6am
+        # block was landing as "Day 1" and as the event's time — real case: CRR
+        # "Ocean & Eco" full-day camp, Fri mis-set to 6am while Mon-Thu ran 9am.)
+        _WEEKDAY = {1: 'Sun', 2: 'Mon', 3: 'Tue', 4: 'Wed', 5: 'Thu', 6: 'Fri', 7: 'Sat'}
+
+        def _day_num(s):
+            dn = s.get("dayNumber")
+            if dn is None:
+                dn = s.get("dayInt")
+            return dn if dn is not None else 99
+
         schedule_list = ev.get("schedule") or []
-        if schedule_list:
-            sched = schedule_list[0]
+        schedule_sorted = sorted(schedule_list, key=_day_num)
+
+        time_str = None
+        if schedule_sorted:
+            sched = schedule_sorted[0]
             start_time = (sched.get("startTime") or "").strip()
             end_time = (sched.get("endTime") or "").strip()
             if start_time and end_time:
                 time_str = f"{start_time} - {end_time}"
 
-        # 4b) Full daily schedule — ADDITIVE capture (July 2, 2026).
-        # A camp can have a different start/duration per weekday (real case: a
-        # SGT half-day camp where Monday was mis-set to 1 hour while Tue-Fri ran
-        # 3 hours). Sync historically kept only schedule[0], so a wrong day
-        # beyond Monday was invisible. We now keep the whole array so the side
-        # panel can show every day and the AI can catch a single day that
-        # doesn't match its siblings. `time_str` above is UNCHANGED (still the
-        # first day) — nothing downstream shifts.
+        # 4b) Full daily schedule — ADDITIVE capture (July 2, 2026; day-order +
+        # weekday labelling fixed Aug 3 2026). A camp can have a different
+        # start/duration per weekday (real case: CRR "Ocean & Eco" — Fri mis-set
+        # to 6am while Mon-Thu ran 9am). We keep the whole array IN DAY ORDER,
+        # each tagged with its real weekday (from dayNumber) so the side panel
+        # shows "Fri 6:00 AM" instead of a meaningless "Day 1", and the checks/AI
+        # can flag the TRUE odd day. The old builder looked for dayName/day/
+        # weekday/dayOfWeek — none of which iClass sends — so `day` was always
+        # null and the order was whatever the API returned.
         daily_schedule = None
-        if schedule_list:
+        if schedule_sorted:
             normalized_days = []
-            for s in schedule_list:
+            for s in schedule_sorted:
+                dn = s.get("dayNumber")
+                if dn is None:
+                    dn = s.get("dayInt")
                 day_label = (s.get("dayName") or s.get("day") or s.get("weekday")
-                             or s.get("dayOfWeek") or "").strip()
+                             or s.get("dayOfWeek") or _WEEKDAY.get(dn) or "").strip()
                 s_start = (s.get("startTime") or "").strip()
                 s_end = (s.get("endTime") or "").strip()
                 s_dur = s.get("duration")
                 if s_start or s_end or day_label:
                     normalized_days.append({
                         "day": day_label or None,
+                        "day_number": dn,
                         "start_time": s_start or None,
                         "end_time": s_end or None,
                         "duration": s_dur,
@@ -1609,6 +1637,11 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "type_id": ev.get("typeId"),
             "allow_choose_days": ev.get("allowChooseDays"),
             "program_name": ev.get("programName"),
+            # iClass Camp Type / booking category (e.g. "SCHOOL YEAR CAMP -
+            # FULL DAY"). Stamped in the collection loop from the category
+            # being pulled. The calendar colors by this; a Camp-Type-vs-Program
+            # mismatch is a catch. Falls back to None for non-camp collectors.
+            "camp_type": ev.get("campTypeTitle"),
             # Availability tracking from iClassPro
             "has_openings": has_openings,
             "openings": openings,

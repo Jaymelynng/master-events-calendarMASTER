@@ -62,13 +62,39 @@ function variantSortKey(event) {
   return typeRank * 10 + durationRank;
 }
 
-// Visual classification used by the bar styling.
+// Which iClass camp family this bar belongs to. Drives the bar COLOR so Summer
+// Camp and School Year Camps read as visually distinct categories.
+//
+// Source of truth = CAMP TYPE (the iClass booking category, `camp_type`), NOT
+// the Program. iClass has two independent fields: the Camp Type decides which
+// SECTION families browse the camp under, while the Program is a separate
+// back-end tag that can drift out of sync (real case: SGT Fall Break camps —
+// Camp Type = School Year, Program = Summer). The Camp Type is what families
+// actually see, so the calendar mirrors it. A Camp-Type-vs-Program mismatch is
+// caught separately in the Errors tab, not painted here. (Jayme, Aug 2026.)
+// Falls back to program_name only if camp_type isn't populated yet.
+function campProgramCategory(event) {
+  const src = (event.camp_type || event.program_name || '').toUpperCase();
+  if (src.includes('SCHOOL YEAR')) return 'SCHOOL_YEAR';
+  if (src.includes('SUMMER')) return 'SUMMER';
+  return 'OTHER'; // e.g. XCEL — show it, don't force it into a camp bucket
+}
+
+// One palette per program. Dark text on light fill (contrast-safe on the
+// light calendar surface).
+const PROGRAM_PALETTE = {
+  SUMMER:      { bg: '#fff3cf', border: '#e0b93a', color: '#6b4f1f' }, // sunny gold
+  SCHOOL_YEAR: { bg: '#e2edfb', border: '#5a8fd0', color: '#1e3a5f' }, // cool blue
+  OTHER:       { bg: '#ececec', border: '#9a9a9a', color: '#333333' }, // neutral
+};
+
+// Visual classification used by the bar styling. Color = program (top-level
+// category); icon = gymnastics vs ninja (the within-week variant).
 function variantStyle(event) {
+  const pal = PROGRAM_PALETTE[campProgramCategory(event)] || PROGRAM_PALETTE.OTHER;
   const text = `${event.title || ''} ${event.program_name || ''}`.toLowerCase();
   const isNinja = text.includes('ninja');
-  return isNinja
-    ? { bg: '#ffe5cc', border: '#c89770', color: '#7a4a20', icon: '🥷' }
-    : { bg: '#fff5d4', border: '#d6a844', color: '#6b4f1f', icon: '🤸' };
+  return { ...pal, icon: isNinja ? '🥷' : '🤸' };
 }
 
 // "Gym Full Day" / "Ninja Half Day" / etc. — short, always-fits label.

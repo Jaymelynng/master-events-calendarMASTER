@@ -1,0 +1,12 @@
+{
+  "gym_id": "OAS",
+  "type": "KIDS NIGHT OUT",
+  "title": "Test KNO | $45 | March 15",
+  "description": "Join us Friday March 15. Price is $45.",
+  "start_date": "2026-03-15",
+  "end_date": "2026-03-15",
+  "time": "6:30 PM - 9:30 PM",
+  "age_min": 5,
+  "day_of_week": "Saturday",
+  "programName": "KIDS NIGHT OUT"
+}

@@ -1,0 +1,2 @@
+-- Validating 339 events
+-- 57 of 339 events have errors. 94 errors total.
