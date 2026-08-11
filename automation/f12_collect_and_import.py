@@ -178,6 +178,16 @@ BOOKING_TITLE_TO_EVENT_TYPE = {
     'SPECIAL EVENTS': 'SPECIAL EVENT',
 }
 
+# ⏸️ TEMPORARY interim hold (Aug 11, 2026, Jayme's call) — booking categories to
+# keep OFF the calendar for now. This is a CAPTURE-skip, NOT the old silent-drop:
+# unknown REAL camps still get captured (below); only these parked add-on
+# categories are held. Before/after/extended care are wrap-around add-ons, not
+# standalone events. A camp category whose title contains one of these whole
+# words is held. ⚠️ KNOWN interim hardcode — Phase 2's category-mappings admin UI
+# replaces this with a per-category "ignore" toggle Jayme controls from a screen
+# (move it into the category_mappings table). Do NOT grow this list in code.
+HELD_CATEGORY_KEYWORDS = {'CARE'}
+
 
 def _api_get(url, timeout=15):
     """Make a GET request to iClassPro public API. Returns parsed JSON or None."""
@@ -209,8 +219,14 @@ def _get_location_id_api(slug):
 def _get_booking_categories(slug, location_id):
     """
     Discover all camp/event categories for a gym via the bookings endpoint.
-    Returns list of {title, typeId, our_event_type} for known event types only.
-    Unknown categories (not in BOOKING_TITLE_TO_EVENT_TYPE) are skipped with a log message.
+    Returns list of {title, typeId, our_event_type}.
+
+    Known titles (in BOOKING_TITLE_TO_EVENT_TYPE) map to their specific type
+    (CLINIC, KIDS NIGHT OUT, OPEN GYM, SPECIAL EVENT, or CAMP). ANY other camp
+    category is still CAPTURED — defaulted to the generic CAMP type — instead of
+    being silently dropped, so no camp ever falls off the calendar just because
+    the code hasn't heard of its category yet. The real booking-category title
+    always rides along on each event as camp_type for display and later sorting.
     """
     url = f"{ICLASSPRO_API_BASE}/{slug}/bookings/{location_id}"
     result = _api_get(url)
@@ -235,8 +251,26 @@ def _get_booking_categories(slug, location_id):
                 'typeId': type_id,
                 'our_event_type': our_type,
             })
+        elif set(title.upper().replace('-', ' ').split()) & HELD_CATEGORY_KEYWORDS:
+            # Parked on purpose (see HELD_CATEGORY_KEYWORDS) — held OFF the
+            # calendar for now, NOT dropped for being unknown. Interim until the
+            # mapping UI lets Jayme classify it.
+            print(f"  [API] Holding parked category (off calendar for now): '{title}' (typeId={type_id})")
         else:
-            print(f"  [API] Skipping unknown category: '{title}' (typeId={type_id})")
+            # Capture ANY other unmapped camp category instead of dropping it.
+            # Unknown booking categories (e.g. a gym's one-off "THANKSGIVING
+            # CAMP" / "WINTER BREAK CAMP") default to the generic CAMP type so
+            # their events still land on the calendar; the real title is
+            # preserved on each event as camp_type (detail['campTypeTitle']) for
+            # display and later sorting. Per Jayme (Aug 11, 2026): capture any
+            # and all real camps now — no camp falls off just because the code
+            # hasn't heard of its category.
+            print(f"  [API] Capturing unmapped category as CAMP: '{title}' (typeId={type_id})")
+            categories.append({
+                'title': title,
+                'typeId': type_id,
+                'our_event_type': 'CAMP',
+            })
 
     return categories
 
