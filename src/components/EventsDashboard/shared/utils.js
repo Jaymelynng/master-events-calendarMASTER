@@ -79,6 +79,17 @@ export const getDisplayDates = (calendarView, currentYear, currentMonth) => {
       return allDates.filter(d => d >= 15 && d <= 21);
     case 'week4':
       return allDates.filter(d => d >= 22);
+    case 'fromToday': {
+      // "From today through the rest of the month." Only trims days when the
+      // month being viewed is the one that actually contains today — other
+      // months have no already-passed days to hide, so they show in full.
+      const today = new Date();
+      const isViewingCurrentMonth =
+        today.getFullYear() === currentYear && today.getMonth() === currentMonth;
+      return isViewingCurrentMonth
+        ? allDates.filter(d => d >= today.getDate())
+        : allDates;
+    }
     case 'full':
     default:
       return allDates;

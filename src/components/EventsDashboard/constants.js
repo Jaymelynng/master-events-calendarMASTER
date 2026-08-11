@@ -96,6 +96,7 @@ export const isMultiDayType = (type) => {
 // Calendar view options
 export const calendarViews = {
   FULL: 'full',
+  FROM_TODAY: 'fromToday',
   FIRST_HALF: 'firstHalf',
   SECOND_HALF: 'secondHalf',
   WEEK1: 'week1',

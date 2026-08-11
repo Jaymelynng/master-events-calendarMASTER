@@ -185,19 +185,37 @@ export default function CampBand({
       const startObj = parseYmdLocal(startDateStr);
       const endObj = getActualEndDate(variant, parseYmdLocal);
 
-      // Clip to visible range when the camp starts before / ends after the
-      // current month, so we always render something visible.
-      let startIdx;
-      if (startObj.getFullYear() === currentYear && startObj.getMonth() === currentMonth) {
-        startIdx = displayDates.indexOf(startObj.getDate());
-      }
-      if (startIdx == null || startIdx === -1) startIdx = 0;
+      // Map the camp's start/end onto the visible columns. displayDates holds
+      // the day-numbers actually on screen for THIS view — full month, a half,
+      // a week, or Today→End-of-Month — so the window can start on ANY day, not
+      // just the 1st. Convert each end of the run to a coordinate in the
+      // current month's day-space: an earlier month is -Infinity, a later
+      // month is +Infinity, otherwise its day number.
+      const dayCoord = (d) => {
+        const y = d.getFullYear(), m = d.getMonth();
+        if (y < currentYear || (y === currentYear && m < currentMonth)) return -Infinity;
+        if (y > currentYear || (y === currentYear && m > currentMonth)) return Infinity;
+        return d.getDate();
+      };
+      const startCoord = dayCoord(startObj);
+      const endCoord = dayCoord(endObj);
+      const firstDay = displayDates[0];
+      const lastDay = displayDates[displayDates.length - 1];
 
-      let endIdx;
-      if (endObj.getFullYear() === currentYear && endObj.getMonth() === currentMonth) {
-        endIdx = displayDates.indexOf(endObj.getDate());
-      }
-      if (endIdx == null || endIdx === -1) endIdx = displayDates.length - 1;
+      // Skip runs that don't overlap the visible window at all — e.g. a camp
+      // that already ended before "today" in the Today→End-of-Month view, or a
+      // second-half camp while viewing Days 1-15. Without this an out-of-window
+      // run used to stretch edge-to-edge and look like a month-long camp.
+      if (endCoord < firstDay || startCoord > lastDay) continue;
+
+      // Clip the visible portion into the window: a camp that starts before the
+      // window begins at column 0; one that ends after it runs to the last col.
+      const startIdx = startCoord <= firstDay ? 0 : displayDates.indexOf(startCoord);
+      const endIdx = endCoord >= lastDay ? displayDates.length - 1 : displayDates.indexOf(endCoord);
+
+      // indexOf can only miss if displayDates were non-contiguous (no current
+      // view is), but guard so a stray value never renders a broken bar.
+      if (startIdx === -1 || endIdx === -1) continue;
 
       // Grid columns 1-indexed; CSS grid end is exclusive so end is +2.
       const gridColumn = `${startIdx + 1} / ${endIdx + 2}`;

@@ -25,6 +25,14 @@ export default function CalendarGrid({
   onEventSelect,
   errorFocus = false
 }) {
+  // Today's day-number, but only when the month on screen is the real current
+  // month — used to mark today's column so it's easy to spot in any view.
+  const now = new Date();
+  const todayDayNumber =
+    now.getFullYear() === currentYear && now.getMonth() === currentMonth
+      ? now.getDate()
+      : null;
+
   return (
     <div className={`mx-2 mb-20 pb-20 transition-all duration-300 ${selectedEventForPanel ? 'mr-[400px]' : ''}`}>
       <div ref={calendarRef} className="w-full overflow-x-auto overflow-y-visible rounded-xl shadow-lg" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
@@ -44,14 +52,23 @@ export default function CalendarGrid({
             </div>
 
             {/* Date Headers */}
-            {displayDates.map(date => (
-              <div key={date} className="p-2 text-center font-medium border-r border-gray-200 min-w-0">
-                <div className="text-sm font-bold">{date}</div>
-                <div className="text-xs text-gray-600">
-                  {new Date(currentYear, currentMonth, date).toLocaleDateString('en-US', { weekday: 'short' })}
+            {displayDates.map(date => {
+              const isToday = date === todayDayNumber;
+              return (
+                <div
+                  key={date}
+                  className="p-2 text-center font-medium border-r border-gray-200 min-w-0"
+                  style={isToday ? { backgroundColor: theme.colors.primary } : {}}
+                >
+                  <div className={`text-sm font-bold ${isToday ? 'text-white' : ''}`}>{date}</div>
+                  <div className={`text-xs ${isToday ? 'text-white' : 'text-gray-600'}`}>
+                    {isToday
+                      ? 'TODAY'
+                      : new Date(currentYear, currentMonth, date).toLocaleDateString('en-US', { weekday: 'short' })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Calendar Body — divide-y removed; each gym row gets its own

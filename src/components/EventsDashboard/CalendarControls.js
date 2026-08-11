@@ -235,6 +235,18 @@ export function CalendarViewToggle({
         >
           Full Month
         </button>
+        {/* From today → end of month. Hides days already past in the current
+            month; leaves other months in full. Full Month stays untouched. */}
+        <button
+          onClick={() => onCalendarViewChange('fromToday')}
+          className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
+            calendarView === 'fromToday' ? 'text-white shadow-lg' : 'text-gray-600 bg-white border hover:shadow-md'
+          }`}
+          style={calendarView === 'fromToday' ? { backgroundColor: theme.colors.primary } : {}}
+          title="Show from today's date through the end of the month"
+        >
+          📍 Today → End of Month
+        </button>
       </div>
 
       {/* Quick weeks */}
