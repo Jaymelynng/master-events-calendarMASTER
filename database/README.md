@@ -1,6 +1,6 @@
 # 📁 Database Folder
 
-**Last Updated:** May 6, 2026
+**Last Updated:** May 14, 2026
 
 This folder contains SQL scripts for the Supabase PostgreSQL database.
 
@@ -47,6 +47,8 @@ These document schema changes over time:
 | `ADD_VERIFIED_ERRORS_COLUMN.sql` | `verified_errors` jsonb on events |
 | `ADD_MANAGER_CONTACTS.sql` | `manager_name`, `manager_email` on `gyms` |
 | `ARCHIVE_SOFT_DELETED_EVENTS.sql` + `CREATE_ARCHIVE_FUNCTION.sql` | Soft-delete + auto-archive pipeline |
+| `CREATE_BULK_LINKS_TABLES.sql` | 4 tables (`bulk_pages`, `bulk_sections`, `bulk_fields`, `bulk_field_values`) — port of Bulk Link PRO into Calendar's Supabase. See [`docs/TECHNICAL/BULK_LINKS_FEATURE.md`](../docs/TECHNICAL/BULK_LINKS_FEATURE.md). (May 14, 2026) |
+| `ADD_BRAND_COLORS_TO_GYMS.sql` | `brand_colors text[]` on `gyms` (May 14, 2026). Each gym's hex palette `[primary, secondary, tertiary, light]`. Used by Bulk Links gym card headers and available to any other UI. Migrated from BLP's `locations.brand_colors`. |
 
 ### Utility Queries:
 | File | Purpose |
@@ -97,6 +99,7 @@ Use `FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql` - it has the complete, current view d
 | `requirement_notes` | Status (In Progress / Late / Excused) for missing monthly requirements |
 | `future_plans` | Admin-managed roadmap |
 | `pricing_schedules`, `camp_type_mappings` | iClassPro pricing data (274 schedules, 243 type mappings) |
+| `bulk_pages`, `bulk_sections`, `bulk_fields`, `bulk_field_values` | Bulk Links tab data — ported from Bulk Link PRO May 14, 2026. See [`docs/TECHNICAL/BULK_LINKS_FEATURE.md`](../docs/TECHNICAL/BULK_LINKS_FEATURE.md). |
 
 ---
 
@@ -110,4 +113,5 @@ Use `FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql` - it has the complete, current view d
 | Dec 28, 2025 | Moved DATA_QUALITY_IMPROVEMENTS.md to docs/OPERATIONS/ |
 | May 6, 2026 | Added `CREATE_MONTHLY_REQUIREMENTS_TABLE.sql` (table existed in prod with read-only RLS — admin writes were failing). Refreshed table list to drop dropped `gym_valid_values` and add `rules`, `requirement_notes`, `future_plans`, `pricing_schedules`, `camp_type_mappings`. Repo is now the source of truth for every load-bearing Supabase object — anything required for the app to run must live in this folder. |
 | May 6, 2026 | Added `ENABLE_RLS_ON_UNGUARDED_TABLES.sql` — closes the 3 critical RLS-disabled gaps the Supabase advisor flagged. Verified by inspecting actual code usage and testing each table as the anon role. |
+| May 14, 2026 | Added `CREATE_BULK_LINKS_TABLES.sql` — 4 new tables (`bulk_pages`, `bulk_sections`, `bulk_fields`, `bulk_field_values`) ported from the standalone Bulk Link PRO app into Calendar's Supabase. Schema applied via Supabase MCP migration `create_bulk_links_tables`. First-pass data migrated directly (4 pages, 24 sections, 104 fields, 116 values for the `programs` tab). Remaining 1,044 field_values migrated via `scripts/migrate-blp-to-calendar.mjs`. Full reference: [`docs/TECHNICAL/BULK_LINKS_FEATURE.md`](../docs/TECHNICAL/BULK_LINKS_FEATURE.md). |
 

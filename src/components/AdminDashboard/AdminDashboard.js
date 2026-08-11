@@ -6,6 +6,7 @@ import AdminQuickActions from './AdminQuickActions';
 import AdminChangeHistory from './AdminChangeHistory';
 import EmailComposer from './EmailComposer';
 import AdminFuturePlans from './AdminFuturePlans';
+import AdminFormatRules from './AdminFormatRules';
 import { monthlyRequirementsApi, eventTypesApi } from '../../lib/api';
 
 // ─── Color helpers ────────────────────────────────────────────────────────────

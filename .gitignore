@@ -77,6 +77,10 @@ Thumbs.db
 tmpclaude-*
 nul
 
+# One-off data migration working files (subagent batches; safe to delete)
+_migration/
+_migration_chunk*.json
+
 # Python cache
 __pycache__/
 *.pyc
