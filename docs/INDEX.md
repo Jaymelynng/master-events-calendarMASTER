@@ -58,7 +58,6 @@ docs/
 | [DATABASE_COMPLETE_SCHEMA.md](TECHNICAL/DATABASE_COMPLETE_SCHEMA.md) | Tables, views, design decisions, SQL commands |
 | [SCALABILITY-ROADMAP.md](TECHNICAL/SCALABILITY-ROADMAP.md) | Future scaling plan |
 | [SYNC_SYSTEM_TECHNICAL.md](TECHNICAL/SYNC_SYSTEM_TECHNICAL.md) | Sync system technical details |
-| **[BULK_LINKS_FEATURE.md](TECHNICAL/BULK_LINKS_FEATURE.md)** ⭐ NEW | 📦 Bulk Links tab — port of Bulk Link PRO into Calendar. Schema, components, migration, rebuild instructions. |
 
 ---
 
@@ -146,26 +145,24 @@ docs/
 
 ## 📊 Documentation Stats
 
-- **Total Documents:** 35 (updated May 14, 2026)
+- **Total Documents:** 34 (updated Aug 11, 2026)
 - **BUSINESS:** 2 documents
-- **TECHNICAL:** 9 documents (added BULK_LINKS_FEATURE.md)
+- **TECHNICAL:** 8 documents (removed BULK_LINKS_FEATURE.md)
 - **OPERATIONS:** 22 documents
 - **Root docs/:** INDEX.md, TEST_COVERAGE_ANALYSIS.md
 - **Root:** `CLAUDE.md` (AI quick-start guide)
-- **Last Major Update:** May 14, 2026 (Bulk Links Slice 1)
+- **Last Major Update:** August 11, 2026 (Bulk Links feature removed)
 
 ---
 
 ## 🔄 Recent Changes
 
+### August 11, 2026
+- **REMOVED** the Bulk Links feature. The Bulk Link PRO port was retired from the calendar — it's a separate app again (`HUB - Bulk Link PRO`). Deleted `src/components/BulkLinks/`, `src/lib/bulkLinksApi.js`, `scripts/migrate-blp-to-calendar.mjs`, `database/CREATE_BULK_LINKS_TABLES.sql`, and `docs/TECHNICAL/BULK_LINKS_FEATURE.md`. `src/App.js` is calendar-only again (the master-nav tab strip is gone). The 4 `bulk_*` tables + the `gyms_with_links` view were dropped from Calendar's Supabase (`xftiwouxpefchwoxxgpf`).
+
 ### May 14, 2026
-- **ADDED** Bulk Links feature — port of standalone Bulk Link PRO into Calendar as a sister-tool tab. Eliminates the two-app / two-database split. See [`TECHNICAL/BULK_LINKS_FEATURE.md`](TECHNICAL/BULK_LINKS_FEATURE.md).
-- **NEW DATABASE TABLES** in Calendar's Supabase (`xftiwouxpefchwoxxgpf`): `bulk_pages`, `bulk_sections`, `bulk_fields`, `bulk_field_values`. Schema in `database/CREATE_BULK_LINKS_TABLES.sql`.
-- **NEW COLUMN** `gyms.brand_colors TEXT[]` — hex palette per gym, populated for all 10. Schema in `database/ADD_BRAND_COLORS_TO_GYMS.sql`.
-- **NEW UI FILES**: `src/components/BulkLinks/BulkLinksHub.js`, `src/components/BulkLinks/GymProfileCard.js`, `src/lib/bulkLinksApi.js`. Wired into `src/App.js` via a top-of-page master nav strip with two tabs (📅 Calendar / 📦 Bulk Links).
-- **URL ROUTING ADDED**: Calendar now has real URLs — `/` for Calendar, `/bulk-links` for Bulk Links. Bookmarks, share links, back-button all work. `vercel.json` updated with SPA rewrites so direct visits don't 404. This also enables redirecting `bulklinkpro.mygymtools.com` → `teamcalendar.mygymtools.com/bulk-links` at the DNS/Vercel level when ready.
-- **NEW MIGRATION SCRIPT**: `scripts/migrate-blp-to-calendar.mjs` — one-time copy of the 1,044 remaining field_values from BLP's Supabase project (`wunjenvrovcrntjakawi`) into Calendar's.
-- **Slice 1 scope** shipped: tab nav, per-gym cards, drop-open sections, dual per-card + global counters, bulk Open/Copy. Slices 2–5 (section selector, admin view with iframe preview, Settings, Active Campaign Session Manager) are roadmap.
+- **ADDED** `gyms.brand_colors TEXT[]` — hex palette per gym, populated for all 10. Schema in `database/ADD_BRAND_COLORS_TO_GYMS.sql`. (Still in use for gym-colored UI.)
+- **ADDED** the Bulk Links feature (port of standalone Bulk Link PRO) — **later removed, see August 11, 2026 above.**
 
 ### March 17, 2026
 - **ADDED** `automation/validation_engine.py` — Database-driven validation engine (replaces hardcoded checks in f12_collect_and_import.py)

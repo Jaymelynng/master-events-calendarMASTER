@@ -171,7 +171,6 @@ The doc-map hook will surface the iClassPro section at the top of every UserProm
 | `sync_log` | Sync progress tracking |
 | `requirement_notes` | Status tracking for missing monthly requirements |
 | `acknowledged_patterns` | Bulk dismiss patterns per gym/event type |
-| `bulk_pages` / `bulk_sections` / `bulk_fields` / `bulk_field_values` | **NEW (May 14, 2026)** — Bulk Links tab data, ported from the standalone Bulk Link PRO app. See [`docs/TECHNICAL/BULK_LINKS_FEATURE.md`](docs/TECHNICAL/BULK_LINKS_FEATURE.md). |
 
 ---
 
@@ -382,7 +381,8 @@ Agents should **read these** when asked about roadmap, sellability, onboarding, 
 | Mar 17, 2026 | Removed FORMAT errors (never implemented). Replaced precoded rules with database-driven system checks. Dropped gym_valid_values references. Updated Admin Dashboard to 7 tabs. CORS note corrected. |
 | Apr 8, 2026 | Added Part 9: multi-sport + AI-assisted setup vision; pointers to `memory/MEMORY.md` and PRODUCT_VISION doc |
 | Apr 26, 2026 | Added openings/spots-remaining capacity feature. New columns + iClass API discovery (`openings`, `openingsDisplay`, `showOpenings`). Card display, side panel badge, CSV export columns. Time removed from cards. Full doc: `docs/OPERATIONS/OPENINGS_CAPACITY_FEATURE.md`. Also: `pricing_supabase.py` added to git (was untracked, broke Railway sync). |
-| May 14, 2026 | 📦 **Bulk Links Slice 1** — port of Bulk Link PRO into Calendar as a new tab. 4 new tables in Calendar's Supabase (`bulk_pages`, `bulk_sections`, `bulk_fields`, `bulk_field_values`). New files: `src/components/BulkLinks/`, `src/lib/bulkLinksApi.js`, `database/CREATE_BULK_LINKS_TABLES.sql`, `scripts/migrate-blp-to-calendar.mjs`. Floating button in `src/App.js` swaps view. Full doc: `docs/TECHNICAL/BULK_LINKS_FEATURE.md`. |
+| May 14, 2026 | 📦 Bulk Links Slice 1 — port of Bulk Link PRO into Calendar as a new tab. **(Removed Aug 11, 2026 — see below.)** |
+| Aug 11, 2026 | **Removed the Bulk Links feature.** Bulk Link PRO is a separate app again (`HUB - Bulk Link PRO`). Deleted `src/components/BulkLinks/`, `src/lib/bulkLinksApi.js`, `database/CREATE_BULK_LINKS_TABLES.sql`, `scripts/migrate-blp-to-calendar.mjs`, `docs/TECHNICAL/BULK_LINKS_FEATURE.md`; `src/App.js` is calendar-only (master nav removed); dropped the 4 `bulk_*` tables + `gyms_with_links` view from Supabase. |
 
 ---
 
