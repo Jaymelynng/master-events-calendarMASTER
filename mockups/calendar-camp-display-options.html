@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendar Camp Display — Mockup Options</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: #faf5f5;
+    color: #2a2a2a;
+    padding: 24px;
+    min-height: 100vh;
+  }
+
+  h1 {
+    color: #6e5658;
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+  .subtitle { color: #9a8b8b; margin-bottom: 28px; }
+
+  .section {
+    background: #fff;
+    border-radius: 16px;
+    padding: 22px 24px;
+    margin-bottom: 22px;
+    box-shadow: 0 6px 20px rgba(70,50,52,0.08);
+    border: 1px solid #ead7d7;
+  }
+
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 18px;
+  }
+  .section-title {
+    color: #6e5658; font-size: 18px; font-weight: 900;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .badge {
+    padding: 4px 12px; border-radius: 999px; font-size: 11px;
+    font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .badge-current { background: #fde4e4; color: #b35454; border: 1px solid #ec9999; }
+  .badge-best { background: #dff4e1; color: #2f7c39; border: 1px solid #6ab86d; }
+  .badge-alt { background: #fff3e0; color: #b07020; border: 1px solid #d8a868; }
+  .pros-cons {
+    font-size: 12px; color: #6e5658; margin-top: 14px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+  .pros-cons strong { color: #3c3939; }
+
+  /* ── Calendar grid (mimics live) ── */
+  .calendar {
+    display: grid;
+    grid-template-columns: 80px repeat(7, 1fr);
+    border: 1px solid #d4c2c2;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .col-header {
+    background: #e6d5d5;
+    padding: 8px 4px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 800;
+    border-right: 1px solid #c5b4b4;
+    color: #6e5658;
+  }
+  .col-header.gym-col { background: #d4c0c0; }
+  .day-num { font-size: 14px; font-weight: 900; }
+  .day-name { font-size: 10px; color: #8b6f6f; }
+
+  .gym-cell {
+    background: #f7f0f0;
+    border-right: 1px solid #c5b4b4;
+    padding: 10px 4px;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    font-weight: 800;
+    color: #6e5658;
+    font-size: 11px;
+  }
+  .gym-cell .logo {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #b48f8f, #8b6f6f);
+    color: white; display:flex; align-items:center; justify-content:center;
+    font-weight: 900; font-size: 11px; margin-bottom: 4px;
+  }
+
+  .day-cell {
+    border-right: 1px solid #e8d8d8;
+    border-top: 1px solid #e8d8d8;
+    min-height: 110px;
+    padding: 4px;
+    position: relative;
+  }
+  .day-cell::before {
+    content: attr(data-day);
+    position: absolute;
+    top: 2px; left: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    color: #b09898;
+    background: white;
+    padding: 0 3px;
+    border-radius: 2px;
+    z-index: 2;
+  }
+
+  /* ── Card styles (using rose/tan/sage palette) ── */
+  .card {
+    background: #f5edee;            /* rose pastel — CLINIC */
+    border: 1px solid rgba(185,147,150,0.55);
+    border-radius: 4px;
+    padding: 6px;
+    margin-bottom: 4px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #5a4344;
+    cursor: pointer;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .card-kno { background: #f7eee0; border-color: rgba(213,163,109,0.55); color: #6b4f30; }
+  .card-og { background: #e6f0e6; border-color: rgba(110,147,111,0.55); color: #355a37; }
+  .card-camp { background: #fff5d4; border-color: rgba(214,168,68,0.7); color: #6b4f1f; }
+
+  .card .type-name { font-weight: 900; line-height: 1.1; font-size: 12px; }
+  .card .opts-line { font-style: italic; color: #888; font-size: 10px; margin-top: 1px; }
+  .card .spots-line { font-size: 10px; font-weight: 800; margin-top: 2px; color: #2f7c39; }
+  .card .spots-low { color: #b07020; }
+  .card .spots-full { color: #c0392b; font-weight: 900; }
+
+  /* Validation indicator dot */
+  .err-dot {
+    position: absolute; top: -4px; right: -4px;
+    width: 11px; height: 11px; background: #dc3545; border-radius: 50%;
+    border: 1px solid #8b1a26; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .full-badge {
+    position: absolute; top: -4px; left: -4px;
+    background: #dc3545; color: white; font-size: 8px; font-weight: 900;
+    padding: 1px 4px; border-radius: 2px;
+  }
+
+  /* ── OPTION 1: Spanning bar with per-variant dot strip ── */
+  .span-bar {
+    grid-column: 3 / 8; /* spans Mon (col 3) through Fri (col 7) */
+    background: linear-gradient(180deg, #fff5d4, #ffe9b3);
+    border: 1px solid rgba(214,168,68,0.85);
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin: 4px 2px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(150,100,30,0.18);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+    position: relative;
+    z-index: 3;
+  }
+  .span-bar .left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .span-bar .type-tag {
+    background: #d6a844; color: white;
+    font-size: 9px; font-weight: 900; letter-spacing: 0.06em;
+    padding: 2px 6px; border-radius: 3px;
+    text-transform: uppercase;
+  }
+  .span-bar .title-text {
+    font-weight: 800; color: #6b4f1f; font-size: 12px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .span-bar .meta { font-size: 10px; color: #8b6f50; font-weight: 600; }
+  .span-bar .dot-strip {
+    display: flex; gap: 3px; align-items: center;
+    background: rgba(255,255,255,0.6);
+    padding: 3px 6px; border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .vdot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 0 1px rgba(0,0,0,0.2); }
+  .vdot-open { background: #28a745; }
+  .vdot-low  { background: #f59e0b; }
+  .vdot-full { background: #dc3545; }
+
+  .span-bar .icon-allow {
+    font-size: 13px;
+    background: rgba(255,255,255,0.8);
+    padding: 1px 5px;
+    border-radius: 3px;
+    cursor: help;
+  }
+
+  /* ── OPTION 2: Variant-stacked thin bars ── */
+  .vbar-wrap { grid-column: 3 / 8; padding: 4px 2px; display: flex; flex-direction: column; gap: 3px; }
+  .vbar {
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.08);
+  }
+  .vbar.gym { background: #fff5d4; color: #6b4f1f; border-color: rgba(214,168,68,0.7); }
+  .vbar.ninja { background: #ffe5cc; color: #7a4a20; border-color: rgba(220,140,80,0.7); }
+  .vbar .v-label { font-weight: 800; }
+  .vbar .v-status { font-weight: 800; font-size: 10px; }
+  .vbar .v-full { color: #c0392b; }
+  .vbar .v-low { color: #b07020; }
+  .vbar .v-open { color: #2f7c39; }
+
+  /* ── OPTION 3: Compact pill (just one cell) ── */
+  .pill-card {
+    background: linear-gradient(180deg, #fff5d4, #ffe9b3);
+    border: 1px solid rgba(214,168,68,0.85);
+    border-radius: 4px;
+    padding: 6px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 11px;
+  }
+  .pill-card .span-text { font-weight: 800; color: #6b4f1f; font-size: 12px; }
+  .pill-card .pill-meta { font-size: 10px; color: #8b6f50; }
+
+  .legend {
+    display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap;
+    font-size: 11px; color: #6e5658;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+
+  .info-bubble {
+    background: #faf3e8;
+    border: 1px solid #e0c89a;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: #6b4f1f;
+    line-height: 1.5;
+  }
+
+  /* ── COMBO STYLE: pill bars for everything (single-day too) ── */
+  .pill-bar {
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+    margin: 2px 4px;
+    white-space: nowrap;
+    position: relative;
+  }
+  .pill-bar.clinic { background: #f5edee; color: #5a4344; border-color: rgba(185,147,150,0.6); }
+  .pill-bar.kno    { background: #f7eee0; color: #6b4f30; border-color: rgba(213,163,109,0.6); }
+  .pill-bar.og     { background: #e6f0e6; color: #355a37; border-color: rgba(110,147,111,0.6); }
+
+  .pill-bar .label  { font-weight: 900; }
+  .pill-bar .meta   { font-size: 10px; font-weight: 700; opacity: 0.85; }
+  .pill-bar .status { font-size: 10px; font-weight: 800; }
+  .pill-bar .status.open { color: #2f7c39; }
+  .pill-bar .status.low  { color: #b07020; }
+  .pill-bar .status.full { color: #c0392b; }
+
+  /* Camp variant pill-bars — stacked inside .camp-stack which itself
+     spans cols 3-7 in row 1 of the calendar grid */
+  .camp-stack {
+    grid-column: 3 / 8;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 4px;
+    align-self: start;
+  }
+  .vbar-pill {
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.10);
+  }
+  .vbar-pill .v-price { font-size: 10px; opacity: 0.7; font-weight: 700; }
+  .vbar-pill.gym   { background: linear-gradient(180deg, #fff5d4, #ffe9b3); color: #6b4f1f; border-color: rgba(214,168,68,0.7); }
+  .vbar-pill.ninja { background: linear-gradient(180deg, #ffe5cc, #f7d2b0); color: #7a4a20; border-color: rgba(220,140,80,0.7); }
+  .vbar-pill .v-left  { display: flex; align-items: center; gap: 8px; }
+  .vbar-pill .v-icon  { font-size: 14px; }
+  .vbar-pill .v-status { font-size: 10px; font-weight: 900; }
+
+  .err-ring {
+    box-shadow: 0 0 0 2px #dc3545, 0 1px 3px rgba(0,0,0,0.10) !important;
+  }
+
+  .combo-section {
+    background: linear-gradient(135deg, #fff8e8 0%, #fff3d4 100%);
+    border: 2px solid #d6a844 !important;
+  }
+  .combo-banner {
+    background: #d6a844; color: white;
+    padding: 6px 14px; border-radius: 8px;
+    font-weight: 900; text-transform: uppercase;
+    letter-spacing: 0.06em; font-size: 11px;
+    display: inline-block;
+  }
+
+  /* ── COMBO v2 (matches Jayme's drawing) ─────────────────────────
+     Rectangles, not pills. Top half of gym row = single-day events
+     as THICK rounded rectangles. Dashed line. Bottom half = THIN
+     rounded rectangles spanning the camp days. */
+  .day-zone {
+    border-right: 1px solid #e8d8d8;
+    padding: 10px 6px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 110px;
+    position: relative;
+  }
+  .day-zone::before {
+    content: attr(data-day);
+    position: absolute;
+    top: 2px; left: 4px;
+    font-size: 9px; font-weight: 800;
+    color: #b09898; background: white;
+    padding: 0 3px; border-radius: 2px;
+    z-index: 2;
+  }
+  /* Single-day events — CHUNKY rounded rectangles (like the current
+     calendar cards). Stacked TYPE + spots-count inside. */
+  .event-rect {
+    border-radius: 6px;
+    padding: 8px 6px;
+    text-align: center;
+    border: 1.5px solid;
+    cursor: pointer;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .event-rect .er-type  { font-weight: 900; font-size: 12px; line-height: 1.1; letter-spacing: 0.02em; }
+  .event-rect .er-spots { font-size: 11px; font-weight: 800; }
+  .event-rect .er-spots.open { color: #2f7c39; }
+  .event-rect .er-spots.low  { color: #b07020; }
+  .event-rect .er-spots.full { color: #c0392b; }
+  .event-rect.kno    { background: #f7eee0; border-color: #d5a36d; color: #6b4f30; }
+  .event-rect.og     { background: #e6f0e6; border-color: #6e936f; color: #355a37; }
+  .event-rect.clinic { background: #f5edee; border-color: #b99396; color: #5a4344; }
+
+  .gym-row-separator {
+    border-top: 2px dashed #b09898;
+    height: 0;
+    margin: 4px 10px;
+  }
+
+  /* Camp variant bars — LONG NARROW rectangles. Variant name on left,
+     status on right. Strong shape contrast vs the chunky event-rect. */
+  .camp-bar {
+    height: 28px;
+    border-radius: 7px;
+    border: 1.5px solid;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .camp-bar .cb-left   { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .camp-bar .cb-icon   { font-size: 13px; }
+  .camp-bar .cb-name   { font-weight: 900; }
+  .camp-bar .cb-price  { font-size: 10px; opacity: 0.65; font-weight: 700; }
+  .camp-bar .cb-status { font-size: 11px; font-weight: 900; white-space: nowrap; }
+  .camp-bar .cb-status.open { color: #2f7c39; }
+  .camp-bar .cb-status.low  { color: #b07020; }
+  .camp-bar .cb-status.full { color: #c0392b; }
+  .camp-bar.gym   { background: #fff5d4; border-color: #d6a844; color: #6b4f1f; }
+  .camp-bar.ninja { background: #ffe5cc; border-color: #c89770; color: #7a4a20; }
+</style>
+</head>
+<body>
+
+<h1>📅 Calendar Camp Display — Options Compared</h1>
+<p class="subtitle">
+  Same week, same data: <strong>Oasis Gymnastics, Summer Week 1 (Mon June 1 – Fri June 5)</strong> with 4 variants:
+  Girls Gym Full ($345, 12 left) • Girls Gym Half ($245, FULL) • Co-ed Ninja Full ($345, 3 left) • Co-ed Ninja Half ($245, 18 left).
+  Plus an OPEN GYM on Wed and a KNO on Fri to show non-camp events alongside.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- CURRENT STATE -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">⚠️ Current — what's on the calendar today</div>
+    <span class="badge badge-current">Today</span>
+  </div>
+  <div class="calendar">
+    <div class="col-header gym-col">Gym</div>
+    <div class="col-header"><div class="day-num">Sun</div><div class="day-name">5/31</div></div>
+    <div class="col-header"><div class="day-num">Mon</div><div class="day-name">6/1</div></div>
+    <div class="col-header"><div class="day-num">Tue</div><div class="day-name">6/2</div></div>
+    <div class="col-header"><div class="day-num">Wed</div><div class="day-name">6/3</div></div>
+    <div class="col-header"><div class="day-num">Thu</div><div class="day-name">6/4</div></div>
+    <div class="col-header"><div class="day-num">Fri</div><div class="day-name">6/5</div></div>
+    <div class="col-header"><div class="day-num">Sat</div><div class="day-name">6/6</div></div>
+
+    <div class="gym-cell"><div class="logo">OAS</div>Oasis</div>
+    <div class="day-cell" data-day="31"></div>
+    <div class="day-cell" data-day="1">
+      <div class="card card-camp"><div class="type-name">CAMP</div><div class="opts-line">4 opts</div><div class="spots-line">🟢 33</div></div>
+    </div>
+    <div class="day-cell" data-day="2">
+      <div class="card card-camp"><div class="type-name">CAMP</div><div class="opts-line">4 opts</div><div class="spots-line">🟢 33</div></div>
+    </div>
+    <div class="day-cell" data-day="3">
+      <div class="card card-camp"><div class="type-name">CAMP</div><div class="opts-line">4 opts</div><div class="spots-line">🟢 33</div></div>
+      <div class="card card-og"><div class="type-name">OPEN GYM</div><div class="spots-line">🟢 12</div></div>
+    </div>
+    <div class="day-cell" data-day="4">
+      <div class="card card-camp"><div class="type-name">CAMP</div><div class="opts-line">4 opts</div><div class="spots-line">🟢 33</div></div>
+    </div>
+    <div class="day-cell" data-day="5">
+      <div class="card card-camp"><div class="type-name">CAMP</div><div class="opts-line">4 opts</div><div class="spots-line">🟢 33</div></div>
+      <div class="card card-kno"><div class="type-name">KNO</div><div class="spots-line">🟢 18</div></div>
+    </div>
+    <div class="day-cell" data-day="6"></div>
+  </div>
+  <div class="info-bubble">
+    <strong>The problems:</strong> 5 identical CAMP cards take 5 cells • can't see which of the 4 variants is full • can't see if single-day signup is allowed • errors collapsed into one dot for the whole group • the "🟢 33" sums all 4 variants, hiding that Gym Half is sold out.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 🎯 THE PICK — matches Jayme's hand-drawn Canva edit -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="section combo-section">
+  <div class="section-header">
+    <div class="section-title">🎯 The Pick — matching what you drew</div>
+    <span class="combo-banner">Jayme's choice</span>
+  </div>
+  <p style="margin-bottom: 14px; font-size: 12px; color: #6b4f1f;">
+    Each gym row split horizontally by a dashed line. <strong>Top zone:</strong> single-day events as thick rounded rectangles in their day column. <strong>Bottom zone:</strong> 4 thin rounded camp variant bars stacked, spanning the camp days. Rectangles, not pills.
+  </p>
+  <div class="calendar">
+    <div class="col-header gym-col">Gym</div>
+    <div class="col-header"><div class="day-num">24</div><div class="day-name">Sun</div></div>
+    <div class="col-header"><div class="day-num">25</div><div class="day-name">Mon</div></div>
+    <div class="col-header"><div class="day-num">26</div><div class="day-name">Tue</div></div>
+    <div class="col-header"><div class="day-num">27</div><div class="day-name">Wed</div></div>
+    <div class="col-header"><div class="day-num">28</div><div class="day-name">Thu</div></div>
+    <div class="col-header"><div class="day-num">29</div><div class="day-name">Fri</div></div>
+    <div class="col-header"><div class="day-num">30</div><div class="day-name">Sat</div></div>
+    <div class="col-header"><div class="day-num">31</div><div class="day-name">Sun</div></div>
+
+    <!-- Gym cell spans all 3 body rows -->
+    <div class="gym-cell" style="grid-row: 1 / 4;">
+      <div class="logo">RBA</div>
+      RBA
+    </div>
+
+    <!-- Body row 1: single-day events zone — CHUNKY rectangles with type + spots -->
+    <div class="day-zone" style="grid-row: 1;" data-day="24">
+      <div class="event-rect kno">
+        <div class="er-type">KNO</div>
+        <div class="er-spots open">🟢 18</div>
+      </div>
+      <div class="event-rect og">
+        <div class="er-type">OPEN GYM</div>
+        <div class="er-spots open">🟢 30</div>
+      </div>
+    </div>
+    <div class="day-zone" style="grid-row: 1;" data-day="25">
+      <div class="event-rect og">
+        <div class="er-type">OPEN GYM</div>
+        <div class="er-spots low">⚠️ 2</div>
+      </div>
+    </div>
+    <div class="day-zone" style="grid-row: 1;" data-day="26"></div>
+    <div class="day-zone" style="grid-row: 1;" data-day="27">
+      <div class="event-rect og">
+        <div class="er-type">OPEN GYM</div>
+        <div class="er-spots open">🟢 12</div>
+      </div>
+    </div>
+    <div class="day-zone" style="grid-row: 1;" data-day="28">
+      <div class="event-rect kno">
+        <div class="er-type">KNO</div>
+        <div class="er-spots full">🔴 FULL</div>
+      </div>
+      <div class="event-rect og">
+        <div class="er-type">OPEN GYM</div>
+        <div class="er-spots open">🟢 22</div>
+      </div>
+    </div>
+    <div class="day-zone" style="grid-row: 1;" data-day="29"></div>
+    <div class="day-zone" style="grid-row: 1;" data-day="30"></div>
+    <div class="day-zone" style="grid-row: 1;" data-day="31"></div>
+
+    <!-- Body row 2: dashed separator across all day columns -->
+    <div class="gym-row-separator" style="grid-row: 2; grid-column: 2 / -1;"></div>
+
+    <!-- Body row 3: 4 LONG NARROW camp variant bars stacked — variant + status -->
+    <div class="camp-stack" style="grid-row: 3; grid-column: 2 / -1;">
+      <div class="camp-bar gym">
+        <div class="cb-left"><span class="cb-icon">🤸</span><span class="cb-name">Gym Full Day</span><span class="cb-price">$345</span></div>
+        <span class="cb-status open">🟢 12 left</span>
+      </div>
+      <div class="camp-bar gym">
+        <div class="cb-left"><span class="cb-icon">🤸</span><span class="cb-name">Gym Half Day</span><span class="cb-price">$245</span></div>
+        <span class="cb-status full">🔴 FULL</span>
+      </div>
+      <div class="camp-bar ninja">
+        <div class="cb-left"><span class="cb-icon">🥷</span><span class="cb-name">Ninja Full Day</span><span class="cb-price">$345</span></div>
+        <span class="cb-status low">⚠️ 3 left</span>
+      </div>
+      <div class="camp-bar ninja">
+        <div class="cb-left"><span class="cb-icon">🥷</span><span class="cb-name">Ninja Half Day</span><span class="cb-price">$245</span></div>
+        <span class="cb-status open">🟢 18 left</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- OPTION 1 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">🥇 Option 1 — Spanning bar + per-variant dot strip</div>
+    <span class="badge badge-best">Recommended</span>
+  </div>
+  <div class="calendar">
+    <div class="col-header gym-col">Gym</div>
+    <div class="col-header"><div class="day-num">Sun</div><div class="day-name">5/31</div></div>
+    <div class="col-header"><div class="day-num">Mon</div><div class="day-name">6/1</div></div>
+    <div class="col-header"><div class="day-num">Tue</div><div class="day-name">6/2</div></div>
+    <div class="col-header"><div class="day-num">Wed</div><div class="day-name">6/3</div></div>
+    <div class="col-header"><div class="day-num">Thu</div><div class="day-name">6/4</div></div>
+    <div class="col-header"><div class="day-num">Fri</div><div class="day-name">6/5</div></div>
+    <div class="col-header"><div class="day-num">Sat</div><div class="day-name">6/6</div></div>
+
+    <div class="gym-cell"><div class="logo">OAS</div>Oasis</div>
+    <div class="day-cell" data-day="31"></div>
+    <div class="span-bar" title="Click to open side panel with all 4 variants">
+      <div class="left">
+        <span class="type-tag">CAMP</span>
+        <span class="title-text">Summer Week 1: Lego Build</span>
+        <span class="meta">M–F • $245–345</span>
+      </div>
+      <span class="icon-allow" title="Block-only signup (no individual days)">📦</span>
+      <div class="dot-strip" title="4 variants: 3 open, 1 full">
+        <span class="vdot vdot-open" title="Girls Gym Full — 12 spots"></span>
+        <span class="vdot vdot-full" title="Girls Gym Half — FULL"></span>
+        <span class="vdot vdot-low"  title="Co-ed Ninja Full — 3 spots ⚠️"></span>
+        <span class="vdot vdot-open" title="Co-ed Ninja Half — 18 spots"></span>
+      </div>
+    </div>
+    <div class="day-cell" data-day="2"></div>
+    <div class="day-cell" data-day="3">
+      <div class="card card-og" style="margin-top: 30px;"><div class="type-name">OPEN GYM</div><div class="spots-line">🟢 12</div></div>
+    </div>
+    <div class="day-cell" data-day="4"></div>
+    <div class="day-cell" data-day="5">
+      <div class="card card-kno" style="margin-top: 30px;"><div class="type-name">KNO</div><div class="spots-line">🟢 18</div></div>
+    </div>
+    <div class="day-cell" data-day="6"></div>
+  </div>
+  <div class="legend">
+    <span><span class="vdot vdot-open"></span> Open</span>
+    <span><span class="vdot vdot-low"></span> Low (≤3)</span>
+    <span><span class="vdot vdot-full"></span> Full</span>
+    <span>📦 Block-only signup</span>
+    <span>📅 Single-day signup OK</span>
+  </div>
+  <div class="pros-cons">
+    <div><strong>✓ Pros:</strong> 1 bar instead of 5×4=20 cards. See 4 variants' fullness at a glance via dots. Hover dots for variant name. Click bar → side panel for full detail. Block vs single-day visible. Holiday weeks (e.g. Memorial Day Mon-Fri) span only the real days because we use blocks[0].sqlDate.</div>
+    <div><strong>✗ Cons:</strong> Edge case at view boundaries (week views). Narrow columns at small zoom may compress text. Per-variant errors shown as a red ring on the matching dot, which is small.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- OPTION 2 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">🥈 Option 2 — Variant-stacked thin bars (4 bars per camp week)</div>
+    <span class="badge badge-alt">Most info, more height</span>
+  </div>
+  <div class="calendar">
+    <div class="col-header gym-col">Gym</div>
+    <div class="col-header"><div class="day-num">Sun</div><div class="day-name">5/31</div></div>
+    <div class="col-header"><div class="day-num">Mon</div><div class="day-name">6/1</div></div>
+    <div class="col-header"><div class="day-num">Tue</div><div class="day-name">6/2</div></div>
+    <div class="col-header"><div class="day-num">Wed</div><div class="day-name">6/3</div></div>
+    <div class="col-header"><div class="day-num">Thu</div><div class="day-name">6/4</div></div>
+    <div class="col-header"><div class="day-num">Fri</div><div class="day-name">6/5</div></div>
+    <div class="col-header"><div class="day-num">Sat</div><div class="day-name">6/6</div></div>
+
+    <div class="gym-cell" style="min-height: 180px;"><div class="logo">OAS</div>Oasis</div>
+    <div class="day-cell" data-day="31"></div>
+    <div class="vbar-wrap">
+      <div class="vbar gym"><span class="v-label">🤸 Gym Full Day</span><span class="v-status v-open">🟢 12 left</span></div>
+      <div class="vbar gym"><span class="v-label">🤸 Gym Half Day</span><span class="v-status v-full">🔴 FULL</span></div>
+      <div class="vbar ninja"><span class="v-label">🥷 Ninja Full Day</span><span class="v-status v-low">⚠️ 3 left</span></div>
+      <div class="vbar ninja"><span class="v-label">🥷 Ninja Half Day</span><span class="v-status v-open">🟢 18 left</span></div>
+    </div>
+    <div class="day-cell" data-day="2"></div>
+    <div class="day-cell" data-day="3">
+      <div class="card card-og" style="margin-top: 110px;"><div class="type-name">OPEN GYM</div><div class="spots-line">🟢 12</div></div>
+    </div>
+    <div class="day-cell" data-day="4"></div>
+    <div class="day-cell" data-day="5">
+      <div class="card card-kno" style="margin-top: 110px;"><div class="type-name">KNO</div><div class="spots-line">🟢 18</div></div>
+    </div>
+    <div class="day-cell" data-day="6"></div>
+  </div>
+  <div class="pros-cons">
+    <div><strong>✓ Pros:</strong> Maximum info — every variant's name, type, and fullness visible without clicking. Color-coded by program (Gym vs Ninja). Easiest to spot which variant is the bottleneck.</div>
+    <div><strong>✗ Cons:</strong> Gym row gets TALL during summer (4× row height). With 10 gyms running camps, the calendar gets long. May need pagination or "collapse all camps" toggle.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- OPTION 3 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">🥉 Option 3 — Compact pill, no spanning (text says "M–F")</div>
+    <span class="badge badge-alt">Easiest to build</span>
+  </div>
+  <div class="calendar">
+    <div class="col-header gym-col">Gym</div>
+    <div class="col-header"><div class="day-num">Sun</div><div class="day-name">5/31</div></div>
+    <div class="col-header"><div class="day-num">Mon</div><div class="day-name">6/1</div></div>
+    <div class="col-header"><div class="day-num">Tue</div><div class="day-name">6/2</div></div>
+    <div class="col-header"><div class="day-num">Wed</div><div class="day-name">6/3</div></div>
+    <div class="col-header"><div class="day-num">Thu</div><div class="day-name">6/4</div></div>
+    <div class="col-header"><div class="day-num">Fri</div><div class="day-name">6/5</div></div>
+    <div class="col-header"><div class="day-num">Sat</div><div class="day-name">6/6</div></div>
+
+    <div class="gym-cell"><div class="logo">OAS</div>Oasis</div>
+    <div class="day-cell" data-day="31"></div>
+    <div class="day-cell" data-day="1">
+      <div class="pill-card">
+        <div class="span-text">CAMP M–F</div>
+        <div class="pill-meta">Lego Wk 1 • 4 opts<br>🟢🔴⚠️🟢 • 33 left</div>
+      </div>
+    </div>
+    <div class="day-cell" data-day="2"></div>
+    <div class="day-cell" data-day="3">
+      <div class="card card-og"><div class="type-name">OPEN GYM</div><div class="spots-line">🟢 12</div></div>
+    </div>
+    <div class="day-cell" data-day="4"></div>
+    <div class="day-cell" data-day="5">
+      <div class="card card-kno"><div class="type-name">KNO</div><div class="spots-line">🟢 18</div></div>
+    </div>
+    <div class="day-cell" data-day="6"></div>
+  </div>
+  <div class="pros-cons">
+    <div><strong>✓ Pros:</strong> Smallest code change (just stop rendering the camp on days 2..N). Works for any column width / view mode. No grid-span gymnastics needed.</div>
+    <div><strong>✗ Cons:</strong> Visually doesn't communicate "this runs all week" — you have to read "M–F" text. Days 2-4 look empty even though camp is happening. Less intuitive than the spanning bar.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- OPTION 5 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">Option 5 — Same as today + add per-variant dots (no spanning)</div>
+    <span class="badge badge-alt">Lowest risk</span>
+  </div>
+  <div class="calendar">
+    <div class="col-header gym-col">Gym</div>
+    <div class="col-header"><div class="day-num">Sun</div><div class="day-name">5/31</div></div>
+    <div class="col-header"><div class="day-num">Mon</div><div class="day-name">6/1</div></div>
+    <div class="col-header"><div class="day-num">Tue</div><div class="day-name">6/2</div></div>
+    <div class="col-header"><div class="day-num">Wed</div><div class="day-name">6/3</div></div>
+    <div class="col-header"><div class="day-num">Thu</div><div class="day-name">6/4</div></div>
+    <div class="col-header"><div class="day-num">Fri</div><div class="day-name">6/5</div></div>
+    <div class="col-header"><div class="day-num">Sat</div><div class="day-name">6/6</div></div>
+
+    <div class="gym-cell"><div class="logo">OAS</div>Oasis</div>
+    <div class="day-cell" data-day="31"></div>
+    <div class="day-cell" data-day="1">
+      <div class="card card-camp">
+        <div class="type-name">CAMP</div>
+        <div class="opts-line">4 opts</div>
+        <div class="dot-strip" style="background: rgba(255,255,255,0.7); margin: 4px auto 2px; width: fit-content;">
+          <span class="vdot vdot-open"></span><span class="vdot vdot-full"></span>
+          <span class="vdot vdot-low"></span><span class="vdot vdot-open"></span>
+        </div>
+        <div class="spots-line">📦</div>
+      </div>
+    </div>
+    <div class="day-cell" data-day="2">
+      <div class="card card-camp">
+        <div class="type-name">CAMP</div>
+        <div class="opts-line">4 opts</div>
+        <div class="dot-strip" style="background: rgba(255,255,255,0.7); margin: 4px auto 2px; width: fit-content;">
+          <span class="vdot vdot-open"></span><span class="vdot vdot-full"></span>
+          <span class="vdot vdot-low"></span><span class="vdot vdot-open"></span>
+        </div>
+        <div class="spots-line">📦</div>
+      </div>
+    </div>
+    <div class="day-cell" data-day="3">
+      <div class="card card-camp">
+        <div class="type-name">CAMP</div>
+        <div class="opts-line">4 opts</div>
+        <div class="dot-strip" style="background: rgba(255,255,255,0.7); margin: 4px auto 2px; width: fit-content;">
+          <span class="vdot vdot-open"></span><span class="vdot vdot-full"></span>
+          <span class="vdot vdot-low"></span><span class="vdot vdot-open"></span>
+        </div>
+        <div class="spots-line">📦</div>
+      </div>
+      <div class="card card-og"><div class="type-name">OPEN GYM</div><div class="spots-line">🟢 12</div></div>
+    </div>
+    <div class="day-cell" data-day="4">
+      <div class="card card-camp">
+        <div class="type-name">CAMP</div>
+        <div class="opts-line">4 opts</div>
+        <div class="dot-strip" style="background: rgba(255,255,255,0.7); margin: 4px auto 2px; width: fit-content;">
+          <span class="vdot vdot-open"></span><span class="vdot vdot-full"></span>
+          <span class="vdot vdot-low"></span><span class="vdot vdot-open"></span>
+        </div>
+        <div class="spots-line">📦</div>
+      </div>
+    </div>
+    <div class="day-cell" data-day="5">
+      <div class="card card-camp">
+        <div class="type-name">CAMP</div>
+        <div class="opts-line">4 opts</div>
+        <div class="dot-strip" style="background: rgba(255,255,255,0.7); margin: 4px auto 2px; width: fit-content;">
+          <span class="vdot vdot-open"></span><span class="vdot vdot-full"></span>
+          <span class="vdot vdot-low"></span><span class="vdot vdot-open"></span>
+        </div>
+        <div class="spots-line">📦</div>
+      </div>
+      <div class="card card-kno"><div class="type-name">KNO</div><div class="spots-line">🟢 18</div></div>
+    </div>
+    <div class="day-cell" data-day="6"></div>
+  </div>
+  <div class="pros-cons">
+    <div><strong>✓ Pros:</strong> Tiny change. Same shape, just adds dots + 📦/📅 icon to the existing card. Zero grid restructuring. Per-variant fullness now visible.</div>
+    <div><strong>✗ Cons:</strong> Doesn't fix the "5 identical cards" space problem. Still feels redundant. Cards are now MORE cluttered, not less.</div>
+  </div>
+</div>
+
+<div class="section" style="background: #fff8e8; border-color: #e0c89a;">
+  <div class="section-title" style="margin-bottom: 8px;">📊 Summary scorecard</div>
+  <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+    <thead>
+      <tr style="background: #faecc8;">
+        <th style="padding: 8px; text-align: left; border: 1px solid #d4b87a;">Option</th>
+        <th style="padding: 8px; border: 1px solid #d4b87a;">Saves space</th>
+        <th style="padding: 8px; border: 1px solid #d4b87a;">Per-variant fullness visible</th>
+        <th style="padding: 8px; border: 1px solid #d4b87a;">Block vs single-day shown</th>
+        <th style="padding: 8px; border: 1px solid #d4b87a;">Implementation effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="padding: 6px; border: 1px solid #d4b87a;">Current</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">❌</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">❌</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">❌</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">—</td></tr>
+      <tr style="background: #e8f5e9;"><td style="padding: 6px; border: 1px solid #d4b87a;"><strong>1 — Spanning + dots</strong></td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">✅✅</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">✅ (dots)</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">✅</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">Medium</td></tr>
+      <tr><td style="padding: 6px; border: 1px solid #d4b87a;">2 — Stacked variant bars</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">✅</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">✅✅ (text)</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">✅</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">Medium</td></tr>
+      <tr><td style="padding: 6px; border: 1px solid #d4b87a;">3 — Compact pill</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">✅✅</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">⚠️ (small dots)</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">✅</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">Easy</td></tr>
+      <tr><td style="padding: 6px; border: 1px solid #d4b87a;">5 — Card + dots</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">❌</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">✅</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">✅</td><td style="padding: 6px; border: 1px solid #d4b87a; text-align: center;">Easy</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
