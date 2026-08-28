@@ -437,6 +437,7 @@ const EventsDashboard = () => {
             onSearchChange={setSearchTerm}
             gymsList={gymsList}
             eventTypesFromEvents={eventTypesFromEvents}
+            eventTypes={eventTypes}
             onAddEvent={() => setShowAddEventModal(true)}
           />
 

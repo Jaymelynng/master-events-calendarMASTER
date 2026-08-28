@@ -3,7 +3,11 @@
 // ============================================================================
 import React from 'react';
 import { ChevronLeft, ChevronRight, Search, List, Grid, Plus } from 'lucide-react';
-import { theme } from './constants';
+import { theme, getEventTypeColor } from './constants';
+
+// Long bucket names get a short chip label; everything else shows as-is.
+const CHIP_LABELS = { 'KIDS NIGHT OUT': 'KNO' };
+const chipLabel = (t) => CHIP_LABELS[t] || t;
 
 export default function CalendarControls({
   currentMonth,
@@ -22,8 +26,20 @@ export default function CalendarControls({
   onSearchChange,
   gymsList,
   eventTypesFromEvents,
+  eventTypes = [],
   onAddEvent
 }) {
+  // Every bucket that exists, ordered: the scored ones first, then the rest.
+  // Falls back to whatever types the loaded events actually have, so the row is
+  // never empty even before event_types loads.
+  const chipTypes = (eventTypes && eventTypes.length)
+    ? [...eventTypes]
+        .sort((a, b) => (b.is_tracked === true) - (a.is_tracked === true)
+          || (a.name || '').localeCompare(b.name || ''))
+        .map(t => t.name)
+        .filter(Boolean)
+    : eventTypesFromEvents;
+
   return (
     <div className="mb-2 space-y-2">
       {/* Month Navigation */}
@@ -120,8 +136,11 @@ export default function CalendarControls({
         </button>
       </div>
 
-      {/* Event Types - All Filter Buttons */}
-      <div className="flex justify-center items-center gap-2 mb-2">
+      {/* Event Types - one chip per bucket, straight from the event_types table.
+          Add a bucket on the admin side and its chip appears here on its own -
+          nothing to hardcode. Buckets that aren't scored (CAMP CARE, SPECIALTY,
+          UNSORTED) still get a chip so Jayme can pull them up on the calendar. */}
+      <div className="flex justify-center items-center gap-2 mb-2 flex-wrap">
         <button
           onClick={() => onEventTypeChange('all')}
           className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer border transition-all text-sm ${
@@ -133,45 +152,19 @@ export default function CalendarControls({
           ALL
         </button>
 
-        <button
-          onClick={() => onEventTypeChange('CLINIC')}
-          className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer border transition-all text-sm ${
-            selectedEventType === 'CLINIC' ? 'border-purple-400 shadow-md' : 'border-transparent'
-          }`}
-          style={{ backgroundColor: '#F3E8FF' }}
-        >
-          CLINIC
-        </button>
-
-        <button
-          onClick={() => onEventTypeChange('KIDS NIGHT OUT')}
-          className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer border transition-all text-sm ${
-            selectedEventType === 'KIDS NIGHT OUT' ? 'border-pink-400 shadow-md' : 'border-transparent'
-          }`}
-          style={{ backgroundColor: '#FFCCCB' }}
-        >
-          KNO
-        </button>
-
-        <button
-          onClick={() => onEventTypeChange('OPEN GYM')}
-          className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer border transition-all text-sm ${
-            selectedEventType === 'OPEN GYM' ? 'border-green-400 shadow-md' : 'border-transparent'
-          }`}
-          style={{ backgroundColor: '#C8E6C9' }}
-        >
-          OPEN GYM
-        </button>
-
-        <button
-          onClick={() => onEventTypeChange('CAMP')}
-          className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer border transition-all text-sm ${
-            selectedEventType === 'CAMP' ? 'border-yellow-400 shadow-md' : 'border-transparent'
-          }`}
-          style={{ backgroundColor: '#fde685' }}
-        >
-          CAMP
-        </button>
+        {chipTypes.map(type => (
+          <button
+            key={type}
+            onClick={() => onEventTypeChange(type)}
+            className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer border transition-all text-sm ${
+              selectedEventType === type ? 'border-gray-600 shadow-md font-semibold' : 'border-transparent'
+            }`}
+            style={{ backgroundColor: getEventTypeColor(type, eventTypes) }}
+            title={type}
+          >
+            {chipLabel(type)}
+          </button>
+        ))}
       </div>
     </div>
   );
