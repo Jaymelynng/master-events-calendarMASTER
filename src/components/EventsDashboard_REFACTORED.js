@@ -19,7 +19,7 @@ import { rulesApi } from '../lib/api';
 // Components
 import DashboardHeader, { ActionButtons } from './EventsDashboard/DashboardHeader';
 import BulkPortalOpener from './EventsDashboard/BulkPortalOpener';
-import MonthlyRequirementsTable from './EventsDashboard/MonthlyRequirementsTable';
+import MonthlyDigest from './EventsDashboard/MonthlyDigest';
 import EmailComposer from './AdminDashboard/EmailComposer';
 import CalendarControls, { CalendarViewToggle, CalendarLegend } from './EventsDashboard/CalendarControls';
 import CalendarGrid from './EventsDashboard/CalendarGrid';
@@ -335,22 +335,23 @@ const EventsDashboard = () => {
             events={events}
           />
 
-          {/* Monthly Requirements Table */}
-          <MonthlyRequirementsTable
-            onEmailShortGyms={() => setShowEmailComposer(true)}
-            currentMonth={currentMonth}
-            currentYear={currentYear}
-            onPreviousMonth={goToPreviousMonth}
-            onNextMonth={goToNextMonth}
+          {/* Monthly digest — the numbers, who's short, and what to do. */}
+          <MonthlyDigest
             allGyms={allGyms}
             events={events}
             eventTypes={eventTypes}
             monthlyRequirements={monthlyRequirements}
-            gymLinks={gymLinks}
-            scrollToGym={scrollToGym}
-            getGymLinkUrl={getGymLinkUrl}
-            handleMagicControlClick={handleMagicControlClick}
+            currentMonth={currentMonth}
+            currentYear={currentYear}
             getEventCounts={getEventCounts}
+            scrollToGym={scrollToGym}
+            handleMagicControlClick={handleMagicControlClick}
+            onEmailShortGyms={() => setShowEmailComposer(true)}
+            onOpenAdminPortal={() => setShowAdminPortal(true)}
+            setViewMode={setViewMode}
+            setSelectedGym={setSelectedGym}
+            setSelectedEventType={setSelectedEventType}
+            setErrorFocus={setErrorFocus}
           />
 
           {/* Calendar Controls */}

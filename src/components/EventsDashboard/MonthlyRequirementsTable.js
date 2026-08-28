@@ -93,21 +93,25 @@ export default function MonthlyRequirementsTable({
 
   // Dots: one per required event, filled when it exists. Anything above the
   // goal is a small "+n" so an over-delivering gym doesn't sprout 8 dots.
+  // "Capital Gymnastics Cedar Park" -> "Capital Cedar Park". The word
+  // Gymnastics is on all fourteen of them and carries no information.
+  const shortName = (n) => n.replace(/\s*Gymnastics?( Academy| Center)?\s*/i, ' ').replace(/\s+/g, ' ').trim();
+
   const Dots = ({ c }) => {
     const filled = Math.min(c.have, c.goal);
     const extra = Math.max(c.have - c.goal, 0);
     return (
       <span className="inline-flex items-center gap-1" title={`${c.label}: ${c.have} of ${c.goal}`}>
-        <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#7a6f75', minWidth: 58 }}>
+        <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#7a6f75' }}>
           {c.label}
         </span>
         <span className="inline-flex items-center gap-0.5">
           {Array.from({ length: c.goal }).map((_, i) => (
             <span key={i} className="inline-block rounded-full"
               style={{
-                width: 9, height: 9,
+                width: 13, height: 13,
                 backgroundColor: i < filled ? c.color : 'transparent',
-                border: `1.5px solid ${i < filled ? c.color : '#c9b9bf'}`,
+                border: `2px solid ${i < filled ? c.color : '#b9a5ab'}`,
               }} />
           ))}
           {extra > 0 && <span className="text-[10px] font-bold" style={{ color: '#7a6f75' }}>+{extra}</span>}
@@ -118,19 +122,20 @@ export default function MonthlyRequirementsTable({
 
   const GymRow = ({ r, dim }) => (
     <div
-      className="flex items-center gap-3 px-3 py-1.5 rounded-md hover:bg-white transition-colors"
-      style={{ opacity: dim ? 0.72 : 1 }}
+      className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/70 hover:bg-white transition-colors"
+      style={{ opacity: dim ? 0.75 : 1, border: '1px solid #e2d7da' }}
     >
       <button
         onClick={() => scrollToGym(r.gym)}
-        className="text-left text-[13px] font-bold hover:underline truncate"
-        style={{ color: '#4a4046', minWidth: 210, maxWidth: 210 }}
+        className="text-left text-[12.5px] font-bold hover:underline truncate shrink-0"
+        style={{ color: '#4a4046', width: 118 }}
         title={`Jump to ${r.gym} on the calendar`}
       >
-        {r.gym}
+        {shortName(r.gym)}
       </button>
 
-      <div className="flex items-center gap-4 flex-1 flex-wrap">
+      {/* Dots spread across the cell instead of hugging the left edge. */}
+      <div className="flex items-center justify-around flex-1 gap-2">
         {r.counts.map(c => {
           const url = getGymLinkUrl(r.gym, c.name) || getGymLinkUrl(r.gym, 'BOOKING');
           const inner = <Dots c={c} />;
@@ -141,23 +146,17 @@ export default function MonthlyRequirementsTable({
         })}
       </div>
 
-      {r.missing.length > 0 && (
-        <span className="text-[11px] font-bold whitespace-nowrap" style={{ color: '#a4485c' }}>
-          {r.missing.join(' · ')}
-        </span>
-      )}
-
       {r.issues > 0 && (
-        <span className="rounded-full px-2 py-0.5 text-[10px] font-black text-white"
+        <span className="rounded-full px-1.5 py-0.5 text-[10px] font-black text-white shrink-0"
               style={{ backgroundColor: '#c27878' }}
-              title={`${r.issues} data issue${r.issues === 1 ? '' : 's'} on this gym's events`}>
+              title={`${r.issues} data issue${r.issues === 1 ? '' : 's'}`}>
           {r.issues}
         </span>
       )}
 
       <button
         onClick={() => handleMagicControlClick(r.gym)}
-        className="text-sm opacity-50 hover:opacity-100 transition-opacity"
+        className="text-sm opacity-40 hover:opacity-100 transition-opacity shrink-0"
         title={`Open ${typeNames.join(', ')} portal pages for ${r.gym}`}
       >
         ✨
@@ -186,7 +185,9 @@ export default function MonthlyRequirementsTable({
               </button>
             )}
           </div>
-          {short.map(r => <GymRow key={r.gym} r={r} />)}
+          <div className="grid gap-1.5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {short.map(r => <GymRow key={r.gym} r={r} />)}
+          </div>
         </>
       )}
 
@@ -195,9 +196,9 @@ export default function MonthlyRequirementsTable({
           <summary className="cursor-pointer list-none px-3 py-1.5 rounded-md text-[11px] font-bold hover:bg-white transition-colors"
                    style={{ color: '#4f7d5c' }}>
             ✓ {done.length} gym{done.length === 1 ? '' : 's'} complete
-            <span className="font-normal opacity-70"> — {done.map(r => r.gym.replace(/ Gymnastics.*| Gymnastic.*/, '')).join(', ')}</span>
+            <span className="font-normal opacity-70"> — {done.map(r => shortName(r.gym)).join(', ')}</span>
           </summary>
-          <div className="mt-1">
+          <div className="mt-1 grid gap-1.5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {done.map(r => <GymRow key={r.gym} r={r} dim />)}
           </div>
         </details>
