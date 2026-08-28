@@ -309,6 +309,8 @@ const EventsDashboard = () => {
             <BulkPortalOpener
               getAllUrlsForEventType={getAllUrlsForEventType}
               openMultipleTabs={openMultipleTabs}
+              gymLinks={gymLinks}
+              events={events}
             />
 
             {/* Monthly Requirements goals — dynamic, driven by `monthly_requirements` table.

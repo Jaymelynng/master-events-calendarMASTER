@@ -1,176 +1,167 @@
 // ============================================================================
-// BULK PORTAL OPENER — grouped 3-card layout (General / School Year / Summer)
+// BULK PORTAL OPENER — Booking is the hub; the rest are shortcuts off it.
 // ============================================================================
-// Replaces the previous flat 8-button row. Each "category" gets its own card
-// with a header bar and the relevant action buttons inside. Visual layout
-// based on the prototype Jayme designed in mockups/ (May 6, 2026).
+// Replaces the 3-card / 8-button band (May 2026 prototype). Two things drove
+// the rewrite, both measured against live iClass data on 2026-08-28:
 //
-// Props are unchanged from the prior version, so no parent file needs
-// updating:
-//   - getAllUrlsForEventType(type)  → returns array of URLs for a given type
-//   - openMultipleTabs(urls, ...)   → opens them in sequence with a toast
+//   1. The old buttons carried no counts, so they all looked equal. They were
+//      not. "Summer Full" had 11 stored links but only ONE gym (PLG) with a
+//      live camp behind it. Four of the eight buttons opened pages that said
+//      "no camps found".
+//   2. Booking is the only link every gym has (14/14), the only one with no
+//      typeId baked into the URL — so the only one that can never go stale —
+//      and it is the gym's own live index of every category it offers.
 //
-// Category → action key → backend `type` mapping is preserved exactly:
-//   clinic     → 'CLINIC'
-//   kno        → 'KIDS NIGHT OUT'
-//   openGym    → 'OPEN GYM'
-//   booking    → 'BOOKING'
-//   schoolFull → 'camps'
-//   schoolHalf → 'camps_half'
-//   summerFull → 'camps_summer_full'
-//   summerHalf → 'camps_summer_half'
+// So Booking is the one primary action, and the category shortcuts collapse to
+// a single quiet row underneath, each carrying a REAL count. A shortcut with
+// nothing live behind it does not render at all — which is why Summer
+// disappears in September and comes back in May on its own.
+//
+// Counts come from the events already loaded on this page, not from how many
+// links are stored. Stored counts were the whole problem: "Summer Full" had 11
+// stored links and exactly one real camp.
+//
+// The obvious source — iClassPro's /bookings/{locationId} endpoint — CANNOT be
+// used here. It sends no Access-Control-Allow-Origin header, so the browser
+// blocks it (verified 2026-08-28: all 14 calls failed CORS). Only the
+// server-side sync can reach it. Counting the events is the browser-side
+// stand-in and the better answer anyway: if a category has nothing on the
+// calendar, there is nothing to go look at.
+//
+// Nothing is hardcoded per category. GROUPS maps a chip to one or more
+// link_type_id values; add a link type to a group (or add a group) and it
+// appears on its own.
 // ============================================================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 
-const BULK_GROUPS = [
-  {
-    id: 'general',
-    title: 'General Portals',
-    icon: '⭐',
-    actions: [
-      { key: 'clinic',   type: 'CLINIC',          label: 'Clinics',  icon: '⭐', color: '#b99396' },
-      { key: 'kno',      type: 'KIDS NIGHT OUT',  label: 'KNO',      icon: '🌙', color: '#d5a36d' },
-      { key: 'openGym',  type: 'OPEN GYM',        label: 'Open Gym', icon: '🎯', color: '#6e936f' },
-      { key: 'booking',  type: 'BOOKING',         label: 'Booking',  icon: '🌐', color: '#7da0a3' },
-    ],
-  },
-  {
-    id: 'school-year',
-    title: 'School Year Camps',
-    icon: '🏫',
-    actions: [
-      { key: 'schoolFull', type: 'camps',      label: 'Full', icon: '🏕️', color: '#c79666' },
-      { key: 'schoolHalf', type: 'camps_half', label: 'Half', icon: '🍂', color: '#a18374' },
-    ],
-  },
-  {
-    id: 'summer',
-    title: 'Summer Camps',
-    icon: '☀️',
-    actions: [
-      { key: 'summerFull', type: 'camps_summer_full', label: 'Full', icon: '☀️',  color: '#d7a257' },
-      { key: 'summerHalf', type: 'camps_summer_half', label: 'Half', icon: '🌤️', color: '#c58164' },
-    ],
-  },
+// A chip covers one or more link types (the pages it opens) and exactly one
+// event bucket (what it counts). Camps is deliberately ONE chip: Full vs Half
+// is a property of a camp, not a different thing to go look at, and the
+// calendar already shows which is which in the event title.
+const GROUPS = [
+  { key: 'camps',     label: 'Camps',     icon: '🏕️', color: '#c79666', bucket: 'CAMP',
+    linkTypes: ['camps', 'camps_half', 'camps_holiday', 'camps_summer_full', 'camps_summer_half'] },
+  { key: 'kno',       label: 'KNO',       icon: '🌙', color: '#d5a36d', bucket: 'KIDS NIGHT OUT', linkTypes: ['kids_night_out'] },
+  { key: 'openGym',   label: 'Open Gym',  icon: '🎯', color: '#6e936f', bucket: 'OPEN GYM',       linkTypes: ['open_gym'] },
+  { key: 'clinics',   label: 'Clinics',   icon: '⭐',      color: '#b99396', bucket: 'CLINIC',         linkTypes: ['skill_clinics'] },
+  { key: 'specialty', label: 'Specialty', icon: '✨',      color: '#7d6b96', bucket: 'SPECIALTY',      linkTypes: ['specialty', 'special_events'] },
+  { key: 'care',      label: 'Camp Care', icon: '🧸', color: '#a18374', bucket: 'CAMP CARE',      linkTypes: ['camp_care', 'camp_care_am'] },
 ];
 
-const CATEGORY_STYLES = {
-  general: {
-    body: 'linear-gradient(180deg, #fbf4f4 0%, #f3e7e7 100%)',
-    border: '#c9aaaa',
-    header: 'linear-gradient(180deg, #b99396 0%, #9f777a 100%)',
-  },
-  'school-year': {
-    body: 'linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%)',
-    border: '#9aaec4',
-    header: 'linear-gradient(180deg, #6f8198 0%, #46576b 100%)',
-  },
-  summer: {
-    body: 'linear-gradient(180deg, #fff2cf 0%, #f6d98f 100%)',
-    border: '#d89b2b',
-    header: 'linear-gradient(180deg, #f0aa2f 0%, #c77918 100%)',
-  },
-};
+export default function BulkPortalOpener({
+  getAllUrlsForEventType,
+  openMultipleTabs,
+  gymLinks = [],
+  events = [],
+}) {
+  // How many gyms have something in this bucket in the month on screen.
+  // Deliberately NOT filtered to "today forward": `events` is already scoped to
+  // the month being viewed, so filtering again collapsed every count to 1-2 on
+  // the 28th. The chip answers "for this month, who has one of these".
+  //
+  // A chip with nothing behind it does not render at all - which is why Summer
+  // folds away in September and comes back on its own in May.
+  const chips = useMemo(() => {
+    const gymsByBucket = {};
+    events.forEach(e => {
+      const bucket = (e.type || e.event_type || '').toUpperCase();
+      if (!bucket || !e.gym_id) return;
+      if (!gymsByBucket[bucket]) gymsByBucket[bucket] = new Set();
+      gymsByBucket[bucket].add(e.gym_id);
+    });
 
-function hexToRgba(hex, alpha) {
-  const clean = hex.replace('#', '');
-  const bigint = parseInt(clean, 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
+    return GROUPS
+      .map(g => ({ ...g, count: (gymsByBucket[g.bucket] || new Set()).size }))
+      .filter(g => g.count > 0);
+  }, [events]);
 
-function GroupCard({ group, onActionClick }) {
-  const style = CATEGORY_STYLES[group.id];
-  const colsClass = group.actions.length === 4 ? 'grid-cols-4' : 'grid-cols-2';
-
-  return (
-    <div
-      className="flex h-full flex-col rounded-lg border p-2"
-      style={{
-        background: style.body,
-        borderColor: style.border,
-        boxShadow: '0 5px 12px rgba(75,65,65,.16), inset 0 1px 0 rgba(255,255,255,.85)',
-      }}
-    >
-      {/* Header bar */}
-      <div
-        className="mb-2 flex h-7 items-center justify-center gap-2 rounded-md px-2 text-[11px] font-black uppercase tracking-wide text-white"
-        style={{
-          background: style.header,
-          boxShadow: '0 3px 7px rgba(70,50,50,.22), inset 0 1px 0 rgba(255,255,255,.25)',
-        }}
-      >
-        <span className="whitespace-nowrap leading-none">
-          {group.icon} {group.title}
-        </span>
-      </div>
-
-      {/* Action buttons */}
-      <div className={`grid flex-1 gap-2 ${colsClass}`}>
-        {group.actions.map(action => (
-          <button
-            key={action.key}
-            onClick={() => onActionClick(action)}
-            className="flex min-h-[58px] flex-col items-center justify-center rounded-md border px-2 py-2 text-center text-white transition active:translate-y-[1px] hover:-translate-y-0.5"
-            style={{
-              background: `linear-gradient(180deg, ${hexToRgba(action.color, 0.88)}, ${action.color})`,
-              borderColor: hexToRgba(action.color, 0.95),
-              boxShadow: `0 4px 9px ${hexToRgba(action.color, 0.32)}, inset 0 1px 0 rgba(255,255,255,.28)`,
-            }}
-            title={`Open ALL gyms — ${group.title} / ${action.label}`}
-          >
-            <div className="text-lg leading-none drop-shadow-sm">{action.icon}</div>
-            <div className="mt-1 text-[11px] font-black leading-tight drop-shadow-sm">{action.label}</div>
-          </button>
-        ))}
-      </div>
-    </div>
+  const bookingCount = useMemo(
+    () => new Set(gymLinks.filter(gl => gl.link_type_id === 'booking').map(gl => gl.gym_id)).size,
+    [gymLinks]
   );
-}
 
-export default function BulkPortalOpener({ getAllUrlsForEventType, openMultipleTabs }) {
-  const handleActionClick = (action) => {
-    const urls = getAllUrlsForEventType(action.type);
+  const openGroup = (group) => {
+    const urls = [...new Set(group.linkTypes.flatMap(t => getAllUrlsForEventType(t) || []))];
+    if (!urls.length) return;
     openMultipleTabs(
       urls,
-      `Opening ${urls.length} ${action.label.toLowerCase()} pages...`,
-      `Opened ${urls.length} ${action.label.toLowerCase()} pages!`
+      `Opening ${urls.length} ${group.label} pages…`,
+      `Opened ${urls.length} ${group.label} pages`
+    );
+  };
+
+  const openBooking = () => {
+    const urls = getAllUrlsForEventType('BOOKING') || [];
+    if (!urls.length) return;
+    openMultipleTabs(
+      urls,
+      `Opening ${urls.length} booking pages…`,
+      `Opened ${urls.length} booking pages`
     );
   };
 
   return (
     <div
-      className="rounded-lg shadow-lg p-4"
+      className="rounded-lg shadow-lg px-4 py-3"
       style={{ backgroundColor: '#e6e6e6', border: '1px solid #adb2c6' }}
     >
-      {/* Title + popup-warning header (unchanged from prior version) */}
-      <div className="flex flex-col items-center justify-center text-center mb-4">
-        <div className="rounded-full px-6 py-2 shadow-md mb-2" style={{ backgroundColor: '#b48f8f' }}>
-          <span className="text-xl font-bold text-white">🚀 BULK PORTAL OPENER</span>
-        </div>
-        <p className="text-sm mb-2" style={{ color: '#737373' }}>
-          Click any button below to open ALL gym portals for that event type at once
-        </p>
-        <div className="rounded-lg px-4 py-2" style={{ backgroundColor: '#f5ebe0', border: '1px solid #c3a5a5' }}>
-          <span className="text-sm font-bold" style={{ color: '#8b6f6f' }}>
-            ⚠️ IMPORTANT: Allow pop-ups in your browser for this to work!
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        {/* Booking — the hub. Every gym has one and it can never go stale. */}
+        <button
+          onClick={openBooking}
+          disabled={!bookingCount}
+          title="Open every gym's booking page — each gym's own index of everything it offers"
+          className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-white transition active:translate-y-[1px] hover:-translate-y-0.5 disabled:opacity-40"
+          style={{
+            background: 'linear-gradient(180deg, #8ba7aa, #6f8f93)',
+            boxShadow: '0 4px 10px rgba(111,143,147,.38), inset 0 1px 0 rgba(255,255,255,.28)',
+          }}
+        >
+          <span className="text-lg leading-none">🌐</span>
+          <span className="text-sm font-black leading-none">OPEN ALL BOOKING PAGES</span>
+          <span className="rounded-full bg-white/25 px-2 py-0.5 text-[11px] font-black leading-none">
+            {bookingCount}
           </span>
-        </div>
+        </button>
+
+        <span className="hidden h-7 w-px bg-black/10 sm:block" />
+
+        {/* Shortcuts. A category with nothing live behind it is not rendered. */}
+        {chips.map(chip => (
+          <button
+            key={chip.key}
+            onClick={() => openGroup(chip)}
+            title={`Open ${chip.label} for the ${chip.count} gym${chip.count === 1 ? '' : 's'} that currently have one`}
+            className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 transition active:translate-y-[1px] hover:-translate-y-0.5"
+            style={{
+              backgroundColor: '#fff',
+              borderColor: chip.color,
+              color: '#4a4046',
+              boxShadow: '0 2px 5px rgba(75,65,65,.14)',
+            }}
+          >
+            <span className="text-sm leading-none">{chip.icon}</span>
+            <span className="text-xs font-bold leading-none">{chip.label}</span>
+            <span
+              className="rounded-full px-1.5 py-0.5 text-[10px] font-black leading-none text-white"
+              style={{ backgroundColor: chip.color }}
+            >
+              {chip.count}
+            </span>
+          </button>
+        ))}
+
+        {!chips.length && (
+          <span className="text-xs" style={{ color: '#8b7f85' }}>
+            No category shortcuts have anything live right now — use the booking pages.
+          </span>
+        )}
       </div>
 
-      {/* 3-card grouped layout: General / School Year / Summer */}
-      <div className="grid gap-3 md:grid-cols-[1.36fr_.82fr_.82fr]">
-        {BULK_GROUPS.map(group => (
-          <GroupCard
-            key={group.id}
-            group={group}
-            onActionClick={handleActionClick}
-          />
-        ))}
-      </div>
+      <p className="mt-2 text-center text-[11px]" style={{ color: '#8b7f85' }}>
+        Opens one tab per gym — allow pop-ups. Counts are gyms with one of these on the calendar this month.
+      </p>
     </div>
   );
 }
