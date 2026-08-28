@@ -963,3 +963,65 @@ export const formatPatternsApi = {
     if (error) throw new Error(error.message);
   }
 };
+
+// ============================================================================
+// CAMP TYPE MAPPINGS — iClass's own category name -> the calendar bucket.
+// ============================================================================
+// iClass hands back a real category name on every camp request (campTypeName /
+// the booking-page title). This table says which bucket each name lands in, so
+// nothing is ever guessed from an event title.
+//
+// A name with NO row here becomes UNSORTED: it shows on the calendar, is never
+// counted toward a monthly requirement, and waits for Jayme to classify it.
+// It is never silently called CAMP.
+export const eventTypeMappingsApi = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('event_type_mappings')
+      .select('*')
+      .order('event_type')
+      .order('iclass_type_name');
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  // { "kids night out": { event_type: 'KIDS NIGHT OUT', hide: false }, ... }
+  async getLookup() {
+    const rows = await eventTypeMappingsApi.getAll();
+    return Object.fromEntries(
+      rows.filter(r => r.is_active).map(r => [
+        (r.iclass_type_name || '').trim().toLowerCase(),
+        { event_type: r.event_type, hide: !!r.hide_from_calendar },
+      ])
+    );
+  },
+
+  async create(row) {
+    const { data, error } = await supabase
+      .from('event_type_mappings')
+      .insert([row])
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('event_type_mappings')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('event_type_mappings')
+      .delete()
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+};

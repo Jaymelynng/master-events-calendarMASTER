@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 // Import real API functions
-import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi, acknowledgedPatternsApi, rulesApi, requirementNotesApi } from '../lib/api';
+import { gymsApi, eventsApi, eventTypesApi, monthlyRequirementsApi, acknowledgedPatternsApi, rulesApi, requirementNotesApi, eventTypeMappingsApi } from '../lib/api';
 import { gymLinksApi } from '../lib/gymLinksApi';
 import { cachedApi, cache } from '../lib/cache';
 import { supabase } from '../lib/supabase';
@@ -1153,6 +1153,14 @@ const EventsDashboard = () => {
         throw new Error('Selected gym not found');
       }
       
+      // iClass category name -> calendar bucket, straight from the table Jayme edits.
+      let typeMappings = {};
+      try {
+        typeMappings = await eventTypeMappingsApi.getLookup();
+      } catch (e) {
+        console.error('Could not load camp-type mappings; everything will land as UNSORTED.', e);
+      }
+
       // Convert iClassPro events to our database format
       const processedEvents = jsonData.data.flatMap(event => {
         // Extract portal slug from ANY link for this gym in gymLinks
@@ -1175,17 +1183,16 @@ const EventsDashboard = () => {
           ? `https://portal.iclasspro.com/${portalSlug}/camp-details/${event.id}`
           : `https://portal.iclasspro.com/UNKNOWN/camp-details/${event.id}`;
         
-        // Determine event type from campTypeName or event name
-        let eventType = 'OPEN GYM';
-        const typeName = (jsonData.campTypeName || event.name || '').toUpperCase();
-        if (typeName.includes('KIDS NIGHT OUT') || typeName.includes('KNO')) {
-            eventType = 'KIDS NIGHT OUT';
-        } else if (typeName.includes('CLINIC')) {
-          eventType = 'CLINIC';
-        } else if (typeName.includes('OPEN GYM')) {
-            eventType = 'OPEN GYM';
-        } else if (typeName.includes('CAMP') || typeName.includes('SCHOOL YEAR')) {
-          eventType = 'CAMP';
+        // Determine event type from iClass's OWN category name.
+        // The lookup comes from the event_type_mappings table (Jayme edits it);
+        // no keyword guessing against the event title any more. A category with
+        // no mapping becomes UNSORTED — visible on the calendar, never counted
+        // toward a requirement, waiting to be classified. Never silently CAMP.
+        const rawTypeName = (jsonData.campTypeName || event.name || '').trim();
+        const mapped = typeMappings[rawTypeName.toLowerCase()];
+        const eventType = mapped?.event_type || 'UNSORTED';
+        if (!mapped) {
+          console.warn(`UNSORTED - no mapping for iClass category "${rawTypeName}". Classify it on the camp-type mappings screen.`);
         }
         
         // Extract time from schedule

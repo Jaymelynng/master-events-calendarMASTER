@@ -178,15 +178,61 @@ BOOKING_TITLE_TO_EVENT_TYPE = {
     'SPECIAL EVENTS': 'SPECIAL EVENT',
 }
 
-# ⏸️ TEMPORARY interim hold (Aug 11, 2026, Jayme's call) — booking categories to
-# keep OFF the calendar for now. This is a CAPTURE-skip, NOT the old silent-drop:
-# unknown REAL camps still get captured (below); only these parked add-on
-# categories are held. Before/after/extended care are wrap-around add-ons, not
-# standalone events. A camp category whose title contains one of these whole
-# words is held. ⚠️ KNOWN interim hardcode — Phase 2's category-mappings admin UI
-# replaces this with a per-category "ignore" toggle Jayme controls from a screen
-# (move it into the category_mappings table). Do NOT grow this list in code.
-HELD_CATEGORY_KEYWORDS = {'CARE'}
+# ✅ Phase 2 (Aug 28, 2026) — the interim hardcoded hold is GONE. Booking-category
+# classification now comes from the `event_type_mappings` table, which Jayme edits
+# from a screen. BOOKING_TITLE_TO_EVENT_TYPE above is kept ONLY as an offline
+# fallback if the database can't be reached mid-sync.
+#
+#   event_type_mappings.iclass_type_name   -> the exact title iClass returns
+#   event_type_mappings.event_type          -> the calendar bucket it lands in
+#   event_type_mappings.hide_from_calendar  -> collected, but kept off the calendar
+#
+# A category with NO row lands in UNSORTED — visible, never counted, waiting on
+# Jayme. It is never silently called CAMP.
+UNMAPPED_EVENT_TYPE = 'UNSORTED'
+
+_TYPE_MAPPINGS_CACHE = None
+
+
+def fetch_type_mappings():
+    """Read event_type_mappings from Supabase.
+
+    Returns {lower(iclass_type_name): {'event_type': str, 'hide': bool}}.
+    Falls back to the hardcoded BOOKING_TITLE_TO_EVENT_TYPE if unreachable so a
+    network blip can never silently re-categorise the whole calendar.
+    """
+    global _TYPE_MAPPINGS_CACHE
+    if _TYPE_MAPPINGS_CACHE is not None:
+        return _TYPE_MAPPINGS_CACHE
+
+    try:
+        url = (f"{SUPABASE_URL}/rest/v1/event_type_mappings"
+               f"?is_active=eq.true&select=iclass_type_name,event_type,hide_from_calendar")
+        req = Request(url)
+        req.add_header("apikey", SUPABASE_KEY)
+        req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
+        with urlopen(req, timeout=15) as response:
+            rows = json.loads(response.read().decode())
+        mapping = {
+            (r.get('iclass_type_name') or '').strip().lower(): {
+                'event_type': r.get('event_type'),
+                'hide': bool(r.get('hide_from_calendar')),
+            }
+            for r in rows if r.get('iclass_type_name')
+        }
+        if mapping:
+            print(f"  [MAP] Loaded {len(mapping)} camp-type mappings from the database")
+            _TYPE_MAPPINGS_CACHE = mapping
+            return mapping
+        print("  [MAP] event_type_mappings is empty - using the built-in fallback list")
+    except Exception as e:
+        print(f"  [MAP] Could not read event_type_mappings ({e}) - using the built-in fallback list")
+
+    _TYPE_MAPPINGS_CACHE = {
+        k.lower(): {'event_type': v, 'hide': False}
+        for k, v in BOOKING_TITLE_TO_EVENT_TYPE.items()
+    }
+    return _TYPE_MAPPINGS_CACHE
 
 
 def _api_get(url, timeout=15):
@@ -221,18 +267,19 @@ def _get_booking_categories(slug, location_id):
     Discover all camp/event categories for a gym via the bookings endpoint.
     Returns list of {title, typeId, our_event_type}.
 
-    Known titles (in BOOKING_TITLE_TO_EVENT_TYPE) map to their specific type
-    (CLINIC, KIDS NIGHT OUT, OPEN GYM, SPECIAL EVENT, or CAMP). ANY other camp
-    category is still CAPTURED — defaulted to the generic CAMP type — instead of
-    being silently dropped, so no camp ever falls off the calendar just because
-    the code hasn't heard of its category yet. The real booking-category title
-    always rides along on each event as camp_type for display and later sorting.
+    Classification comes from the event_type_mappings table, which Jayme edits.
+    A title with a mapping lands in that bucket. A title Jayme has hidden is
+    skipped. Anything with no mapping is captured as UNSORTED — on the calendar,
+    never counted, waiting to be classified — instead of being silently called
+    CAMP. The real booking-category title always rides along on each event as
+    camp_type for display and later sorting.
     """
     url = f"{ICLASSPRO_API_BASE}/{slug}/bookings/{location_id}"
     result = _api_get(url)
     if not result or not result.get('data'):
         return []
 
+    mappings = fetch_type_mappings()
     categories = []
     for item in result['data']:
         if item.get('target') != 'camps':
@@ -243,33 +290,30 @@ def _get_booking_categories(slug, location_id):
             continue
 
         title = item.get('title', '').strip()
-        our_type = BOOKING_TITLE_TO_EVENT_TYPE.get(title.upper())
+        rule = mappings.get(title.lower())
 
-        if our_type:
+        if rule and rule.get('hide'):
+            # Jayme switched this category off from the mappings screen. Still
+            # a capture-skip, not a silent drop — flip hide_from_calendar back
+            # to false and it returns on the next sync.
+            print(f"  [API] Hidden by mapping (Jayme's toggle): '{title}' (typeId={type_id})")
+        elif rule and rule.get('event_type'):
             categories.append({
                 'title': title,
                 'typeId': type_id,
-                'our_event_type': our_type,
+                'our_event_type': rule['event_type'],
             })
-        elif set(title.upper().replace('-', ' ').split()) & HELD_CATEGORY_KEYWORDS:
-            # Parked on purpose (see HELD_CATEGORY_KEYWORDS) — held OFF the
-            # calendar for now, NOT dropped for being unknown. Interim until the
-            # mapping UI lets Jayme classify it.
-            print(f"  [API] Holding parked category (off calendar for now): '{title}' (typeId={type_id})")
         else:
-            # Capture ANY other unmapped camp category instead of dropping it.
-            # Unknown booking categories (e.g. a gym's one-off "THANKSGIVING
-            # CAMP" / "WINTER BREAK CAMP") default to the generic CAMP type so
-            # their events still land on the calendar; the real title is
-            # preserved on each event as camp_type (detail['campTypeTitle']) for
-            # display and later sorting. Per Jayme (Aug 11, 2026): capture any
-            # and all real camps now — no camp falls off just because the code
-            # hasn't heard of its category.
-            print(f"  [API] Capturing unmapped category as CAMP: '{title}' (typeId={type_id})")
+            # No row in event_type_mappings for this title. Capture it as
+            # UNSORTED so it lands on the calendar, is never counted toward a
+            # requirement, and shows up in Jayme's mappings screen waiting to be
+            # classified. It is NEVER silently called CAMP.
+            print(f"  [API] UNSORTED - no mapping for '{title}' (typeId={type_id}). "
+                  f"Classify it on the camp-type mappings screen.")
             categories.append({
                 'title': title,
                 'typeId': type_id,
-                'our_event_type': 'CAMP',
+                'our_event_type': UNMAPPED_EVENT_TYPE,
             })
 
     return categories
