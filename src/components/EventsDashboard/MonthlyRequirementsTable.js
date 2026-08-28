@@ -2,7 +2,6 @@
 // MONTHLY REQUIREMENTS TABLE - Shows event counts vs requirements per gym
 // ============================================================================
 import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { theme, getEventTypeColor } from './constants';
 import { parseYmdLocal } from './utils';
 import { isErrorAcknowledgedAnywhere } from '../../lib/validationHelpers';
@@ -10,8 +9,6 @@ import { isErrorAcknowledgedAnywhere } from '../../lib/validationHelpers';
 export default function MonthlyRequirementsTable({
   currentMonth,
   currentYear,
-  onPreviousMonth,
-  onNextMonth,
   allGyms,
   events,
   eventTypes,
@@ -63,53 +60,13 @@ export default function MonthlyRequirementsTable({
 
   return (
     <div className="rounded-lg shadow-lg p-3 mb-2 mx-2" style={{ backgroundColor: '#e6e6e6', border: '1px solid #adb2c6' }}>
-      {/* Month Navigation */}
-      <div className="flex justify-center items-center gap-4 mb-3">
-        <button
-          onClick={onPreviousMonth}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-sm font-medium transition-all duration-200 hover:bg-gray-200 hover:scale-105"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Previous
-        </button>
-
-        <div className="text-center">
-          <h2 className="text-lg font-bold" style={{ color: theme.colors.textPrimary }}>
-            {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-          </h2>
-        </div>
-
-        <button
-          onClick={onNextMonth}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-sm font-medium transition-all duration-200 hover:bg-gray-200 hover:scale-105"
-        >
-          Next
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Title */}
-      <div className="text-center mb-2">
-        <h3 className="text-sm font-semibold" style={{ color: '#737373' }}>
-          📊 Monthly Requirements
-        </h3>
-      </div>
-
-      {/* Monthly Goal centered under title */}
-      <div className="flex justify-center mb-2 text-xs">
-        <div className="bg-gray-50 px-3 py-2 rounded border">
-          <span className="font-semibold text-gray-700">Monthly Goal: </span>
-          <span className="text-gray-600">
-            {monthlyRequirements['CLINIC']} Clinic • {monthlyRequirements['KIDS NIGHT OUT']} KNO • {monthlyRequirements['OPEN GYM']} Open Gym
-          </span>
-        </div>
-      </div>
-
-      {/* Instructions - subtle, above table */}
-      <div className="text-xs text-gray-500 text-center mb-2">
-        📍 Gym → scroll | 🔢 Number → open page | ✨ Sparkle → open all
-      </div>
-
+      {/* Removed from this card, all of it duplicated something above:
+           - a SECOND month picker (the header already has the only one)
+           - the "Monthly Requirements" title (this IS the requirements table)
+           - "Monthly Goal: 1 Clinic - 2 KNO - 1 Open Gym" (the header chips now
+             carry each goal next to its own count)
+           - the icon legend (moved onto the icons themselves as tooltips)
+         That was five stacked lines of chrome above a table that explains itself. */}
       <div className="overflow-x-auto">
         <table className="min-w-full border border-gray-200">
           <thead>

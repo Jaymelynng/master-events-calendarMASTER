@@ -296,6 +296,8 @@ const EventsDashboard = () => {
             setCalendarView={setCalendarView}
             loadAuditHistory={loadAuditHistory}
             setShowAuditHistory={setShowAuditHistory}
+                      eventTypes={eventTypes}
+            monthlyRequirements={monthlyRequirements}
           />
 
           {/* Action Buttons (Sync & Export) */}

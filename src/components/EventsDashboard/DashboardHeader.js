@@ -19,178 +19,103 @@ export default function DashboardHeader({
   setSelectedEventType,
   setCalendarView,
   loadAuditHistory,
-  setShowAuditHistory
+  setShowAuditHistory,
+  eventTypes = [],
+  monthlyRequirements = {},
 }) {
-  return (
-    <div className="w-full mb-6 px-6 py-8 rounded-2xl shadow-2xl" style={{ backgroundColor: '#b48f8f' }}>
-      {/* Title */}
-      <div className="text-center mb-6">
-        <h1 className="text-5xl font-bold text-white mb-3 drop-shadow-lg">
-          ✨ Master Events Calendar ✨
-        </h1>
-        <p className="text-white text-lg opacity-90">All gyms special events in one place</p>
+  // ONE strip instead of a 460px band of six cards.
+  //
+  // What was there: title, subtitle, timestamp, month nav, then "Total Events /
+  // Active Gyms / Requirements Met" as three cards, then "Clinics / Kids Night
+  // Out / Open Gym" as three more. Six cards, three words each, and the month
+  // was repeated twice more further down the page.
+  //
+  // What changed and why:
+  //   - "Requirements Met 9/14" was a number you cannot act on. It is now
+  //     "N gyms short", and clicking it takes you to them.
+  //   - Each tracked type shows its count AND its goal on one chip, so
+  //     "20 Clinics" and "goal 1" stop living in two separate widgets saying
+  //     different things about the same word.
+  //   - Total Events and Active Gyms are one line of text, not two cards.
+  //
+  // Every chip is still a filter button, exactly as before.
+  const short = allGyms.filter(gym => getMissingEventTypes(gym).length > 0);
 
-        {/* Secret audit history trigger - Ctrl+Click */}
-        <div
-          className="text-sm text-white opacity-70 mt-3 cursor-default select-none hover:opacity-100 transition-opacity"
-          onClick={(e) => {
-            if (e.ctrlKey || e.metaKey) {
-              e.preventDefault();
-              loadAuditHistory();
-              setShowAuditHistory(true);
-            }
-          }}
-          title="Ctrl+Click for secret features"
-        >
-          {new Date().toLocaleString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+  const tracked = (eventTypes || []).filter(t => t.is_tracked);
+  const chips = (tracked.length
+    ? tracked.map(t => ({ name: t.name, label: t.display_name || t.name, color: t.color }))
+    : Object.keys(monthlyRequirements).map(n => ({ name: n, label: n, color: null })));
+
+  return (
+    <div className="w-full mb-3 px-5 py-3 rounded-2xl shadow-xl" style={{ backgroundColor: '#b48f8f' }}>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+
+        {/* Month — the one and only month control on the page */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => { onPreviousMonth(); setCalendarView('full'); }}
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-white/90 text-gray-800 hover:bg-white transition"
+            title="Previous month"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <h1 className="px-4 py-1.5 rounded-full bg-white text-gray-900 text-lg font-bold whitespace-nowrap">
+            {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </h1>
+          <button
+            onClick={() => { onNextMonth(); setCalendarView('full'); }}
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-white/90 text-gray-800 hover:bg-white transition"
+            title="Next month"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Count + goal on the SAME chip, so one word means one thing */}
+        <div className="flex flex-wrap items-center gap-2">
+          {chips.map(c => {
+            const have = events.filter(e => e.type === c.name).length;
+            const goal = monthlyRequirements[c.name];
+            return (
+              <button
+                key={c.name}
+                onClick={() => { setSelectedEventType(c.name); setViewMode('calendar'); }}
+                className="flex items-baseline gap-1.5 rounded-full bg-white/95 px-3 py-1.5 hover:bg-white transition"
+                title={`Show only ${c.name}`}
+              >
+                <span className="text-base font-black" style={{ color: c.color || '#2a2030' }}>{have}</span>
+                <span className="text-xs font-semibold text-gray-700">{c.label}</span>
+                {goal ? <span className="text-[10px] text-gray-500">goal {goal}/gym</span> : null}
+              </button>
+            );
           })}
         </div>
-      </div>
 
-      {/* Month Navigation */}
-      <div className="flex justify-center items-center gap-6 mb-8">
-        <button
-          onClick={() => {
-            onPreviousMonth();
-            setCalendarView('full');
-          }}
-          className="flex items-center gap-2 px-6 py-3 rounded-full bg-white text-gray-800 font-semibold transition-all duration-200 hover:scale-105 hover:shadow-xl min-w-[120px] justify-center"
-          style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.25)' }}
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Previous
-        </button>
-
-        <div className="flex-shrink-0">
-          <h2 className="text-3xl font-bold px-10 py-4 rounded-full bg-white text-gray-800 text-center whitespace-nowrap"
-              style={{ boxShadow: '0 6px 20px rgba(0,0,0,0.3)' }}>
-            {new Date(currentYear, currentMonth).toLocaleDateString('en-US', {
-              month: 'long',
-              year: 'numeric'
-            })}
-          </h2>
-        </div>
-
-        <button
-          onClick={() => {
-            onNextMonth();
-            setCalendarView('full');
-          }}
-          className="flex items-center gap-2 px-6 py-3 rounded-full bg-white text-gray-800 font-semibold transition-all duration-200 hover:scale-105 hover:shadow-xl min-w-[120px] justify-center"
-          style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.25)' }}
-        >
-          Next
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Dashboard Stats Cards - Row 1: General Stats */}
-      <div className="flex gap-3 justify-center max-w-4xl mx-auto mb-4">
-        <button
-          onClick={() => setViewMode('calendar')}
-          className="bg-white rounded-lg px-4 py-3 hover:shadow-2xl transition-all duration-200 text-center flex-1 min-w-[110px] hover:scale-105"
-          style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
-        >
-          <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
-            {events.length}
-          </div>
-          <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
-            Total Events
-          </div>
-          <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
-            This Month
-          </div>
-        </button>
-
-        <button
-          onClick={() => {
-            setSelectedGym('all');
-            setSelectedEventType('all');
-            setViewMode('calendar');
-          }}
-          className="bg-white rounded-lg px-4 py-3 hover:shadow-2xl transition-all duration-200 text-center flex-1 min-w-[110px] hover:scale-105"
-          style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
-        >
-          <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
-            {uniqueGymsWithEvents.length}
-          </div>
-          <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
-            Active Gyms
-          </div>
-          <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
-            This Month
-          </div>
-        </button>
-
+        {/* The one number worth acting on */}
         <button
           onClick={() => setViewMode('table')}
-          className="bg-white rounded-lg px-4 py-3 hover:shadow-2xl transition-all duration-200 text-center flex-1 min-w-[110px] hover:scale-105"
-          style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
-        >
-          <div className="text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
-            {allGyms.filter(gym => getMissingEventTypes(gym).length === 0).length}/{allGyms.length}
-          </div>
-          <div className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
-            Requirements Met
-          </div>
-          <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
-            This Month
-          </div>
-        </button>
-      </div>
-
-      {/* Dashboard Stats Cards - Row 2: Event Types */}
-      <div className="flex gap-3 justify-center max-w-3xl mx-auto">
-        <button
-          onClick={() => {
-            setSelectedEventType('CLINIC');
-            setViewMode('calendar');
+          className="ml-auto flex items-center gap-2 rounded-full px-4 py-1.5 font-bold transition hover:brightness-105"
+          style={{
+            backgroundColor: short.length ? '#8f4a55' : '#4f7d5c',
+            color: '#fff',
           }}
-          className="rounded-lg px-4 py-3 hover:shadow-2xl transition-all duration-200 text-center flex-1 min-w-[110px] hover:scale-105"
-          style={{ backgroundColor: '#e3f2fd', boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
+          title={short.length ? short.join(', ') : 'Every gym has met its monthly requirements'}
         >
-          <div className="text-xl font-bold text-blue-800">
-            {events.filter(e => e.type === 'CLINIC').length}
-          </div>
-          <div className="text-sm font-medium text-blue-700">Clinics</div>
-          <div className="text-xs text-blue-600">This month</div>
+          {short.length
+            ? <>{short.length} gym{short.length === 1 ? '' : 's'} short <span className="opacity-70">→</span></>
+            : <>All {allGyms.length} gyms complete</>}
         </button>
 
-        <button
-          onClick={() => {
-            setSelectedEventType('KIDS NIGHT OUT');
-            setViewMode('calendar');
+        {/* Was two cards. Now a line of text. Ctrl+click still opens audit history. */}
+        <div
+          className="text-xs text-white/85 whitespace-nowrap cursor-default select-none"
+          onClick={(e) => {
+            if (e.ctrlKey || e.metaKey) { e.preventDefault(); loadAuditHistory(); setShowAuditHistory(true); }
           }}
-          className="rounded-lg px-4 py-3 hover:shadow-2xl transition-all duration-200 text-center flex-1 min-w-[110px] hover:scale-105"
-          style={{ backgroundColor: '#f3e8ff', boxShadow: '0 4px 12px rgba(139,92,246,0.3)' }}
+          title="Ctrl+Click for audit history"
         >
-          <div className="text-xl font-bold text-purple-800">
-            {events.filter(e => e.type === 'KIDS NIGHT OUT').length}
-          </div>
-          <div className="text-sm font-medium text-purple-700">Kids Night Out</div>
-          <div className="text-xs text-purple-600">This month</div>
-        </button>
-
-        <button
-          onClick={() => {
-            setSelectedEventType('OPEN GYM');
-            setViewMode('calendar');
-          }}
-          className="rounded-lg px-4 py-3 hover:shadow-2xl transition-all duration-200 text-center flex-1 min-w-[110px] hover:scale-105"
-          style={{ backgroundColor: '#e8f5e9', boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}
-        >
-          <div className="text-xl font-bold text-green-800">
-            {events.filter(e => e.type === 'OPEN GYM').length}
-          </div>
-          <div className="text-sm font-medium text-green-700">Open Gym</div>
-          <div className="text-xs text-green-600">This month</div>
-        </button>
+          {events.length} events · {uniqueGymsWithEvents.length} of {allGyms.length} gyms active
+        </div>
       </div>
     </div>
   );
