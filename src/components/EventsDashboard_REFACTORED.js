@@ -344,6 +344,7 @@ const EventsDashboard = () => {
             currentMonth={currentMonth}
             currentYear={currentYear}
             getEventCounts={getEventCounts}
+            getGymLinkUrl={getGymLinkUrl}
             scrollToGym={scrollToGym}
             handleMagicControlClick={handleMagicControlClick}
             onEmailShortGyms={() => setShowEmailComposer(true)}
