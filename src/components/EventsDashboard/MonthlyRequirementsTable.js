@@ -7,6 +7,7 @@ import { parseYmdLocal } from './utils';
 import { isErrorAcknowledgedAnywhere } from '../../lib/validationHelpers';
 
 export default function MonthlyRequirementsTable({
+  onEmailShortGyms,
   currentMonth,
   currentYear,
   allGyms,
@@ -58,151 +59,155 @@ export default function MonthlyRequirementsTable({
     return errors + warnings + missing;
   };
 
-  return (
-    <div className="rounded-lg shadow-lg p-3 mb-2 mx-2" style={{ backgroundColor: '#e6e6e6', border: '1px solid #adb2c6' }}>
-      {/* Removed from this card, all of it duplicated something above:
-           - a SECOND month picker (the header already has the only one)
-           - the "Monthly Requirements" title (this IS the requirements table)
-           - "Monthly Goal: 1 Clinic - 2 KNO - 1 Open Gym" (the header chips now
-             carry each goal next to its own count)
-           - the icon legend (moved onto the icons themselves as tooltips)
-         That was five stacked lines of chrome above a table that explains itself. */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full border border-gray-200">
-          <thead>
-            <tr style={{ backgroundColor: '#8b6f6f' }}>
-              <th className="p-2 border text-sm text-center font-bold text-white">Gym</th>
-              {eventTypes.filter(et => et.is_tracked).map((eventType, i) => (
-                <th key={i} className="p-2 border text-sm text-center font-bold text-white">
-                  {eventType.display_name || eventType.name}
-                </th>
-              ))}
-              <th className="p-2 border text-sm text-center font-bold text-white">Status</th>
-              <th className="p-2 border text-sm text-center font-bold text-white" title="Data quality issues">Issues</th>
-            </tr>
-          </thead>
-          <tbody>
-            {allGyms.map((gym, i) => {
-              const missing = getMissingEventTypes(gym);
-              const qualityIssues = getQualityIssues(gym);
+  // ── The redesign ─────────────────────────────────────────────────────────
+  // Before: 14 rows x 45px, six columns, every cell a 48x40 button. Nine of the
+  // fourteen rows said "Complete" - nine rows of nothing - and a full-width
+  // Status column existed to hold a pill that repeated what the numbers said.
+  //
+  // Three changes:
+  //   1. Gyms that are SHORT come first and are the only ones open. The gyms
+  //      that are fine collapse to one line you can expand. Work first, done
+  //      out of the way.
+  //   2. Counts become dots against the goal - filled = have it, hollow = still
+  //      needed. You read "short by one" without doing arithmetic, and the
+  //      Status column disappears because the dots ARE the status.
+  //   3. Rows are one line each, not a grid of padded buttons.
+  const tracked = (eventTypes || []).filter(et => et.is_tracked);
+  const typeNames = tracked.length ? tracked.map(t => t.name) : Object.keys(monthlyRequirements);
 
-              return (
-                <tr key={i} className="border-b hover:bg-gray-50 transition-colors">
-                  {/* Gym Name Cell */}
-                  <td className="p-1 border font-medium text-sm" style={{ color: theme.colors.textPrimary }}>
-                    <div className="flex items-center justify-center">
-                      <button
-                        onClick={() => scrollToGym(gym)}
-                        className="hover:underline inline-flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors font-bold cursor-pointer text-base"
-                        style={{ color: '#4a4a4a' }}
-                        title={`Jump to ${gym} in calendar`}
-                      >
-                        {gym}
-                        <svg className="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                        </svg>
-                      </button>
-                      {getGymLinkUrl(gym, 'Booking (Special Events)') && (
-                        <a
-                          href={getGymLinkUrl(gym, 'Booking (Special Events)')}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 hover:scale-125 px-1 py-1 rounded transition-all text-xs"
-                          title={`View all special events at ${gym}`}
-                        >
-                          ✨
-                        </a>
-                      )}
-                      <button
-                        onClick={() => handleMagicControlClick(gym)}
-                        className="ml-1 inline-flex items-center justify-center px-2 py-1 rounded text-xs font-semibold hover:bg-purple-50 transition-colors hover:scale-110"
-                        style={{ color: theme.colors.textPrimary }}
-                        title={`Open Clinic, KNO, Open Gym for ${gym}`}
-                      >
-                        <span aria-hidden>✨</span>
-                        <span className="sr-only">Open All Events</span>
-                      </button>
-                    </div>
-                  </td>
+  const rows = allGyms.map(gym => ({
+    gym,
+    missing: getMissingEventTypes(gym),
+    issues: getQualityIssues(gym),
+    counts: typeNames.map(t => ({
+      name: t,
+      label: (tracked.find(x => x.name === t) || {}).display_name || t,
+      have: counts[gym]?.[t] || 0,
+      goal: monthlyRequirements[t] || 0,
+      color: getEventTypeColor(t, eventTypes),
+    })),
+  }));
 
-                  {/* Event Type Count Cells */}
-                  {Object.keys(monthlyRequirements).map((eventType, j) => {
-                    const count = counts[gym]?.[eventType] || 0;
-                    const requiredCount = monthlyRequirements[eventType];
-                    const isDeficient = count < requiredCount;
-                    const url = getGymLinkUrl(gym, eventType) || getGymLinkUrl(gym, 'BOOKING') || '#';
-                    // Pass eventTypes (DB rows) so colors come from
-                    // event_types.color, not the static fallback. Single
-                    // source of truth = the event_types table.
-                    const backgroundColor = getEventTypeColor(eventType, eventTypes);
+  const short = rows.filter(r => r.missing.length > 0);
+  const done  = rows.filter(r => r.missing.length === 0);
 
-                    // Adjust background opacity for deficient counts
-                    let adjustedBackgroundColor = backgroundColor;
-                    if (isDeficient && backgroundColor.startsWith('#')) {
-                      const hex = backgroundColor.replace('#', '');
-                      const r = parseInt(hex.substr(0, 2), 16);
-                      const g = parseInt(hex.substr(2, 2), 16);
-                      const b = parseInt(hex.substr(4, 2), 16);
-                      adjustedBackgroundColor = `rgba(${r}, ${g}, ${b}, 0.3)`;
-                    }
+  // Dots: one per required event, filled when it exists. Anything above the
+  // goal is a small "+n" so an over-delivering gym doesn't sprout 8 dots.
+  const Dots = ({ c }) => {
+    const filled = Math.min(c.have, c.goal);
+    const extra = Math.max(c.have - c.goal, 0);
+    return (
+      <span className="inline-flex items-center gap-1" title={`${c.label}: ${c.have} of ${c.goal}`}>
+        <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#7a6f75', minWidth: 58 }}>
+          {c.label}
+        </span>
+        <span className="inline-flex items-center gap-0.5">
+          {Array.from({ length: c.goal }).map((_, i) => (
+            <span key={i} className="inline-block rounded-full"
+              style={{
+                width: 9, height: 9,
+                backgroundColor: i < filled ? c.color : 'transparent',
+                border: `1.5px solid ${i < filled ? c.color : '#c9b9bf'}`,
+              }} />
+          ))}
+          {extra > 0 && <span className="text-[10px] font-bold" style={{ color: '#7a6f75' }}>+{extra}</span>}
+        </span>
+      </span>
+    );
+  };
 
-                    return (
-                      <td key={j} className="p-1 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-bold inline-flex items-center justify-center gap-1 px-3 py-2 rounded transition-all duration-200 hover:scale-105 hover:shadow-md text-gray-700 min-w-[48px] h-[40px]"
-                          style={{ backgroundColor: adjustedBackgroundColor }}
-                          title={`View ${eventType} page at ${gym} (${count}/${requiredCount})`}
-                        >
-                          <span className="text-lg font-bold">{count}</span>
-                          <svg className="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                      </td>
-                    );
-                  })}
+  const GymRow = ({ r, dim }) => (
+    <div
+      className="flex items-center gap-3 px-3 py-1.5 rounded-md hover:bg-white transition-colors"
+      style={{ opacity: dim ? 0.72 : 1 }}
+    >
+      <button
+        onClick={() => scrollToGym(r.gym)}
+        className="text-left text-[13px] font-bold hover:underline truncate"
+        style={{ color: '#4a4046', minWidth: 210, maxWidth: 210 }}
+        title={`Jump to ${r.gym} on the calendar`}
+      >
+        {r.gym}
+      </button>
 
-                  {/* Status Cell */}
-                  <td className="p-1 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
-                    {missing.length === 0 ? (
-                      <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white" style={{ backgroundColor: '#6b8e6b' }}>
-                        ✓ Complete
-                      </span>
-                    ) : (
-                      <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white" style={{ backgroundColor: '#c27878' }}>
-                        {missing.join(' • ')}
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Quality Issues Cell */}
-                  <td className="p-1 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
-                    {qualityIssues === 0 ? (
-                      <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white text-xs" style={{ backgroundColor: '#6b8e6b' }}>
-                        ✓
-                      </span>
-                    ) : (
-                      <span
-                        className="font-bold px-3 py-1 rounded-lg shadow-sm text-white text-xs inline-flex items-center gap-1 cursor-pointer hover:shadow-md"
-                        style={{ backgroundColor: '#c27878' }}
-                        title={`${qualityIssues} issues`}
-                      >
-                        {qualityIssues}
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="flex items-center gap-4 flex-1 flex-wrap">
+        {r.counts.map(c => {
+          const url = getGymLinkUrl(r.gym, c.name) || getGymLinkUrl(r.gym, 'BOOKING');
+          const inner = <Dots c={c} />;
+          return url
+            ? <a key={c.name} href={url} target="_blank" rel="noopener noreferrer"
+                 className="hover:opacity-70 transition-opacity">{inner}</a>
+            : <span key={c.name}>{inner}</span>;
+        })}
       </div>
+
+      {r.missing.length > 0 && (
+        <span className="text-[11px] font-bold whitespace-nowrap" style={{ color: '#a4485c' }}>
+          {r.missing.join(' · ')}
+        </span>
+      )}
+
+      {r.issues > 0 && (
+        <span className="rounded-full px-2 py-0.5 text-[10px] font-black text-white"
+              style={{ backgroundColor: '#c27878' }}
+              title={`${r.issues} data issue${r.issues === 1 ? '' : 's'} on this gym's events`}>
+          {r.issues}
+        </span>
+      )}
+
+      <button
+        onClick={() => handleMagicControlClick(r.gym)}
+        className="text-sm opacity-50 hover:opacity-100 transition-opacity"
+        title={`Open ${typeNames.join(', ')} portal pages for ${r.gym}`}
+      >
+        ✨
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="rounded-lg shadow-lg px-2 py-2 mb-2 mx-2"
+         style={{ backgroundColor: '#efeaea', border: '1px solid #d6c9cc' }}>
+
+      {short.length > 0 && (
+        <>
+          <div className="flex items-center gap-3 px-3 pb-1">
+            <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: '#a4485c' }}>
+              {short.length} gym{short.length === 1 ? '' : 's'} short this month
+            </span>
+            {onEmailShortGyms && (
+              <button
+                onClick={onEmailShortGyms}
+                className="rounded-full px-3 py-0.5 text-[11px] font-bold text-white transition hover:brightness-110"
+                style={{ backgroundColor: '#8f4a55' }}
+                title="Compose the shortfall email for these gyms"
+              >
+                Email them →
+              </button>
+            )}
+          </div>
+          {short.map(r => <GymRow key={r.gym} r={r} />)}
+        </>
+      )}
+
+      {done.length > 0 && (
+        <details className="mt-1">
+          <summary className="cursor-pointer list-none px-3 py-1.5 rounded-md text-[11px] font-bold hover:bg-white transition-colors"
+                   style={{ color: '#4f7d5c' }}>
+            ✓ {done.length} gym{done.length === 1 ? '' : 's'} complete
+            <span className="font-normal opacity-70"> — {done.map(r => r.gym.replace(/ Gymnastics.*| Gymnastic.*/, '')).join(', ')}</span>
+          </summary>
+          <div className="mt-1">
+            {done.map(r => <GymRow key={r.gym} r={r} dim />)}
+          </div>
+        </details>
+      )}
+
+      {rows.length === 0 && (
+        <div className="px-3 py-4 text-center text-sm" style={{ color: '#8b7f85' }}>
+          No gyms loaded yet.
+        </div>
+      )}
     </div>
   );
 }
