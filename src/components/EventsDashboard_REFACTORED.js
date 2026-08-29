@@ -308,8 +308,8 @@ const EventsDashboard = () => {
           {/* Side by side: the opener and the monthly goals stack in a narrow
               left column, the gym table takes the rest of the width. They were
               three full-width blocks running down the page; this is one row. */}
-          <div className="flex flex-wrap gap-3 mx-2 mb-3 items-start">
-            <div className="flex flex-col gap-3" style={{ flex: '1 1 380px', minWidth: 340 }}>
+          <div className="grid gap-3 mx-2 mb-3 lg:grid-cols-[320px_1fr] items-start">
+            <div className="flex flex-col gap-3">
             <BulkPortalOpener
               getAllUrlsForEventType={getAllUrlsForEventType}
               openMultipleTabs={openMultipleTabs}
