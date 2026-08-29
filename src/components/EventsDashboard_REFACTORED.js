@@ -305,7 +305,11 @@ const EventsDashboard = () => {
           />
 
           {/* Bulk Portal Opener + Monthly Requirements goals (side-by-side row to save vertical space) */}
-          <div className="grid gap-3 lg:grid-cols-[1.9fr_.8fr] mx-2 mb-3">
+          {/* Side by side: the opener and the monthly goals stack in a narrow
+              left column, the gym table takes the rest of the width. They were
+              three full-width blocks running down the page; this is one row. */}
+          <div className="grid gap-3 mx-2 mb-3 lg:grid-cols-[320px_1fr] items-start">
+            <div className="flex flex-col gap-3">
             <BulkPortalOpener
               getAllUrlsForEventType={getAllUrlsForEventType}
               openMultipleTabs={openMultipleTabs}
@@ -402,9 +406,9 @@ const EventsDashboard = () => {
                 Required per gym each month
               </div>
             </div>
-          </div>
+            </div>
 
-          {/* Monthly Requirements Table */}
+            <div>
           <MonthlyRequirementsTable
             currentMonth={currentMonth}
             currentYear={currentYear}
@@ -420,6 +424,8 @@ const EventsDashboard = () => {
             handleMagicControlClick={handleMagicControlClick}
             getEventCounts={getEventCounts}
           />
+            </div>
+          </div>
 
           {/* Calendar Controls */}
           <CalendarControls

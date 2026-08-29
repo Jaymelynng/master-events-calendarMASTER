@@ -59,7 +59,7 @@ export default function MonthlyRequirementsTable({
   };
 
   return (
-    <div className="rounded-lg shadow-lg p-3 mb-2 mx-2" style={{ backgroundColor: '#e6e6e6', border: '1px solid #adb2c6' }}>
+    <div className="rounded-lg shadow-lg p-2" style={{ backgroundColor: '#e6e6e6', border: '1px solid #adb2c6' }}>
       {/* Removed - every line of it repeated something already on the page:
            - a SECOND Previous / August 2026 / Next (the header has one)
            - the heading "Monthly Requirements" (this IS that table)
@@ -70,14 +70,14 @@ export default function MonthlyRequirementsTable({
         <table className="min-w-full border border-gray-200">
           <thead>
             <tr style={{ backgroundColor: '#8b6f6f' }}>
-              <th className="p-2 border text-sm text-center font-bold text-white">Gym</th>
+              <th className="px-2 py-1 border text-xs text-center font-bold text-white">Gym</th>
               {eventTypes.filter(et => et.is_tracked).map((eventType, i) => (
-                <th key={i} className="p-2 border text-sm text-center font-bold text-white">
+                <th key={i} className="px-2 py-1 border text-xs text-center font-bold text-white">
                   {eventType.display_name || eventType.name}
                 </th>
               ))}
-              <th className="p-2 border text-sm text-center font-bold text-white">Status</th>
-              <th className="p-2 border text-sm text-center font-bold text-white" title="Data quality issues">Issues</th>
+              <th className="px-2 py-1 border text-xs text-center font-bold text-white">Status</th>
+              <th className="px-2 py-1 border text-xs text-center font-bold text-white" title="Data quality issues">Issues</th>
             </tr>
           </thead>
           <tbody>
@@ -88,11 +88,11 @@ export default function MonthlyRequirementsTable({
               return (
                 <tr key={i} className="border-b hover:bg-gray-50 transition-colors">
                   {/* Gym Name Cell */}
-                  <td className="p-1 border font-medium text-sm" style={{ color: theme.colors.textPrimary }}>
+                  <td className="px-2 py-0.5 border font-medium text-sm" style={{ color: theme.colors.textPrimary }}>
                     <div className="flex items-center justify-center">
                       <button
                         onClick={() => scrollToGym(gym)}
-                        className="hover:underline inline-flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors font-bold cursor-pointer text-base"
+                        className="hover:underline inline-flex items-center gap-1 hover:bg-blue-50 px-1 py-0.5 rounded transition-colors font-bold cursor-pointer text-[12.5px]"
                         style={{ color: '#4a4a4a' }}
                         title={`Jump to ${gym} in calendar`}
                       >
@@ -146,16 +146,16 @@ export default function MonthlyRequirementsTable({
                     }
 
                     return (
-                      <td key={j} className="p-1 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
+                      <td key={j} className="px-1 py-0.5 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
                         <a
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-bold inline-flex items-center justify-center gap-1 px-3 py-2 rounded transition-all duration-200 hover:scale-105 hover:shadow-md text-gray-700 min-w-[48px] h-[40px]"
+                          className="font-bold inline-flex items-center justify-center gap-1 px-2 py-1 rounded transition-all duration-200 hover:scale-105 hover:shadow-md text-gray-700 min-w-[38px] h-[26px]"
                           style={{ backgroundColor: adjustedBackgroundColor }}
                           title={`View ${eventType} page at ${gym} (${count}/${requiredCount})`}
                         >
-                          <span className="text-lg font-bold">{count}</span>
+                          <span className="text-sm font-bold">{count}</span>
                           <svg className="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
@@ -165,27 +165,27 @@ export default function MonthlyRequirementsTable({
                   })}
 
                   {/* Status Cell */}
-                  <td className="p-1 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
+                  <td className="px-1 py-0.5 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
                     {missing.length === 0 ? (
-                      <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white" style={{ backgroundColor: '#6b8e6b' }}>
+                      <span className="font-bold px-2 py-0.5 rounded-md shadow-sm text-white text-[11px]" style={{ backgroundColor: '#6b8e6b' }}>
                         ✓ Complete
                       </span>
                     ) : (
-                      <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white" style={{ backgroundColor: '#c27878' }}>
+                      <span className="font-bold px-2 py-0.5 rounded-md shadow-sm text-white text-[11px]" style={{ backgroundColor: '#c27878' }}>
                         {missing.join(' • ')}
                       </span>
                     )}
                   </td>
 
                   {/* Quality Issues Cell */}
-                  <td className="p-1 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
+                  <td className="px-1 py-0.5 border text-center text-sm" style={{ color: theme.colors.textPrimary }}>
                     {qualityIssues === 0 ? (
-                      <span className="font-bold px-3 py-1 rounded-lg shadow-sm text-white text-xs" style={{ backgroundColor: '#6b8e6b' }}>
+                      <span className="font-bold px-2 py-0.5 rounded-md shadow-sm text-white text-[10px]" style={{ backgroundColor: '#6b8e6b' }}>
                         ✓
                       </span>
                     ) : (
                       <span
-                        className="font-bold px-3 py-1 rounded-lg shadow-sm text-white text-xs inline-flex items-center gap-1 cursor-pointer hover:shadow-md"
+                        className="font-bold px-2 py-0.5 rounded-md shadow-sm text-white text-[10px] inline-flex items-center gap-1 cursor-pointer hover:shadow-md"
                         style={{ backgroundColor: '#c27878' }}
                         title={`${qualityIssues} issues`}
                       >
