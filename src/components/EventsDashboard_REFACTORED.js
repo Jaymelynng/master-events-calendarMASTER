@@ -19,8 +19,7 @@ import { rulesApi } from '../lib/api';
 // Components
 import DashboardHeader, { ActionButtons } from './EventsDashboard/DashboardHeader';
 import BulkPortalOpener from './EventsDashboard/BulkPortalOpener';
-import MonthlyDigest from './EventsDashboard/MonthlyDigest';
-import EmailComposer from './AdminDashboard/EmailComposer';
+import MonthlyRequirementsTable from './EventsDashboard/MonthlyRequirementsTable';
 import CalendarControls, { CalendarViewToggle, CalendarLegend } from './EventsDashboard/CalendarControls';
 import CalendarGrid from './EventsDashboard/CalendarGrid';
 import TableView from './EventsDashboard/TableView';
@@ -95,11 +94,6 @@ const EventsDashboard = () => {
     acknowledgeValidationError, resetAcknowledgedErrors,
   } = dashboard;
 
-  // Emailing a short gym was Shift+Click the wand -> Admin -> Email Managers ->
-  // pick gyms -> compose. Five clicks to do the thing the screen is telling you
-  // to do. It now opens straight off the short list.
-  const [showEmailComposer, setShowEmailComposer] = React.useState(false);
-
   // Show loading state
   if (loading) {
     return (
@@ -158,17 +152,6 @@ const EventsDashboard = () => {
       )}
 
       {/* ==================== MODALS ==================== */}
-
-      {showEmailComposer && (
-        <EmailComposer
-          gyms={gymsList}
-          events={events}
-          monthlyRequirements={monthlyRequirements}
-          currentMonth={currentMonth}
-          currentYear={currentYear}
-          onClose={() => setShowEmailComposer(false)}
-        />
-      )}
 
       {showAddEventModal && (
         <Suspense fallback={<ModalLoader />}>
@@ -313,8 +296,6 @@ const EventsDashboard = () => {
             setCalendarView={setCalendarView}
             loadAuditHistory={loadAuditHistory}
             setShowAuditHistory={setShowAuditHistory}
-                      eventTypes={eventTypes}
-            monthlyRequirements={monthlyRequirements}
           />
 
           {/* Action Buttons (Sync & Export) */}
@@ -323,36 +304,121 @@ const EventsDashboard = () => {
             onOpenExportModal={() => setShowExportModal(true)}
           />
 
-          {/* The Monthly Requirements 1/2/1 card is GONE. It was a fourth place
-              the same three goals appeared - the header chips now carry each goal
-              next to its own count ("20 CLINIC goal 1/gym"), which is the only
-              place a goal and its actual number sit together. The opener no longer
-              needs a two-column grid to fill the space that card was holding. */}
-          <BulkPortalOpener
-            getAllUrlsForEventType={getAllUrlsForEventType}
-            openMultipleTabs={openMultipleTabs}
-            gymLinks={gymLinks}
-            events={events}
-          />
+          {/* Bulk Portal Opener + Monthly Requirements goals (side-by-side row to save vertical space) */}
+          <div className="grid gap-3 lg:grid-cols-[1.9fr_.8fr] mx-2 mb-3">
+            <BulkPortalOpener
+              getAllUrlsForEventType={getAllUrlsForEventType}
+              openMultipleTabs={openMultipleTabs}
+              gymLinks={gymLinks}
+              events={events}
+            />
 
-          {/* Monthly digest — the numbers, who's short, and what to do. */}
-          <MonthlyDigest
+            {/* Monthly Requirements goals — dynamic, driven by `monthly_requirements` table.
+                Add/edit/remove a row in admin and this card auto-adjusts (column count
+                follows the number of requirements). Color is assigned by a per-type lookup
+                with a neutral fallback for new types we haven't seen before. */}
+            <div
+              className="rounded-xl border p-3 flex flex-col justify-center items-center text-center"
+              style={{
+                background: '#f7f3f3',
+                borderColor: '#c5b4b4',
+                boxShadow: '0 8px 18px rgba(90,70,70,.18), inset 0 1px 0 rgba(255,255,255,.8)',
+              }}
+            >
+              <div className="mb-2 text-sm font-black uppercase tracking-wide" style={{ color: '#6e5658' }}>
+                Monthly Requirements
+              </div>
+
+              {(() => {
+                // Labels for human-readable display only. Colors come from
+                // event_types.color in Supabase — single source of truth.
+                // Change a color in Admin → it propagates here too.
+                const REQ_LABELS = {
+                  'CLINIC': 'Clinics',
+                  'KIDS NIGHT OUT': 'KNOs',
+                  'OPEN GYM': 'Open Gym',
+                  'CAMP': 'Camps',
+                  'SPECIAL EVENT': 'Special',
+                };
+
+                // Build hex lookup from live eventTypes (DB-driven)
+                const colorByType = {};
+                (eventTypes || []).forEach(et => {
+                  const key = (et.name || et.event_type || '').toUpperCase();
+                  if (key && et.color) colorByType[key] = et.color;
+                });
+
+                // Convert hex → soft-tint background + medium border
+                const hexToRgba = (hex, alpha) => {
+                  if (!hex) return `rgba(180,143,143,${alpha})`;
+                  const v = hex.replace('#', '');
+                  const full = v.length === 3 ? v.split('').map(c => c + c).join('') : v;
+                  const n = parseInt(full, 16);
+                  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+                };
+                const FALLBACK_HEX = '#b48f8f';
+
+                const entries = Object.entries(monthlyRequirements || {}).filter(([, v]) => v != null);
+                if (entries.length === 0) {
+                  return (
+                    <div className="text-xs italic" style={{ color: '#9a8b8b' }}>
+                      No monthly requirements configured. Add some in admin.
+                    </div>
+                  );
+                }
+                const cols = Math.min(entries.length, 4);
+
+                return (
+                  <div
+                    className="w-full grid gap-2"
+                    style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+                  >
+                    {entries.map(([type, count]) => {
+                      const hex = colorByType[type.toUpperCase()] || FALLBACK_HEX;
+                      const label = REQ_LABELS[type] || type;
+                      return (
+                        <div
+                          key={type}
+                          className="rounded-lg border px-2 py-3 text-center"
+                          style={{
+                            background: hexToRgba(hex, 0.18),
+                            borderColor: hexToRgba(hex, 0.55),
+                            boxShadow: '0 2px 6px rgba(70,60,75,.14), inset 0 1px 0 rgba(255,255,255,.55)',
+                          }}
+                        >
+                          <div className="text-[11px] font-black uppercase" style={{ color: '#6e5658' }}>{label}</div>
+                          <div className="text-2xl font-black" style={{ color: '#263044' }}>{count}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              <div
+                className="mt-2 w-full rounded-lg border px-3 py-2 text-center text-xs font-black"
+                style={{ background: 'rgba(255,255,255,.75)', borderColor: '#ded1d1', color: '#71585a', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.85)' }}
+              >
+                Required per gym each month
+              </div>
+            </div>
+          </div>
+
+          {/* Monthly Requirements Table */}
+          <MonthlyRequirementsTable
+            currentMonth={currentMonth}
+            currentYear={currentYear}
+            onPreviousMonth={goToPreviousMonth}
+            onNextMonth={goToNextMonth}
             allGyms={allGyms}
             events={events}
             eventTypes={eventTypes}
             monthlyRequirements={monthlyRequirements}
-            currentMonth={currentMonth}
-            currentYear={currentYear}
-            getEventCounts={getEventCounts}
-            getGymLinkUrl={getGymLinkUrl}
+            gymLinks={gymLinks}
             scrollToGym={scrollToGym}
+            getGymLinkUrl={getGymLinkUrl}
             handleMagicControlClick={handleMagicControlClick}
-            onEmailShortGyms={() => setShowEmailComposer(true)}
-            onOpenAdminPortal={() => setShowAdminPortal(true)}
-            setViewMode={setViewMode}
-            setSelectedGym={setSelectedGym}
-            setSelectedEventType={setSelectedEventType}
-            setErrorFocus={setErrorFocus}
+            getEventCounts={getEventCounts}
           />
 
           {/* Calendar Controls */}
