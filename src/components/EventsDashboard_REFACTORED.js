@@ -308,25 +308,7 @@ const EventsDashboard = () => {
           {/* Side by side: the opener and the monthly goals stack in a narrow
               left column, the gym table takes the rest of the width. They were
               three full-width blocks running down the page; this is one row. */}
-          <div className="grid gap-3 mx-2 mb-3 justify-start lg:grid-cols-[minmax(0,1120px)_minmax(0,560px)] items-start">
-            <div>
-          <MonthlyRequirementsTable
-            currentMonth={currentMonth}
-            currentYear={currentYear}
-            onPreviousMonth={goToPreviousMonth}
-            onNextMonth={goToNextMonth}
-            allGyms={allGyms}
-            events={events}
-            eventTypes={eventTypes}
-            monthlyRequirements={monthlyRequirements}
-            gymLinks={gymLinks}
-            scrollToGym={scrollToGym}
-            getGymLinkUrl={getGymLinkUrl}
-            handleMagicControlClick={handleMagicControlClick}
-            getEventCounts={getEventCounts}
-          />
-            </div>
-
+          <div className="grid gap-3 mx-2 mb-3 lg:grid-cols-[320px_1fr] items-start">
             <div className="flex flex-col gap-3">
             <BulkPortalOpener
               getAllUrlsForEventType={getAllUrlsForEventType}
@@ -424,6 +406,24 @@ const EventsDashboard = () => {
                 Required per gym each month
               </div>
             </div>
+            </div>
+
+            <div>
+          <MonthlyRequirementsTable
+            currentMonth={currentMonth}
+            currentYear={currentYear}
+            onPreviousMonth={goToPreviousMonth}
+            onNextMonth={goToNextMonth}
+            allGyms={allGyms}
+            events={events}
+            eventTypes={eventTypes}
+            monthlyRequirements={monthlyRequirements}
+            gymLinks={gymLinks}
+            scrollToGym={scrollToGym}
+            getGymLinkUrl={getGymLinkUrl}
+            handleMagicControlClick={handleMagicControlClick}
+            getEventCounts={getEventCounts}
+          />
             </div>
           </div>
 
