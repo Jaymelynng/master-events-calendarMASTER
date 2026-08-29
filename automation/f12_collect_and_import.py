@@ -415,10 +415,27 @@ def _collect_events_direct_api(gym_id, event_type_filter=None):
     for cat in categories:
         print(f"    {cat['title']} → typeId={cat['typeId']} → {cat['our_event_type']}")
 
-    # Filter categories if a specific event type was requested
+    # Filter categories if a specific event type was requested.
+    #
+    # CAMP is special. In iClassPro EVERY one of these categories is a "camp" -
+    # clinics, kids night out, open gym, Music Muscles and More, Swim & Gym,
+    # before/after care. They all come off the same camps endpoint. The buckets
+    # in event_type_mappings are OUR names for them, not iClass's.
+    #
+    # So when the sync asks for CAMP it means "every camp category that is not
+    # already collected under its own name". Before this, CAMP matched only
+    # categories mapped to exactly 'CAMP', which silently dropped every event in
+    # a newer bucket: EAG's Music Muscles and More (SPECIALTY), PLG's Swim & Gym
+    # Extended Day and RC Cheer AM Extended (CAMP CARE), and anything landing in
+    # UNSORTED. They were discovered, printed, and then thrown away one line later.
+    SYNCED_SEPARATELY = {'CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM', 'SPECIAL EVENT'}
+
     if not collect_all:
         normalized_filter = EVENT_TYPE_ALIASES.get(event_type_filter, event_type_filter)
-        categories = [c for c in categories if c['our_event_type'] == normalized_filter]
+        if normalized_filter == 'CAMP':
+            categories = [c for c in categories if c['our_event_type'] not in SYNCED_SEPARATELY]
+        else:
+            categories = [c for c in categories if c['our_event_type'] == normalized_filter]
         if not categories:
             print(f"  [API] No categories match type '{event_type_filter}'")
             return []
@@ -461,6 +478,11 @@ def _collect_events_direct_api(gym_id, event_type_filter=None):
                 # drift out of sync with it. Grouped into our_type ('CAMP')
                 # loses cat_title otherwise, so capture it here.
                 detail['campTypeTitle'] = cat_title
+                # The bucket THIS category maps to, carried on the event itself.
+                # A single CAMP request now brings back several buckets at once
+                # (CAMP, CAMP CARE, SPECIALTY, UNSORTED), so the label can no
+                # longer come from what was requested - it has to ride along.
+                detail['_our_event_type'] = our_type
                 global_seen_ids.add(event_id)
                 all_results[our_type].append(detail)
                 # Log same debug info as Playwright version for consistency
@@ -487,8 +509,17 @@ def _collect_events_direct_api(gym_id, event_type_filter=None):
     if collect_all:
         return {'events': all_results, 'checked_types': checked_types}
     else:
-        # Single type — return flat list (same as old Playwright _collect_events_from_url)
         normalized_filter = EVENT_TYPE_ALIASES.get(event_type_filter, event_type_filter)
+        if normalized_filter == 'CAMP':
+            # CAMP collected several buckets above, so return all of them. Each
+            # event carries _our_event_type, so they still land in the right
+            # bucket. Returning only all_results['CAMP'] here is what dropped
+            # Music Muscles and More, Swim & Gym Extended Day and RC Cheer AM
+            # after they had already been fetched.
+            flat = []
+            for evs in all_results.values():
+                flat.extend(evs)
+            return flat
         return all_results.get(normalized_filter, [])
 
 
@@ -1704,7 +1735,9 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "end_date": end_date,
             "time": time_str,
             "price": price,
-            "type": camp_type_label,
+            # Prefer the bucket the category actually maps to. Falls back to
+            # the requested label for the single-type syncs (CLINIC, KNO, ...).
+            "type": ev.get('_our_event_type') or camp_type_label,
             "event_url": event_url,
             "age_min": age_min,
             "age_max": age_max,
