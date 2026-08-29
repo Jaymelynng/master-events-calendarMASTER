@@ -67,17 +67,17 @@ export default function MonthlyRequirementsTable({
              Requirements card above already shows 1 / 2 / 1 in big numbers)
            - the icon legend (the icons carry tooltips) */}
       <div className="overflow-x-auto">
-        <table className="min-w-full border border-gray-200">
+        <table className="w-full border border-gray-200" style={{ maxWidth: 1120, tableLayout: 'fixed' }}>
           <thead>
             <tr style={{ backgroundColor: '#8b6f6f' }}>
-              <th className="px-2 py-1 border text-xs text-center font-bold text-white">Gym</th>
+              <th className="px-2 py-1 border text-xs text-left font-bold text-white" style={{ width: '30%' }}>Gym</th>
               {eventTypes.filter(et => et.is_tracked).map((eventType, i) => (
-                <th key={i} className="px-2 py-1 border text-xs text-center font-bold text-white">
+                <th key={i} className="px-2 py-1 border text-xs text-center font-bold text-white" style={{ width: '11%' }}>
                   {eventType.display_name || eventType.name}
                 </th>
               ))}
-              <th className="px-2 py-1 border text-xs text-center font-bold text-white">Status</th>
-              <th className="px-2 py-1 border text-xs text-center font-bold text-white" title="Data quality issues">Issues</th>
+              <th className="px-2 py-1 border text-xs text-center font-bold text-white" style={{ width: '29%' }}>Status</th>
+              <th className="px-2 py-1 border text-xs text-center font-bold text-white" style={{ width: '8%' }} title="Data quality issues">Issues</th>
             </tr>
           </thead>
           <tbody>
@@ -89,7 +89,7 @@ export default function MonthlyRequirementsTable({
                 <tr key={i} className="border-b hover:bg-gray-50 transition-colors">
                   {/* Gym Name Cell */}
                   <td className="px-2 py-0.5 border font-medium text-sm" style={{ color: theme.colors.textPrimary }}>
-                    <div className="flex items-center justify-center">
+                    <div className="flex items-center justify-start gap-0.5 whitespace-nowrap">
                       <button
                         onClick={() => scrollToGym(gym)}
                         className="hover:underline inline-flex items-center gap-1 hover:bg-blue-50 px-1 py-0.5 rounded transition-colors font-bold cursor-pointer text-[12.5px]"
