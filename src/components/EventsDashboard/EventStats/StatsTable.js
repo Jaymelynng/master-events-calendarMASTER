@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { parseYmdLocal } from '../utils';
+import { isExcusedFrom } from '../../../lib/requirementExceptions';
 
 // Extracted statistics table component
 export const StatsTable = ({ 
@@ -8,6 +9,8 @@ export const StatsTable = ({
   gyms, 
   eventTypes, 
   monthlyRequirements,
+  gymRules = [],
+  gymsList = [],
   currentMonth,
   currentYear,
   theme,
@@ -38,6 +41,8 @@ export const StatsTable = ({
     const missing = [];
 
     monthlyRequirements.forEach(req => {
+      // Excused gyms are not short. See lib/requirementExceptions.js.
+      if (isExcusedFrom(gymRules, gymName, req.event_type, gymsList)) return;
       const count = stats[req.event_type] || 0;
       if (count < req.required_count) {
         missing.push({

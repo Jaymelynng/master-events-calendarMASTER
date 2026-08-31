@@ -3,6 +3,7 @@
 // ============================================================================
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { eventsApi, gymsApi, eventTypesApi, monthlyRequirementsApi, auditLogApi, rulesApi } from '../../lib/api';
+import { isExcusedFrom } from '../../lib/requirementExceptions';
 import { gymLinksApi } from '../../lib/gymLinksApi';
 import { useRealtimeEvents, useRealtimeGymLinks, useRealtimeGyms } from '../../lib/useRealtimeEvents';
 import { cache } from '../../lib/cache';
@@ -219,6 +220,10 @@ export default function useEventsDashboard() {
     const counts = getEventCounts();
     const missing = [];
     Object.keys(monthlyRequirements).forEach(eventType => {
+      // A gym excused from this requirement is not short of it. The four
+      // merger gyms are excused while they are being set up, so they no longer
+      // drag down "N/14 Requirements Met" or show red on the gym table.
+      if (isExcusedFrom(gymRules, gym, eventType, gymsList)) return;
       const requiredCount = monthlyRequirements[eventType];
       const currentCount = counts[gym]?.[eventType] || 0;
       if (currentCount < requiredCount) {
@@ -226,7 +231,7 @@ export default function useEventsDashboard() {
       }
     });
     return missing;
-  }, [getEventCounts, monthlyRequirements]);
+  }, [getEventCounts, monthlyRequirements, gymRules, gymsList]);
 
   // Get gym link URL
   const getGymLinkUrl = useCallback((gymName, linkType) => {

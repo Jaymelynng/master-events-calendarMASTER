@@ -5,8 +5,11 @@ import React from 'react';
 import { theme, getEventTypeColor } from './constants';
 import { parseYmdLocal } from './utils';
 import { isErrorAcknowledgedAnywhere } from '../../lib/validationHelpers';
+import { isExcusedFrom, excusedPrograms } from '../../lib/requirementExceptions';
 
 export default function MonthlyRequirementsTable({
+  gymRules = [],
+  gymsList = [],
   currentMonth,
   currentYear,
   allGyms,
@@ -26,6 +29,8 @@ export default function MonthlyRequirementsTable({
   const getMissingEventTypes = (gym) => {
     const missing = [];
     Object.keys(monthlyRequirements).forEach(eventType => {
+      // Excused gyms are not short. See lib/requirementExceptions.js.
+      if (isExcusedFrom(gymRules, gym, eventType, gymsList)) return;
       const requiredCount = monthlyRequirements[eventType];
       const currentCount = counts[gym]?.[eventType] || 0;
       if (currentCount < requiredCount) {

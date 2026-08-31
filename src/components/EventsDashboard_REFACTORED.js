@@ -53,7 +53,7 @@ const EventsDashboard = () => {
   // Destructure for cleaner JSX
   const {
     // Data
-    events, gymsList, eventTypes, setEventTypes, monthlyRequirements, setMonthlyRequirements, gymLinks,
+    events, gymsList, eventTypes, setEventTypes, monthlyRequirements, setMonthlyRequirements, gymLinks, gymRules,
     // Loading
     loading,
     // View state
@@ -410,6 +410,8 @@ const EventsDashboard = () => {
 
             <div>
           <MonthlyRequirementsTable
+            gymRules={gymRules}
+            gymsList={gymsList}
             currentMonth={currentMonth}
             currentYear={currentYear}
             onPreviousMonth={goToPreviousMonth}
