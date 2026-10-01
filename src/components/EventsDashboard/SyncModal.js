@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Loader, CheckCircle, XCircle } from 'lucide-react';
-import { eventsApi, syncLogApi, auditLogApi, rulesApi } from '../../lib/api';
+import { eventsApi, syncLogApi, auditLogApi, rulesApi, eventTypesApi } from '../../lib/api';
 import { isErrorAcknowledgedAnywhere, inferErrorCategory } from '../../lib/validationHelpers';
 import { compareEvents } from '../../lib/eventComparison';
 import { supabase } from '../../lib/supabase';
@@ -66,14 +66,22 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
     return date.toLocaleDateString();
   };
 
-  // Event types from your working script
-  const eventTypes = [
-    'KIDS NIGHT OUT',
-    'CLINIC',
-    'OPEN GYM',
-    'CAMP',
-    'SPECIAL EVENT'
-  ];
+  // The buckets the sync asks for come from the event_types table - the same
+  // list Jayme manages from the Admin Dashboard. Add a bucket there and the sync
+  // asks for it; nothing is typed in here. Each bucket is its own request.
+  const [typeRows, setTypeRows] = useState([]);
+  const [typesError, setTypesError] = useState(null);
+  useEffect(() => {
+    eventTypesApi.getAll()
+      .then(rows => {
+        setTypeRows(rows || []);
+        setTypesError((rows || []).length ? null : 'The bucket list (event_types) is empty.');
+      })
+      .catch(err => setTypesError(err.message));
+  }, []);
+  const eventTypes = typeRows.map(t => t.name);
+  // Short label for a bucket = its display name from the same table.
+  const typeLabel = (type) => typeRows.find(t => t.name === type)?.display_name || type;
 
   // Get events with validation issues from the sync results
   const getEventsWithValidationIssues = () => {
@@ -195,6 +203,10 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
   // to avoid Railway gateway timeouts
   // ==========================================
   const handleSyncAllGyms = async () => {
+    if (eventTypes.length === 0) {
+      alert(`Can't sync yet - the bucket list didn't load${typesError ? `: ${typesError}` : '.'}`);
+      return;
+    }
     abortRef.current = false;
     setSyncAllMode(true);
     setSyncAllComplete(false);
@@ -976,10 +988,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                     <th className="text-left py-2 px-2 font-bold text-purple-800 border border-purple-200 sticky left-0 bg-purple-100">Gym</th>
                     {eventTypes.map(type => (
                       <th key={type} className="text-center py-2 px-2 font-bold text-purple-800 border border-purple-200" style={{ minWidth: '70px' }}>
-                        {type === 'KIDS NIGHT OUT' ? 'KNO' : 
-                         type === 'OPEN GYM' ? 'OG' :
-                         type === 'SPECIAL EVENT' ? 'SE' :
-                         type}
+                        {typeLabel(type)}
                       </th>
                     ))}
                   </tr>
@@ -1097,10 +1106,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                     const current = syncAllProgress.gymResults[syncAllProgress.currentGymIndex];
                     if (!current) return 'Preparing...';
                     if (current.status === 'syncing') {
-                      const typeName = current.currentType === 'KIDS NIGHT OUT' ? 'KNO' :
-                        current.currentType === 'OPEN GYM' ? 'OG' :
-                        current.currentType === 'SPECIAL EVENT' ? 'SE' :
-                        current.currentType || '...';
+                      const typeName = (current.currentType ? typeLabel(current.currentType) : '...');
                       return `Collecting ${typeName} from ${current.gymName}... (${current.completedTypes || 0}/${eventTypes.length} types)`;
                     }
                     if (current.status === 'importing') return `Importing events for ${current.gymName}...`;
@@ -1143,10 +1149,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                   {(gym.status === 'syncing' || gym.status === 'importing') && (
                     <div className="flex gap-1 mt-1.5">
                       {eventTypes.map(type => {
-                        const shortName = type === 'KIDS NIGHT OUT' ? 'KNO' :
-                                          type === 'OPEN GYM' ? 'OG' :
-                                          type === 'SPECIAL EVENT' ? 'SE' :
-                                          type;
+                        const shortName = typeLabel(type);
                         const typeResult = gym.typeResults?.[type];
                         const isCurrent = gym.currentType === type;
                         return (
@@ -1178,10 +1181,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                       {gym.typeResults && Object.keys(gym.typeResults).length > 0 && (
                         <div className="flex gap-1 mt-1">
                           {Object.entries(gym.typeResults).map(([type, result]) => {
-                            const shortName = type === 'KIDS NIGHT OUT' ? 'KNO' :
-                                              type === 'OPEN GYM' ? 'OG' :
-                                              type === 'SPECIAL EVENT' ? 'SE' :
-                                              type;
+                            const shortName = typeLabel(type);
                             return (
                               <span key={type} className={`text-[10px] px-1 rounded ${
                                 result.status === 'error' ? 'bg-red-100 text-red-600' :
@@ -2026,9 +2026,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                   <div className="flex flex-wrap gap-1">
                     {eventTypes.map(type => {
                       const status = getSyncStatus(selectedGym, type);
-                      const shortType = type === 'KIDS NIGHT OUT' ? 'KNO' : 
-                                       type === 'OPEN GYM' ? 'OG' :
-                                       type === 'SPECIAL EVENT' ? 'SE' : type;
+                      const shortType = typeLabel(type);
                       return (
                         <span 
                           key={type}

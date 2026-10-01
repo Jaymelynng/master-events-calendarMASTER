@@ -427,27 +427,19 @@ def _collect_events_direct_api(gym_id, event_type_filter=None):
     for cat in categories:
         print(f"    {cat['title']} → typeId={cat['typeId']} → {cat['our_event_type']}")
 
-    # Filter categories if a specific event type was requested.
+    # Filter categories if a specific bucket was requested.
     #
-    # CAMP is special. In iClassPro EVERY one of these categories is a "camp" -
-    # clinics, kids night out, open gym, Music Muscles and More, Swim & Gym,
-    # before/after care. They all come off the same camps endpoint. The buckets
-    # in event_type_mappings are OUR names for them, not iClass's.
+    # In iClassPro EVERY one of these categories is a "camp" - clinics, kids
+    # night out, open gym, before/after care. The buckets are OUR names, and they
+    # live in the event_types table, not in this file.
     #
-    # So when the sync asks for CAMP it means "every camp category that is not
-    # already collected under its own name". Before this, CAMP matched only
-    # categories mapped to exactly 'CAMP', which silently dropped every event in
-    # a newer bucket: EAG's Music Muscles and More (SPECIALTY), PLG's Swim & Gym
-    # Extended Day and RC Cheer AM Extended (CAMP CARE), and anything landing in
-    # UNSORTED. They were discovered, printed, and then thrown away one line later.
-    SYNCED_SEPARATELY = {'CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM', 'SPECIAL EVENT'}
-
+    # A request for a bucket returns exactly the categories Jayme mapped to that
+    # bucket. The sync screen asks for every bucket in event_types (including the
+    # holding bucket for categories with no rule yet), so nothing is dropped and
+    # no list of bucket names is typed in here.
     if not collect_all:
         normalized_filter = EVENT_TYPE_ALIASES.get(event_type_filter, event_type_filter)
-        if normalized_filter == 'CAMP':
-            categories = [c for c in categories if c['our_event_type'] not in SYNCED_SEPARATELY]
-        else:
-            categories = [c for c in categories if c['our_event_type'] == normalized_filter]
+        categories = [c for c in categories if c['our_event_type'] == normalized_filter]
         if not categories:
             print(f"  [API] No categories match type '{event_type_filter}'")
             return []
@@ -522,16 +514,6 @@ def _collect_events_direct_api(gym_id, event_type_filter=None):
         return {'events': all_results, 'checked_types': checked_types}
     else:
         normalized_filter = EVENT_TYPE_ALIASES.get(event_type_filter, event_type_filter)
-        if normalized_filter == 'CAMP':
-            # CAMP collected several buckets above, so return all of them. Each
-            # event carries _our_event_type, so they still land in the right
-            # bucket. Returning only all_results['CAMP'] here is what dropped
-            # Music Muscles and More, Swim & Gym Extended Day and RC Cheer AM
-            # after they had already been fetched.
-            flat = []
-            for evs in all_results.values():
-                flat.extend(evs)
-            return flat
         return all_results.get(normalized_filter, [])
 
 
