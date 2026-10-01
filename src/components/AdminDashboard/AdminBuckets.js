@@ -51,6 +51,7 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
   const [selEvents, setSelEvents] = useState([]);
   const [scope, setScope] = useState('gym');  // 'gym' | 'all' — only for a new rule
   const [busy, setBusy] = useState(false);
+  const [openEvent, setOpenEvent] = useState(null); // the one event whose own bucket buttons are showing
   const [msg, setMsg] = useState(null);
   const [loadError, setLoadError] = useState(null);
 
@@ -364,7 +365,11 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
               ) : (
                 <div className="mt-3 p-3 rounded-xl" style={{ background: '#f6f1f1', border: `1px solid ${LINE}` }}>
                   <div className="flex items-center gap-2 flex-wrap mb-2">
-                    <span className="font-black" style={{ color: INK, fontSize: 16 }}>Train it — every event in this category goes to:</span>
+                    <span className="font-black" style={{ color: INK, fontSize: 16 }}>
+                      {currentRuleBucket
+                        ? `✓ Sorted. Every event in this category, now and in the future, goes to ${bucketLabel(currentRuleBucket)}. Click another bucket to change it.`
+                        : 'Pick the bucket for this whole category (covers future events too):'}
+                    </span>
                     {sel.kind === 'unsorted' && (
                       <span className="flex rounded-lg overflow-hidden ml-auto" style={{ border: `2px solid ${INK}` }}>
                         {[['gym', `Only ${sel.gymId}`], ['all', 'Every gym']].map(([v, label]) => (
@@ -398,7 +403,7 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
               )}
 
               <div className="mt-4 font-black" style={{ color: INK, fontSize: 16 }}>
-                Events in this category ({selEvents.length}) — or force just one:
+                Events in this category ({selEvents.length})
               </div>
               {selEvents.length === 0 && (
                 <div className="py-2" style={{ color: MUTED, fontSize: 15 }}>No events on the calendar in this category right now.</div>
@@ -410,6 +415,14 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
                     <span className="w-32 flex-shrink-0" style={{ color: MUTED }}>{fmtDate(ev)}</span>
                     <a href={ev.event_url} target="_blank" rel="noreferrer" className="flex-1 min-w-0 font-semibold underline" style={{ color: INK }}>{ev.title} ↗</a>
                     <Pill name={ev.type} />
+                    {forceReady && !ev.type_locked && (
+                      <button onClick={() => setOpenEvent(openEvent === ev.id ? null : ev.id)} disabled={busy}
+                        className="px-2.5 py-1 rounded-lg font-bold hover:brightness-90"
+                        style={{ background: openEvent === ev.id ? INK : '#e7dede', color: openEvent === ev.id ? '#fff' : INK, fontSize: 15, cursor: 'pointer', border: `1px solid ${ACCENT}` }}
+                        title="Put only this event in a different bucket than the rest of its category">
+                        {openEvent === ev.id ? 'Cancel' : 'Move only this one'}
+                      </button>
+                    )}
                     {ev.type_locked && (
                       <button onClick={() => unforce(ev)} disabled={busy}
                         className="px-2.5 py-1 rounded-lg font-bold hover:brightness-90" style={{ background: INK, color: '#fff', fontSize: 15, cursor: 'pointer' }}>
@@ -417,9 +430,9 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
                       </button>
                     )}
                   </div>
-                  {forceReady && !ev.type_locked && (
+                  {forceReady && !ev.type_locked && openEvent === ev.id && (
                     <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                      <span style={{ color: MUTED }}>Just this one →</span>
+                      <span style={{ color: MUTED }}>Only this event goes to →</span>
                       {buckets.map(b => (
                         <BucketButton key={b.name} b={b} small active={false} onClick={() => force(ev, b.name)} />
                       ))}
