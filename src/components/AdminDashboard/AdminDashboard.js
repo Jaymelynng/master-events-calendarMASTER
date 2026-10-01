@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AdminErrorsCenter from './AdminErrorsCenter';
 import AdminContacts from './AdminContacts';
+import AdminBuckets from './AdminBuckets';
 import AdminGymRules from './AdminGymRules';
 import AdminQuickActions from './AdminQuickActions';
 import AdminChangeHistory from './AdminChangeHistory';
@@ -539,6 +540,7 @@ export default function AdminDashboard({
 
   const tabs = [
     { id: 'audit', label: '🚨 Errors', alwaysShow: true },
+    { id: 'buckets', label: '🗂️ Buckets', alwaysShow: true },
     { id: 'rules', label: '📏 Gym Rules', alwaysShow: true },
     { id: 'contacts', label: '✉️ Contacts', alwaysShow: true },
     { id: 'history', label: '📜 Change History', alwaysShow: true },
@@ -673,6 +675,10 @@ export default function AdminDashboard({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         {activeTab === 'audit' && (
           <AdminErrorsCenter gyms={gyms} events={events} />
+        )}
+
+        {activeTab === 'buckets' && (
+          <AdminBuckets gyms={gyms} eventTypes={eventTypes} />
         )}
 
         {activeTab === 'rules' && (

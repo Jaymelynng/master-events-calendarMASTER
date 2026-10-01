@@ -197,7 +197,10 @@ _TYPE_MAPPINGS_CACHE = None
 def fetch_type_mappings():
     """Read event_type_mappings from Supabase.
 
-    Returns {lower(iclass_type_name): {'event_type': str, 'hide': bool}}.
+    Returns {lower(iclass_type_name): {scope: {'event_type': str, 'hide': bool}}}
+    where scope is a gym id (a rule Jayme made for ONE gym) or '*' (every gym).
+    Two gyms can use the same category name for different things, so a gym's
+    own rule always beats the every-gym rule - see resolve_type_mapping().
     Falls back to the hardcoded BOOKING_TITLE_TO_EVENT_TYPE if unreachable so a
     network blip can never silently re-categorise the whole calendar.
     """
@@ -207,19 +210,21 @@ def fetch_type_mappings():
 
     try:
         url = (f"{SUPABASE_URL}/rest/v1/event_type_mappings"
-               f"?is_active=eq.true&select=iclass_type_name,event_type,hide_from_calendar")
+               f"?is_active=eq.true&select=iclass_type_name,event_type,hide_from_calendar,gym_id")
         req = Request(url)
         req.add_header("apikey", SUPABASE_KEY)
         req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
         with urlopen(req, timeout=15) as response:
             rows = json.loads(response.read().decode())
-        mapping = {
-            (r.get('iclass_type_name') or '').strip().lower(): {
+        mapping = {}
+        for r in rows:
+            if not r.get('iclass_type_name'):
+                continue
+            name = r['iclass_type_name'].strip().lower()
+            mapping.setdefault(name, {})[r.get('gym_id') or '*'] = {
                 'event_type': r.get('event_type'),
                 'hide': bool(r.get('hide_from_calendar')),
             }
-            for r in rows if r.get('iclass_type_name')
-        }
         if mapping:
             print(f"  [MAP] Loaded {len(mapping)} camp-type mappings from the database")
             _TYPE_MAPPINGS_CACHE = mapping
@@ -229,10 +234,17 @@ def fetch_type_mappings():
         print(f"  [MAP] Could not read event_type_mappings ({e}) - using the built-in fallback list")
 
     _TYPE_MAPPINGS_CACHE = {
-        k.lower(): {'event_type': v, 'hide': False}
+        k.lower(): {'*': {'event_type': v, 'hide': False}}
         for k, v in BOOKING_TITLE_TO_EVENT_TYPE.items()
     }
     return _TYPE_MAPPINGS_CACHE
+
+
+def resolve_type_mapping(mappings, title, gym_id=None):
+    """The rule for one iClass category name at one gym: the gym's own rule if
+    Jayme made one, otherwise the every-gym rule, otherwise None (UNSORTED)."""
+    scopes = mappings.get((title or '').strip().lower()) or {}
+    return scopes.get(gym_id) or scopes.get('*')
 
 
 def _api_get(url, timeout=15):
@@ -262,7 +274,7 @@ def _get_location_id_api(slug):
     return None
 
 
-def _get_booking_categories(slug, location_id):
+def _get_booking_categories(slug, location_id, gym_id=None):
     """
     Discover all camp/event categories for a gym via the bookings endpoint.
     Returns list of {title, typeId, our_event_type}.
@@ -290,7 +302,7 @@ def _get_booking_categories(slug, location_id):
             continue
 
         title = item.get('title', '').strip()
-        rule = mappings.get(title.lower())
+        rule = resolve_type_mapping(mappings, title, gym_id)
 
         if rule and rule.get('hide'):
             # Jayme switched this category off from the mappings screen. Still
@@ -405,7 +417,7 @@ def _collect_events_direct_api(gym_id, event_type_filter=None):
 
     # Step 2: Discover categories automatically from bookings endpoint
     print(f"  [API] Step 2: Discovering categories...")
-    categories = _get_booking_categories(slug, location_id)
+    categories = _get_booking_categories(slug, location_id, gym_id)
     if not categories:
         print(f"  [API] ⚠️ No known categories found")
         if not collect_all:

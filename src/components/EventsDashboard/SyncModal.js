@@ -324,10 +324,14 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
 
         const existingEvents = await eventsApi.getAll(null, null, true);
         const checkedTypesSet = new Set(checkedTypes);
-        const gymExisting = existingEvents.filter(ev =>
-          ev.gym_id === gym.id && checkedTypesSet.has(ev.type)
-        );
-        const comp = compareEvents(allIncoming, gymExisting);
+        // Match against EVERY saved event for the gym (by link), so an event
+        // that moved buckets is updated instead of skipped as a duplicate.
+        const gymAllExisting = existingEvents.filter(ev => ev.gym_id === gym.id);
+        const gymExisting = gymAllExisting.filter(ev => checkedTypesSet.has(ev.type));
+        const comp = compareEvents(allIncoming, gymAllExisting, {
+          deletableTypes: checkedTypes,
+          fullSweep: checkedTypes.length === eventTypes.length
+        });
 
         // SAFETY CHECK: suspicious mass deletions
         const deletedCount = comp.deleted.length;
@@ -378,6 +382,8 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
               const ex = allExisting.find(e => e.event_url === changed.incoming.event_url);
               if (!ex) continue;
               await eventsApi.update(ex.id, {
+                // The bucket follows iClass's category - unless Jayme forced it.
+                ...(!ex.type_locked && changed.incoming.type ? { type: changed.incoming.type } : {}),
                 title: changed.incoming.title, date: changed.incoming.date,
                 start_date: changed.incoming.start_date, end_date: changed.incoming.end_date,
                 time: changed.incoming.time, price: changed.incoming.price,
@@ -559,13 +565,15 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
         try {
           const existingEvents = await eventsApi.getAll(null, null, true);
           const allCheckedTypes = new Set(data.checkedTypes || Object.keys(eventsByTypeMap));
-          const gymExistingEvents = existingEvents.filter(ev =>
-            ev.gym_id === selectedGym && allCheckedTypes.has(ev.type)
-          );
-          
+          // Every saved event for the gym - matched by link, whatever its bucket.
+          const gymExistingEvents = existingEvents.filter(ev => ev.gym_id === selectedGym);
+
           console.log('🔍 Comparison: incoming=', allEvents.length, 'existing=', gymExistingEvents.length, 'checkedTypes=', [...allCheckedTypes]);
-          
-          const comparisonResult = compareEvents(allEvents, gymExistingEvents);
+
+          const comparisonResult = compareEvents(allEvents, gymExistingEvents, {
+            deletableTypes: [...allCheckedTypes],
+            fullSweep: true
+          });
           setComparison(comparisonResult);
         } catch (err) {
           console.error('Error comparing events:', err);
@@ -602,14 +610,17 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
         // The sync may include past events that are already in the database
         try {
           const existingEvents = await eventsApi.getAll(null, null, true); // No date filter, include deleted
-          const gymExistingEvents = existingEvents.filter(
-            ev => ev.gym_id === selectedGym && ev.type === eventType
-          );
-          
+          // Every saved event for the gym - matched by link, whatever its bucket.
+          const gymExistingEvents = existingEvents.filter(ev => ev.gym_id === selectedGym);
+
           console.log('🔍 Comparison: incoming=', data.events.length, 'existing=', gymExistingEvents.length);
-          
-          // Compare new vs existing
-          const comparisonResult = compareEvents(data.events, gymExistingEvents);
+
+          // Compare new vs existing. Only this one bucket was checked, so only
+          // events saved in this bucket can be called deleted.
+          const comparisonResult = compareEvents(data.events, gymExistingEvents, {
+            deletableTypes: [eventType],
+            fullSweep: false
+          });
           setComparison(comparisonResult);
         } catch (err) {
           console.error('Error comparing events:', err);
@@ -739,6 +750,9 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
             if (existingEvent) {
               // Update with new data (but keep the database ID)
               await eventsApi.update(existingEvent.id, {
+                // The bucket follows iClass's category - unless Jayme forced it.
+                ...(!existingEvent.type_locked && changed.incoming.type ? { type: changed.incoming.type } : {}),
+                camp_type: changed.incoming.camp_type || null,
                 title: changed.incoming.title,
                 date: changed.incoming.date,
                 start_date: changed.incoming.start_date,
@@ -829,6 +843,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
               allow_choose_days: incomingEvent.allow_choose_days !== undefined ? incomingEvent.allow_choose_days : null,
               type_id: incomingEvent.type_id !== undefined ? incomingEvent.type_id : null,
               program_name: incomingEvent.program_name || null,
+              camp_type: incomingEvent.camp_type || null,
               daily_schedule: incomingEvent.daily_schedule !== undefined ? incomingEvent.daily_schedule : null,
               registration_start_date: incomingEvent.registration_start_date || null,
               registration_end_date: incomingEvent.registration_end_date || null

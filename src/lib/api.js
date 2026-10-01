@@ -1025,3 +1025,68 @@ export const eventTypeMappingsApi = {
     if (error) throw new Error(error.message);
   }
 };
+
+// ============================================================================
+// BUCKETS - the Admin "Buckets" screen (AdminBuckets.js).
+// Two ways Jayme decides where an event lands, both stored in the database:
+//   1. TRAIN a category: an event_type_mappings row (for one gym or every gym).
+//      Every event in that iClass category follows it, now and on every sync.
+//   2. FORCE one event: events.type_locked = true. The sync leaves its bucket
+//      alone no matter which iClass category the gym filed it under.
+// ============================================================================
+const pageAll = async (build) => {
+  // Supabase caps a read at 1,000 rows without saying so - always page.
+  const rows = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await build().range(from, from + 999);
+    if (error) throw new Error(error.message);
+    rows.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return rows;
+};
+
+export const bucketsApi = {
+  // Events waiting for a home.
+  async getUnsorted(unsortedName) {
+    return pageAll(() => supabase.from('events').select('*')
+      .eq('type', unsortedName).is('deleted_at', null).order('start_date'));
+  },
+
+  // Events Jayme forced into a bucket.
+  async getForced() {
+    return pageAll(() => supabase.from('events').select('*')
+      .eq('type_locked', true).is('deleted_at', null).order('start_date'));
+  },
+
+  // Every live event filed under one iClass category name. gymId null = every gym.
+  async getByCategory(categoryName, gymId = null) {
+    // ilike = same name in any capitals. Escape its wildcards so the name is
+    // matched exactly, never as a pattern.
+    const exact = (categoryName || '').replace(/[\\%_]/g, c => '\\' + c);
+    return pageAll(() => {
+      let q = supabase.from('events').select('*')
+        .ilike('camp_type', exact).is('deleted_at', null).order('start_date');
+      if (gymId) q = q.eq('gym_id', gymId);
+      return q;
+    });
+  },
+
+  // Move events to a bucket. locked: true = force, false = un-force,
+  // undefined = leave the lock as it is.
+  async moveEvents(events, bucket, locked, changedBy = 'Buckets screen') {
+    let moved = 0;
+    for (const ev of events) {
+      const updates = { type: bucket };
+      if (locked !== undefined) updates.type_locked = locked;
+      const { error } = await supabase.from('events').update(updates).eq('id', ev.id);
+      if (error) throw new Error(error.message);
+      if (ev.type !== bucket) {
+        await auditLogApi.log(ev.id, ev.gym_id, 'UPDATE', 'type', String(ev.type), String(bucket),
+          ev.title, ev.date, changedBy);
+      }
+      moved++;
+    }
+    return moved;
+  }
+};

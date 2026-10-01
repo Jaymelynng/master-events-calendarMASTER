@@ -15,7 +15,20 @@
  * - Past events naturally disappear from the portal after they occur
  * - We should NOT mark past events as deleted just because they're not in the sync
  */
-export function compareEvents(newEvents, existingEvents) {
+export function compareEvents(newEvents, existingEvents, options = {}) {
+  // existingEvents is EVERY saved event for the gym, whatever bucket it sits in.
+  // An event is matched by its link, so one that a gym moved to a different
+  // iClass category (or that Jayme re-bucketed) is still found and updated
+  // instead of being mistaken for a brand-new event and skipped.
+  //
+  // options.deletableTypes - only saved events in these buckets may be flagged
+  //   "deleted". A sync that only looked at clinics can't know a camp is gone.
+  // options.fullSweep - true when the sync covered every category at the gym.
+  //   An event Jayme forced into a bucket can come from any category, so only a
+  //   full sweep can tell that it is really gone.
+  const deletableTypes = options.deletableTypes ? new Set(options.deletableTypes) : null;
+  const fullSweep = !!options.fullSweep;
+
   // DEBUG: Log what we're comparing
   console.log('🔍 compareEvents called:');
   console.log('  - newEvents count:', (newEvents || []).length);
@@ -74,6 +87,11 @@ export function compareEvents(newEvents, existingEvents) {
       if (existing.deleted_at) {
         return; // Already dealt with, move on
       }
+
+      // This sync didn't look at the bucket this event sits in - say nothing.
+      if (deletableTypes && !deletableTypes.has(existing.type)) return;
+      // A forced event is only "gone" if the whole gym was just checked.
+      if (existing.type_locked && !fullSweep) return;
 
       // ONLY mark as deleted if the event HASN'T STARTED YET
       // - iClassPro removes events once they START (not when they end)
@@ -149,8 +167,10 @@ function hasEventChanged(existing, incoming) {
   ];
 
   const changes = [];
-  
+
   for (const field of fieldsToCompare) {
+    // Jayme forced this event's bucket - iClass's category no longer decides it.
+    if (field === 'type' && existing.type_locked) continue;
     const existingValue = normalizeValue(existing[field], field);
     const incomingValue = normalizeValue(incoming[field], field);
 
@@ -192,6 +212,7 @@ function getChangedFields(existing, incoming) {
   const changes = [];
 
   for (const field of fieldsToCompare) {
+    if (field === 'type' && existing.type_locked) continue;
     const existingValue = normalizeValue(existing[field], field);
     const incomingValue = normalizeValue(incoming[field], field);
 
