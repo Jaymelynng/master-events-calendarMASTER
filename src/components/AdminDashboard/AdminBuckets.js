@@ -11,7 +11,11 @@
 // The bucket list itself comes from the event_types table.
 // ============================================================================
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { eventTypeMappingsApi, bucketsApi } from '../../lib/api';
+import { eventTypeMappingsApi, bucketsApi, appConfigApi } from '../../lib/api';
+
+// The app_config row that says which gyms' iClass APPOINTMENTS the sync also
+// collects (APPOINTMENT_GYMS_KEY in automation/f12_collect_and_import.py).
+const APPOINTMENT_GYMS_KEY = 'sync_appointments_gyms';
 
 // The holding bucket the sync uses for a category with no rule
 // (UNMAPPED_EVENT_TYPE in automation/f12_collect_and_import.py).
@@ -54,6 +58,29 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
   const [openEvent, setOpenEvent] = useState(null); // the one event whose own bucket buttons are showing
   const [msg, setMsg] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [apptGyms, setApptGyms] = useState([]); // gym ids whose appointments get pulled
+
+  useEffect(() => {
+    appConfigApi.getAll()
+      .then(cfg => setApptGyms((cfg[APPOINTMENT_GYMS_KEY] || '').split(',').map(g => g.trim()).filter(Boolean)))
+      .catch(() => {});
+  }, []);
+
+  const toggleApptGym = async (gymId) => {
+    const next = apptGyms.includes(gymId) ? apptGyms.filter(g => g !== gymId) : [...apptGyms, gymId].sort();
+    setBusy(true);
+    try {
+      await appConfigApi.set(APPOINTMENT_GYMS_KEY, next.join(','));
+      setApptGyms(next);
+      setMsg({ bad: false, text: next.includes(gymId)
+        ? `${gymId}: appointments will be pulled on the next sync. They show up here to be sorted like any other category.`
+        : `${gymId}: appointments switched off. The next full sync removes its upcoming appointment events from the calendar.` });
+    } catch (e) {
+      setMsg({ bad: true, text: `Could not save: ${e.message}` });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const buckets = useMemo(
     () => (eventTypes || []).filter(t => t.name !== UNSORTED),
@@ -276,6 +303,23 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
           {msg.text}
         </div>
       )}
+
+      {/* Appointments switch - per gym, on or off */}
+      <div className="mb-3 px-3 py-2 rounded-xl flex items-center gap-2 flex-wrap" style={{ background: '#ffffff', border: `1px solid ${LINE}` }}>
+        <span className="font-black" style={{ color: INK, fontSize: 15 }}>Also pull iClass appointments for:</span>
+        {[...gyms].sort((a, b) => (a.id || '').localeCompare(b.id || '')).map(g => {
+          const on = apptGyms.includes(g.id);
+          return (
+            <button key={g.id} onClick={() => toggleApptGym(g.id)} disabled={busy}
+              className="px-2.5 py-1 rounded-lg font-black hover:brightness-90 hover:shadow-md"
+              style={{ background: on ? '#15803d' : '#e7dede', color: on ? '#ffffff' : INK, fontSize: 15, cursor: 'pointer', border: `1px solid ${on ? '#15803d' : ACCENT}` }}
+              title={on ? `${g.name}: appointments are being pulled - click to switch off` : `${g.name}: click to also pull its appointments`}>
+              {on ? '✓ ' : ''}{g.id}
+            </button>
+          );
+        })}
+        <span style={{ color: MUTED, fontSize: 15 }}>For a gym that runs Kids Night Out or Open Gym as appointments. Off for everyone else.</span>
+      </div>
 
       <div className="flex gap-4 items-start">
         {/* LEFT — what needs a home, what is trained, what is forced */}

@@ -247,6 +247,91 @@ def resolve_type_mapping(mappings, title, gym_id=None):
     return scopes.get(gym_id) or scopes.get('*')
 
 
+# ----------------------------------------------------------------------------
+# APPOINTMENTS - some gyms file Kids Night Out / Open Gym as iClass
+# "appointments" instead of events. They are only collected for the gyms Jayme
+# switched on (Admin > Buckets). The switch is a row in app_config:
+#   key = 'sync_appointments_gyms', value = comma-separated gym ids.
+# Nothing is collected for a gym that is not in that list.
+# ----------------------------------------------------------------------------
+APPOINTMENT_GYMS_KEY = 'sync_appointments_gyms'
+_APPOINTMENT_GYMS_CACHE = None
+
+
+def fetch_appointment_gyms():
+    """Gym ids whose appointments Jayme switched on. Empty set if unreachable -
+    an appointment is never collected on a guess."""
+    global _APPOINTMENT_GYMS_CACHE
+    if _APPOINTMENT_GYMS_CACHE is not None:
+        return _APPOINTMENT_GYMS_CACHE
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/app_config?key=eq.{APPOINTMENT_GYMS_KEY}&select=value"
+        req = Request(url)
+        req.add_header("apikey", SUPABASE_KEY)
+        req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
+        with urlopen(req, timeout=15) as response:
+            rows = json.loads(response.read().decode())
+        value = (rows[0].get('value') if rows else '') or ''
+        _APPOINTMENT_GYMS_CACHE = {g.strip() for g in value.split(',') if g.strip()}
+    except Exception as e:
+        print(f"  [APPT] Could not read {APPOINTMENT_GYMS_KEY} ({e}) - no appointments collected")
+        return set()
+    return _APPOINTMENT_GYMS_CACHE
+
+
+def _clock_12h(value):
+    """'18:00:00' -> '6:00 PM' (the format the camps endpoint already uses)."""
+    try:
+        hh, mm = str(value).split(':')[:2]
+        h = int(hh)
+        return f"{h % 12 or 12}:{mm} {'AM' if h < 12 else 'PM'}"
+    except Exception:
+        return value
+
+
+def _get_appointment_listing_api(slug, location_id, service_id, limit=24):
+    """All appointments in one service. The list already carries the full
+    record (description, schedule, openings) - there is no detail call."""
+    rows, page, total = [], 1, None
+    while True:
+        url = (f"{ICLASSPRO_API_BASE}/{slug}/appointments"
+               f"?locationId={location_id}&serviceId={service_id}&limit={limit}&page={page}")
+        result = _api_get(url)
+        if not result or not result.get('data'):
+            break
+        rows.extend(result['data'])
+        total = result.get('totalRecords', len(rows))
+        if len(rows) >= total:
+            break
+        page += 1
+        time.sleep(0.2)
+    return rows, total or len(rows)
+
+
+def _appointment_to_event_shape(appt, slug, service_id):
+    """Re-shape one appointment so the rest of the sync reads it like an event.
+    Only fields iClass actually sent are filled; anything it did not send is
+    left out, never defaulted."""
+    ev = dict(appt)
+    # An appointment id and an event id can be the same number - keep them apart.
+    ev['id'] = f"appt-{appt.get('id')}"
+    ev['_event_url'] = (f"https://portal.iclasspro.com/{slug}/appointment-details/"
+                        f"{appt.get('id')}?serviceId={service_id}")
+    slots = []
+    for slot_in in (appt.get('schedule') or []):
+        slot = dict(slot_in)
+        slot['startTime'] = _clock_12h(slot_in.get('startTime'))
+        slot['endTime'] = _clock_12h(slot_in.get('endTime'))
+        slots.append(slot)
+    ev['schedule'] = slots
+    # Spots left is per timeslot. With exactly one timeslot it is that number;
+    # with several there is no single answer, so it stays unknown.
+    if len(slots) == 1 and slots[0].get('openings') is not None:
+        ev['openings'] = slots[0]['openings']
+        ev['hasOpenings'] = slots[0]['openings'] > 0
+    return ev
+
+
 def _api_get(url, timeout=15):
     """Make a GET request to iClassPro public API. Returns parsed JSON or None."""
     try:
@@ -292,13 +377,23 @@ def _get_booking_categories(slug, location_id, gym_id=None):
         return []
 
     mappings = fetch_type_mappings()
+    appointments_on = gym_id in fetch_appointment_gyms()
     categories = []
     for item in result['data']:
-        if item.get('target') != 'camps':
-            continue
-        params = item.get('targetParams', {})
-        type_id = params.get('typeId')
-        if type_id is None:
+        target = item.get('target')
+        params = item.get('targetParams') or {}
+        if target == 'appointments':
+            # Only for gyms Jayme switched on, and only when iClass names the service.
+            if not appointments_on or params.get('serviceId') is None:
+                continue
+            type_id = None
+            extra = {'kind': 'appointments', 'serviceId': params.get('serviceId')}
+        elif target == 'camps':
+            type_id = params.get('typeId')
+            if type_id is None:
+                continue
+            extra = {}
+        else:
             continue
 
         title = item.get('title', '').strip()
@@ -314,6 +409,7 @@ def _get_booking_categories(slug, location_id, gym_id=None):
                 'title': title,
                 'typeId': type_id,
                 'our_event_type': rule['event_type'],
+                **extra,
             })
         else:
             # No row in event_type_mappings for this title. Capture it as
@@ -326,6 +422,7 @@ def _get_booking_categories(slug, location_id, gym_id=None):
                 'title': title,
                 'typeId': type_id,
                 'our_event_type': UNMAPPED_EVENT_TYPE,
+                **extra,
             })
 
     return categories
@@ -455,6 +552,25 @@ def _collect_events_direct_api(gym_id, event_type_filter=None):
         cat_title = cat['title']
         type_id = cat['typeId']
         our_type = cat['our_event_type']
+
+        if cat.get('kind') == 'appointments':
+            service_id = cat['serviceId']
+            print(f"\n  [API] Step 3: Listing APPOINTMENTS for '{cat_title}' (serviceId={service_id})...")
+            appts, total_records = _get_appointment_listing_api(slug, location_id, service_id)
+            print(f"  [API] Found {len(appts)} appointments (totalRecords={total_records})")
+            if our_type not in all_results:
+                all_results[our_type] = []
+            for appt in appts:
+                if appt.get('id') is None:
+                    continue
+                ev = _appointment_to_event_shape(appt, slug, service_id)
+                if ev['id'] in global_seen_ids:
+                    continue
+                ev['campTypeTitle'] = cat_title
+                ev['_our_event_type'] = our_type
+                global_seen_ids.add(ev['id'])
+                all_results[our_type].append(ev)
+            continue
 
         print(f"\n  [API] Step 3: Listing events for '{cat_title}' (typeId={type_id})...")
         events_list, total_records = _get_event_listing_api(slug, location_id, type_id)
@@ -1403,7 +1519,8 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             continue
         
         # 3) build URL from ID (your source of truth)
-        event_url = f"https://portal.iclasspro.com/{portal_slug}/camp-details/{event_id}"
+        # Appointments carry their own link (a different portal page).
+        event_url = ev.get('_event_url') or f"https://portal.iclasspro.com/{portal_slug}/camp-details/{event_id}"
         
         # 4) time from schedule (None if no schedule data — skips time validation)
         # iClass returns the schedule blocks in a NON-chronological order and
