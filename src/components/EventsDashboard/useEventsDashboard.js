@@ -24,7 +24,14 @@ export default function useEventsDashboard() {
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [selectedGym, setSelectedGym] = useState('all');
+  // Which gyms show on the calendar. Empty = every gym. Holds gym NAMES.
+  const [selectedGyms, setSelectedGyms] = useState([]);
+  // Older callers still say "one gym or 'all'" - keep that working.
+  const selectedGym = selectedGyms.length === 1 ? selectedGyms[0] : 'all';
+  const setSelectedGym = useCallback(
+    (value) => setSelectedGyms(!value || value === 'all' ? [] : [value]),
+    []
+  );
   const [selectedEventType, setSelectedEventType] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('calendar');
@@ -172,6 +179,14 @@ export default function useEventsDashboard() {
     [gymsList]
   );
 
+  // The gym rows the calendar draws: only the picked gyms, or all of them.
+  const visibleGyms = useMemo(() =>
+    selectedGyms.length === 0
+      ? allGymsFromList
+      : allGymsFromList.filter(name => selectedGyms.includes(name)),
+    [allGymsFromList, selectedGyms]
+  );
+
   // Unique gyms that have events this month
   const uniqueGymsWithEvents = useMemo(() =>
     [...new Set(events.map(e => e.gym_name || e.gym_code))].filter(Boolean),
@@ -187,15 +202,15 @@ export default function useEventsDashboard() {
   // Filtered events based on selections
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
-      const matchesGym = selectedGym === 'all' ||
-        (event.gym_name || event.gym_code) === selectedGym;
+      const matchesGym = selectedGyms.length === 0 ||
+        selectedGyms.includes(event.gym_name || event.gym_code);
       const matchesType = selectedEventType === 'all' ||
         (event.type || event.event_type) === selectedEventType;
       const matchesSearch = !searchTerm ||
         (event.title || '').toLowerCase().includes(searchTerm.toLowerCase());
       return matchesGym && matchesType && matchesSearch;
     });
-  }, [events, selectedGym, selectedEventType, searchTerm]);
+  }, [events, selectedGyms, selectedEventType, searchTerm]);
 
   // ==================== HELPER FUNCTIONS ====================
 
@@ -556,6 +571,9 @@ export default function useEventsDashboard() {
     // Filters
     selectedGym,
     setSelectedGym,
+    selectedGyms,
+    setSelectedGyms,
+    visibleGyms,
     selectedEventType,
     setSelectedEventType,
     searchTerm,

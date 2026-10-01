@@ -3,7 +3,7 @@
 // ============================================================================
 import React from 'react';
 import { ChevronLeft, ChevronRight, Search, List, Grid, Plus } from 'lucide-react';
-import { theme, getEventTypeColor } from './constants';
+import { theme, gymColors, getEventTypeColor } from './constants';
 
 // Long bucket names get a short chip label; everything else shows as-is.
 const CHIP_LABELS = { 'KIDS NIGHT OUT': 'KNO' };
@@ -18,8 +18,8 @@ export default function CalendarControls({
   onCalendarViewChange,
   viewMode,
   onViewModeToggle,
-  selectedGym,
-  onGymChange,
+  selectedGyms = [],
+  onGymsChange,
   selectedEventType,
   onEventTypeChange,
   searchTerm,
@@ -29,6 +29,15 @@ export default function CalendarControls({
   eventTypes = [],
   onAddEvent
 }) {
+  // No gym picked means every gym is showing.
+  const allPicked = selectedGyms.length === 0;
+  const toggleGym = (name) => {
+    const next = selectedGyms.includes(name)
+      ? selectedGyms.filter(n => n !== name)
+      : [...selectedGyms, name];
+    // Picking every gym one by one is the same as "all".
+    onGymsChange(next.length === gymsList.length ? [] : next);
+  };
   // Every bucket that exists, ordered: the scored ones first, then the rest.
   // Falls back to whatever types the loaded events actually have, so the row is
   // never empty even before event_types loads.
@@ -86,22 +95,63 @@ export default function CalendarControls({
         </button>
       </div>
 
+      {/* Gym picker - every gym's logo in one row. Click any number of them;
+          only those gyms show on the calendar, and the type chips, search and
+          view buttons below all act on that same set. None picked = all gyms. */}
+      <div className="flex justify-center items-start gap-1.5 flex-wrap mb-3">
+        <button
+          onClick={() => onGymsChange([])}
+          className="flex flex-col items-center justify-center rounded-xl px-2 py-1.5 transition-all hover:shadow-md"
+          style={{
+            cursor: 'pointer', minWidth: 60, height: 76,
+            backgroundColor: allPicked ? theme.colors.primary : '#ffffff',
+            color: allPicked ? '#ffffff' : '#2b2224',
+            border: `2px solid ${theme.colors.primary}`,
+          }}
+          title="Show every gym"
+        >
+          <span className="font-black" style={{ fontSize: 16 }}>ALL</span>
+          <span className="font-bold" style={{ fontSize: 15 }}>{gymsList.length}</span>
+        </button>
+        {[...gymsList].sort((a, b) => (a.id || '').localeCompare(b.id || '')).map(gym => {
+          const picked = selectedGyms.includes(gym.name);
+          const dim = !allPicked && !picked;
+          return (
+            <button
+              key={gym.id}
+              onClick={() => toggleGym(gym.name)}
+              className="flex flex-col items-center justify-center rounded-xl px-1.5 py-1.5 transition-all hover:shadow-md"
+              style={{
+                cursor: 'pointer', minWidth: 60, height: 76,
+                backgroundColor: picked ? theme.colors.secondary : '#ffffff',
+                border: `2px solid ${picked ? theme.colors.primary : '#e5dcdc'}`,
+                boxShadow: picked ? '0 2px 8px rgba(140, 100, 100, 0.35)' : 'none',
+              }}
+              title={picked ? `${gym.name} - click to remove` : `${gym.name} - click to show`}
+            >
+              {gym.logo_url ? (
+                <img
+                  src={gym.logo_url}
+                  alt=""
+                  className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
+                  style={{ opacity: dim ? 0.35 : 1, filter: dim ? 'grayscale(1)' : 'none' }}
+                />
+              ) : (
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                  style={{ backgroundColor: gymColors[gym.id] || theme.colors.accent, opacity: dim ? 0.35 : 1, fontSize: 15 }}
+                >
+                  {(gym.id || '').substring(0, 2)}
+                </div>
+              )}
+              <span className="font-black" style={{ fontSize: 15, color: '#2b2224' }}>{gym.id}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* All Controls in One Row */}
       <div className="flex justify-center items-end gap-3 mb-2">
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-2">Gym:</label>
-          <select
-            value={selectedGym}
-            onChange={(e) => onGymChange(e.target.value)}
-            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-300 focus:border-pink-400 bg-white shadow-sm min-w-[140px]"
-          >
-            <option value="all">All Gyms</option>
-            {gymsList.map(gym => (
-              <option key={gym.id} value={gym.name}>{gym.name}</option>
-            ))}
-          </select>
-        </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-600 mb-2">Category:</label>
           <select

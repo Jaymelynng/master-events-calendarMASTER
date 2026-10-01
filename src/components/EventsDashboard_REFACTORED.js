@@ -60,7 +60,7 @@ const EventsDashboard = () => {
     currentMonth, currentYear, calendarView, viewMode, displayDates,
     setCalendarView, setViewMode, errorFocus, setErrorFocus,
     // Filters
-    selectedGym, setSelectedGym, selectedEventType, setSelectedEventType,
+    selectedGym, setSelectedGym, selectedGyms, setSelectedGyms, visibleGyms, selectedEventType, setSelectedEventType,
     searchTerm, setSearchTerm,
     // Computed
     allGyms, allGymsFromList, uniqueGymsWithEvents, eventTypesFromEvents, filteredEvents,
@@ -439,8 +439,8 @@ const EventsDashboard = () => {
             onCalendarViewChange={handleCalendarViewChange}
             viewMode={viewMode}
             onViewModeToggle={() => setViewMode(viewMode === 'calendar' ? 'table' : 'calendar')}
-            selectedGym={selectedGym}
-            onGymChange={setSelectedGym}
+            selectedGyms={selectedGyms}
+            onGymsChange={setSelectedGyms}
             selectedEventType={selectedEventType}
             onEventTypeChange={setSelectedEventType}
             searchTerm={searchTerm}
@@ -476,7 +476,7 @@ const EventsDashboard = () => {
               {/* Calendar Grid */}
               <CalendarGrid
                 displayDates={displayDates}
-                allGymsFromList={allGymsFromList}
+                allGymsFromList={visibleGyms}
                 gymsList={gymsList}
                 filteredEvents={filteredEvents}
                 eventTypes={eventTypes}
