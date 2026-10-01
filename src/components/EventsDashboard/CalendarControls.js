@@ -148,6 +148,21 @@ export default function CalendarControls({
             </button>
           );
         })}
+        {/* One click un-picks every gym. Only shows while gyms are picked. */}
+        {!allPicked && (
+          <button
+            onClick={() => onGymsChange([])}
+            className="flex flex-col items-center justify-center rounded-xl px-3 py-1.5 transition-all hover:brightness-90 hover:shadow-md"
+            style={{
+              cursor: 'pointer', minWidth: 76, height: 76,
+              backgroundColor: '#b91c1c', color: '#ffffff', border: '2px solid #b91c1c',
+            }}
+            title="Un-pick every gym and show them all"
+          >
+            <span className="font-black" style={{ fontSize: 16 }}>✕ CLEAR</span>
+            <span className="font-bold" style={{ fontSize: 15 }}>{selectedGyms.length} picked</span>
+          </button>
+        )}
       </div>
 
       {/* All Controls in One Row */}
