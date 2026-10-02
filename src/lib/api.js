@@ -1072,6 +1072,15 @@ export const bucketsApi = {
     });
   },
 
+  // Every event that hasn't ended yet, with just the fields the bulk opener
+  // needs to count gyms per bucket and build each category's portal page.
+  async getUpcoming() {
+    const today = new Date().toISOString().split('T')[0];
+    return pageAll(() => supabase.from('events')
+      .select('gym_id, type, type_id, event_url, end_date')
+      .is('deleted_at', null).gte('end_date', today).order('id'));
+  },
+
   // Move events to a bucket. locked: true = force, false = un-force,
   // undefined = leave the lock as it is.
   async moveEvents(events, bucket, locked, changedBy = 'Buckets screen') {

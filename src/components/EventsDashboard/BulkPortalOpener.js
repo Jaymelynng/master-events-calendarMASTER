@@ -37,7 +37,8 @@
 // there and its chip appears; nothing is listed in this file.
 // ============================================================================
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { bucketsApi } from '../../lib/api';
 
 // Decoration only (an emoji and a friendlier plural). A bucket missing from
 // here still gets a chip - it just shows its own name and no emoji.
@@ -76,17 +77,28 @@ export default function BulkPortalOpener({
   events = [],
   eventTypes = [],
 }) {
-  // How many gyms have something in this bucket in the month on screen, and
-  // which live category pages those events sit in.
-  // Deliberately NOT filtered to "today forward": `events` is already scoped to
-  // the month being viewed, so filtering again collapsed every count to 1-2 on
-  // the 28th. The chip answers "for this month, who has one of these".
-  //
-  // A chip with nothing behind it does not render at all - which is why Summer
-  // folds away in September and comes back on its own in May.
+  // The chips cover EVERY upcoming event, not only the month on screen. A gym
+  // whose first camp is next month still has a camp page worth opening today
+  // (2026-10-01: Eagle's and Metro's school-year camps start in November, so
+  // in October the Camps chip left both out). Re-read whenever the page's own
+  // events change, e.g. after a sync. Until it loads, or if it fails, the
+  // month's events stand in.
+  const [upcoming, setUpcoming] = useState(null);
+  useEffect(() => {
+    let live = true;
+    bucketsApi.getUpcoming()
+      .then(rows => { if (live) setUpcoming(rows); })
+      .catch(() => { if (live) setUpcoming(null); });
+    return () => { live = false; };
+  }, [events.length]);
+  const source = upcoming || events;
+
+  // How many gyms have something coming up in this bucket, and which live
+  // category pages those events sit in.
+  // A chip with nothing behind it does not render at all.
   const chips = useMemo(() => {
     const byBucket = {};
-    events.forEach(e => {
+    source.forEach(e => {
       const bucket = (e.type || e.event_type || '').toUpperCase();
       if (!bucket || !e.gym_id) return;
       if (!byBucket[bucket]) byBucket[bucket] = { gyms: new Set(), urls: new Set(), noLink: 0 };
@@ -119,7 +131,7 @@ export default function BulkPortalOpener({
           noLink: byBucket[name].noLink,
         };
       });
-  }, [events, eventTypes]);
+  }, [source, eventTypes]);
 
   const bookingCount = useMemo(
     () => new Set(gymLinks.filter(gl => gl.link_type_id === 'booking').map(gl => gl.gym_id)).size,
@@ -206,7 +218,7 @@ export default function BulkPortalOpener({
       </div>
 
       <p className="mt-2 text-center text-[11px]" style={{ color: '#8b7f85' }}>
-        Opens each gym’s live iClass page for that category — allow pop-ups. Counts are gyms with one on the calendar this month.
+        Opens each gym’s live iClass page for that category — allow pop-ups. Counts are gyms with one coming up.
       </p>
     </div>
   );
