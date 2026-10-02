@@ -242,7 +242,7 @@ const EventsDashboard = () => {
               if (ri && dismissModalState.gymId) {
                 const temporary = duration.isPermanent === false;
                 const isProgramSynonym = ri.ruleType === 'program_synonym';
-                const ruleTypeMap = { price: 'valid_price', time: 'valid_time', program_synonym: 'program_synonym' };
+                const ruleTypeMap = { time: 'valid_time', program_synonym: 'program_synonym' };
                 try {
                   await rulesApi.create({
                     is_permanent: !temporary,

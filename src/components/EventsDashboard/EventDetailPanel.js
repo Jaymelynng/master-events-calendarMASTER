@@ -2,7 +2,7 @@
 // EVENT DETAIL PANEL - Slide-out panel showing full event details
 // ============================================================================
 import React, { useState, useEffect } from 'react';
-import { MapPin, Calendar, Clock, DollarSign, Users, Copy, CheckCircle } from 'lucide-react';
+import { MapPin, Calendar, Clock, Users, Copy, CheckCircle } from 'lucide-react';
 import { theme, getEventTypeColor, getErrorLabel } from './constants';
 import { parseYmdLocal, formatTime, formatTimeShort, parseCampOptionFromTitle } from './utils';
 import { isErrorAcknowledgedAnywhere, inferErrorCategory, canAddAsRule, extractRuleValue } from '../../lib/validationHelpers';
@@ -183,15 +183,8 @@ export default function EventDetailPanel({
           </div>
 
           <div className="flex items-start gap-3">
-            <DollarSign className="w-5 h-5 text-gray-400 mt-0.5" />
             <div>
-              <div className="font-semibold text-xs text-gray-500 uppercase mb-1">Price</div>
-              {event.price ? (
-                <div className="font-bold text-lg" style={{ color: theme.colors.primary }}>${event.price}</div>
-              ) : (
-                <div className="text-sm text-gray-500 italic">Price not in event details</div>
-              )}
-              {/* Camp signup mode — inline tag under price (only for CAMPs that have data) */}
+              {/* Camp signup mode (only for CAMPs that have data) */}
               {event.type === 'CAMP' && event.allow_choose_days != null && (
                 <div className="mt-1">
                   {event.allow_choose_days ? (
@@ -689,7 +682,7 @@ function RegistrationOptions({ event, copiedUrl, onCopyUrl, onEditEvent }) {
                   <span className="flex-1">
                     <span className="block font-semibold">{label}</span>
                     <span className="block text-xs opacity-90 mt-0.5">
-                      {formatTimeShort(option.time)} {option.price && `• $${option.price}`}
+                      {formatTimeShort(option.time)}
                     </span>
                   </span>
                   <span className="text-sm flex-shrink-0">→</span>

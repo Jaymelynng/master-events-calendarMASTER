@@ -25,7 +25,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
   const [campSeason, setCampSeason] = useState(prefill.camp_season || null);
   const [scope, setScope] = useState(prefill.scope || 'all_events');
   const [keyword, setKeyword] = useState(prefill.keyword || '');
-  const [ruleType, setRuleType] = useState(prefill.rule_type || 'valid_price');
+  const [ruleType, setRuleType] = useState(prefill.rule_type || 'valid_time');
   const [value, setValue] = useState(prefill.value || '');
   // Valid Time can hold SEVERAL times in one rule (e.g. before + after care).
   // Stored as a comma-joined string; edited here as a list of inputs.
@@ -48,8 +48,6 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
   const reqPrograms = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'];
   
   const ruleTypes = [
-    { value: 'valid_price', label: 'Valid Price', desc: 'This price is correct for this program' },
-    { value: 'sibling_price', label: 'Sibling Pricing', desc: 'Different prices per kid (1st, 2nd, 3rd)' },
     { value: 'valid_time', label: 'Valid Time', desc: 'This time is correct (e.g., before care at 8:30 AM)' },
     { value: 'program_synonym', label: 'Program Name', desc: 'This name means a specific program (e.g., "Gym Fun Friday" = KNO)' },
     { value: 'program_ignore', label: 'Ignore Keyword', desc: 'A keyword that mentions another program but should NOT trigger a mismatch (e.g., "open gym" inside a KNO description as a station)' },
@@ -113,8 +111,6 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
       keyword: scope === 'keyword' ? keyword : null,
       rule_type: ruleType,
       value: isTimeRule() ? joinedTimes() : value,
-      value_kid2: ruleType === 'sibling_price' ? valueKid2 : null,
-      value_kid3: ruleType === 'sibling_price' ? valueKid3 : null,
       label,
       note: note || null,
     });
@@ -151,7 +147,7 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
               onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = 'rgba(107,142,107,0.15)'; }}
             >
               <div className="font-bold text-gray-800 text-base">Validation Rule</div>
-              <div className="text-sm text-gray-500 mt-1">Set a valid price, time, or program name to prevent false errors</div>
+              <div className="text-sm text-gray-500 mt-1">Set a valid time or program name to prevent false errors</div>
               <div className="text-xs text-gray-400 mt-2 italic">Example: Homeschool Open Gym at EST is $10, before care at RBA is 8:30 AM</div>
             </button>
           </div>
@@ -412,19 +408,6 @@ export default function RuleWizard({ gyms, onSave, onCancel, prefill = {} }) {
             </div>
             <div className="text-xs text-gray-500 mb-4">{ruleTypes.find(r => r.value === ruleType)?.desc}</div>
 
-            {(ruleType === 'valid_price' || ruleType === 'price') && (
-              <div>
-                <label className="text-sm text-gray-600 block mb-1">Valid price (Kid 1):</label>
-                <input type="text" value={value} onChange={e => setValue(e.target.value)} placeholder="e.g., 10" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" autoFocus />
-              </div>
-            )}
-            {ruleType === 'sibling_price' && (
-              <div className="space-y-3">
-                <div><label className="text-sm text-gray-600 block mb-1">Kid 1 price:</label><input type="text" value={value} onChange={e => setValue(e.target.value)} placeholder="e.g., 40" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" autoFocus /></div>
-                <div><label className="text-sm text-gray-600 block mb-1">Kid 2 price:</label><input type="text" value={valueKid2} onChange={e => setValueKid2(e.target.value)} placeholder="e.g., 35" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" /></div>
-                <div><label className="text-sm text-gray-600 block mb-1">Kid 3 price:</label><input type="text" value={valueKid3} onChange={e => setValueKid3(e.target.value)} placeholder="e.g., 35" className="px-3 py-2 border border-gray-300 rounded-lg w-full text-sm" /></div>
-              </div>
-            )}
             {(ruleType === 'valid_time' || ruleType === 'time') && (
               <div>
                 <label className="text-sm text-gray-600 block mb-1">Allowed time(s):</label>

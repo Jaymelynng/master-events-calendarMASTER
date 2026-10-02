@@ -8,7 +8,6 @@ const makeEvent = (overrides = {}) => ({
   start_date: '2099-06-15',
   end_date: '2099-06-15',
   time: '6:00 PM - 8:00 PM',
-  price: 40,
   type: 'CLINIC',
   age_min: 5,
   age_max: 12,
@@ -53,13 +52,6 @@ describe('compareEvents', () => {
       expect(result.unchanged).toHaveLength(1);
     });
 
-    test('treats price 0 and null as equivalent', () => {
-      const incoming = makeEvent({ price: 0 });
-      const existing = makeEvent({ price: null });
-      const result = compareEvents([incoming], [existing]);
-      expect(result.unchanged).toHaveLength(1);
-    });
-
     test('normalizes date with time component', () => {
       const incoming = makeEvent({ date: '2099-06-15' });
       const existing = makeEvent({ date: '2099-06-15T00:00:00' });
@@ -77,13 +69,6 @@ describe('compareEvents', () => {
       expect(result.changed[0]._status).toBe('changed');
     });
 
-    test('detects price change', () => {
-      const existing = makeEvent({ price: 40 });
-      const incoming = makeEvent({ price: 45 });
-      const result = compareEvents([incoming], [existing]);
-      expect(result.changed).toHaveLength(1);
-    });
-
     test('detects time change', () => {
       const existing = makeEvent({ time: '6:00 PM - 8:00 PM' });
       const incoming = makeEvent({ time: '7:00 PM - 9:00 PM' });
@@ -92,14 +77,14 @@ describe('compareEvents', () => {
     });
 
     test('reports which fields changed', () => {
-      const existing = makeEvent({ title: 'Old', price: 40 });
-      const incoming = makeEvent({ title: 'New', price: 50 });
+      const existing = makeEvent({ title: 'Old', time: '6:00 PM - 8:00 PM' });
+      const incoming = makeEvent({ title: 'New', time: '7:00 PM - 9:00 PM' });
       const result = compareEvents([incoming], [existing]);
       const changes = result.changed[0]._changes;
       expect(changes).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ field: 'title' }),
-          expect.objectContaining({ field: 'price' }),
+          expect.objectContaining({ field: 'time' }),
         ])
       );
     });

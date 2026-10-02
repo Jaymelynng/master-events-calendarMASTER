@@ -43,8 +43,8 @@ export const inferErrorCategory = (error) => {
 
   const dataErrorTypes = [
     'year_mismatch', 'date_mismatch', 'time_mismatch', 'age_mismatch',
-    'day_mismatch', 'program_mismatch', 'skill_mismatch', 'price_mismatch',
-    'title_desc_mismatch', 'camp_price_mismatch', 'event_price_mismatch'
+    'day_mismatch', 'program_mismatch', 'skill_mismatch',
+    'title_desc_mismatch'
   ];
 
   const statusErrorTypes = ['registration_closed', 'registration_not_open', 'sold_out'];
@@ -56,17 +56,13 @@ export const inferErrorCategory = (error) => {
 
 // Check if an error type supports "Add as Rule"
 export const canAddAsRule = (errorType) => {
-  return errorType === 'camp_price_mismatch' || errorType === 'event_price_mismatch' ||
-         errorType === 'time_mismatch' ||
+  return errorType === 'time_mismatch' ||
          errorType === 'program_mismatch' || errorType === 'missing_program_in_title';
 };
 
-// Extract rule value from an error object (price, time, or program synonym)
+// Extract rule value from an error object (time or program synonym)
 export const extractRuleValue = (errorObj, event = null) => {
-  if (errorObj.type === 'camp_price_mismatch' || errorObj.type === 'event_price_mismatch') {
-    const priceMatch = errorObj.message.match(/\$(\d+(?:\.\d{2})?)/);
-    return priceMatch ? { ruleType: 'price', value: priceMatch[1] } : null;
-  } else if (errorObj.type === 'time_mismatch') {
+  if (errorObj.type === 'time_mismatch') {
     const timeMatch = errorObj.message.match(/(?:description|title) says (\d{1,2}(?::\d{2})?\s*(?:am|pm|a|p))/i);
     return timeMatch ? { ruleType: 'time', value: timeMatch[1].trim() } : null;
   } else if (errorObj.type === 'program_mismatch' || errorObj.type === 'missing_program_in_title') {
@@ -163,9 +159,6 @@ export const getErrorLabel = (type) => {
     'program_mismatch': '🏷️ Program Mismatch',
     'missing_program_in_title': '🏷️ Missing Program in Title',
     'skill_mismatch': '⭐ Skill Mismatch',
-    'price_mismatch': '💰 Price Mismatch',
-    'camp_price_mismatch': '💰 Camp Price Mismatch',
-    'event_price_mismatch': '💰 Event Price Mismatch',
     'title_desc_mismatch': '📝 Title/Description Mismatch',
     'camp_type_not_offered': '🏕️ Camp Type Not Offered',
     'registration_closed': '🔒 Registration Closed',
@@ -175,58 +168,16 @@ export const getErrorLabel = (type) => {
 };
 
 // Error type filter groups for audit page
-const PRICE_TYPES = ['price_mismatch', 'camp_price_mismatch', 'event_price_mismatch'];
 const TIME_TYPES = ['time_mismatch'];
 const AGE_TYPES = ['age_mismatch'];
 const DATE_TYPES = ['date_mismatch', 'day_mismatch', 'year_mismatch'];
 const PROGRAM_TYPES = ['program_mismatch', 'missing_program_in_title'];
-// Check if an error matches the error type filter + hidePrices toggle
-export const matchesErrorTypeFilter = (errorType, filterValue, hidePrices = false) => {
-  // Always hide prices when toggle is on
-  if (hidePrices && PRICE_TYPES.includes(errorType)) return false;
-
+// Check if an error matches the error type filter
+export const matchesErrorTypeFilter = (errorType, filterValue) => {
   if (filterValue === 'all') return true;
-  if (filterValue === 'price') return PRICE_TYPES.includes(errorType);
   if (filterValue === 'time') return TIME_TYPES.includes(errorType);
   if (filterValue === 'age') return AGE_TYPES.includes(errorType);
   if (filterValue === 'date') return DATE_TYPES.includes(errorType);
   if (filterValue === 'program') return PROGRAM_TYPES.includes(errorType);
   return true;
-};
-
-// Parse price details from an error message for the "Update Price" button
-// Returns: { foundPrice, validPrices, eventType, gymId } or null
-export const parsePriceErrorDetails = (errorObj, event) => {
-  if (!errorObj || !errorObj.message) return null;
-  const msg = errorObj.message;
-
-  if (errorObj.type === 'event_price_mismatch') {
-    // "KIDS NIGHT OUT price $40 doesn't match expected price for HGA. Valid: $45"
-    const match = msg.match(/price \$(\d+(?:\.\d{2})?)\s+doesn't match.*?for (\w+)\.\s*Valid:\s*(.+)/);
-    if (match) {
-      return {
-        foundPrice: match[1],
-        gymId: match[2],
-        validPrices: match[3].split(',').map(s => s.trim().replace('$', '')),
-        eventType: event?.type || '',
-        errorType: 'event_price_mismatch',
-      };
-    }
-  }
-
-  if (errorObj.type === 'camp_price_mismatch') {
-    // "Camp price $360 doesn't match any valid price for HGA. Valid: Full Day Daily $90, Full Day Weekly $400"
-    const match = msg.match(/Camp price \$(\d+(?:\.\d{2})?)\s+doesn't match.*?for (\w+)\.\s*Valid:\s*(.+)/);
-    if (match) {
-      return {
-        foundPrice: match[1],
-        gymId: match[2],
-        validPricesRaw: match[3],
-        eventType: 'CAMP',
-        errorType: 'camp_price_mismatch',
-      };
-    }
-  }
-
-  return null;
 };

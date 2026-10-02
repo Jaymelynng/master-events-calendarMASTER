@@ -392,7 +392,7 @@ export default function AdminErrorsCenter({ gyms, events }) {
       setAckOverride(o => ({ ...o, [eventId]: updated }));
       if (ruleInfo && gymId) {
         const isProgramSynonym = ruleInfo.ruleType === 'program_synonym';
-        const ruleTypeMap = { price: 'valid_price', time: 'valid_time', program_synonym: 'program_synonym' };
+        const ruleTypeMap = { time: 'valid_time', program_synonym: 'program_synonym' };
         await rulesApi.create({
           is_permanent: !temporary,
           start_date: temporary ? duration.startDate : null,
@@ -699,7 +699,6 @@ export default function AdminErrorsCenter({ gyms, events }) {
               </div>
               <div className="text-xs mt-1 mb-3" style={{ color: '#9a8b8b' }}>
                 {selectedEvent.type || selectedEvent.event_type || 'EVENT'} · {fmtDate(selectedEvent.start_date || selectedEvent.date)}
-                {selectedEvent.price ? ` · $${selectedEvent.price}` : ''}
               </div>
 
               {selectedEvent.event_url && (

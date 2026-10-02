@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from validation_engine import ValidationContext, run_validation
 
 
-# ── Pricing + rules data fetched from Supabase on 2026-04-26 ─────────────
+# ── Rules data fetched from Supabase on 2026-04-26 ─────────────
 ACTIVE_CHECKS = [
     {"id": "83dca8d5-ce10-4658-b805-39494f56dcad", "rule_type": "check_date_mismatch",       "gym_ids": ["ALL"], "program": "ALL"},
     {"id": "7a72c653-abc1-4ee2-9caa-4b580266eaba", "rule_type": "check_year_mismatch",       "gym_ids": ["ALL"], "program": "ALL"},
@@ -22,50 +22,19 @@ ACTIVE_CHECKS = [
     {"id": "33dda81c-d0e2-4dbe-83e2-32d2488a0561", "rule_type": "check_program_mismatch",    "gym_ids": ["ALL"], "program": "ALL"},
     {"id": "87185cf9-8b00-4748-aff8-e307d82cf6da", "rule_type": "check_title_desc_mismatch", "gym_ids": ["ALL"], "program": "ALL"},
     {"id": "e4239e01-398c-4a71-9826-de5385ad565c", "rule_type": "check_impossible_date",    "gym_ids": ["ALL"], "program": "ALL"},
-    {"id": "7258d3d0-21c7-435f-a0c6-db8cf5516cdc", "rule_type": "check_price_mismatch",      "gym_ids": ["ALL"], "program": "ALL"},
     {"id": "1f9851ed-0701-41a5-b4c1-e8a3ff37b276", "rule_type": "check_day_mismatch",        "gym_ids": ["ALL"], "program": "ALL"},
-    {"id": "78ab7c23-112c-4bd6-9444-c2ec587dd77e", "rule_type": "check_camp_price",          "gym_ids": ["ALL"], "program": "CAMP"},
-    {"id": "6ca35f5a-9421-4b05-897e-c17d4c66cd3f", "rule_type": "check_event_price",         "gym_ids": ["ALL"], "program": "ALL"},
 ]
 
-CAMP_PRICING = {
-    "CCP": {"full_day_daily": 75, "full_day_weekly": 345, "half_day_daily": 65,  "half_day_weekly": 270},
-    "CPF": {"full_day_daily": 70, "full_day_weekly": 315, "half_day_daily": 60,  "half_day_weekly": 240},
-    "CRR": {"full_day_daily": 70, "full_day_weekly": 315, "half_day_daily": 60,  "half_day_weekly": 240},
-    "RBA": {"full_day_daily": 62, "full_day_weekly": 250, "half_day_daily": None,"half_day_weekly": None},
-    "RBK": {"full_day_daily": 62, "full_day_weekly": 250, "half_day_daily": None,"half_day_weekly": None},
-    "HGA": {"full_day_daily": 90, "full_day_weekly": 400, "half_day_daily": None,"half_day_weekly": None},
-    "EST": {"full_day_daily": 65, "full_day_weekly": 270, "half_day_daily": 50,  "half_day_weekly": 205},
-    "OAS": {"full_day_daily": 70, "full_day_weekly": 315, "half_day_daily": 60,  "half_day_weekly": 240},
-    "SGT": {"full_day_daily": 90, "full_day_weekly": 390, "half_day_daily": 70,  "half_day_weekly": 315},
-    "TIG": {"full_day_daily": 80, "full_day_weekly": 335, "half_day_daily": None,"half_day_weekly": None},
-}
 
-EVENT_PRICING = {
-    "CCP": {"CLINIC": [35], "KIDS NIGHT OUT": [40], "OPEN GYM": [10]},
-    "RBK": {"OPEN GYM": [15], "KIDS NIGHT OUT": [40], "CLINIC": [30]},
-    "SGT": {"KIDS NIGHT OUT": [45], "CLINIC": [30], "OPEN GYM": [30]},
-    "CPF": {"CLINIC": [30], "OPEN GYM": [10], "KIDS NIGHT OUT": [40]},
-    "OAS": {"OPEN GYM": [20], "KIDS NIGHT OUT": [45], "CLINIC": [30]},
-    "EST": {"KIDS NIGHT OUT": [40], "OPEN GYM": [35], "CLINIC": [30]},
-    "HGA": {"KIDS NIGHT OUT": [45], "CLINIC": [30], "OPEN GYM": [20]},
-    "CRR": {"CLINIC": [30], "KIDS NIGHT OUT": [40], "OPEN GYM": [10]},
-    "RBA": {"OPEN GYM": [20], "KIDS NIGHT OUT": [40], "CLINIC": [30]},
-    "TIG": {"OPEN GYM": [20], "CLINIC": [30], "KIDS NIGHT OUT": [40]},
-}
 
 
 def get_rules_for_gym(gym_id, event_type):
-    # rules table only has check_* rules right now (no user-created price/time/synonym rules yet)
+    # rules table only has check_* rules right now (no user-created time/synonym rules yet)
     return {}
 
 
-def get_camp_pricing():
-    return CAMP_PRICING
 
 
-def get_event_pricing():
-    return EVENT_PRICING
 
 
 def sql_escape(s):
@@ -103,8 +72,6 @@ def main(events_json_path):
             age_min=ev.get("age_min"),
             day_of_week=ev.get("day_of_week"),
             get_rules_for_gym_fn=get_rules_for_gym,
-            get_camp_pricing_fn=get_camp_pricing,
-            get_event_pricing_fn=get_event_pricing,
         )
         errors, _hits = run_validation(ctx, ACTIVE_CHECKS)
         if errors:

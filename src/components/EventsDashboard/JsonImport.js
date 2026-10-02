@@ -17,12 +17,6 @@ export const parseIClassProJSON = (jsonString, gymSlug) => {
       // Build the portal URL
       const eventUrl = `https://portal.iclasspro.com/${gymSlug}/camp-details/${event.id}`;
       
-      // Extract price from name if present
-      let price = null;
-      const priceMatch = event.name.match(/\$(\d+)/);
-      if (priceMatch) {
-        price = parseInt(priceMatch[1]);
-      }
       
       return {
         title: event.name,
@@ -31,7 +25,6 @@ export const parseIClassProJSON = (jsonString, gymSlug) => {
         type: data.campTypeName || 'KIDS NIGHT OUT',
         age_min: event.minAge,
         age_max: event.maxAge,
-        price: price,
         event_url: eventUrl,
         hasOpenings: event.hasOpenings
       };

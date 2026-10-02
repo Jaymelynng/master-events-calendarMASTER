@@ -24,7 +24,6 @@ from datetime import datetime, date
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 from validation_engine import ValidationContext, run_validation
-from pricing_supabase import get_active_event_prices_for_validation, build_event_pricing_for_today
 
 # Playwright is optional — only needed if USE_DIRECT_API=false
 try:
@@ -607,13 +606,6 @@ def _collect_events_direct_api(gym_id, event_type_filter=None):
                 all_results[our_type].append(detail)
                 # Log same debug info as Playwright version for consistency
                 print(f"      [RAW API] minAge={detail.get('minAge')}, maxAge={detail.get('maxAge')}")
-                price_fields = [k for k in detail.keys() if any(
-                    w in k.lower() for w in ['price', 'fee', 'cost', 'amount', 'rate', 'tuition']
-                )]
-                if price_fields:
-                    print(f"      [RAW API] PRICE FIELDS: {price_fields}")
-                    for pk in price_fields:
-                        print(f"        - {pk}: {detail.get(pk)}")
                 # Log all keys on first event per type to see full API response structure
                 if len(all_results[our_type]) == 1:
                     print(f"      [RAW API] ALL FIELDS IN API RESPONSE: {list(detail.keys())}")
@@ -640,64 +632,15 @@ def _collect_events_direct_api(gym_id, event_type_filter=None):
 # Requires: pip install playwright && playwright install chromium
 
 # ============================================================================
-# PRICING: Source of truth — Supabase camp_pricing + event_pricing + rules
-# See docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md
+# PRICING - REMOVED 2026-10-02 (Jayme's decision).
+# The sync no longer sets, guesses or checks a price. There is no verified
+# source to compare prices against yet, and the old code filled a price from
+# a lookup table and, failing that, from the first dollar amount in the
+# title or description. Do not re-add any of it without her explicit go.
+# What was removed is recorded in database/REMOVED_PRICING_2026_10_02.sql.
 # ============================================================================
 
-CAMP_PRICING_CACHE = None
-
-
-def fetch_camp_pricing_from_db():
-    """Load camp_pricing rows from Supabase. Returns { gym_id: { full_day_daily, ... } }."""
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/camp_pricing?select=gym_id,full_day_daily,full_day_weekly,half_day_daily,half_day_weekly"
-        req = Request(url)
-        req.add_header("apikey", SUPABASE_KEY)
-        req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
-        with urlopen(req) as response:
-            rows = json.loads(response.read().decode())
-        out = {}
-        for row in rows:
-            gid = row.get('gym_id')
-            if not gid:
-                continue
-            out[gid] = {
-                'full_day_daily': row.get('full_day_daily'),
-                'full_day_weekly': row.get('full_day_weekly'),
-                'half_day_daily': row.get('half_day_daily'),
-                'half_day_weekly': row.get('half_day_weekly'),
-            }
-        print(f"[INFO] Loaded camp_pricing for {len(out)} gyms from Supabase")
-        return out
-    except Exception as e:
-        print(f"[WARN] Could not fetch camp_pricing: {e}")
-        return {}
-
-
-def get_camp_pricing():
-    """Cached camp pricing by gym (camp_pricing table). Values are numeric or None."""
-    global CAMP_PRICING_CACHE
-    if CAMP_PRICING_CACHE is None:
-        raw = fetch_camp_pricing_from_db()
-        CAMP_PRICING_CACHE = {}
-        for gid, cols in raw.items():
-            CAMP_PRICING_CACHE[gid] = {
-                'full_day_daily': str(cols['full_day_daily']) if cols.get('full_day_daily') is not None else None,
-                'full_day_weekly': str(cols['full_day_weekly']) if cols.get('full_day_weekly') is not None else None,
-                'half_day_daily': str(cols['half_day_daily']) if cols.get('half_day_daily') is not None else None,
-                'half_day_weekly': str(cols['half_day_weekly']) if cols.get('half_day_weekly') is not None else None,
-            }
-    return CAMP_PRICING_CACHE
-
-
-def get_event_pricing():
-    """
-    Build { gym_id: { event_type: [prices] } } using **today** for effective_date / end_date window.
-    Per-event validation uses get_active_event_prices_for_validation(..., event_start_date) from pricing_supabase.
-    """
-    return build_event_pricing_for_today()
-
-# Per-gym validation rules (extra prices, times, synonyms) from unified `rules` table
+# Per-gym validation rules (times, synonyms) from unified `rules` table
 RULES_CACHE = None
 GYM_VALID_VALUES = None  # Backward-compat alias — do not use in new code
 
@@ -705,15 +648,13 @@ def fetch_rules():
     """Fetch validation rules from Supabase `rules` table (unified rules system).
     Filters to active rules only (permanent, or temporary with end_date >= today).
     Maps new rule_type names to legacy names used by validation code:
-      valid_price -> price, valid_time -> time, program_synonym -> program_synonym
+      valid_time -> time, program_synonym -> program_synonym
     Returns dict grouped by gym_id and rule_type:
-    { 'RBA': { 'price': [{'value': '20', 'label': 'Before Care'}], 'time': [...] } }
+    { 'RBA': { 'time': [{'value': '8:30 AM', 'label': 'Before Care'}], ... } }
     """
     # Map rules table rule_types to the legacy names used throughout validation code
     RULE_TYPE_MAP = {
-        'valid_price': 'price',
         'valid_time': 'time',
-        'sibling_price': 'price',       # sibling prices are still valid prices
         'program_synonym': 'program_synonym',
         'program_ignore': 'program_ignore',  # suppresses program-mismatch flags for a keyword in a given event_type
         # 'exception' and 'requirement_exception' are NOT used for validation — skip them
@@ -1146,12 +1087,6 @@ async def _collect_events_from_url(gym_id, url):
             print(f"    [CAPTURED] Event {event_id}: {data.get('name', 'Unknown')[:50]}...")
             # DEBUG: Log age fields immediately when captured
             print(f"      [RAW API] minAge={data.get('minAge')}, maxAge={data.get('maxAge')}")
-            # DEBUG: Log ALL fields to find price-related data
-            price_related = [k for k in data.keys() if any(word in k.lower() for word in ['price', 'fee', 'cost', 'amount', 'rate', 'tuition', 'charge'])]
-            if price_related:
-                print(f"      [RAW API] PRICE FIELDS FOUND: {price_related}")
-                for pk in price_related:
-                    print(f"        - {pk}: {data.get(pk)}")
             # Log all keys on first event to see full API response structure
             if len(captured_events) == 1:
                 print(f"      [RAW API] ALL FIELDS IN API RESPONSE: {list(data.keys())}")
@@ -1241,12 +1176,10 @@ async def collect_events_via_f12(gym_id, camp_type):
         For single type: list of raw event dicts
         For "ALL": {'events': {event_type: [events...]}, 'checked_types': [...]}
     """
-    # Reset all pricing/rules caches so fresh data is always used
-    global RULES_CACHE, GYM_VALID_VALUES, EVENT_PRICING, CAMP_PRICING
+    # Reset the rules cache so fresh data is always used
+    global RULES_CACHE, GYM_VALID_VALUES
     RULES_CACHE = None
     GYM_VALID_VALUES = None
-    EVENT_PRICING = None
-    CAMP_PRICING = None
 
     if gym_id not in GYMS:
         print(f"Unknown gym ID: {gym_id}")
@@ -1502,8 +1435,6 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         # camps display the bookend (e.g. 5/25) instead of the real first day
         # (e.g. 5/26), which has propagated wrong dates to customer-facing
         # outputs (the calendar UI and Email Composer).
-        # Pricing logic below intentionally still uses the bookend dates for
-        # weekly-vs-daily distinction — that semantic doesn't change.
         blocks = ev.get("blocks") or []
         if blocks:
             block_dates = sorted({(b.get("sqlDate") or "")[:10] for b in blocks if b.get("sqlDate")})
@@ -1583,65 +1514,6 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         # 5) title
         title = (ev.get("name") or "Untitled Event").strip()
         title = " ".join(title.split())
-        
-        # Get price from SOURCE OF TRUTH (camp_pricing / event_pricing tables)
-        # NOT from regex parsing of title/description
-        price = None
-        event_type_upper = camp_type_label.upper()
-
-        # For CAMP events, get price from camp_pricing table
-        if event_type_upper == 'CAMP':
-            camp_pricing = get_camp_pricing()
-            if gym_id in camp_pricing:
-                gym_prices = camp_pricing[gym_id]
-
-                # Use ONLY iClassPro API data - NOT title/description text
-                program_name = (ev.get("programName") or "").lower()
-                camp_start = ev.get("startDate") or ""
-                camp_end = ev.get("endDate") or ""
-
-                # Half day vs Full day: ONLY from programName (iClassPro API field)
-                is_half_day = 'half day' in program_name or 'half-day' in program_name
-
-                # Weekly vs Daily: Based on startDate vs endDate (iClassPro API fields)
-                # If camp spans multiple days = weekly, single day = daily
-                is_weekly = camp_start != camp_end and camp_start and camp_end
-
-                if is_half_day:
-                    if is_weekly and gym_prices.get('half_day_weekly'):
-                        price = gym_prices['half_day_weekly']
-                    elif gym_prices.get('half_day_daily'):
-                        price = gym_prices['half_day_daily']
-                else:  # Full day
-                    if is_weekly and gym_prices.get('full_day_weekly'):
-                        price = gym_prices['full_day_weekly']
-                    elif gym_prices.get('full_day_daily'):
-                        price = gym_prices['full_day_daily']
-
-                if price:
-                    print(f"    [PRICE] Source of truth: ${price} ({'half' if is_half_day else 'full'} day, {'weekly' if is_weekly else 'daily'}) [program: {ev.get('programName', 'N/A')}, dates: {camp_start} to {camp_end}]")
-
-        # For non-CAMP events, get price from event_pricing table
-        elif event_type_upper in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']:
-            valid_prices = get_active_event_prices_for_validation(gym_id, event_type_upper, start_date)
-            if valid_prices:
-                price = valid_prices[0]
-                print(f"    [PRICE] Using source of truth: ${price} ({event_type_upper})")
-
-        # Fallback: extract from title/description only if no source of truth price found
-        if price is None:
-            price_match = re.search(r'\$(\d+(?:\.\d{2})?)', title)
-            if price_match:
-                price = float(price_match.group(1))
-                print(f"    [PRICE] Fallback - extracted from title: ${price}")
-            else:
-                # Try description if available
-                description_html = ev.get('description', '')
-                if description_html:
-                    price_match = re.search(r'\$(\d+(?:\.\d{2})?)', description_html)
-                    if price_match:
-                        price = float(price_match.group(1))
-                        print(f"    [PRICE] Fallback - extracted from description: ${price}")
         
         # Calculate day_of_week from start_date
         try:
@@ -1793,9 +1665,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
                 age_min=age_min,
                 age_max=age_max,
                 day_of_week=day_of_week,
-                get_rules_for_gym_fn=get_rules_for_gym,
-                get_camp_pricing_fn=get_camp_pricing,
-                get_event_pricing_fn=get_event_pricing
+                get_rules_for_gym_fn=get_rules_for_gym
             )
             validation_errors, per_event_hits = run_validation(ctx, active_checks)
             # Accumulate hit counts across this batch so we can write them
@@ -1845,7 +1715,6 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "start_date": start_date,
             "end_date": end_date,
             "time": time_str,
-            "price": price,
             # Prefer the bucket the category actually maps to. Falls back to
             # the requested label for the single-type syncs (CLINIC, KNO, ...).
             "type": ev.get('_our_event_type') or camp_type_label,
@@ -1859,7 +1728,7 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
             "flyer_url": flyer_url,
             "description_status": description_status,
             "validation_errors": validation_errors,
-            # iClassPro camp fields for pricing schedule matching
+            # iClassPro category fields
             "type_id": ev.get("typeId"),
             "allow_choose_days": ev.get("allowChooseDays"),
             "program_name": ev.get("programName"),

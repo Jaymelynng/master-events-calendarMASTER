@@ -97,10 +97,10 @@
 
 ### Pricing
 - **⚠️ PRICE VALIDATION REMOVED July 1, 2026 (Jayme's decision)** — the 3 pricing checks (`check_camp_price`, `check_event_price`, `check_price_mismatch`) are deleted from the `rules` table and stored pricing errors were stripped. Too many weird situations; Jayme is exploring an authenticated-backend connection before rebuilding. Do NOT re-add pricing validation without her explicit go. Restore path: `database/REMOVED_PRICING_VALIDATION_2026_07_01.sql`. Full context: `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md`.
+- **⛔ ALL PRICING REMOVED October 2, 2026 (Jayme's decision) — this supersedes the "display only" setup.** The calendar no longer sets, shows, exports, or checks a price anywhere. Reason, in her words: it is not verified as correct and there is no system yet to compare prices. `events.price` is NULL on every event, the last price check (`check_price_mismatch`) is deleted, the sync (`f12_collect_and_import.py`) has no price code, the engine has no price checks, and the app has no price column, field, filter, or rule type. **Do NOT re-add any price display, lookup, title/description price parsing, or price validation without her explicit go.** Record + backup: `database/REMOVED_PRICING_2026_10_02.sql`, `database/backups/REMOVED_PRICING_2026_10_02_backup.json`. Guard test: `automation/test_validation_fixtures.py`.
 - iClass API does NOT provide prices
-- **Camp prices:** `camp_pricing` table — still used by sync to SET the displayed price on events (display only, no validation)
-- **Other prices:** `event_pricing` table with `effective_date` support — same, display only
-- **Pricing admin tab REMOVED July 2, 2026 (Jayme's ask)** — `AdminPricing.js` deleted (recoverable from git). Edit prices directly in Supabase if a base price changes.
+- `camp_pricing` and `event_pricing` tables still exist with their rows, but **nothing reads them** as of October 2, 2026.
+- **Pricing admin tab REMOVED July 2, 2026 (Jayme's ask)** — `AdminPricing.js` deleted (recoverable from git).
 - **April backend-discovery data** (`pricing_schedules`, `camp_type_mappings`) lives in the `archive` schema, out of `public`
 - **Raw pricing data:** `data/gym-pricing-raw/` has iClassPro enterprise pricing for EST + CCP (all 10 gyms collected)
 

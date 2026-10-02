@@ -115,11 +115,7 @@ export const errorTypeLabels = {
   'day_mismatch': '📅 Day of Week Mismatch',
   'program_mismatch': '🏷️ Program Type Mismatch',
   'skill_mismatch': '🎯 Skill Mismatch',
-  'price_mismatch': '💰 Price Mismatch',
   'title_desc_mismatch': '📋 Title vs Description Conflict',
-  // Camp pricing validation
-  'camp_price_mismatch': '💰 Camp Price Mismatch',
-  'event_price_mismatch': '💰 Event Price Mismatch',
   'camp_type_not_offered': '🏕️ Camp Type Not Offered',
   // Registration/availability (info, not errors)
   'registration_closed': '🔒 Registration Closed',

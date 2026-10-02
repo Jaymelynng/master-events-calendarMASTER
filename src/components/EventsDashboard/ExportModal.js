@@ -88,43 +88,17 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [syncLog, setSyncLog] = useState([]);
   const [loadingSyncLog, setLoadingSyncLog] = useState(false);
-  const [campPricing, setCampPricing] = useState({});
 
   // Quick preset selected
   const [activePreset, setActivePreset] = useState(null);
 
   const eventTypes = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM', 'CAMP', 'SPECIAL EVENT'];
 
-  // Fetch events and camp pricing when date range changes
+  // Fetch events when date range changes
   useEffect(() => {
     fetchEventsForDateRange();
-    fetchCampPricing();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
-
-  const fetchCampPricing = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('camp_pricing')
-        .select('*');
-
-      if (error) throw error;
-
-      // Convert to lookup by gym_id
-      const pricingByGym = {};
-      (data || []).forEach(row => {
-        pricingByGym[row.gym_id] = {
-          full_day_daily: row.full_day_daily,
-          full_day_weekly: row.full_day_weekly,
-          half_day_daily: row.half_day_daily,
-          half_day_weekly: row.half_day_weekly
-        };
-      });
-      setCampPricing(pricingByGym);
-    } catch (err) {
-      console.error('Error fetching camp pricing:', err);
-    }
-  };
 
   // Fetch sync log when needed
   useEffect(() => {
@@ -456,7 +430,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     // Events section
     if (includeEvents && filteredEvents.length > 0) {
       csvContent += `EVENTS - ${monthName}\n`;
-      csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Daily Schedule,Full Day Daily,Full Day Weekly,Half Day Daily,Half Day Weekly,Ages,Description,Description Status,Has Openings,Spots Left,Openings Display,Signup Mode,iClass Program,Type ID,URL\n';
+      csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Daily Schedule,Ages,Description,Description Status,Has Openings,Spots Left,Openings Display,Signup Mode,iClass Program,Type ID,URL\n';
       filteredEvents.forEach(event => {
         const gym = gyms.find(g => g.id === event.gym_id);
         // Use explicit null/undefined checks so age_min = 0 (infants) is
@@ -467,17 +441,6 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         const ageDisplay = hasMin && hasMax
           ? `"Ages ${event.age_min}-${event.age_max}"`
           : (hasMin ? `"Ages ${event.age_min}+"` : '');
-
-        let fdDaily = '', fdWeekly = '', hdDaily = '', hdWeekly = '';
-        if (event.type === 'CAMP' && campPricing[event.gym_id]) {
-          const pricing = campPricing[event.gym_id];
-          fdDaily = pricing.full_day_daily ? `$${pricing.full_day_daily}` : '';
-          fdWeekly = pricing.full_day_weekly ? `$${pricing.full_day_weekly}` : '';
-          hdDaily = pricing.half_day_daily ? `$${pricing.half_day_daily}` : '';
-          hdWeekly = pricing.half_day_weekly ? `$${pricing.half_day_weekly}` : '';
-        } else if (event.price) {
-          fdDaily = `$${event.price}`;
-        }
 
         const startDate = (event.start_date || event.date || '').split('T')[0];
         const endDate = (event.end_date || event.start_date || event.date || '').split('T')[0];
@@ -500,10 +463,6 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
                 return `${label} ${hrs}${dur}`.trim();
               }).join(' | ').replace(/"/g, '""')}"`
             : '',
-          fdDaily,
-          fdWeekly,
-          hdDaily,
-          hdWeekly,
           ageDisplay,
           event.description
             ? `"${event.description.replace(/\r?\n/g, ' ').replace(/"/g, '""').trim()}"`

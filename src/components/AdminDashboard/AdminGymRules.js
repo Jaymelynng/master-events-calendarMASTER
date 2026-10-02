@@ -24,9 +24,6 @@ function Toggle({ checked, onChange, disabled }) {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const TYPE_COLORS = {
-  valid_price:   { bg: 'bg-green-100',  text: 'text-green-700',  label: 'Price' },
-  price:         { bg: 'bg-green-100',  text: 'text-green-700',  label: 'Price' },
-  sibling_price: { bg: 'bg-green-100',  text: 'text-green-700',  label: 'Price' },
   valid_time:    { bg: 'bg-amber-100',  text: 'text-amber-700',  label: 'Time' },
   time:          { bg: 'bg-amber-100',  text: 'text-amber-700',  label: 'Time' },
   program_synonym: { bg: 'bg-blue-100', text: 'text-blue-700',  label: 'Program' },
@@ -41,16 +38,12 @@ const TYPE_COLORS = {
   check_age_mismatch:        { bg: 'bg-pink-100',   text: 'text-pink-700',   label: 'Age' },
   check_program_mismatch:    { bg: 'bg-blue-100',   text: 'text-blue-700',   label: 'Program' },
   check_title_desc_mismatch: { bg: 'bg-blue-100',   text: 'text-blue-700',   label: 'Program' },
-  check_price_mismatch:      { bg: 'bg-green-100',  text: 'text-green-700',  label: 'Price' },
-  check_camp_price:          { bg: 'bg-green-100',  text: 'text-green-700',  label: 'Price' },
-  check_event_price:         { bg: 'bg-green-100',  text: 'text-green-700',  label: 'Price' },
 };
 
 const FILTER_TYPE_MAP = {
   Date:      ['check_date_mismatch','check_year_mismatch','check_impossible_date','check_day_mismatch'],
   Program:   ['program_synonym','check_program_mismatch','check_title_desc_mismatch'],
   Age:       ['check_age_mismatch'],
-  Price:     ['valid_price','price','sibling_price','check_price_mismatch','check_camp_price','check_event_price'],
   Time:      ['valid_time','time','check_time_mismatch'],
   System:    [], // handled separately via is_system flag
   Exception: ['exception','requirement_exception'],
@@ -64,10 +57,7 @@ const SYSTEM_CHECKS_SEED = [
   { rule_type: 'check_program_mismatch', label: 'Program Type Mismatch', description: 'Program type cross-contamination between title/description and iClass type', gym_ids: ['ALL'], program: 'ALL', is_system: true, is_permanent: true, is_active: true, created_by: 'system', scope: 'all_events', value: 'system_check' },
   { rule_type: 'check_title_desc_mismatch', label: 'Title vs Description Conflict', description: 'Title and description contradict each other on program type', gym_ids: ['ALL'], program: 'ALL', is_system: true, is_permanent: true, is_active: true, created_by: 'system', scope: 'all_events', value: 'system_check' },
   { rule_type: 'check_impossible_date', label: 'Impossible Date', description: 'Dates that cannot exist (June 31st, Feb 30th)', gym_ids: ['ALL'], program: 'ALL', is_system: true, is_permanent: true, is_active: true, created_by: 'system', scope: 'all_events', value: 'system_check' },
-  { rule_type: 'check_price_mismatch', label: 'Price Mismatch (Title vs Description)', description: 'Price in title differs from price in description', gym_ids: ['ALL'], program: 'ALL', is_system: true, is_permanent: true, is_active: true, created_by: 'system', scope: 'all_events', value: 'system_check' },
   { rule_type: 'check_day_mismatch', label: 'Day of Week Mismatch', description: 'Day of week in description vs actual event day', gym_ids: ['ALL'], program: 'ALL', is_system: true, is_permanent: true, is_active: true, created_by: 'system', scope: 'all_events', value: 'system_check' },
-  { rule_type: 'check_camp_price', label: 'Camp Price vs Pricing Table', description: 'Camp prices against valid prices in pricing table', gym_ids: ['ALL'], program: 'CAMP', is_system: true, is_permanent: true, is_active: true, created_by: 'system', scope: 'all_events', value: 'system_check' },
-  { rule_type: 'check_event_price', label: 'Event Price vs Pricing Table', description: 'Clinic/KNO/Open Gym prices against valid prices in pricing table', gym_ids: ['ALL'], program: 'ALL', is_system: true, is_permanent: true, is_active: true, created_by: 'system', scope: 'all_events', value: 'system_check' },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -79,8 +69,6 @@ function getTypeBadge(ruleType) {
 function getRuleDisplayName(rule) {
   if (rule.label) return rule.label;
   if (rule.description) return rule.description;
-  if (rule.rule_type === 'valid_price' || rule.rule_type === 'price') return `$${rule.value} is valid`;
-  if (rule.rule_type === 'sibling_price') return `Sibling: $${rule.value} / $${rule.value_kid2} / $${rule.value_kid3}`;
   if (rule.rule_type === 'valid_time' || rule.rule_type === 'time') return `${rule.value} is valid`;
   if (rule.rule_type === 'program_synonym') return `"${rule.value}" = ${rule.label}`;
   if (rule.rule_type === 'exception') return rule.value;
@@ -279,7 +267,7 @@ export default function AdminGymRules({ gyms }) {
   // Type filter counts
   const typeFilterCounts = {};
   const countableRules = selectedGym === 'ALL' ? rules : rules.filter(r => ruleMatchesGym(r, selectedGym));
-  ['Date','Program','Age','Price','Time','System','Exception'].forEach(name => {
+  ['Date','Program','Age','Time','System','Exception'].forEach(name => {
     if (name === 'System') {
       typeFilterCounts[name] = countableRules.filter(r => isSystemRule(r)).length;
     } else {
@@ -466,13 +454,12 @@ export default function AdminGymRules({ gyms }) {
               </div>
               {/* Type pills */}
               <div className="flex gap-1.5 flex-wrap">
-                {['Date','Program','Age','Price','Time','System','Exception'].map(name => {
+                {['Date','Program','Age','Time','System','Exception'].map(name => {
                   const active = typeFilters.includes(name);
                   const colorMap = {
                     Date: { bg: 'bg-purple-100', text: 'text-purple-700', activeBg: '#7c3aed' },
                     Program: { bg: 'bg-blue-100', text: 'text-blue-700', activeBg: '#2563eb' },
                     Age: { bg: 'bg-pink-100', text: 'text-pink-700', activeBg: '#db2777' },
-                    Price: { bg: 'bg-green-100', text: 'text-green-700', activeBg: '#16a34a' },
                     Time: { bg: 'bg-amber-100', text: 'text-amber-700', activeBg: '#d97706' },
                     System: { bg: 'bg-slate-100', text: 'text-slate-700', activeBg: '#475569' },
                     Exception: { bg: 'bg-yellow-100', text: 'text-yellow-700', activeBg: '#ca8a04' },
@@ -690,8 +677,6 @@ function DetailPanel({ rule, onClose, onEdit, onDelete, onToggle, toggling }) {
     { label: 'Scope', value: rule.scope || 'all_events' },
     rule.keyword ? { label: 'Keyword', value: `"${rule.keyword}"` } : null,
     { label: 'Value', value: rule.value || '(none)' },
-    rule.value_kid2 ? { label: 'Kid 2 Price', value: `$${rule.value_kid2}` } : null,
-    rule.value_kid3 ? { label: 'Kid 3 Price', value: `$${rule.value_kid3}` } : null,
     rule.label ? { label: 'Label', value: rule.label } : null,
     rule.description ? { label: 'Description', value: rule.description } : null,
     rule.note ? { label: 'Note', value: rule.note } : null,

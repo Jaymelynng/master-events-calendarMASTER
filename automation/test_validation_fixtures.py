@@ -1,86 +1,45 @@
 """
-Smoke tests for validation pricing path — no Supabase required.
-Run: python test_validation_fixtures.py
+Smoke test: pricing validation must stay removed — no Supabase required.
+
+Pricing was removed on 2026-10-02 (Jayme's decision): there is no verified
+source to compare prices against, so the engine must not carry any price check
+and the sync must not set a price. Re-adding either needs her explicit go.
+
+Run from repo: python automation/test_validation_fixtures.py
 """
-
-from __future__ import annotations
-
 import inspect
-import json
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from validation_engine import (  # noqa: E402
-    ValidationContext,
-    check_camp_price,
-    check_event_price,
-    CHECK_REGISTRY,
-)
+import validation_engine
+from validation_engine import CHECK_REGISTRY, ValidationContext
 
 
-def _fixture(name: str) -> dict:
-    path = os.path.join(os.path.dirname(__file__), "fixtures", "validation", name)
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
+def test_no_price_checks_in_engine() -> None:
+    for name in CHECK_REGISTRY:
+        assert "price" not in name.lower(), f"price check is back in the registry: {name}"
+    for name, _ in inspect.getmembers(validation_engine, inspect.isfunction):
+        assert "price" not in name.lower(), f"price function is back in the engine: {name}"
 
 
-def test_no_schedule_matching_in_price_checks() -> None:
-    src_camp = inspect.getsource(check_camp_price)
-    src_evt = inspect.getsource(check_event_price)
-    assert "find_matching_schedule" not in src_camp
-    assert "find_matching_schedule" not in src_evt
+def test_context_takes_no_pricing_lookups() -> None:
+    params = inspect.signature(ValidationContext.__init__).parameters
+    for p in params:
+        assert "pric" not in p.lower(), f"ValidationContext takes a pricing argument again: {p}"
 
 
-def test_event_price_with_mock_pricing() -> None:
-    ev = _fixture("sample_event_kno.json")
-
-    def get_rules(_gym, _prog):
-        return {"price": [], "time": [], "program_synonym": []}
-
-    def get_camp():
-        return {}
-
-    def get_event():
-        return {"OAS": {"KIDS NIGHT OUT": [45.0]}}
-
-    ctx = ValidationContext(
-        event_dict=ev,
-        gym_id=ev["gym_id"],
-        event_type="KIDS NIGHT OUT",
-        title=ev["title"],
-        description=ev["description"],
-        start_date=ev["start_date"],
-        end_date_str=ev["end_date"],
-        time_str=ev.get("time") or "",
-        age_min=ev.get("age_min"),
-        day_of_week=ev.get("day_of_week") or "",
-        get_rules_for_gym_fn=get_rules,
-        get_camp_pricing_fn=get_camp,
-        get_event_pricing_fn=get_event,
-    )
-    errs = check_event_price(ctx)
-    assert errs == [], errs
-
-
-def test_registry_has_expected_checks() -> None:
-    required = {
-        "check_date_mismatch",
-        "check_camp_price",
-        "check_event_price",
-        "check_price_mismatch",
-    }
-    missing = required - set(CHECK_REGISTRY.keys())
-    assert not missing, f"Missing registry keys: {missing}"
-
-
-def main() -> None:
-    test_no_schedule_matching_in_price_checks()
-    test_event_price_with_mock_pricing()
-    test_registry_has_expected_checks()
-    print("test_validation_fixtures: OK")
+def test_sync_sets_no_price() -> None:
+    here = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(here, "f12_collect_and_import.py"), encoding="utf-8") as f:
+        src = f.read()
+    assert '"price":' not in src, "the sync writes a price field again"
+    assert "pricing_supabase" not in src, "the sync imports the pricing lookup again"
 
 
 if __name__ == "__main__":
-    main()
+    test_no_price_checks_in_engine()
+    test_context_takes_no_pricing_lookups()
+    test_sync_sets_no_price()
+    print("OK - pricing is still removed")

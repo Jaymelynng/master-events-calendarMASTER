@@ -234,7 +234,7 @@ ${data.ogReq} Open Gym${data.ogReq !== 1 ? 's' : ''}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
                 {[
                   { v: 'missing', l: 'Missing Events', d: 'Which events are missing for the month', icon: '📋' },
-                  { v: 'audit', l: 'Data Errors', d: 'Wrong prices, times, dates in their events', icon: '🔍' },
+                  { v: 'audit', l: 'Data Errors', d: 'Wrong times, dates, ages in their events', icon: '🔍' },
                   { v: 'both', l: 'Both', d: 'Missing events + data errors combined', icon: '📊' },
                 ].map(opt => (
                   <button

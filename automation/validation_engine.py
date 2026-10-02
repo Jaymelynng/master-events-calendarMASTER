@@ -27,7 +27,7 @@ class ValidationContext:
 
     def __init__(self, event_dict, gym_id, event_type, title, description,
                  start_date, end_date_str, time_str, age_min, day_of_week,
-                 get_rules_for_gym_fn, get_camp_pricing_fn, get_event_pricing_fn,
+                 get_rules_for_gym_fn,
                  age_max=None):
         self.event = event_dict
         self.gym_id = gym_id
@@ -62,12 +62,6 @@ class ValidationContext:
 
         # Database lookup functions (passed in from main module)
         self.get_rules_for_gym = get_rules_for_gym_fn
-        self.get_camp_pricing = get_camp_pricing_fn
-        self.get_event_pricing = get_event_pricing_fn
-
-        # Extracted prices (used by multiple price checks)
-        self.title_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', title) if title else []
-        self.desc_prices = re.findall(r'\$(\d+(?:\.\d{2})?)', self.description) if self.description else []
 
 
 # ============================================================
@@ -727,154 +721,6 @@ def check_impossible_date(ctx):
     return errors
 
 
-def check_price_mismatch(ctx):
-    """Check if price in title differs from price in description."""
-    errors = []
-    if not ctx.title_prices or not ctx.desc_prices:
-        return errors
-
-    title_price = float(ctx.title_prices[0])
-    desc_price_floats = [float(p) for p in ctx.desc_prices]
-    title_price_found = any(abs(title_price - dp) <= 1 for dp in desc_price_floats)
-
-    if not title_price_found:
-        errors.append({
-            "type": "price_mismatch",
-            "severity": "error",
-            "category": "data_error",
-            "message": f"Title says ${title_price:.0f} but description prices are {', '.join(['$' + p for p in ctx.desc_prices])}"
-        })
-
-    return errors
-
-
-def check_camp_price(ctx):
-    """Check camp prices against valid prices in pricing table."""
-    errors = []
-    if ctx.event_type != 'CAMP':
-        return errors
-
-    all_camp_prices = list(set(ctx.title_prices + ctx.desc_prices))
-    if not all_camp_prices:
-        return errors
-
-    camp_pricing = ctx.get_camp_pricing()
-    if ctx.gym_id not in camp_pricing:
-        return errors
-
-    gym_prices = camp_pricing[ctx.gym_id]
-    valid_prices = []
-    price_labels = []
-
-    # Detect duration (half-day vs full-day) from title and program_name so
-    # we constrain the valid prices to ONLY the matching subset. Without
-    # this, a half-day camp whose description shows the full-day price
-    # silently passes (the full-day price is "valid" for the gym, just for
-    # the wrong variant). Real bug Jayme found in May 2026: 12 CRR half-day
-    # camps had full-day prices in their descriptions and the engine never
-    # caught it.
-    title_lower = ctx.title_lower or ''
-    program_lower = (ctx.event.get('program_name') or '').lower() if ctx.event else ''
-    is_half = 'half' in title_lower or 'half' in program_lower
-    is_full = 'full' in title_lower or 'full' in program_lower
-
-    if is_half and not is_full:
-        allowed_keys = [('half_day_daily', 'Half Day Daily'),
-                        ('half_day_weekly', 'Half Day Weekly')]
-    elif is_full and not is_half:
-        allowed_keys = [('full_day_daily', 'Full Day Daily'),
-                        ('full_day_weekly', 'Full Day Weekly')]
-    else:
-        # No clear hint either way (or both present, e.g. a mixed-format
-        # event listing both options) — accept any of the 4. Original
-        # behaviour, preserved as the safe fallback.
-        allowed_keys = [('full_day_daily', 'Full Day Daily'),
-                        ('full_day_weekly', 'Full Day Weekly'),
-                        ('half_day_daily', 'Half Day Daily'),
-                        ('half_day_weekly', 'Half Day Weekly')]
-
-    for key, label_prefix in allowed_keys:
-        if gym_prices.get(key):
-            valid_prices.append(float(gym_prices[key]))
-            price_labels.append(f"{label_prefix} ${gym_prices[key]}")
-
-    # Add extra valid prices from rules
-    extra_price_rules = ctx.get_rules_for_gym(ctx.gym_id, ctx.event_type).get('price', [])
-    for ep in extra_price_rules:
-        try:
-            extra_price = float(ep['value'])
-            if extra_price not in valid_prices:
-                valid_prices.append(extra_price)
-                price_labels.append(f"{ep.get('label', 'Custom')} ${ep['value']}")
-        except (ValueError, TypeError):
-            pass
-
-    if not valid_prices:
-        return errors
-
-    for camp_price_str in all_camp_prices:
-        camp_price = float(camp_price_str)
-        is_valid = any(abs(camp_price - vp) <= 2 for vp in valid_prices)
-        if not is_valid:
-            errors.append({
-                "type": "camp_price_mismatch",
-                "severity": "warning",
-                "category": "data_error",
-                "message": f"Camp price ${camp_price:.0f} doesn't match any valid price for {ctx.gym_id}. Valid: {', '.join(price_labels)}"
-            })
-            break
-
-    return errors
-
-
-def check_event_price(ctx):
-    """Check clinic/KNO/open gym prices against valid prices in pricing table."""
-    errors = []
-    if ctx.event_type not in ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']:
-        return errors
-
-    event_pricing = ctx.get_event_pricing()
-    if ctx.gym_id not in event_pricing or ctx.event_type not in event_pricing[ctx.gym_id]:
-        return errors
-
-    valid_prices = list(event_pricing[ctx.gym_id][ctx.event_type])
-
-    # Add extra valid prices from rules
-    extra_price_rules = ctx.get_rules_for_gym(ctx.gym_id, ctx.event_type).get('price', [])
-    for ep in extra_price_rules:
-        try:
-            extra_price = float(ep['value'])
-            if extra_price not in valid_prices:
-                valid_prices.append(extra_price)
-        except (ValueError, TypeError):
-            pass
-
-    if not valid_prices:
-        return errors
-
-    all_event_prices = list(set(ctx.title_prices + ctx.desc_prices))
-    if not all_event_prices:
-        return errors
-
-    all_found_prices = set(float(p) for p in all_event_prices)
-    expected_price_found = any(
-        any(abs(found - vp) <= 1 for found in all_found_prices)
-        for vp in valid_prices
-    )
-
-    if not expected_price_found:
-        valid_str = ', '.join([f'${p:.0f}' for p in valid_prices])
-        found_str = ', '.join([f'${p}' for p in all_event_prices])
-        errors.append({
-            "type": "event_price_mismatch",
-            "severity": "error",
-            "category": "data_error",
-            "message": f"{ctx.event_type} price {found_str} doesn't match expected price for {ctx.gym_id}. Valid: {valid_str}"
-        })
-
-    return errors
-
-
 def check_ordinal_typo(ctx):
     """Catch invalid date-ordinal typos in the title/description, e.g.
     "July 29nd" (should be 29th), "22th" (should be 22nd), "31nd". Pure
@@ -919,9 +765,6 @@ CHECK_REGISTRY = {
     'check_program_mismatch': check_program_mismatch,
     'check_title_desc_mismatch': check_title_desc_mismatch,
     'check_impossible_date': check_impossible_date,
-    'check_price_mismatch': check_price_mismatch,
-    'check_camp_price': check_camp_price,
-    'check_event_price': check_event_price,
 }
 
 # Skill mismatch is part of program_mismatch check (runs inside check_program_mismatch context)

@@ -81,7 +81,6 @@ COMPARISON_FIELDS = [
     'start_date',
     'end_date',
     'time',
-    'price',
     'day_of_week',
     'type',
     'age_min',
@@ -105,7 +104,6 @@ ALLOWED_EVENT_FIELDS = {
     'title',
     'date',
     'time',
-    'price',
     'day_of_week',
     'type',
     'event_url',
@@ -136,7 +134,7 @@ ALLOWED_EVENT_FIELDS = {
     'show_openings',
     'registration_start_date',
     'registration_end_date',
-    # iClassPro camp fields for pricing schedule matching
+    # iClassPro category fields
     'type_id',
     'allow_choose_days',
     'program_name',

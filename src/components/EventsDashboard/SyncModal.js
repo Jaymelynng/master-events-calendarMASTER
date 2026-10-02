@@ -119,16 +119,13 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
 
   // Check if an error type supports "Add as Rule"
   const canAddAsRule = (errorType) => {
-    return errorType === 'camp_price_mismatch' || errorType === 'time_mismatch' ||
+    return errorType === 'time_mismatch' ||
            errorType === 'program_mismatch' || errorType === 'missing_program_in_title';
   };
 
-  // Extract rule value from an error message (price, time, or program synonym)
+  // Extract rule value from an error message (time or program synonym)
   const extractRuleValue = (errorObj, event = null) => {
-    if (errorObj.type === 'camp_price_mismatch') {
-      const priceMatch = errorObj.message.match(/\$(\d+(?:\.\d{2})?)/);
-      return priceMatch ? { ruleType: 'price', value: priceMatch[1] } : null;
-    } else if (errorObj.type === 'time_mismatch') {
+    if (errorObj.type === 'time_mismatch') {
       const timeMatch = errorObj.message.match(/(?:description|title) says (\d{1,2}(?::\d{2})?\s*(?:am|pm|a|p))/i);
       return timeMatch ? { ruleType: 'time', value: timeMatch[1].trim() } : null;
     } else if (errorObj.type === 'program_mismatch' || errorObj.type === 'missing_program_in_title') {
@@ -380,7 +377,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
           for (const ne of imported) {
             try {
               await auditLogApi.log(ne.id, ne.gym_id, 'CREATE', 'all', null,
-                JSON.stringify({ title: ne.title, date: ne.date, price: ne.price }),
+                JSON.stringify({ title: ne.title, date: ne.date }),
                 ne.title, ne.date, 'Sync All Import');
             } catch (e) { /* continue */ }
           }
@@ -398,7 +395,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                 ...(!ex.type_locked && changed.incoming.type ? { type: changed.incoming.type } : {}),
                 title: changed.incoming.title, date: changed.incoming.date,
                 start_date: changed.incoming.start_date, end_date: changed.incoming.end_date,
-                time: changed.incoming.time, price: changed.incoming.price,
+                time: changed.incoming.time,
                 age_min: changed.incoming.age_min, age_max: changed.incoming.age_max,
                 description: changed.incoming.description,
                 has_flyer: changed.incoming.has_flyer || false,
@@ -693,16 +690,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
     }
   };
 
-  const handlePriceChange = (index, newPrice) => {
-    setEditableEvents(prev => {
-      const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        price: newPrice === '' || newPrice === null ? null : parseFloat(newPrice)
-      };
-      return updated;
-    });
-  };
 
   const handleImport = async () => {
     if (!result || !result.success) {
@@ -739,7 +726,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
             'CREATE',
             'all',
             null,
-            JSON.stringify({ title: newEvent.title, date: newEvent.date, price: newEvent.price }),
+            JSON.stringify({ title: newEvent.title, date: newEvent.date }),
             newEvent.title,
             newEvent.date,
             'Sync Import'
@@ -770,7 +757,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                 start_date: changed.incoming.start_date,
                 end_date: changed.incoming.end_date,
                 time: changed.incoming.time,
-                price: changed.incoming.price,
                 age_min: changed.incoming.age_min,
                 age_max: changed.incoming.age_max,
                 description: changed.incoming.description,
@@ -1684,13 +1670,13 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
           );
         })()}
 
-        {/* Events Preview Table with Editable Prices */}
+        {/* Events Preview Table */}
         {result && result.success && editableEvents.length > 0 && !importResult && (
           <div className="mb-4 border-2 border-purple-300 rounded-lg overflow-hidden bg-white">
             <div className="bg-purple-50 px-4 py-3 border-b-2 border-purple-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-gray-800 text-lg">📋 Preview & Edit Prices</h3>
+                  <h3 className="font-bold text-gray-800 text-lg">📋 Preview</h3>
                   {selectedGym && selectedEventType && (
                     <p className="text-xs text-gray-600 mt-1">
                       <strong>{gyms.find(g => g.id === selectedGym)?.name || selectedGym}</strong> - <strong>{selectedEventType}</strong>
@@ -1704,7 +1690,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                 )}
               </div>
               <p className="text-sm text-gray-700 mt-2 font-medium">
-                ✏️ Edit prices in the table below if needed, then click Import
+                Check the list below, then click Import
               </p>
             </div>
             <div className="max-h-96 overflow-y-auto border border-gray-200 rounded">
@@ -1715,7 +1701,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Title</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Date</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Age</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Price</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1802,17 +1787,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                             : event.age_min 
                               ? `${event.age_min}+`
                               : '-'}
-                        </td>
-                        <td className="px-3 py-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={event.price || ''}
-                            onChange={(e) => handlePriceChange(idx, e.target.value)}
-                            placeholder="Enter price"
-                            className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
                         </td>
                       </tr>
                     );
@@ -2102,7 +2076,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
             if (ruleInfo && gymId) {
               try {
                 const isProgramSynonym = ruleInfo.ruleType === 'program_synonym';
-                const ruleTypeMap = { 'price': 'valid_price', 'time': 'valid_time', 'program_synonym': 'program_synonym' };
+                const ruleTypeMap = { 'time': 'valid_time', 'program_synonym': 'program_synonym' };
                 await rulesApi.create({
                   is_permanent: true,
                   gym_ids: [gymId],
@@ -2113,7 +2087,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                   label: label,
                   created_by: 'dismiss'
                 });
-                const displayValue = ruleInfo.ruleType === 'price' ? `$${ruleInfo.value}` : ruleInfo.value;
+                const displayValue = ruleInfo.value;
                 alert(`Rule saved! "${displayValue}" is now valid for ${gymId} (${label}).`);
               } catch (ruleErr) {
                 console.error('Error adding rule:', ruleErr);

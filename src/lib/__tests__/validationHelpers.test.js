@@ -7,7 +7,6 @@ import {
   canAddAsRule,
   extractRuleValue,
   matchesErrorTypeFilter,
-  parsePriceErrorDetails,
   processEventsWithIssues,
   computeAccuracyStats,
   isErrorVerified,
@@ -31,8 +30,8 @@ describe('isErrorAcknowledged', () => {
   });
 
   test('matches object entries by .message', () => {
-    const acks = [{ message: 'price error', note: 'ok' }];
-    expect(isErrorAcknowledged(acks, 'price error')).toBe(true);
+    const acks = [{ message: 'time error', note: 'ok' }];
+    expect(isErrorAcknowledged(acks, 'time error')).toBe(true);
     expect(isErrorAcknowledged(acks, 'other error')).toBe(false);
   });
 });
@@ -41,19 +40,19 @@ describe('isErrorAcknowledged', () => {
 
 describe('matchesAcknowledgedPattern', () => {
   const patterns = [
-    { gym_id: 'CRR', event_type: 'CLINIC', error_message: 'Price mismatch' },
+    { gym_id: 'CRR', event_type: 'CLINIC', error_message: 'Time mismatch' },
   ];
 
   test('matches exact gym + type + message', () => {
-    expect(matchesAcknowledgedPattern(patterns, 'CRR', 'CLINIC', 'Price mismatch')).toBe(true);
+    expect(matchesAcknowledgedPattern(patterns, 'CRR', 'CLINIC', 'Time mismatch')).toBe(true);
   });
 
   test('case-insensitive on event_type', () => {
-    expect(matchesAcknowledgedPattern(patterns, 'CRR', 'clinic', 'Price mismatch')).toBe(true);
+    expect(matchesAcknowledgedPattern(patterns, 'CRR', 'clinic', 'Time mismatch')).toBe(true);
   });
 
   test('returns false for wrong gym', () => {
-    expect(matchesAcknowledgedPattern(patterns, 'CAP', 'CLINIC', 'Price mismatch')).toBe(false);
+    expect(matchesAcknowledgedPattern(patterns, 'CAP', 'CLINIC', 'Time mismatch')).toBe(false);
   });
 
   test('returns false for null/empty patterns', () => {
@@ -109,8 +108,8 @@ describe('inferErrorCategory', () => {
 
   test('classifies data error types', () => {
     expect(inferErrorCategory({ type: 'year_mismatch' })).toBe('data_error');
-    expect(inferErrorCategory({ type: 'price_mismatch' })).toBe('data_error');
-    expect(inferErrorCategory({ type: 'camp_price_mismatch' })).toBe('data_error');
+    expect(inferErrorCategory({ type: 'time_mismatch' })).toBe('data_error');
+    expect(inferErrorCategory({ type: 'age_mismatch' })).toBe('data_error');
   });
 
   test('classifies status types', () => {
@@ -128,8 +127,6 @@ describe('inferErrorCategory', () => {
 
 describe('canAddAsRule', () => {
   test('returns true for supported types', () => {
-    expect(canAddAsRule('camp_price_mismatch')).toBe(true);
-    expect(canAddAsRule('event_price_mismatch')).toBe(true);
     expect(canAddAsRule('time_mismatch')).toBe(true);
     expect(canAddAsRule('program_mismatch')).toBe(true);
   });
@@ -144,20 +141,8 @@ describe('canAddAsRule', () => {
 
 describe('matchesErrorTypeFilter', () => {
   test('"all" matches everything', () => {
-    expect(matchesErrorTypeFilter('price_mismatch', 'all')).toBe(true);
+    expect(matchesErrorTypeFilter('time_mismatch', 'all')).toBe(true);
     expect(matchesErrorTypeFilter('age_mismatch', 'all')).toBe(true);
-  });
-
-  test('price filter matches price types', () => {
-    expect(matchesErrorTypeFilter('price_mismatch', 'price')).toBe(true);
-    expect(matchesErrorTypeFilter('camp_price_mismatch', 'price')).toBe(true);
-    expect(matchesErrorTypeFilter('age_mismatch', 'price')).toBe(false);
-  });
-
-  test('hidePrices hides all price types even with "all"', () => {
-    expect(matchesErrorTypeFilter('price_mismatch', 'all', true)).toBe(false);
-    expect(matchesErrorTypeFilter('camp_price_mismatch', 'all', true)).toBe(false);
-    expect(matchesErrorTypeFilter('age_mismatch', 'all', true)).toBe(true);
   });
 
   test('date filter matches date/day/year types', () => {
@@ -171,12 +156,6 @@ describe('matchesErrorTypeFilter', () => {
 // ── extractRuleValue ─────────────────────────────────────────────────
 
 describe('extractRuleValue', () => {
-  test('extracts price from event_price_mismatch', () => {
-    const err = { type: 'event_price_mismatch', message: 'CLINIC price $40 doesn\'t match' };
-    const result = extractRuleValue(err);
-    expect(result).toEqual({ ruleType: 'price', value: '40' });
-  });
-
   test('extracts time from time_mismatch', () => {
     const err = { type: 'time_mismatch', message: 'description says 6:30 PM but fields say 7:00 PM' };
     const result = extractRuleValue(err);
@@ -185,37 +164,6 @@ describe('extractRuleValue', () => {
 
   test('returns null for unsupported type', () => {
     expect(extractRuleValue({ type: 'age_mismatch', message: 'age wrong' })).toBeNull();
-  });
-});
-
-// ── parsePriceErrorDetails ───────────────────────────────────────────
-
-describe('parsePriceErrorDetails', () => {
-  test('parses event_price_mismatch message', () => {
-    const err = {
-      type: 'event_price_mismatch',
-      message: "KIDS NIGHT OUT price $40 doesn't match expected price for HGA. Valid: $45",
-    };
-    const result = parsePriceErrorDetails(err, { type: 'KIDS NIGHT OUT' });
-    expect(result.foundPrice).toBe('40');
-    expect(result.gymId).toBe('HGA');
-    expect(result.validPrices).toEqual(['45']);
-  });
-
-  test('parses camp_price_mismatch message', () => {
-    const err = {
-      type: 'camp_price_mismatch',
-      message: "Camp price $360 doesn't match any valid price for HGA. Valid: Full Day Daily $90, Full Day Weekly $400",
-    };
-    const result = parsePriceErrorDetails(err);
-    expect(result.foundPrice).toBe('360');
-    expect(result.gymId).toBe('HGA');
-    expect(result.eventType).toBe('CAMP');
-  });
-
-  test('returns null for unrecognized message', () => {
-    expect(parsePriceErrorDetails(null)).toBeNull();
-    expect(parsePriceErrorDetails({ type: 'other', message: 'nope' })).toBeNull();
   });
 });
 
@@ -269,7 +217,7 @@ describe('processEventsWithIssues', () => {
 
   test('includes events with validation errors', () => {
     const events = [
-      { validation_errors: [{ type: 'price_mismatch', message: 'bad price' }] },
+      { validation_errors: [{ type: 'time_mismatch', message: 'bad time' }] },
     ];
     const result = processEventsWithIssues(events);
     expect(result).toHaveLength(1);
@@ -292,14 +240,24 @@ describe('processEventsWithIssues', () => {
   test('separates active and dismissed errors', () => {
     const events = [{
       validation_errors: [
-        { type: 'price_mismatch', message: 'bad price' },
+        { type: 'time_mismatch', message: 'bad time' },
         { type: 'age_mismatch', message: 'bad age' },
       ],
-      acknowledged_errors: ['bad price'],
+      acknowledged_errors: ['bad time'],
     }];
     const result = processEventsWithIssues(events);
     expect(result[0].activeErrors).toHaveLength(1);
     expect(result[0].dismissedErrors).toHaveLength(1);
     expect(result[0].activeErrors[0].message).toBe('bad age');
+  });
+});
+
+// ── pricing stays removed (2026-10-02) ──────────────────────────────
+
+describe('pricing is removed', () => {
+  test('price error types are no longer data errors or rule-able', () => {
+    expect(inferErrorCategory({ type: 'price_mismatch' })).toBe('other');
+    expect(canAddAsRule('camp_price_mismatch')).toBe(false);
+    expect(extractRuleValue({ type: 'event_price_mismatch', message: 'CLINIC price $40' })).toBeNull();
   });
 });

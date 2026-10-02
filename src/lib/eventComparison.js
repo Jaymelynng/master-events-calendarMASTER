@@ -157,7 +157,6 @@ function hasEventChanged(existing, incoming) {
     'start_date',
     'end_date',
     'time',
-    'price',
     'type',
     'age_min',
     'age_max',
@@ -202,7 +201,6 @@ function getChangedFields(existing, incoming) {
     'start_date',
     'end_date',
     'time',
-    'price',
     'type',
     'age_min',
     'age_max',
@@ -235,13 +233,6 @@ function normalizeValue(value, fieldName = '') {
   // Treat null, undefined, empty string, and 0 as equivalent for optional fields
   if (value === null || value === undefined || value === '') {
     return null;
-  }
-  
-  // Special handling for price - convert to number for consistent comparison
-  if (fieldName === 'price') {
-    const num = parseFloat(value);
-    // Treat 0 as null for price (no price = 0 = null)
-    return isNaN(num) || num === 0 ? null : num;
   }
   
   // Special handling for age fields - convert to integer.

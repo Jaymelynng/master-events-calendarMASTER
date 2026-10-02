@@ -1,7 +1,24 @@
 # Pricing source of truth — input contract (SSoT)
 
-**Last updated:** July 1, 2026  
+**Last updated:** October 2, 2026  
 **Purpose:** Single contract for how camp/event pricing works so docs, Python, and Admin UI stay aligned.
+
+---
+
+## ⛔ ALL PRICING REMOVED — October 2, 2026 (Jayme's decision)
+
+**This section overrides everything below it.** The calendar no longer sets, shows, exports, or checks a price anywhere.
+
+- **Why:** the prices are not verified as correct, and there is no system yet to pull the real price from iClass or compare against it. Until that exists, no price may appear in the app.
+- **Database:** `events.price` is NULL on every event; the stored `price_mismatch` errors were stripped; the last price check (`check_price_mismatch`) was deleted from `rules`.
+- **Sync:** `f12_collect_and_import.py` no longer sets a price. It used to fill one from `camp_pricing` / `event_pricing`, and if that found nothing, from the first dollar amount in the title or description. All of that is gone.
+- **Engine:** `validation_engine.py` has no price checks.
+- **App:** price is gone from the event side panel, Table View, CSV export, sync preview, add-event form, Rule Wizard, and the Gym Rules filters.
+- **Still there, unused:** the `camp_pricing` and `event_pricing` tables keep their rows. Nothing reads them.
+- **Record + backup:** `database/REMOVED_PRICING_2026_10_02.sql` and `database/backups/REMOVED_PRICING_2026_10_02_backup.json`.
+- **Do NOT re-add any of it without Jayme's explicit go.**
+
+Everything below describes how pricing worked BEFORE this date and is kept as history only.
 
 ---
 

@@ -134,26 +134,6 @@ export default function AddEventModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Price (optional)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-2 text-gray-500">$</span>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={newEvent.price}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/[^0-9.]/g, '');
-                  setNewEvent({ ...newEvent, price: value });
-                }}
-                className="w-full pl-8 pr-2 py-2 border rounded-lg focus:ring-2 focus:ring-pink-300"
-                placeholder="0.00"
-              />
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Enter numbers only (e.g., 35 or 35.00)</p>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium mb-1">
               Registration URL <span className="text-red-500">* REQUIRED</span>
             </label>
@@ -181,7 +161,6 @@ export default function AddEventModal({
                 title: '',
                 date: '',
                 time: '',
-                price: '',
                 type: '',
                 event_url: '',
               });

@@ -43,16 +43,6 @@ const RULE_PLAIN_LANGUAGE = {
     catches: "Catches when the time written in title or description doesn't match iClass's scheduled time.",
     example: 'iClass schedule says 7:00 PM but title says "6:30-9:30 pm".',
   },
-  check_event_price: {
-    title: 'Event Price vs Pricing Table',
-    catches: "For Clinic, KNO, Open Gym — catches when the price in title or description doesn't match the price in your event_pricing table for that gym.",
-    example: 'HGA KNO is set to $45 in your pricing table but the description says $40.',
-  },
-  check_camp_price: {
-    title: 'Camp Price vs Pricing Table',
-    catches: "For Camp — catches when the price doesn't match valid prices in camp_pricing (full day daily / weekly, half day daily / weekly).",
-    example: 'RBA Half Day camp description shows a Full Day price.',
-  },
   check_day_mismatch: {
     title: 'Day of Week Mismatch',
     catches: "Catches when the actual day of the event doesn't match the day mentioned in the description. Skipped for camps.",
@@ -72,11 +62,6 @@ const RULE_PLAIN_LANGUAGE = {
     title: 'Impossible Date',
     catches: "Catches dates that physically can't exist anywhere in the text.",
     example: '"June 31st" or "February 30th".',
-  },
-  check_price_mismatch: {
-    title: 'Price Mismatch (Title vs Description)',
-    catches: "Catches when the dollar amount in the title doesn't match the dollar amount in the description.",
-    example: 'Title: "Clinic $25" / Description: "Sign up for $30!"',
   },
 };
 

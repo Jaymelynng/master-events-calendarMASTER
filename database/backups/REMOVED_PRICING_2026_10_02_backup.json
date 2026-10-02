@@ -1,0 +1,2333 @@
+{
+ "taken": "2026-10-02",
+ "why": "Jayme: all pricing removed - not verified, no system to compare prices yet",
+ "event_prices": [
+  {
+   "id": "00a8cde7-7cb9-44da-966a-af5f8e81c039",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1657",
+   "price": "250"
+  },
+  {
+   "id": "014acbeb-2f4c-4ab7-88e0-be5622e8a2b2",
+   "gym_id": "PLG",
+   "event_url": "https://portal.iclasspro.com/planetgymnasticsnatick/appointment-details/1756?serviceId=22",
+   "price": "30"
+  },
+  {
+   "id": "01514047-15a0-4ee2-b0b7-1ab595b1182f",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/960",
+   "price": "315"
+  },
+  {
+   "id": "02d25291-85fa-453a-a8b0-cf4baab6dbc3",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/697",
+   "price": "270"
+  },
+  {
+   "id": "03f45d81-e2d6-4320-927c-2e0451cbdb0a",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2631",
+   "price": "10"
+  },
+  {
+   "id": "05764d69-200b-4796-b79e-bd4948213520",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/656",
+   "price": "80"
+  },
+  {
+   "id": "06fe3de9-b348-448d-8e96-0111eb432c3e",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1346",
+   "price": "75"
+  },
+  {
+   "id": "0789c32d-bd42-4a57-9a32-4459175b7f11",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1738",
+   "price": "16"
+  },
+  {
+   "id": "07e126c1-7299-4e36-b952-b3f6baf7adf5",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2042",
+   "price": "45"
+  },
+  {
+   "id": "0854ba81-2c27-4516-84f9-351011f039fe",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2170",
+   "price": "62"
+  },
+  {
+   "id": "0943af22-288d-44f9-bca4-0730cc18dc03",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/653",
+   "price": "80"
+  },
+  {
+   "id": "09c3650e-43b1-47c8-b970-ac8de7083ca5",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2039",
+   "price": "30"
+  },
+  {
+   "id": "0d93066b-d64e-42ab-9df0-a5143db531cc",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2616",
+   "price": "40.0"
+  },
+  {
+   "id": "0e16f467-db43-44f6-8557-293b158a38da",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/679",
+   "price": "270"
+  },
+  {
+   "id": "0e83026d-40f2-4f50-8e39-5e51173bc35f",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1741",
+   "price": "8"
+  },
+  {
+   "id": "0eca6aa0-0a12-4dbb-9f9b-78ee31b2e3bf",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/690",
+   "price": "270"
+  },
+  {
+   "id": "109ebbad-4a52-426a-9a2e-c7bfeb2e0fa5",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/972",
+   "price": "90"
+  },
+  {
+   "id": "1193a0b1-47e1-494d-a626-92077a22bf5f",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/1003",
+   "price": "30"
+  },
+  {
+   "id": "11a7d301-c1cb-497f-967a-9567d90d1ed8",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2671",
+   "price": "16"
+  },
+  {
+   "id": "11c96672-f1b4-4736-946c-fcd653ce6598",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2184",
+   "price": "62"
+  },
+  {
+   "id": "12799366-81e8-4551-bf6b-14423305320a",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/654",
+   "price": "80"
+  },
+  {
+   "id": "13a95bb4-3dc9-4ea4-b51c-4206a92d486f",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2026",
+   "price": "90"
+  },
+  {
+   "id": "13e0793d-db7e-4143-90d1-11050dc8cbf3",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2076",
+   "price": "45"
+  },
+  {
+   "id": "146d7eca-d960-4337-a8ab-fc1537d8f9f3",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1744",
+   "price": "8"
+  },
+  {
+   "id": "15618fc1-f54b-4331-8858-95accd6c08e0",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1701",
+   "price": "30"
+  },
+  {
+   "id": "15b57066-78cb-4439-a748-3458591d3cfa",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1362",
+   "price": "10"
+  },
+  {
+   "id": "16bf9a86-13c8-4c57-80fd-4416b380b5e5",
+   "gym_id": "PLG",
+   "event_url": "https://portal.iclasspro.com/planetgymnasticsnatick/appointment-details/1760?serviceId=22",
+   "price": "30"
+  },
+  {
+   "id": "1729e2d4-51cb-4907-aa09-f15318dfbd7c",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2169",
+   "price": "20"
+  },
+  {
+   "id": "17ba211d-9b5f-4667-80d3-649c0e928983",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1685",
+   "price": "250"
+  },
+  {
+   "id": "17e4c606-ac47-4392-a9bf-3bcfb6ff00d7",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/968",
+   "price": "315"
+  },
+  {
+   "id": "1858cd4e-a540-486c-b64e-ff336b6fc688",
+   "gym_id": "PLG",
+   "event_url": "https://portal.iclasspro.com/planetgymnasticsnatick/appointment-details/1759?serviceId=22",
+   "price": "30"
+  },
+  {
+   "id": "18f02b8e-1aa3-42d5-b364-b754096153e6",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1011",
+   "price": "45"
+  },
+  {
+   "id": "19581d10-dc17-4552-beb0-c11708d1754b",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/701",
+   "price": "65"
+  },
+  {
+   "id": "1a798641-2a67-4a3b-9f11-0ec2e203a428",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1002",
+   "price": "30"
+  },
+  {
+   "id": "1acf2dfc-88e7-4dc0-b5e3-969b2ff09c3f",
+   "gym_id": "PLG",
+   "event_url": "https://portal.iclasspro.com/planetgymnasticsnatick/appointment-details/1761?serviceId=22",
+   "price": "30"
+  },
+  {
+   "id": "1b15ca66-267b-4798-a7a1-25cae9154863",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2203",
+   "price": "20"
+  },
+  {
+   "id": "1b916a26-27f2-4cd2-9205-a95bd689b9f2",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/651",
+   "price": "80"
+  },
+  {
+   "id": "1bc1e8b5-9a18-4281-9976-61ac705429b8",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/943",
+   "price": "20"
+  },
+  {
+   "id": "1bd1241e-2fcd-4b65-992e-7309a26854a0",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1009",
+   "price": "20"
+  },
+  {
+   "id": "1d19fc5f-873f-482c-8290-94ebf7bcf9a8",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/694",
+   "price": "270"
+  },
+  {
+   "id": "1dcda503-32cc-49d5-a18c-112338b7708d",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/684",
+   "price": "270"
+  },
+  {
+   "id": "1f0d6301-ed94-4a98-b8ca-e98afb103b22",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1791",
+   "price": "30"
+  },
+  {
+   "id": "1f8fdcd6-91eb-4ead-b4bf-66080141cce6",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1335",
+   "price": "75"
+  },
+  {
+   "id": "20b42669-b738-4a7f-89b3-154714135382",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1762",
+   "price": "8"
+  },
+  {
+   "id": "22070162-eadb-492d-8c0b-8636cd04d023",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1665",
+   "price": "250"
+  },
+  {
+   "id": "22322b04-4c4e-41a1-ac9a-a74ef2655bf4",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1796",
+   "price": "40"
+  },
+  {
+   "id": "229e53ea-654d-4309-bd21-d268c9dbc4ec",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1006",
+   "price": "20"
+  },
+  {
+   "id": "230101e9-970b-45ac-8e69-27233645f197",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1681",
+   "price": "250"
+  },
+  {
+   "id": "2316311b-df7c-4cea-9b57-84029cf90207",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/965",
+   "price": "400"
+  },
+  {
+   "id": "232b1541-dc5e-4fa3-a7d5-ed80104e329f",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2642",
+   "price": "10"
+  },
+  {
+   "id": "24b7042d-34ae-4a93-b7de-924ff4e35e15",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1663",
+   "price": "62"
+  },
+  {
+   "id": "24e94333-1049-4289-8c0a-51cb3517791e",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2166",
+   "price": "250"
+  },
+  {
+   "id": "25114fd8-1725-4b39-9f7c-d2cf220c5f88",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2014",
+   "price": "390"
+  },
+  {
+   "id": "25606eaa-d6e5-4106-991f-e994dfe1d6bf",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1012",
+   "price": "45"
+  },
+  {
+   "id": "25ef7d32-cc06-4613-8ff2-785f345e2fab",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1774",
+   "price": "8"
+  },
+  {
+   "id": "262172a0-1c73-4656-81f3-5eba6de8f456",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/714",
+   "price": "40"
+  },
+  {
+   "id": "26425a0f-d26e-492a-8489-179ecdf0ad73",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/960",
+   "price": "90"
+  },
+  {
+   "id": "26625df3-f515-4fcd-982c-90f51fa09ce7",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2174",
+   "price": "250"
+  },
+  {
+   "id": "269a6252-a707-4ce3-8cbf-5078137d754e",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1376",
+   "price": "10"
+  },
+  {
+   "id": "273c4cf8-16a4-49c5-914d-82339768ae10",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1794",
+   "price": "10"
+  },
+  {
+   "id": "278e8e33-f6e3-4da5-bf93-fa26c77ceab4",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/689",
+   "price": "270"
+  },
+  {
+   "id": "27f4ee6f-81b3-44b9-b394-1a16396ff742",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/992",
+   "price": "45"
+  },
+  {
+   "id": "296b190b-db3c-484d-aa37-ffe1e5fad886",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/1013",
+   "price": "90"
+  },
+  {
+   "id": "2aa251af-a943-4942-a9f3-0a718f94f05c",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1336",
+   "price": "75"
+  },
+  {
+   "id": "2bd18c21-0be1-43f1-a913-a7f36e162d98",
+   "gym_id": "MGC",
+   "event_url": "https://portal.iclasspro.com/metrogymnastics/camp-details/57",
+   "price": "80"
+  },
+  {
+   "id": "2c13005a-a0d5-418c-8c9f-91a9662a8811",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/977",
+   "price": "70"
+  },
+  {
+   "id": "2cf474b3-8bb1-4ba6-a686-f783678524ae",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2663",
+   "price": "70"
+  },
+  {
+   "id": "2d02a15b-8272-45e3-b009-1a025ead8464",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/1001",
+   "price": "30"
+  },
+  {
+   "id": "2d88da8d-bcd2-40b8-9797-b28b5de246a3",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1338",
+   "price": "75"
+  },
+  {
+   "id": "2da38872-c54a-4aad-ae99-1e61dd40f72b",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/1000",
+   "price": "30"
+  },
+  {
+   "id": "2f18fc4a-3389-428b-8514-56032e76d87a",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/680",
+   "price": "270"
+  },
+  {
+   "id": "2f1a6d65-2289-47ed-b9a1-9499125f6ca2",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/713",
+   "price": "40"
+  },
+  {
+   "id": "2f85e011-1f9d-4556-835f-400b209b4357",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/941",
+   "price": "20"
+  },
+  {
+   "id": "2ffbc4c5-5b9e-4d1d-be25-bf05823b1a04",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2015",
+   "price": "390"
+  },
+  {
+   "id": "30906a2a-46c2-45f7-af1a-f1588988fe61",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2180",
+   "price": "250"
+  },
+  {
+   "id": "30cea551-95a5-4704-881a-1941efea345a",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/648",
+   "price": "335"
+  },
+  {
+   "id": "30df704e-0a7b-4b38-b552-dc2e29ee75a2",
+   "gym_id": "EAG",
+   "event_url": "https://portal.iclasspro.com/eaglegymnasticsfrisco/camp-details/374",
+   "price": "15"
+  },
+  {
+   "id": "32059b12-7c37-4544-a16f-d9d18353024c",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2670",
+   "price": "16"
+  },
+  {
+   "id": "359dc904-76ff-4136-9e50-382ecf9be2d4",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1684",
+   "price": "250"
+  },
+  {
+   "id": "36ca30a8-5840-4048-b503-a79458f0ef48",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2182",
+   "price": "250"
+  },
+  {
+   "id": "37bd0956-d452-42f1-814f-b20ca6338ecf",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1772",
+   "price": "70"
+  },
+  {
+   "id": "37d518cb-8f7e-4b95-8971-fd14870c5b53",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1789",
+   "price": "40"
+  },
+  {
+   "id": "38d60b2b-fc75-42a3-8cb8-8be869ed58fd",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1759",
+   "price": "16"
+  },
+  {
+   "id": "39e19c58-72d7-4598-938d-c8cdf94ae789",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2681",
+   "price": "16"
+  },
+  {
+   "id": "3a0bf51e-fe8b-4338-bd33-62bf28a90f00",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1331",
+   "price": "345"
+  },
+  {
+   "id": "3b7b2dd8-46ab-4945-8d62-1ce57c77f902",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2662",
+   "price": "70"
+  },
+  {
+   "id": "3babbe5a-05ba-4d7a-9795-6c89b285bd0e",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2658",
+   "price": "315"
+  },
+  {
+   "id": "3c5c3ee3-db42-4f5b-a10e-4f8f7eeef9c6",
+   "gym_id": "PLG",
+   "event_url": "https://portal.iclasspro.com/planetgymnasticsnatick/appointment-details/1762?serviceId=22",
+   "price": "30"
+  },
+  {
+   "id": "3e0431d9-58ab-4857-8a66-e2ecca120817",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/961",
+   "price": "70"
+  },
+  {
+   "id": "3e68917a-1b27-41ec-a02c-b617080ee16b",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1000",
+   "price": "45"
+  },
+  {
+   "id": "3f1319a6-3b65-4803-8581-1e39639cd22e",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/999",
+   "price": "30"
+  },
+  {
+   "id": "425ca3d4-2e99-4b67-b6e7-bfa284b19521",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/657",
+   "price": "335"
+  },
+  {
+   "id": "42800f30-189f-4832-b367-944d46446897",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2075",
+   "price": "45"
+  },
+  {
+   "id": "431b32cf-4154-4b39-8d6e-650441c6012d",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2081",
+   "price": "30"
+  },
+  {
+   "id": "434b6476-391e-40a0-b0db-6260e45c67e6",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/974",
+   "price": "315"
+  },
+  {
+   "id": "44183fed-947d-4305-a068-9de84bc276c1",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/972",
+   "price": "70"
+  },
+  {
+   "id": "44425eef-3c07-4370-897f-2ad58ef243b6",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1372",
+   "price": "35"
+  },
+  {
+   "id": "448149f2-abcf-418b-b29f-9656f002a533",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1340",
+   "price": "75"
+  },
+  {
+   "id": "448a8d49-64b6-48fc-bf03-4ce461b496e3",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/650",
+   "price": "335"
+  },
+  {
+   "id": "449722c2-d24f-40e5-98fd-dc9d7aca86e4",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/942",
+   "price": "20"
+  },
+  {
+   "id": "45239773-bf1f-4d0b-9513-3a908b10f6f7",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1763",
+   "price": "70"
+  },
+  {
+   "id": "468e9ee9-54c4-4079-933b-ee1e6bc71370",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1013",
+   "price": "30"
+  },
+  {
+   "id": "46fcaf72-388d-484f-815a-32d1d8489cf1",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/670",
+   "price": "30"
+  },
+  {
+   "id": "4752575f-aa4e-4163-89ba-25a516d2abde",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1332",
+   "price": "75"
+  },
+  {
+   "id": "479b2ebe-129c-47e9-aa28-3f6d41599726",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/966",
+   "price": "400"
+  },
+  {
+   "id": "48bfce09-3d9c-43c1-820e-caddca94f70a",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1345",
+   "price": "345"
+  },
+  {
+   "id": "4a170124-e7cd-40f3-bfe7-e175f73c1d35",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1664",
+   "price": "250"
+  },
+  {
+   "id": "4a3cc204-4ec3-4cdb-9343-ccf6eeb869e1",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1366",
+   "price": "10"
+  },
+  {
+   "id": "4a3df3b6-2583-4783-87d6-774bc8ff3068",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/669",
+   "price": "40"
+  },
+  {
+   "id": "4aa3aec5-f443-433e-ba5b-83e8d3887753",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/695",
+   "price": "270"
+  },
+  {
+   "id": "4b498693-aab4-4b16-922a-d717b3117c69",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/702",
+   "price": "65"
+  },
+  {
+   "id": "4b67b1ca-5766-4905-b129-1fbd4d79899e",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/989",
+   "price": "45"
+  },
+  {
+   "id": "4c379f48-07e4-4634-926a-810491a3091d",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1339",
+   "price": "75"
+  },
+  {
+   "id": "4c50bb0a-1a14-47a9-9e0f-ff1ff43e86ac",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2655",
+   "price": "30"
+  },
+  {
+   "id": "4d45da3d-33e4-4687-9a9a-749891ecccf1",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/995",
+   "price": "45"
+  },
+  {
+   "id": "4d7cbafa-cf05-4d30-8e03-1a98f3aac918",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1750",
+   "price": "16"
+  },
+  {
+   "id": "4d8fae5b-590f-449f-8759-5c9267fa25ee",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1739",
+   "price": "70"
+  },
+  {
+   "id": "4dbf2f7a-affa-467a-ab4c-86604ac44106",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2617",
+   "price": "40.0"
+  },
+  {
+   "id": "4dcf639a-9c48-400c-b9f3-1ee383200de7",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1668",
+   "price": "250"
+  },
+  {
+   "id": "4e8ad444-d433-407f-a664-e5ae7ae428ef",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2023",
+   "price": "90"
+  },
+  {
+   "id": "4ed78fd1-561b-4fdc-b45c-e3f602ef22cd",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2674",
+   "price": "16"
+  },
+  {
+   "id": "4edfa547-415d-40b6-9ce6-396063c24659",
+   "gym_id": "EAG",
+   "event_url": "https://portal.iclasspro.com/eaglegymnasticsfrisco/camp-details/336",
+   "price": "15"
+  },
+  {
+   "id": "4f8c6189-c4e9-41ed-812f-ab3b57063f48",
+   "gym_id": "EAG",
+   "event_url": "https://portal.iclasspro.com/eaglegymnasticsfrisco/camp-details/334",
+   "price": "15"
+  },
+  {
+   "id": "501c3439-6f64-41cc-8d0c-13f428bb4b13",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/958",
+   "price": "315"
+  },
+  {
+   "id": "50a37f5d-0b2e-486d-8b41-1c0304a0705e",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1660",
+   "price": "250"
+  },
+  {
+   "id": "50cb8e07-3d7e-48fc-abd1-06d356d09620",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/988",
+   "price": "45"
+  },
+  {
+   "id": "515e197c-9cb4-4130-ab37-f93e56cc72ff",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2639",
+   "price": "10"
+  },
+  {
+   "id": "518651c0-e523-41a6-94b6-eb814cbd31f0",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/644",
+   "price": "335"
+  },
+  {
+   "id": "5201fe2f-95c6-40c1-a122-4c54bb3760f0",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2614",
+   "price": "40.0"
+  },
+  {
+   "id": "52239cad-e645-4904-85a1-5a935a99835a",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/962",
+   "price": "400"
+  },
+  {
+   "id": "532652fa-928a-490e-af99-f971efb060ae",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2179",
+   "price": "20"
+  },
+  {
+   "id": "558ec126-b15f-412e-bfce-1bf89ec2b5b9",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1748",
+   "price": "16"
+  },
+  {
+   "id": "563da60b-9d2e-48e3-bb57-eae5a3ea85fb",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/973",
+   "price": "90"
+  },
+  {
+   "id": "56939f1f-1ded-4726-906b-fa39e76fdc1a",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2679",
+   "price": "315"
+  },
+  {
+   "id": "5701251b-6771-4934-bef8-4ba9ffdb2e55",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1337",
+   "price": "345"
+  },
+  {
+   "id": "571cb9eb-7629-4c3d-9a01-35cccdd912fc",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/979",
+   "price": "70"
+  },
+  {
+   "id": "582606ce-21bf-4f72-9651-6d06045b2203",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2641",
+   "price": "10"
+  },
+  {
+   "id": "58db036f-82ca-4a5f-895b-9aa16bede33d",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2659",
+   "price": "315"
+  },
+  {
+   "id": "59052d76-39fe-450b-aff7-6ad1a5dc356e",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1692",
+   "price": "15"
+  },
+  {
+   "id": "5a0956f8-54d8-47b2-a575-7124a50ad7af",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2028",
+   "price": "90"
+  },
+  {
+   "id": "5a60c3c4-d473-43f0-b838-c95a67923e42",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/635",
+   "price": "335"
+  },
+  {
+   "id": "5a6f503b-3aa5-40ac-9bc2-74795575a94b",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1328",
+   "price": "75"
+  },
+  {
+   "id": "5abdf670-ec73-4b86-862e-cdd18cebddcc",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/967",
+   "price": "315"
+  },
+  {
+   "id": "5ad14f3b-05f1-439c-bccb-eed40fa06c9f",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2676",
+   "price": "16"
+  },
+  {
+   "id": "5b0ad268-0e6d-4264-aa09-7f45c86bcbfa",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/659",
+   "price": "335"
+  },
+  {
+   "id": "5b0cca9d-a2ee-47b4-8698-001ceb7f49e9",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2201",
+   "price": "40"
+  },
+  {
+   "id": "5b1ddbf1-17be-4f00-b464-57322a651537",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/964",
+   "price": "315"
+  },
+  {
+   "id": "5b3db716-b7d8-4d5f-bcdf-b02b89675c8f",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/968",
+   "price": "90"
+  },
+  {
+   "id": "5b533975-ee71-4dd2-8a12-a1b171fd514c",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1333",
+   "price": "75"
+  },
+  {
+   "id": "5bcdf84e-fb41-4dbf-b45d-85742c32862b",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2040",
+   "price": "45"
+  },
+  {
+   "id": "5bdc9303-225d-4cfa-8ddc-2313143c8d67",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/996",
+   "price": "30"
+  },
+  {
+   "id": "5bdec753-aa54-4f6e-87b1-c6809c374b6d",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1795",
+   "price": "10"
+  },
+  {
+   "id": "5c78deb2-7b37-4e9b-8a68-02ec0c748a78",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/993",
+   "price": "45"
+  },
+  {
+   "id": "5cbd6e04-36be-4e74-8f63-7666f03fa207",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1700",
+   "price": "40"
+  },
+  {
+   "id": "5d1e5393-bb25-4438-9821-537656f4e5e7",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2675",
+   "price": "16"
+  },
+  {
+   "id": "5e4cd346-4d46-4bb1-b58d-a8d945193a19",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2677",
+   "price": "16"
+  },
+  {
+   "id": "60ca3f68-b02e-4e86-884d-74fbc2cc77e4",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/716",
+   "price": "35"
+  },
+  {
+   "id": "61f104f2-d294-47fe-bfcc-5ccd34242ccc",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/721",
+   "price": "30"
+  },
+  {
+   "id": "621fccd3-8a87-4004-b087-8465b9f4721d",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2012",
+   "price": "390"
+  },
+  {
+   "id": "63fce215-e4a2-4973-a814-ebf0ef18ab0b",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/683",
+   "price": "270"
+  },
+  {
+   "id": "64753ba2-df9c-4264-8025-b5c96ed500f0",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/720",
+   "price": "30"
+  },
+  {
+   "id": "6592d3e1-d8a4-4eda-8a1e-bd20a16303a6",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2199",
+   "price": "40"
+  },
+  {
+   "id": "65cfed49-55a4-4096-9ed8-50528e99c937",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2678",
+   "price": "16"
+  },
+  {
+   "id": "6678a91e-18fe-419d-b10d-71d6567c092c",
+   "gym_id": "PLG",
+   "event_url": "https://portal.iclasspro.com/planetgymnasticsnatick/appointment-details/1755?serviceId=22",
+   "price": "30"
+  },
+  {
+   "id": "66a07897-7912-4668-8352-9c406f642954",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/705",
+   "price": "65"
+  },
+  {
+   "id": "671c937d-1bac-4492-b757-178b4c2655b1",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1666",
+   "price": "250"
+  },
+  {
+   "id": "67fb0c6d-3953-4f6a-bbf6-5dbad7039665",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/704",
+   "price": "65"
+  },
+  {
+   "id": "688ca0bd-e876-490f-a1f7-eb9922bcaf21",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2200",
+   "price": "30"
+  },
+  {
+   "id": "6894430c-d912-45a9-97f3-652d28e13784",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/645",
+   "price": "335"
+  },
+  {
+   "id": "6a0fc2b1-1c5d-426a-8d23-f686ab5252fe",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/961",
+   "price": "400"
+  },
+  {
+   "id": "6a27db97-7d74-4eb3-aa28-8c021479344d",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2027",
+   "price": "90"
+  },
+  {
+   "id": "6cc8ed92-8bd4-4ec8-8d75-64c2d1f62b27",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/1011",
+   "price": "90"
+  },
+  {
+   "id": "6eca9fb4-99e4-460f-852c-c6cfe2db7469",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2185",
+   "price": "20"
+  },
+  {
+   "id": "6edbc117-3c75-4a9f-afed-36e310ee2f36",
+   "gym_id": "MGC",
+   "event_url": "https://portal.iclasspro.com/metrogymnastics/camp-details/56",
+   "price": "80"
+  },
+  {
+   "id": "6fb85039-8621-4be2-baaa-d1b731565403",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/964",
+   "price": "400"
+  },
+  {
+   "id": "71badaba-d25d-4035-8c82-4e75dacbc0d3",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/991",
+   "price": "45"
+  },
+  {
+   "id": "72619f9d-6eac-4e87-b653-94511e0ec776",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1793",
+   "price": "10"
+  },
+  {
+   "id": "72999dc4-e52e-4632-a4b6-ee3843b91b11",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1765",
+   "price": "16"
+  },
+  {
+   "id": "72e31617-a31b-426e-b044-0193a420cb0a",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1989",
+   "price": "390"
+  },
+  {
+   "id": "73627f70-4568-41dc-893e-bdaebcf7a65f",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1757",
+   "price": "70"
+  },
+  {
+   "id": "7376e515-fdbc-4479-8fde-94d689c94787",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/696",
+   "price": "270"
+  },
+  {
+   "id": "73826443-3f98-490a-a2f3-b76cef519d29",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/973",
+   "price": "315"
+  },
+  {
+   "id": "73b7aca8-5345-4778-b3c5-5704c58558c0",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/638",
+   "price": "335"
+  },
+  {
+   "id": "7406bd6e-3274-4139-9446-92ff59283f5f",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2654",
+   "price": "30"
+  },
+  {
+   "id": "7609047b-dc64-4e4b-80e8-d11b54639eb9",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2016",
+   "price": "390"
+  },
+  {
+   "id": "764012fa-8f35-4dc5-8f54-007af3fac536",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1737",
+   "price": "8"
+  },
+  {
+   "id": "76898c19-2a6a-42ae-a34a-e1b686db8b9c",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1381",
+   "price": "40"
+  },
+  {
+   "id": "76ddb8b9-6564-4f93-bd48-ef194f5540cb",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1659",
+   "price": "250"
+  },
+  {
+   "id": "77ab1323-64dc-4c82-a248-484ad2f1a7cc",
+   "gym_id": "EAG",
+   "event_url": "https://portal.iclasspro.com/eaglegymnasticsfrisco/camp-details/375",
+   "price": "15"
+  },
+  {
+   "id": "77e9e4e7-5486-4326-b252-f1bac6aee737",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/687",
+   "price": "270"
+  },
+  {
+   "id": "78880154-6486-449b-8b07-43bac6dc9b53",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1003",
+   "price": "20"
+  },
+  {
+   "id": "79e3c224-b605-4799-8e6f-c30093e01c3b",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1755",
+   "price": "16"
+  },
+  {
+   "id": "79efd3be-67a0-4b00-a021-d947c181042a",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/971",
+   "price": "70"
+  },
+  {
+   "id": "7b3b5637-45f8-45f7-ab21-0e8e03387662",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2615",
+   "price": "40.0"
+  },
+  {
+   "id": "7b3eeab8-ab4e-409c-bdf9-132034f39de9",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/703",
+   "price": "65"
+  },
+  {
+   "id": "7c3cdf27-496d-4683-8944-7e827a704e0a",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/962",
+   "price": "70"
+  },
+  {
+   "id": "7d09e2e3-92be-40c6-a88b-80c563a223b9",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1768",
+   "price": "8"
+  },
+  {
+   "id": "7d9f8945-1727-49a4-8e74-7364bb88c048",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1004",
+   "price": "20"
+  },
+  {
+   "id": "7f3f3102-9fd6-4e8b-a1bb-57e2665d6e5d",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/1990",
+   "price": "390"
+  },
+  {
+   "id": "7f63e08e-87e4-4e47-ba01-97feb6f034df",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2640",
+   "price": "10"
+  },
+  {
+   "id": "803aa860-1f1f-4fba-a6e2-6a8199f601c2",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1752",
+   "price": "70"
+  },
+  {
+   "id": "810ab593-637b-4485-a8b8-e5159223b00a",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2183",
+   "price": "20"
+  },
+  {
+   "id": "81423a42-f547-4b46-99cf-69ca54a7f042",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1363",
+   "price": "10"
+  },
+  {
+   "id": "822dafb0-b085-4d46-ad9c-10e3a7fa1aa1",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1327",
+   "price": "345"
+  },
+  {
+   "id": "826cca4e-11c0-4671-bb58-52901c48131c",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1790",
+   "price": "30"
+  },
+  {
+   "id": "82b0c1d8-0446-42d9-bf5d-17b1914189d1",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2612",
+   "price": "40.0"
+  },
+  {
+   "id": "838c0f3f-699d-4145-8c0b-80e79318adec",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1669",
+   "price": "250"
+  },
+  {
+   "id": "840b9a0b-727b-4be0-803a-c51571a73add",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1007",
+   "price": "20"
+  },
+  {
+   "id": "8585b348-8585-4524-842c-54dc9df4d54e",
+   "gym_id": "EAG",
+   "event_url": "https://portal.iclasspro.com/eaglegymnasticsfrisco/camp-details/383",
+   "price": "15"
+  },
+  {
+   "id": "8710cdb3-327a-4009-b26a-367fa7f49d18",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1683",
+   "price": "250"
+  },
+  {
+   "id": "8863a236-aa79-4577-b3dc-a32494ed44f8",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2630",
+   "price": "10"
+  },
+  {
+   "id": "8869db95-bbb8-4226-a83a-6e37e59a8057",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1734",
+   "price": "8"
+  },
+  {
+   "id": "8914c1b8-e9e2-46f9-ae16-89998b340697",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/692",
+   "price": "270"
+  },
+  {
+   "id": "89ea8712-b494-4152-a701-9b84e4fa8c22",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/685",
+   "price": "270"
+  },
+  {
+   "id": "8a1df636-ffac-40ba-a073-b180b387de9b",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1383",
+   "price": "40"
+  },
+  {
+   "id": "8b919c88-0bd4-4e8b-b5e3-e8b5768b7df8",
+   "gym_id": "EAG",
+   "event_url": "https://portal.iclasspro.com/eaglegymnasticsfrisco/camp-details/384",
+   "price": "15"
+  },
+  {
+   "id": "8ba4bf3d-cf75-498b-8de5-9a740c2f1608",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1329",
+   "price": "345"
+  },
+  {
+   "id": "8bbb497f-cf92-4132-8fd7-127e1e29031a",
+   "gym_id": "MGC",
+   "event_url": "https://portal.iclasspro.com/metrogymnastics/camp-details/49",
+   "price": "80"
+  },
+  {
+   "id": "8c61c3aa-7acd-4824-a664-6fa62fdd7719",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2029",
+   "price": "90"
+  },
+  {
+   "id": "8e8207a5-23b3-44a5-bc8b-a523fd7b816b",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2664",
+   "price": "70"
+  },
+  {
+   "id": "8eade962-5ebb-4fec-8b44-1fdc8bad7c03",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/678",
+   "price": "270"
+  },
+  {
+   "id": "8eebed6e-f940-4694-b1e1-a41303ba4500",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2176",
+   "price": "250"
+  },
+  {
+   "id": "91e080ff-0a35-4260-88d2-1cb7c2aff9d3",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2636",
+   "price": "10"
+  },
+  {
+   "id": "926bcd69-40de-4a7b-b38d-c001e91f5cd0",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/682",
+   "price": "270"
+  },
+  {
+   "id": "92727f9b-424f-4687-b100-0364276e5ecf",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1671",
+   "price": "250"
+  },
+  {
+   "id": "934a23b6-092a-4ed1-8686-79138d8e558c",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1747",
+   "price": "16"
+  },
+  {
+   "id": "93bdb370-3fc1-4592-b017-25b46ed4273b",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1380",
+   "price": "10"
+  },
+  {
+   "id": "93dd1ac8-d538-4317-a470-b2a52f44c227",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/970",
+   "price": "70"
+  },
+  {
+   "id": "94b21547-8958-4158-b270-32efd4235587",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2011",
+   "price": "390"
+  },
+  {
+   "id": "95370598-cc3d-4cb6-8828-5c9139b5068b",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/681",
+   "price": "270"
+  },
+  {
+   "id": "95562561-1788-4607-949a-b765afab163f",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1751",
+   "price": "8"
+  },
+  {
+   "id": "9645ab67-90be-4b58-809c-ff6cdfad43d9",
+   "gym_id": "MGC",
+   "event_url": "https://portal.iclasspro.com/metrogymnastics/camp-details/52",
+   "price": "80"
+  },
+  {
+   "id": "96ac9151-ca4d-4ff0-aa5e-dab198cdcc92",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1753",
+   "price": "8"
+  },
+  {
+   "id": "9702b39b-9387-4f10-abd7-1f8c01711be0",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1771",
+   "price": "8"
+  },
+  {
+   "id": "97b0f734-006f-451f-8493-2ff48c874705",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/967",
+   "price": "90"
+  },
+  {
+   "id": "98dcebca-0720-4c56-9960-6a902cb0e36e",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2661",
+   "price": "315"
+  },
+  {
+   "id": "9971d1a3-2eb0-4c36-b55f-b9ced3520a65",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2638",
+   "price": "10"
+  },
+  {
+   "id": "9b9668e6-d550-4b01-9e02-6eaac12420cf",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2666",
+   "price": "315"
+  },
+  {
+   "id": "9c2b9212-00fe-4eab-8c5b-9cf5911781f5",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1773",
+   "price": "16"
+  },
+  {
+   "id": "9dedca17-6af5-414a-af63-7cca5a0da523",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1369",
+   "price": "40"
+  },
+  {
+   "id": "a04531bd-3c44-47f0-9052-6f29fb113fbd",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1745",
+   "price": "315"
+  },
+  {
+   "id": "a1d4d57d-aaeb-4da0-8141-07314d9e3e17",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/647",
+   "price": "335"
+  },
+  {
+   "id": "a21ffb73-155d-44d6-abdd-2ab1dd684212",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1769",
+   "price": "315"
+  },
+  {
+   "id": "a2671ecd-1722-4780-a08e-c4676b8846a2",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2657",
+   "price": "70"
+  },
+  {
+   "id": "a32e63c3-8730-461c-abcd-141a6444cbb8",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2637",
+   "price": "10"
+  },
+  {
+   "id": "a3309b7e-322f-4864-a214-424958b7c2e1",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1735",
+   "price": "16"
+  },
+  {
+   "id": "a34e49be-d5da-4dc9-9d1f-d1711f0405ad",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2009",
+   "price": "390"
+  },
+  {
+   "id": "a41ad39a-0454-46fa-a4d7-dd9652bf5b05",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2618",
+   "price": "40.0"
+  },
+  {
+   "id": "a4aa033c-8315-428a-83cb-310cc13eb325",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/715",
+   "price": "40"
+  },
+  {
+   "id": "a5c52e6c-7c74-4458-80ee-b3851cee8e9f",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/723",
+   "price": "35"
+  },
+  {
+   "id": "a87e5ed3-7c58-430c-932d-ce90f8471022",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1788",
+   "price": "40"
+  },
+  {
+   "id": "a890b6b1-e1f5-4a48-a8d3-5064e6d31530",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1662",
+   "price": "62"
+  },
+  {
+   "id": "a8cfb53e-b4b4-45a0-9198-93211e22a47c",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1348",
+   "price": "75"
+  },
+  {
+   "id": "aa30e66c-f315-42b4-bd20-ada522602bb1",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/969",
+   "price": "70"
+  },
+  {
+   "id": "aad8bf81-2fa4-417a-9817-8cbebdc1aaa8",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1347",
+   "price": "75"
+  },
+  {
+   "id": "ab1e7f99-4f67-45f5-a25d-8e088804369f",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/719",
+   "price": "30"
+  },
+  {
+   "id": "ac6e0b1c-cd18-437a-b1e9-65b0f4aeeda3",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/965",
+   "price": "315"
+  },
+  {
+   "id": "ace600b4-2131-4ce7-a0fb-96fdfd596758",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1767",
+   "price": "16"
+  },
+  {
+   "id": "b00a78a7-fb6e-4306-bda7-4e48d2786bc9",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/698",
+   "price": "65"
+  },
+  {
+   "id": "b4beeebc-09d6-4924-9181-28c1124ba35d",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1658",
+   "price": "250"
+  },
+  {
+   "id": "b5091324-9647-4ef5-a064-7f5e80599074",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1001",
+   "price": "45"
+  },
+  {
+   "id": "b6a9ca68-0c02-4c16-b58c-a9d3097a9870",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/639",
+   "price": "335"
+  },
+  {
+   "id": "b7e78487-14d8-4e1f-ac9a-2e93f310a647",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2172",
+   "price": "250"
+  },
+  {
+   "id": "b8bb8ac3-9651-4790-a3c1-1d2769612261",
+   "gym_id": "MGC",
+   "event_url": "https://portal.iclasspro.com/metrogymnastics/camp-details/53",
+   "price": "80"
+  },
+  {
+   "id": "b95ec1ad-977b-4be3-9026-4daa0053ab45",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/966",
+   "price": "315"
+  },
+  {
+   "id": "b9887d0f-b249-43bb-a8f7-9dda07839115",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2672",
+   "price": "315"
+  },
+  {
+   "id": "b9faaab7-8502-4d8b-9e5e-fff2a2ea0229",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/668",
+   "price": "20"
+  },
+  {
+   "id": "ba38a7b6-96a0-4572-a371-7572cdefd480",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1733",
+   "price": "70"
+  },
+  {
+   "id": "ba4e977a-5c4e-446b-8da2-3bfab6e6bbca",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1787",
+   "price": "40"
+  },
+  {
+   "id": "ba566ec0-d048-4d98-b122-fc08b4571e64",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1667",
+   "price": "250"
+  },
+  {
+   "id": "bb15f362-9157-418a-a4f4-0a056cb64ecf",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2010",
+   "price": "390"
+  },
+  {
+   "id": "bc495c39-7024-4413-86b9-4492b4f325bb",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1740",
+   "price": "315"
+  },
+  {
+   "id": "bc4b5dbb-374c-41cc-92bb-5892180edcf2",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/969",
+   "price": "90"
+  },
+  {
+   "id": "bd069a50-353e-4752-8f3e-3013a0d47e99",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1758",
+   "price": "8"
+  },
+  {
+   "id": "bf1c157d-3683-401f-81ee-94d45c9eb154",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2633",
+   "price": "10"
+  },
+  {
+   "id": "bf2f96aa-b450-447c-bcac-6d1f72a707be",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2074",
+   "price": "45"
+  },
+  {
+   "id": "bf692a93-f623-4b1c-983b-4e1f4ad06c1b",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1749",
+   "price": "315"
+  },
+  {
+   "id": "c0c1c83a-377f-4fae-ae64-f52bbd505ef7",
+   "gym_id": "MGC",
+   "event_url": "https://portal.iclasspro.com/metrogymnastics/camp-details/51",
+   "price": "80"
+  },
+  {
+   "id": "c10ce56a-340f-4cbf-a269-680d5c858b54",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2177",
+   "price": "20"
+  },
+  {
+   "id": "c143293b-2221-443a-b861-d3de2b3ecab9",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1742",
+   "price": "16"
+  },
+  {
+   "id": "c18e9463-ae53-41cd-80fa-ec2af0a12557",
+   "gym_id": "MGC",
+   "event_url": "https://portal.iclasspro.com/metrogymnastics/camp-details/55",
+   "price": "80"
+  },
+  {
+   "id": "c1f54076-1b9b-41af-bdd5-7e952aeaee8c",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1656",
+   "price": "250"
+  },
+  {
+   "id": "c458106e-2e07-4a2c-8b81-b364e8e6a6b0",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2632",
+   "price": "10"
+  },
+  {
+   "id": "c4f70daa-5919-4db4-aa09-e39d80124829",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1342",
+   "price": "75"
+  },
+  {
+   "id": "c63e8b9b-c5a6-44c2-99c0-d1731be6e521",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2171",
+   "price": "20"
+  },
+  {
+   "id": "c69d2728-95a5-4b74-baf1-6c0c85a25f00",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/641",
+   "price": "335"
+  },
+  {
+   "id": "c740f228-4bfe-4d2f-9750-62ca2bbb45eb",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2073",
+   "price": "45"
+  },
+  {
+   "id": "c7c14e83-e7de-442b-a9c7-1d87a961acb5",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2041",
+   "price": "30"
+  },
+  {
+   "id": "c8dad239-b1d4-4fe8-a617-ffd7b94764b1",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2181",
+   "price": "20"
+  },
+  {
+   "id": "c96663a6-5652-4b40-a0fe-1d9b555ca2ab",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1702",
+   "price": "30"
+  },
+  {
+   "id": "c97643ce-ac5d-4e1d-a12f-24f567f23681",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2175",
+   "price": "20"
+  },
+  {
+   "id": "c9cfb980-df0f-4c4c-aef1-7b7f23a6fcb5",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1736",
+   "price": "70"
+  },
+  {
+   "id": "c9d9a6f1-351d-4bfe-8e41-0dbfd4dc12cb",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1367",
+   "price": "10"
+  },
+  {
+   "id": "ca26807a-e48d-4876-9f1e-64c96cdcfde5",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2013",
+   "price": "390"
+  },
+  {
+   "id": "cabdcc94-00db-4230-a4a6-42fc98878e03",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1370",
+   "price": "35"
+  },
+  {
+   "id": "cbb4fd16-530f-474a-a3a6-1f629cfbbbea",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1691",
+   "price": "15"
+  },
+  {
+   "id": "cbd8a55f-f7ca-4931-baa5-1309124f713b",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1371",
+   "price": "10"
+  },
+  {
+   "id": "cc15b48a-4007-4a60-8fb6-822cfec4af57",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1746",
+   "price": "8"
+  },
+  {
+   "id": "cc4004bd-15c8-4ea0-a2a8-648e6a587a33",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2653",
+   "price": "30"
+  },
+  {
+   "id": "cc79f25c-53ca-4edf-a76d-8fcfa1bf14d7",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/976",
+   "price": "70"
+  },
+  {
+   "id": "ccfa72f1-4ff5-4343-bea6-b6019546c427",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1670",
+   "price": "62"
+  },
+  {
+   "id": "ced9f51e-c50c-474f-936b-0c2588a732bf",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/717",
+   "price": "35"
+  },
+  {
+   "id": "d0228006-cc43-49f9-9415-d64f1fa6dabb",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/691",
+   "price": "270"
+  },
+  {
+   "id": "d037b6be-e76e-4bc9-8065-7bbaae6cc398",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1330",
+   "price": "75"
+  },
+  {
+   "id": "d1d174de-8a7b-48b0-9968-b66f51e3cf3a",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2613",
+   "price": "40"
+  },
+  {
+   "id": "d266b4a0-7552-4a41-99b8-efe326f27510",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/963",
+   "price": "315"
+  },
+  {
+   "id": "d2e7f1b1-a46b-470d-b4ce-5370a3920b81",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1770",
+   "price": "16"
+  },
+  {
+   "id": "d36bc452-c29d-4e08-87e9-5392637bef04",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2168",
+   "price": "250"
+  },
+  {
+   "id": "d3c55b4e-7018-4e17-b505-18d67d78938c",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/667",
+   "price": "40"
+  },
+  {
+   "id": "d4e6bc62-8e7d-4def-be55-ea3fb995262c",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2682",
+   "price": "30"
+  },
+  {
+   "id": "d4facd4c-90cc-47fd-abab-38f37aaa1d63",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1343",
+   "price": "345"
+  },
+  {
+   "id": "d58e0db3-da41-458d-b3c4-e76fc3752063",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/975",
+   "price": "70"
+  },
+  {
+   "id": "d60917a0-3289-4858-a73f-f8320a407007",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2055",
+   "price": "390"
+  },
+  {
+   "id": "d6b00936-0a5b-4cec-8712-e313f7e56469",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1686",
+   "price": "250"
+  },
+  {
+   "id": "d7ab8c2b-d6b7-46ef-861e-429a9f6c7b63",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/1012",
+   "price": "90"
+  },
+  {
+   "id": "d80f8357-052b-4d74-bd89-f2b14220b9cb",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/693",
+   "price": "270"
+  },
+  {
+   "id": "d9dac0a1-38ba-44cf-819b-05388fefca70",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1743",
+   "price": "70"
+  },
+  {
+   "id": "dbaf702e-bc24-4a6c-85f3-09400648610a",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1756",
+   "price": "8"
+  },
+  {
+   "id": "dbc6e22f-e28c-4801-994f-fb252c6d9b54",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2178",
+   "price": "62"
+  },
+  {
+   "id": "dc881618-703b-4a9b-a012-aafbf696837d",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1326",
+   "price": "75"
+  },
+  {
+   "id": "dd51017f-0e5e-40a9-8f5f-2462f73f06a4",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1341",
+   "price": "75"
+  },
+  {
+   "id": "dda259ae-42a4-4507-a6da-051ab98f84c2",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1766",
+   "price": "70"
+  },
+  {
+   "id": "df30fdc1-68f6-4bdf-a8e3-55be7a9bb468",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/978",
+   "price": "70"
+  },
+  {
+   "id": "df99c917-6fcf-4ded-8a74-9d8c4fbdb0f3",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1005",
+   "price": "20"
+  },
+  {
+   "id": "e171e36c-1d52-497e-a7f3-c6338bb30750",
+   "gym_id": "EAG",
+   "event_url": "https://portal.iclasspro.com/eaglegymnasticsfrisco/camp-details/380",
+   "price": "15"
+  },
+  {
+   "id": "e402b428-c86c-4a96-98f0-7e97a1ec3428",
+   "gym_id": "MGC",
+   "event_url": "https://portal.iclasspro.com/metrogymnastics/camp-details/54",
+   "price": "80"
+  },
+  {
+   "id": "e413649e-e093-4a1c-b979-55efc5f23f37",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1379",
+   "price": "10"
+  },
+  {
+   "id": "e5f1ec37-e77c-463e-9a0c-38079ca5ee81",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1761",
+   "price": "16"
+  },
+  {
+   "id": "e6b503f0-2b2a-4cef-8d52-929b5c55f4dc",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1375",
+   "price": "10"
+  },
+  {
+   "id": "e7703068-7482-4bb4-9eda-259e903a900f",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1792",
+   "price": "10"
+  },
+  {
+   "id": "e810ad03-87c9-4694-a6fd-eae7b8788a65",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2665",
+   "price": "70"
+  },
+  {
+   "id": "e838d76d-b3ab-4d12-88ae-2b17a8c776ba",
+   "gym_id": "TIG",
+   "event_url": "https://portal.iclasspro.com/tigar/camp-details/642",
+   "price": "335"
+  },
+  {
+   "id": "e83b924b-7ca3-4fef-9ba1-19cc7102f145",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1008",
+   "price": "20"
+  },
+  {
+   "id": "e891c974-c209-4fb3-97fa-30019af45bd3",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1365",
+   "price": "10"
+  },
+  {
+   "id": "e9004e78-05a2-4546-9e6c-86911e56b516",
+   "gym_id": "MGC",
+   "event_url": "https://portal.iclasspro.com/metrogymnastics/camp-details/50",
+   "price": "45"
+  },
+  {
+   "id": "e911582c-1523-475f-b97f-b0fbc4eb06cc",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/722",
+   "price": "35"
+  },
+  {
+   "id": "eb8e10a8-57fe-41fc-97de-0ff3caf491db",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/971",
+   "price": "400"
+  },
+  {
+   "id": "ece288c0-bab5-4640-9781-8f96c80c94ae",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1699",
+   "price": "40"
+  },
+  {
+   "id": "ece7d554-e499-4dfa-a829-c4c1901f130b",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/686",
+   "price": "270"
+  },
+  {
+   "id": "ed30816f-e4ce-4ee6-8a3f-029e04fde223",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1344",
+   "price": "75"
+  },
+  {
+   "id": "ed573f68-746c-45ee-8ae2-021183b9e409",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1368",
+   "price": "40"
+  },
+  {
+   "id": "ed6a9fed-f37b-44f7-9e6d-5419b1c3206c",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/712",
+   "price": "40"
+  },
+  {
+   "id": "ede3de3f-36c2-48fa-a846-018ea5630350",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1754",
+   "price": "16"
+  },
+  {
+   "id": "ee458c41-f6c6-49b0-a0b3-bd031324602e",
+   "gym_id": "EST",
+   "event_url": "https://portal.iclasspro.com/estrellagymnastics/camp-details/688",
+   "price": "270"
+  },
+  {
+   "id": "ee9640ec-3b7a-446d-b4e1-e87d328a8308",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/963",
+   "price": "400"
+  },
+  {
+   "id": "eeb40a30-23a3-442c-be1e-58f3f2da099c",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1384",
+   "price": "35"
+  },
+  {
+   "id": "ef66b7f7-f0cb-472b-bab0-7e52fc46e1bd",
+   "gym_id": "OAS",
+   "event_url": "https://portal.iclasspro.com/oasisgymnastics/camp-details/1010",
+   "price": "20"
+  },
+  {
+   "id": "f043ae00-5dca-4a4e-ae3e-347d2ec00f71",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/1002",
+   "price": "30"
+  },
+  {
+   "id": "f16c48de-4cc8-4ae9-8bae-c03fa4dc0acc",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2167",
+   "price": "20"
+  },
+  {
+   "id": "f17b9c79-9a57-4da1-8035-295798322945",
+   "gym_id": "PLG",
+   "event_url": "https://portal.iclasspro.com/planetgymnasticsnatick/appointment-details/1757?serviceId=22",
+   "price": "30"
+  },
+  {
+   "id": "f1ea87a8-e1b7-43e3-a1c8-df2c3a545086",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1764",
+   "price": "8"
+  },
+  {
+   "id": "f3094170-39e0-4343-b206-b960b8f144ba",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1378",
+   "price": "10"
+  },
+  {
+   "id": "f4a679f3-5fc2-4341-ac73-3bbb425eb3dc",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2025",
+   "price": "90"
+  },
+  {
+   "id": "f5069590-140e-405a-9745-f05bcbdeccec",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1377",
+   "price": "10"
+  },
+  {
+   "id": "f5c862bd-0688-4e49-adbd-8ae826549811",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2077",
+   "price": "30"
+  },
+  {
+   "id": "f7802b5e-457e-46c6-b0b1-de05de349e20",
+   "gym_id": "SGT",
+   "event_url": "https://portal.iclasspro.com/scottsdalegymnastics/camp-details/2022",
+   "price": "60"
+  },
+  {
+   "id": "f8dfb259-be38-4c0d-b60b-1df80b50347c",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1760",
+   "price": "70"
+  },
+  {
+   "id": "f95ad2d0-d7f4-425d-b128-a3cbd4d6636c",
+   "gym_id": "HGA",
+   "event_url": "https://portal.iclasspro.com/houstongymnastics/camp-details/974",
+   "price": "90"
+  },
+  {
+   "id": "f9fa0fdf-20c7-4000-b153-8bfe3cd510fd",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2673",
+   "price": "315"
+  },
+  {
+   "id": "faa82804-c427-45fc-a57e-e8dcf48a1eb8",
+   "gym_id": "EAG",
+   "event_url": "https://portal.iclasspro.com/eaglegymnasticsfrisco/camp-details/335",
+   "price": "15"
+  },
+  {
+   "id": "fb19db1f-bbee-4223-b435-7e8f0aa9ccb9",
+   "gym_id": "RBK",
+   "event_url": "https://portal.iclasspro.com/rbkingwood/camp-details/1680",
+   "price": "250"
+  },
+  {
+   "id": "fbf86b69-28d1-4c38-8fa9-6255a50163d8",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2667",
+   "price": "70"
+  },
+  {
+   "id": "fc2c323b-8a28-433d-bd7e-f8b5a6aa2025",
+   "gym_id": "CPF",
+   "event_url": "https://portal.iclasspro.com/capgymhp/camp-details/2660",
+   "price": "315"
+  },
+  {
+   "id": "fce15c3f-31de-4a82-95bb-8d3ea1b3d445",
+   "gym_id": "PLG",
+   "event_url": "https://portal.iclasspro.com/planetgymnasticsnatick/appointment-details/1758?serviceId=22",
+   "price": "30"
+  },
+  {
+   "id": "fda8b43b-9bac-45d1-a325-98bdf4c1894d",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2202",
+   "price": "20"
+  },
+  {
+   "id": "feb25769-bb79-4a94-9922-ac02a59433fe",
+   "gym_id": "RBA",
+   "event_url": "https://portal.iclasspro.com/rbatascocita/camp-details/2173",
+   "price": "20"
+  },
+  {
+   "id": "ff0df536-5a7e-4c28-82d0-d0f2da10eef6",
+   "gym_id": "PLG",
+   "event_url": "https://portal.iclasspro.com/planetgymnasticsnatick/appointment-details/1763?serviceId=22",
+   "price": "30"
+  },
+  {
+   "id": "ffe0a008-4f48-42be-830d-7f6bd934cdf4",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1334",
+   "price": "345"
+  }
+ ],
+ "events_with_price_errors": [
+  {
+   "id": "48bfce09-3d9c-43c1-820e-caddca94f70a",
+   "gym_id": "CCP",
+   "event_url": "https://portal.iclasspro.com/capgymavery/camp-details/1345",
+   "validation_errors": [
+    {
+     "type": "price_mismatch",
+     "message": "Title says $345 but description prices are $75",
+     "category": "data_error",
+     "severity": "error"
+    }
+   ]
+  },
+  {
+   "id": "4d7cbafa-cf05-4d30-8e03-1a98f3aac918",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1750",
+   "validation_errors": [
+    {
+     "type": "price_mismatch",
+     "message": "Title says $16 but description prices are $8",
+     "category": "data_error",
+     "severity": "error"
+    },
+    {
+     "type": "time_mismatch",
+     "message": "iClass time is 3:00 PM - 4:00 PM but description says 8:00 am",
+     "category": "data_error",
+     "severity": "warning"
+    },
+    {
+     "type": "time_mismatch",
+     "message": "iClass time is 3:00 PM - 4:00 PM but description says 9:00 am",
+     "category": "data_error",
+     "severity": "warning"
+    }
+   ]
+  },
+  {
+   "id": "934a23b6-092a-4ed1-8686-79138d8e558c",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1747",
+   "validation_errors": [
+    {
+     "type": "price_mismatch",
+     "message": "Title says $16 but description prices are $8",
+     "category": "data_error",
+     "severity": "error"
+    },
+    {
+     "type": "time_mismatch",
+     "message": "iClass time is 3:00 PM - 6:00 PM but description says 8:00 am",
+     "category": "data_error",
+     "severity": "warning"
+    },
+    {
+     "type": "time_mismatch",
+     "message": "iClass time is 3:00 PM - 6:00 PM but description says 9:00 am",
+     "category": "data_error",
+     "severity": "warning"
+    }
+   ]
+  },
+  {
+   "id": "d2e7f1b1-a46b-470d-b4ce-5370a3920b81",
+   "gym_id": "CRR",
+   "event_url": "https://portal.iclasspro.com/capgymroundrock/camp-details/1770",
+   "validation_errors": [
+    {
+     "type": "price_mismatch",
+     "message": "Title says $16 but description prices are $8",
+     "category": "data_error",
+     "severity": "error"
+    },
+    {
+     "type": "time_mismatch",
+     "message": "iClass time is 3:00 PM - 6:00 PM but description says 8:00 am",
+     "category": "data_error",
+     "severity": "warning"
+    },
+    {
+     "type": "time_mismatch",
+     "message": "iClass time is 3:00 PM - 6:00 PM but description says 9:00 am",
+     "category": "data_error",
+     "severity": "warning"
+    }
+   ]
+  }
+ ],
+ "price_rules": [
+  {
+   "id": "0f5c710d-9b74-4498-ab18-52467f73f238",
+   "is_permanent": true,
+   "end_date": null,
+   "gym_ids": [
+    "ALL"
+   ],
+   "program": "ALL",
+   "camp_season": null,
+   "scope": "all_events",
+   "keyword": null,
+   "event_id": null,
+   "rule_type": "check_price_mismatch",
+   "value": "system_check",
+   "value_kid2": null,
+   "value_kid3": null,
+   "label": "Price Mismatch (Title vs Description)",
+   "note": null,
+   "created_at": "2026-07-12T19:38:18.272396+00:00",
+   "created_by": "system",
+   "start_date": null,
+   "is_active": true,
+   "is_system": true,
+   "last_hit_count": 3,
+   "last_sync_at": "2026-10-02T15:07:10.58706+00:00",
+   "description": "INTERNAL CONSISTENCY ONLY \u2014 not a source-of-truth check. Fires only when the TITLE has a price AND the description has a price, and they do not match (\"title says $30 but description says $25\"). Uses NO pricing table; the camp/event price-vs-table checks stay OFF (Jayme, July 1). Re-enabled July 2026."
+  }
+ ]
+}

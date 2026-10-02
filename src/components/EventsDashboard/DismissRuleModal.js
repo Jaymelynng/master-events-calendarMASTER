@@ -14,7 +14,7 @@ import React, { useState } from 'react';
  *   errorMessage - the error text being dismissed
  *   gymId - which gym this is for (e.g. "RBA")
  *   ruleEligible - boolean, whether this error type can become a rule
- *   ruleInfo - { ruleType: 'price'|'time', value: '20' } or null
+ *   ruleInfo - { ruleType: 'time'|'program_synonym', value: '8:30 AM' } or null
  *   onDismiss(note, scope) - called when user wants to dismiss; scope: 'event_only' | 'all_in_program'
  *   onDismissAndRule(note, label) - called when user wants to dismiss AND create a rule
  *   onCancel() - called when user cancels entirely
@@ -42,11 +42,7 @@ export default function DismissRuleModal({
   const datesOk = isPermanent || (startDate && endDate);
 
   const isProgramSynonym = ruleInfo?.ruleType === 'program_synonym';
-  const displayValue = ruleInfo
-    ? ruleInfo.ruleType === 'price'
-      ? `$${ruleInfo.value}`
-      : ruleInfo.value
-    : '';
+  const displayValue = ruleInfo ? ruleInfo.value : '';
 
   const handleAcceptException = (scope) => {
     if (typeof onDismiss === 'function') {
@@ -107,7 +103,7 @@ export default function DismissRuleModal({
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Why is this OK? e.g. Before Care pricing"
+            placeholder="Why is this OK? e.g. Before Care hours"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
             autoFocus
             onKeyDown={(e) => {

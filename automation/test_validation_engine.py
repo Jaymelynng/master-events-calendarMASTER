@@ -76,9 +76,9 @@ def main():
     print(f"Events with existing errors: {len(events_with_errors)}")
     print()
 
-    # Import helper functions from f12 (for rules lookup, pricing)
+    # Import helper functions from f12 (for rules lookup)
     # We need these for ValidationContext
-    from f12_collect_and_import import get_rules_for_gym, get_camp_pricing, get_event_pricing
+    from f12_collect_and_import import get_rules_for_gym
 
     # Run new engine against ALL events
     total_old_errors = 0
@@ -107,8 +107,6 @@ def main():
             age_min=event.get('age_min'),
             day_of_week=event.get('day_of_week', ''),
             get_rules_for_gym_fn=get_rules_for_gym,
-            get_camp_pricing_fn=get_camp_pricing,
-            get_event_pricing_fn=get_event_pricing,
         )
 
         # Run new engine

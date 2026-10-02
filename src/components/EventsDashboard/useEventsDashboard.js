@@ -55,7 +55,6 @@ export default function useEventsDashboard() {
     title: '',
     date: '',
     time: '',
-    price: '',
     type: 'CLINIC',
     gym_id: '',
     event_url: ''
@@ -280,16 +279,12 @@ export default function useEventsDashboard() {
     if (!gymId || !gymRules.length) return false;
 
     // Extract value from error message for comparison
-    const priceMatch = errorMessage.match(/\$(\d+)/);
     const timeMatch = errorMessage.match(/(\d{1,2}:\d{2}\s*(?:AM|PM)?)/i);
 
     return gymRules.some(rule => {
       const ruleGymIds = rule.gym_ids || [];
       if (!ruleGymIds.includes(gymId) && !ruleGymIds.includes('ALL')) return false;
 
-      if (rule.rule_type === 'valid_price' && priceMatch) {
-        return rule.value === priceMatch[1];
-      }
       if (rule.rule_type === 'valid_time' && timeMatch) {
         return rule.value.toLowerCase() === timeMatch[1].toLowerCase();
       }
@@ -408,7 +403,6 @@ export default function useEventsDashboard() {
         title: '',
         date: '',
         time: '',
-        price: '',
         type: 'CLINIC',
         gym_id: '',
         event_url: ''
@@ -428,7 +422,6 @@ export default function useEventsDashboard() {
       title: event.title || '',
       date: event.date || '',
       time: event.time || '',
-      price: event.price || '',
       type: event.type || 'CLINIC',
       gym_id: event.gym_id || '',
       event_url: event.event_url || ''
