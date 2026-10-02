@@ -315,6 +315,7 @@ const EventsDashboard = () => {
               openMultipleTabs={openMultipleTabs}
               gymLinks={gymLinks}
               events={events}
+              eventTypes={eventTypes}
             />
 
             {/* Monthly Requirements goals — dynamic, driven by `monthly_requirements` table.
