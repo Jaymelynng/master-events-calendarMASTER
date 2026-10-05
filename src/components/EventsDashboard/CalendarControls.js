@@ -1,8 +1,8 @@
 // ============================================================================
 // CALENDAR CONTROLS - Month navigation, view toggles, and filters
 // ============================================================================
-import React from 'react';
-import { ChevronLeft, ChevronRight, Search, List, Grid, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronLeft, ChevronRight, Search, List, Grid, Plus, Copy } from 'lucide-react';
 import { theme, gymColors, getEventTypeColor } from './constants';
 
 // Long bucket names get a short chip label; everything else shows as-is.
@@ -27,8 +27,11 @@ export default function CalendarControls({
   gymsList,
   eventTypesFromEvents,
   eventTypes = [],
-  onAddEvent
+  onAddEvent,
+  onCopyShown,
+  shownCount = 0,
 }) {
+  const [copiedCount, setCopiedCount] = useState(null);
   // No gym picked means every gym is showing.
   const allPicked = selectedGyms.length === 0;
   const toggleGym = (name) => {
@@ -199,6 +202,31 @@ export default function CalendarControls({
           {viewMode === 'calendar' ? <List className="w-4 h-4" /> : <Grid className="w-4 h-4" />}
           {viewMode === 'calendar' ? 'Table View' : 'Calendar View'}
         </button>
+
+        {/* Copies exactly the events on screen right now (gyms, category,
+            search and the days in view) as a table to paste anywhere. */}
+        {onCopyShown && (
+          <button
+            onClick={async () => {
+              const n = await onCopyShown();
+              if (n !== null && n !== undefined) {
+                setCopiedCount(n);
+                setTimeout(() => setCopiedCount(null), 2500);
+              }
+            }}
+            disabled={!shownCount}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all shadow-sm hover:brightness-95 hover:shadow-md disabled:opacity-40"
+            style={{
+              cursor: shownCount ? 'pointer' : 'not-allowed',
+              backgroundColor: copiedCount !== null ? '#15803d' : theme.colors.primary,
+              color: '#ffffff',
+            }}
+            title="Copy every event on screen right now as a table — paste into email, Excel or Google Sheets"
+          >
+            <Copy className="w-4 h-4" />
+            {copiedCount !== null ? `Copied ${copiedCount} ✓` : `Copy what's shown (${shownCount || 0})`}
+          </button>
+        )}
       </div>
 
       {/* Event Types - one chip per bucket, straight from the event_types table.

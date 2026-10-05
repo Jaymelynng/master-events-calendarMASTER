@@ -24,6 +24,7 @@ import CalendarControls, { CalendarViewToggle, CalendarLegend } from './EventsDa
 import CalendarGrid from './EventsDashboard/CalendarGrid';
 import TableView from './EventsDashboard/TableView';
 import EventDetailPanel from './EventsDashboard/EventDetailPanel';
+import { eventsInView, buildCopy, copyToClipboardRich } from './EventsDashboard/copyVisible';
 
 // Lazy-loaded modals (only load when needed)
 const AddEventModal = lazy(() => import('./EventsDashboard/AddEventModal'));
@@ -93,6 +94,12 @@ const EventsDashboard = () => {
     handleAddEvent, handleEditEvent, handleDeleteEvent,
     acknowledgeValidationError, resetAcknowledgedErrors,
   } = dashboard;
+
+  // The events actually on screen: in Table View every filtered row; on the
+  // calendar only those that fall on the days in view. Feeds "Copy what's shown".
+  const shownEvents = viewMode === 'table'
+    ? filteredEvents
+    : eventsInView(filteredEvents, displayDates, currentYear, currentMonth);
 
   // Show loading state
   if (loading) {
@@ -450,6 +457,17 @@ const EventsDashboard = () => {
             eventTypesFromEvents={eventTypesFromEvents}
             eventTypes={eventTypes}
             onAddEvent={() => setShowAddEventModal(true)}
+            shownCount={shownEvents.length}
+            onCopyShown={async () => {
+              const payload = buildCopy(shownEvents, gymsList);
+              try {
+                await copyToClipboardRich(payload);
+                return payload.count;
+              } catch (err) {
+                alert(`Could not copy: ${err.message}`);
+                return null;
+              }
+            }}
           />
 
           {/* Table View */}
