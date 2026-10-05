@@ -1652,26 +1652,28 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         
         # ========== DATABASE-DRIVEN VALIDATION ==========
         # All checks come from the `rules` table. Python has no hardcoded validation.
-        if description and event_type != 'SPECIAL EVENT':
-            ctx = ValidationContext(
-                event_dict=ev,
-                gym_id=gym_id,
-                event_type=event_type,
-                title=title,
-                description=description,
-                start_date=start_date,
-                end_date_str=end_date,
-                time_str=time_str,
-                age_min=age_min,
-                age_max=age_max,
-                day_of_week=day_of_week,
-                get_rules_for_gym_fn=get_rules_for_gym
-            )
-            validation_errors, per_event_hits = run_validation(ctx, active_checks)
-            # Accumulate hit counts across this batch so we can write them
-            # back to the rules table in one shot at the end.
-            for rule_id, count in per_event_hits.items():
-                hit_count_accumulator[rule_id] = hit_count_accumulator.get(rule_id, 0) + count
+        # Runs on every event: run_validation() itself skips the TEXT checks when
+        # there's no description or it's a Special Event, but still runs the
+        # SETTINGS checks (e.g. registration closes before the event's last day).
+        ctx = ValidationContext(
+            event_dict=ev,
+            gym_id=gym_id,
+            event_type=event_type,
+            title=title,
+            description=description,
+            start_date=start_date,
+            end_date_str=end_date,
+            time_str=time_str,
+            age_min=age_min,
+            age_max=age_max,
+            day_of_week=day_of_week,
+            get_rules_for_gym_fn=get_rules_for_gym
+        )
+        validation_errors, per_event_hits = run_validation(ctx, active_checks)
+        # Accumulate hit counts across this batch so we can write them
+        # back to the rules table in one shot at the end.
+        for rule_id, count in per_event_hits.items():
+            hit_count_accumulator[rule_id] = hit_count_accumulator.get(rule_id, 0) + count
         
         # Registration status checks (not validation — informational)
         if registration_end_date:

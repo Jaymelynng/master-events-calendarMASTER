@@ -44,7 +44,7 @@ export const inferErrorCategory = (error) => {
   const dataErrorTypes = [
     'year_mismatch', 'date_mismatch', 'time_mismatch', 'age_mismatch',
     'day_mismatch', 'program_mismatch', 'skill_mismatch',
-    'title_desc_mismatch'
+    'title_desc_mismatch', 'registration_closes_early'
   ];
 
   const statusErrorTypes = ['registration_closed', 'registration_not_open', 'sold_out'];
@@ -163,6 +163,7 @@ export const getErrorLabel = (type) => {
     'camp_type_not_offered': '🏕️ Camp Type Not Offered',
     'registration_closed': '🔒 Registration Closed',
     'registration_not_open': '🔓 Registration Not Open Yet',
+    'registration_closes_early': '🔒 Registration Closes Before Last Day',
   };
   return labels[type] || type;
 };

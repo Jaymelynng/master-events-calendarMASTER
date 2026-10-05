@@ -63,6 +63,11 @@ const RULE_PLAIN_LANGUAGE = {
     catches: "Catches dates that physically can't exist anywhere in the text.",
     example: '"June 31st" or "February 30th".',
   },
+  check_registration_closes_early: {
+    title: 'Registration Closes Before Last Day',
+    catches: "Catches when iClass's Allowed Registration end date is earlier than the event's last day, so families can't sign up after it.",
+    example: 'Camp on May 12 but registration ends Feb 12.',
+  },
 };
 
 // Programs the rule can be scoped to. Mirror of what RuleWizard / the rules

@@ -34,6 +34,7 @@ const TYPE_COLORS = {
   check_year_mismatch:       { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Date' },
   check_impossible_date:     { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Date' },
   check_day_mismatch:        { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Date' },
+  check_registration_closes_early: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Date' },
   check_time_mismatch:       { bg: 'bg-amber-100',  text: 'text-amber-700',  label: 'Time' },
   check_age_mismatch:        { bg: 'bg-pink-100',   text: 'text-pink-700',   label: 'Age' },
   check_program_mismatch:    { bg: 'bg-blue-100',   text: 'text-blue-700',   label: 'Program' },
@@ -41,7 +42,7 @@ const TYPE_COLORS = {
 };
 
 const FILTER_TYPE_MAP = {
-  Date:      ['check_date_mismatch','check_year_mismatch','check_impossible_date','check_day_mismatch'],
+  Date:      ['check_date_mismatch','check_year_mismatch','check_impossible_date','check_day_mismatch','check_registration_closes_early'],
   Program:   ['program_synonym','check_program_mismatch','check_title_desc_mismatch'],
   Age:       ['check_age_mismatch'],
   Time:      ['valid_time','time','check_time_mismatch'],
@@ -57,6 +58,7 @@ const SYSTEM_CHECKS_SEED = [
   { rule_type: 'check_program_mismatch', label: 'Program Type Mismatch', description: 'Program type cross-contamination between title/description and iClass type', gym_ids: ['ALL'], program: 'ALL', is_system: true, is_permanent: true, is_active: true, created_by: 'system', scope: 'all_events', value: 'system_check' },
   { rule_type: 'check_title_desc_mismatch', label: 'Title vs Description Conflict', description: 'Title and description contradict each other on program type', gym_ids: ['ALL'], program: 'ALL', is_system: true, is_permanent: true, is_active: true, created_by: 'system', scope: 'all_events', value: 'system_check' },
   { rule_type: 'check_impossible_date', label: 'Impossible Date', description: 'Dates that cannot exist (June 31st, Feb 30th)', gym_ids: ['ALL'], program: 'ALL', is_system: true, is_permanent: true, is_active: true, created_by: 'system', scope: 'all_events', value: 'system_check' },
+  { rule_type: 'check_registration_closes_early', label: 'Registration Closes Before Last Day', description: "iClass Allowed Registration end date is before the event's last day — nobody can sign up after it", gym_ids: ['ALL'], program: 'ALL', is_system: true, is_permanent: true, is_active: true, created_by: 'system', scope: 'all_events', value: 'system_check' },
   { rule_type: 'check_day_mismatch', label: 'Day of Week Mismatch', description: 'Day of week in description vs actual event day', gym_ids: ['ALL'], program: 'ALL', is_system: true, is_permanent: true, is_active: true, created_by: 'system', scope: 'all_events', value: 'system_check' },
 ];
 

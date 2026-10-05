@@ -752,6 +752,36 @@ def check_ordinal_typo(ctx):
     return errors
 
 
+def check_registration_closes_early(ctx):
+    """Online registration must stay open through the event's LAST day.
+    Jayme's rule (Oct 5, 2026): a single-day event closes on that day; a
+    multi-day camp closes on its last day. If iClass's Allowed Registration
+    end date is earlier, no family can sign up after it.
+
+    Reads only structured fields: iClass `registrationEndDate` vs the event's
+    last real meeting day (ctx.end_date_str = last block date). No text parsing.
+    A missing registrationEndDate is left alone — nothing to compare."""
+    reg_end_str = (ctx.event or {}).get("registrationEndDate")
+    if not reg_end_str or not ctx.end_date_obj:
+        return []
+    try:
+        reg_end = datetime.strptime(str(reg_end_str)[:10], "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return []
+    if reg_end >= ctx.end_date_obj:
+        return []
+    days_early = (ctx.end_date_obj - reg_end).days
+    fmt = lambda d: f"{d.month}/{d.day}/{d.year}"
+    return [{
+        "type": "registration_closes_early",
+        "severity": "error",
+        "category": "data_error",
+        "message": (f"Registration closes {fmt(reg_end)} but the event's last day is "
+                    f"{fmt(ctx.end_date_obj)} ({days_early} day{'s' if days_early != 1 else ''} early)"
+                    f". Nobody can sign up after {fmt(reg_end)}.")
+    }]
+
+
 # ============================================================
 # CHECK REGISTRY — maps rule_type to check function
 # ============================================================
@@ -771,6 +801,12 @@ CHECK_REGISTRY = {
 # We register it separately so it can be toggled independently in the future
 CHECK_REGISTRY['check_skill_mismatch'] = check_skill_mismatch
 CHECK_REGISTRY['check_ordinal_typo'] = check_ordinal_typo
+CHECK_REGISTRY['check_registration_closes_early'] = check_registration_closes_early
+
+# Checks that read only iClass SETTINGS (not title/description text). These run
+# on every event — including ones with no description and Special Events — since
+# a wrong setting blocks families no matter what the text says.
+SETTINGS_CHECKS = {'check_registration_closes_early'}
 
 
 # ============================================================
@@ -793,12 +829,15 @@ def run_validation(ctx, active_checks):
     all_errors = []
     hit_counts = {}  # rule_id -> number of errors this rule found
 
-    if not ctx.description or ctx.event_type == 'SPECIAL EVENT':
-        return all_errors, hit_counts
+    # Text checks need a description and skip Special Events; settings checks run on everything.
+    text_checks_allowed = bool(ctx.description) and ctx.event_type != 'SPECIAL EVENT'
 
     for check_rule in active_checks:
         rule_type = check_rule['rule_type']
         rule_id = check_rule['id']
+
+        if rule_type not in SETTINGS_CHECKS and not text_checks_allowed:
+            continue
 
         # Check if this rule applies to this gym
         gym_ids = check_rule.get('gym_ids', ['ALL'])

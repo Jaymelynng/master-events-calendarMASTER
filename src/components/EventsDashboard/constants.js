@@ -117,6 +117,7 @@ export const errorTypeLabels = {
   'skill_mismatch': '🎯 Skill Mismatch',
   'title_desc_mismatch': '📋 Title vs Description Conflict',
   'camp_type_not_offered': '🏕️ Camp Type Not Offered',
+  'registration_closes_early': '🔒 Registration Closes Before Last Day',
   // Registration/availability (info, not errors)
   'registration_closed': '🔒 Registration Closed',
   'registration_not_open': '🔓 Registration Not Open Yet',

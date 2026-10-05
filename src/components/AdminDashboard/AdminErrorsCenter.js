@@ -29,6 +29,7 @@ const TOPICS = [
   // See database/REMOVED_PRICING_VALIDATION_2026_07_01.sql to restore.
   { id: 'time',        label: 'Time',           icon: '🕐', types: ['time_mismatch'] },
   { id: 'date',        label: 'Dates',          icon: '📅', types: ['date_mismatch', 'day_mismatch', 'year_mismatch', 'impossible_date', 'ordinal_typo'] },
+  { id: 'registration', label: 'Registration',  icon: '🔒', types: ['registration_closes_early'] },
   { id: 'age',         label: 'Age',            icon: '👶', types: ['age_mismatch'] },
   // Program = ONE topic in Jayme's head: settings↔text (program_mismatch) AND
   // text↔text (title_desc_mismatch) are two halves of the same question.
