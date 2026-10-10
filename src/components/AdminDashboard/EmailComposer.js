@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 
+// Emails greet by first name only ("Hi Allen,"); the gym list keeps the full name.
+const greetName = (fullName) => (fullName || '').trim().split(/\s+/)[0] || 'Team';
+
 export default function EmailComposer({ gyms, events, monthlyRequirements, currentMonth, currentYear, onClose }) {
   const [selectedGyms, setSelectedGyms] = useState([]);
   const [emailType, setEmailType] = useState('missing');
@@ -72,7 +75,7 @@ export default function EmailComposer({ gyms, events, monthlyRequirements, curre
 
 <!-- Greeting -->
 <tr><td style="padding:30px 40px 15px;">
-<p style="color:#2a2a2a;font-size:15px;line-height:1.6;margin:0;">Hi ${gym.manager_name || 'Team'},</p>
+<p style="color:#2a2a2a;font-size:15px;line-height:1.6;margin:0;">Hi ${greetName(gym.manager_name)},</p>
 <p style="color:#555;font-size:14px;line-height:1.6;margin:10px 0 0;">I just ran the ${monthName} compliance check for your location. Here's what I found:</p>
 </td></tr>
 
@@ -374,7 +377,7 @@ ${data.ogReq} Open Gym${data.ogReq !== 1 ? 's' : ''}
                         const to = encodeURIComponent(previewGym.manager_email || '');
                         const cc = encodeURIComponent('jgibson@powersgym.com');
                         const body = encodeURIComponent(
-                          `Hi ${previewGym.manager_name || 'Team'},\n\n` +
+                          `Hi ${greetName(previewGym.manager_name)},\n\n` +
                           (getGymData(previewGym).missing.length > 0 ? 
                             `I just ran the ${monthName} compliance check and noticed ${previewGym.name} is missing:\n` +
                             getGymData(previewGym).missing.map(m => `  - ${m.need} more ${m.type}`).join('\n') + '\n\n' +
@@ -432,7 +435,7 @@ ${data.ogReq} Open Gym${data.ogReq !== 1 ? 's' : ''}
                             const cc = encodeURIComponent('jgibson@powersgym.com');
                             const data = getGymData(gym);
                             const body = encodeURIComponent(
-                              `Hi ${gym.manager_name || 'Team'},\n\n` +
+                              `Hi ${greetName(gym.manager_name)},\n\n` +
                               (data.missing.length > 0 ?
                                 `I just ran the ${monthName} compliance check and noticed ${gym.name} is missing:\n` +
                                 data.missing.map(m => `  - ${m.need} more ${m.type}`).join('\n') + '\n\n' +
