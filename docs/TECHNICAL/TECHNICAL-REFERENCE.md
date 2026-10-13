@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): March 17 snapshot. Wrong today: the admin tab list (now 🚨 Errors, 🗂️ Buckets, 📏 Gym Rules, ✉️ Contacts, 📜 Change History, 📅 Future Plans, ⚡ Quick Actions — Audit & Review, Pricing and Audit Rules are gone along with `AdminAuditReview.js` / `AdminAuditFilters.js` / `AdminAuditErrorCard.js`); price is not parsed, stored, compared or shown (all pricing removed 2026-10-02); 15 tables → 23 in `public` + 2 in `archive`; `events` has 42 columns; event types come from `event_types` (7, no SPECIAL EVENTS); `gyms` has 14 rows (old codes AAG / EAG / PLG stored); "CORS: Enabled for Vercel domain" is false — `local_api_server.py:30` is `CORS(app)`, open to every origin. Current: `CLAUDE.md`, `docs/OPERATIONS/CURRENT_SYSTEM_STATUS.md`.
+
 # 🎯 TEAM CALENDAR - COMPLETE TECHNICAL FORMULA 2025
 ## Updated Production-Ready Documentation
 

@@ -1,3 +1,5 @@
+> SUPERSEDED BY C:\Users\Jayme\JAYME PROJECTS\SOURCE-OF-TRUTH\iclass-kb\iclasspro-kb.md (checked 2026-10-13). This is an April 2026 copy of the iclasspro-kb skill (569 articles); the authority holds 597 articles (refreshed 2026-10-12). Grep the authority and quote line numbers.
+
 ---
 name: iclasspro-kb
 description: Complete iClassPro platform knowledge for Rise Athletics' 10-gym operation. Covers features, limitations, pricing, billing, automation, API gaps, competitor landscape, and strategic opportunities. Use when Jayme asks about iClassPro capabilities, troubleshoots platform issues, discusses billing/pricing, plans integrations or workarounds, evaluates competitors, or builds tools that interact with iClassPro data. Also use when suggesting solutions — this skill prevents recommending things iClassPro can't do.

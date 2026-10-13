@@ -1,6 +1,6 @@
 # How to Run Tests (Non-Technical Guide)
 
-**What are tests?** They're like a checklist that automatically verifies your app's logic is working correctly. Instead of you manually clicking through the app to check things, the computer runs 98 checks in about 7 seconds and tells you if anything broke.
+**What are tests?** They're like a checklist that automatically verifies your app's logic is working correctly. Instead of you manually clicking through the app to check things, the computer runs 90 checks in about 6 seconds and tells you if anything broke.
 
 ---
 
@@ -33,7 +33,7 @@ PASS src/lib/__tests__/validationHelpers.test.js
 PASS src/lib/__tests__/eventComparison.test.js
 
 Test Suites: 4 passed, 4 total
-Tests:       98 passed, 98 total
+Tests:       90 passed, 90 total
 ```
 
 **All green = you're good!**
@@ -52,27 +52,27 @@ If something breaks, you'll see red text showing exactly which test failed and w
 
 ## What Do the Tests Actually Check?
 
-### 1. Event Sync Logic (`eventComparison.test.js` — 17 tests)
+### 1. Event Sync Logic (`eventComparison.test.js` — 16 tests)
 Verifies that when your app syncs events from iClassPro:
 - New events get detected correctly
-- Changed events (title, price, time updates) get flagged
+- Changed events (title, time, date, age, description updates) get flagged
 - Deleted events only get flagged if they're in the FUTURE (past events just expired naturally)
 - Already-deleted events don't get re-flagged
 - Events that reappear after being deleted get restored
 
-**Why this matters:** A bug here could delete real events or create duplicates across all 10 gyms.
+**Why this matters:** A bug here could delete real events or create duplicates across every gym.
 
-### 2. Validation & Error Handling (`validationHelpers.test.js` — 40 tests)
+### 2. Validation & Error Handling (`validationHelpers.test.js` — 35 tests)
 Verifies that the audit dashboard:
 - Correctly categorizes errors (data error vs formatting vs status)
 - Dismissed errors stay dismissed
 - Pattern-based dismissals work (dismiss for all events of a type)
-- Price filter hides/shows the right errors
+- Price error types are no longer data errors or rule-able (pricing removed 2026-10-02)
 - Accuracy percentages calculate correctly
 
 **Why this matters:** If errors get miscategorized, real problems get hidden.
 
-### 3. Date & Calendar Logic (`utils.test.js` — 31 tests)
+### 3. Date & Calendar Logic (`utils.test.js` — 30 tests)
 Verifies that:
 - Dates parse correctly without timezone bugs (the "off by one day" problem)
 - Calendar views show the right days (full month, first half, weeks)
@@ -82,7 +82,7 @@ Verifies that:
 
 **Why this matters:** Wrong dates = events showing on wrong days for all your gyms.
 
-### 4. Cache System (`cache.test.js` — 10 tests)
+### 4. Cache System (`cache.test.js` — 9 tests)
 Verifies that:
 - Cached data expires after its time limit
 - Clearing one cache entry doesn't clear others
@@ -121,7 +121,9 @@ A: Show the AI the failing test output. The test name tells you exactly what's b
 A: No. Tests only READ your code and check it — they never change anything.
 
 **Q: How long do tests take?**
-A: About 7 seconds for all 98 tests.
+A: About 6 seconds for all 90 tests (run 2026-10-13: 4 suites, 90 passed).
+
+**Python tests also exist:** `python automation/test_validation_fixtures.py` (guards that pricing stays removed) and `automation/test_validation_engine.py`.
 
 ---
 

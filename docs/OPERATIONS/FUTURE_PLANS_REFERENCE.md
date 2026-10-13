@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): April 26 snapshot (it says so). Since then: #3 `program_ignore` is BUILT (commit 6d76ecf, May 6, 2026); #6 event types are database-driven — sync and filters read `event_types` (CLINIC, KIDS NIGHT OUT, OPEN GYM, CAMP, CAMP CARE, SPECIALTY, UNSORTED), though `ExportModal.js` still hardcodes 5; #1 keyword move is partly done (camp categories now come from `event_type_mappings`). Live list: the `future_plans` table (9 rows on 2026-10-13).
+
 # Future Plans — IP Snapshot
 
 **Status:** Reference / IP preservation

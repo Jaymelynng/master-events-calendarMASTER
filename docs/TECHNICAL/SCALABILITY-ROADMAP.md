@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): describes December 2025 — 9 tables (now 23 in `public` + 2 in `archive`), Playwright collection (Direct HTTP API since Mar 2026), a single ~3,000-line dashboard (refactored into `EventsDashboard/` components; `EventsDashboard_REFACTORED.js` is live), 10 gyms (the `gyms` table now has more). Its "revisit when events exceed 1000" trigger is passed (428 active + 1,293 archived). Current: `CLAUDE.md`, `docs/OPERATIONS/CURRENT_SYSTEM_STATUS.md`.
+
 # Master Events Scalability Improvement Plan
 
 **Last Updated:** December 28, 2025  

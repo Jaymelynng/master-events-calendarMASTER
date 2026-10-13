@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): the catalog (what mismatches matter) is still useful, but its status claims are out of date — the `rules` table is NOT empty (10 active check rows + 4 valid_time + 12 requirement_exception); CHECK_REGISTRY now has 11 functions (date, year, time, age, day, program, skill, title_desc, impossible_date, ordinal_typo, registration_closes_early — `validation_engine.py:790-804`) and the 3 price functions are gone; Section 8 Pricing is removed entirely (2026-10-02); `program_ignore` is built (commit 6d76ecf); `AdminAuditRulesReference.js` no longer exists. Current: `rules` table + `automation/validation_engine.py`.
+
 # Validation Rules Reference — Catalog of What to Check
 
 **Status:** Reference / IP preservation

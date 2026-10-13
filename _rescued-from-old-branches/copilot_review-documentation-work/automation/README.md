@@ -1,3 +1,5 @@
+> SUPERSEDED BY HUB -ACTIVE - master-events-calendar/automation/README.md (checked 2026-10-13) — older copy of the same file rescued off a deleted branch (commit 6bb602b); that file is itself marked stale.
+
 # 🚀 Master Events Calendar - Automation System
 
 **Last Updated:** December 28, 2025  

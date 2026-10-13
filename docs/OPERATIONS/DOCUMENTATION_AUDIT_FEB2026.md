@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): a Feb 23, 2026 audit snapshot. Most of its findings were acted on or overtaken — the Pricing tab and all pricing are gone (2026-10-02), `gym_valid_values` was dropped, the Audit & Review tab became the 🚨 Errors tab, `App.js` now imports `EventsDashboard_REFACTORED.js`, `CURRENT_SYSTEM_STATUS.md` exists again. Do not work from its fix list. Current: `CLAUDE.md`, `docs/OPERATIONS/CURRENT_SYSTEM_STATUS.md`.
+
 # Documentation Audit Report — February 23, 2026
 
 **Purpose:** Exhaustive cross-check of all 28 documentation files against actual codebase  

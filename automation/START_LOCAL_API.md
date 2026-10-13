@@ -12,7 +12,7 @@ Use this guide when developing locally or testing the sync system.
 ```bash
 cd automation
 pip install -r requirements.txt
-playwright install chromium
+playwright install chromium   # only needed if USE_DIRECT_API=false (Direct HTTP API is the default since Mar 2026)
 ```
 
 ### 2. Start the server:
@@ -43,7 +43,7 @@ curl http://localhost:5000/health
 
 **Expected response:**
 ```json
-{"status": "healthy", "message": "API is running"}
+{"status": "ok", "message": "Local F12 API server is running"}
 ```
 
 ### Test sync (no API key needed locally):
@@ -66,8 +66,8 @@ npm start
 
 ### 3. Open the calendar:
 - Go to `http://localhost:3000`
-- Click 🪄 Admin button
-- Click "Open Automated Sync"
+- Shift+Click the 🪄 wand → Admin Dashboard
+- Quick Actions tab → "Automated Sync"
 - Select a gym and sync
 
 **Note:** For local development, the React app should connect to `http://localhost:5000`. In production, it connects to Railway.

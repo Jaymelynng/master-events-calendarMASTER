@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): the gym list and the 5 program types are out of date — SyncModal now reads the gyms from the `gyms` table and the buckets from `event_types` (CLINIC, KIDS NIGHT OUT, OPEN GYM, CAMP, CAMP CARE, SPECIALTY, UNSORTED; no Special Events button), and there is also a SYNC ALL GYMS mode (`SyncModal.js:69-82, 198, 1263`); price is no longer collected or compared (all pricing removed 2026-10-02); errors are reviewed in the 🚨 Errors tab, not Audit & Review; the dashboard file is `EventsDashboard_REFACTORED.js`. Current: `CLAUDE.md`, `src/components/EventsDashboard/SyncModal.js`.
+
 # ⚡ AUTOMATED SYNC GUIDE
 ## One-Click Event Collection from iClassPro
 

@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): describes Feb 2026 wiring. `gym_valid_values` was dropped (rules live in `rules`), the Pricing tab (`AdminPricing.js`) and Audit & Review tab (`AdminAuditReview.js`) are deleted, and all pricing was removed 2026-10-02 so Python reads no price table. Current: `CLAUDE.md`, `docs/TECHNICAL/DATABASE_COMPLETE_SCHEMA.md`, `src/components/AdminDashboard/AdminDashboard.js`.
+
 # Admin Dashboard — How Everything Connects
 
 **Last updated:** Feb 2026  

@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): the architecture (system checks + user rules in one `rules` table, run by `validation_engine.py`) still holds, but the specifics are out of date — there are 10 active check rows, not 11 (`check_ordinal_typo` and `check_registration_closes_early` added; `check_skill_mismatch` has no row; all 3 price checks deleted); CHECK_REGISTRY has 11 functions; ALL pricing was removed 2026-10-02 (no price parsing, no `camp_pricing` / `event_pricing` lookups, no `valid_price` / `sibling_price` rules, no Pricing tab — Part 3 price sections and the setup steps 4–5 are void); `program_ignore` is built (commit 6d76ecf); settings checks run even without a description (`validation_engine.py:832`); the Audit & Review tab and `AdminAuditReview.js` are gone (🚨 Errors tab); the gym/slug table lists 10 of the 14 rows in `gyms`. Current truth: `automation/validation_engine.py` + the `rules` table.
+
 # Validation Rules Architecture
 
 **Last Updated:** March 17, 2026

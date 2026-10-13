@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): copied off a deleted branch (commit 6bb602b) — it describes the app as of its own date, not now. Jan 2026 Copilot review / strategy notes (Playwright collection, monolithic EventsDashboard.js, 10 gyms). Still true from it: the admin PIN is client-side with a `1426` fallback in code (`AdminDashboard.js:510`, `ExportModal.js:76`). Current: `CLAUDE.md`.
+
 # 📊 Comprehensive Code & Documentation Review Report
 **Team Calendar - Master Events Hub**
 

@@ -22,7 +22,7 @@ https://portal.iclasspro.com/{slug}/camp-details/{id}
 ## 🔄 How Comparison Works
 
 ### **Step 1: Get Data**
-- **New Events:** From sync (Playwright script)
+- **New Events:** From sync (Direct HTTP API via Railway; Playwright only if USE_DIRECT_API=false)
 - **Existing Events:** From database (Supabase)
 
 ### **Step 2: Compare by event_url**
@@ -36,7 +36,7 @@ For each event_url:
 
 #### **🔄 CHANGED Event**
 - `event_url` exists in BOTH new sync AND database
-- But data fields are different (title, date, time, price, etc.)
+- But data fields are different (title, date, time, ages, description, etc.)
 - **Action:** Update existing record in database
 
 #### **🗑️ DELETED Event**
@@ -71,11 +71,12 @@ When checking if an event changed, we compare **only core content fields**:
 | `start_date` | Multi-day start | 2025-06-01 → 2025-06-02 |
 | `end_date` | Multi-day end | 2025-06-05 → 2025-06-06 |
 | `time` | Time range | "6:30 PM - 9:30 PM" → "7:00 PM - 10:00 PM" |
-| `price` | Cost | $25 → $30 |
-| `type` | Event category | CLINIC → OPEN GYM |
+| `type` | Event category | CLINIC → OPEN GYM (skipped when `type_locked` is true — Jayme forced the bucket) |
 | `age_min` | Minimum age | 5 → 7 |
 | `age_max` | Maximum age | 12 → 15 |
 | `description` | Event description | Any text change |
+
+`price` is no longer compared (all pricing removed October 2, 2026 — `src/lib/eventComparison.js:154-166`).
 
 ### Fields That DON'T Trigger "Changed" (Volatile Fields)
 These fields are **saved to the database** but are excluded from comparison to prevent false "CHANGED" alerts:
@@ -108,7 +109,6 @@ The `normalizeValue()` function ensures consistent comparison by handling edge c
 
 | Field Type | Normalization |
 |------------|---------------|
-| `price` | Convert to float; treat 0 as null |
 | `age_min`, `age_max` | Convert to integer; treat 0 as null |
 | `date`, `start_date`, `end_date` | Extract YYYY-MM-DD (strip time component) |
 | `time` | Trim and normalize whitespace |
@@ -147,7 +147,7 @@ compareEvents(newEvents, existingEvents)
   _wasDeleted: false,   // True if restoring a soft-deleted event
   _changes: [           // List of what changed
     { field: 'title', old: 'Old Title', new: 'New Title' },
-    { field: 'price', old: 25, new: 30 }
+    { field: 'time', old: '6:30 PM - 9:30 PM', new: '7:00 PM - 10:00 PM' }
   ]
 }
 ```
@@ -197,12 +197,12 @@ compareEvents(newEvents, existingEvents)
 - Event B: `event_url: "portal.../2107"`, title: "KNO Nov 15", price: 35
 
 ### **New sync has:**
-- Event A: `event_url: "portal.../2106"`, title: "KNO Nov 14", price: **40** (changed!)
+- Event A: `event_url: "portal.../2106"`, title: "KNO Nov 14 — 7pm", (changed!)
 - Event C: `event_url: "portal.../2108"`, title: "KNO Nov 16", price: 35 (new!)
 
 ### **Result:**
 - 🆕 **Event C** - New (insert)
-- 🔄 **Event A** - Changed (price: 35 → 40, update)
+- 🔄 **Event A** - Changed (title changed, update)
 - 🗑️ **Event B** - Deleted (not in new sync)
 
 ---

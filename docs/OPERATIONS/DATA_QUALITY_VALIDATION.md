@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): price is no longer a source of truth or a check (sections 7 / 7b and the pricing tables in the source-of-truth section are gone — all pricing removed 2026-10-02); the Audit & Review tab and `AdminAuditReview.js` / `AdminAuditErrorCard.js` are deleted (errors live in the 🚨 Errors tab); the `rules` table holds NO `program_synonym` rows today (only check_*, valid_time, requirement_exception), so the "gym fun friday → OPEN GYM" global synonyms listed below are not there; skill mismatch (#6) has no active check row so it does not run; Jayme's July 2, 2026 doctrine replaced "iClass is the source of truth" with "no truth side — any two of settings/title/description disagreeing is an error" (`AI_EVENT_REVIEW.md`). Current: `automation/validation_engine.py`, `rules` table, `CLAUDE.md`.
+
 # Data Quality Validation System
 
 **Last Updated:** March 17, 2026

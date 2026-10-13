@@ -15,8 +15,12 @@
 | **CLINIC** | `#b99396` | Soft rose card background |
 | **KIDS NIGHT OUT** | `#d5a36d` | Soft tan/peach card background |
 | **OPEN GYM** | `#6e936f` | Soft sage card background |
-| **CAMP** | (uses static fallback `#fde685`) | Warm yellow — no `event_types` row yet |
-| **SPECIAL EVENT** | (static fallback `#E3F2FD`) | Light blue — no `event_types` row yet |
+| **CAMP** | `#fde685` | Warm yellow (row added Aug 28, 2026) |
+| **CAMP CARE** | `#a18374` | (row added Aug 28, 2026) |
+| **SPECIALTY** | `#7d6b96` | (row added Aug 28, 2026) |
+| **UNSORTED** | `#9aa0a6` | (row added Aug 28, 2026) |
+
+(Read from `event_types` 2026-10-13. `SPECIAL EVENT` is no longer a type.)
 
 ### How the conversion works
 The DB stores SATURATED hex values (e.g. `#b99396`). The frontend's `hexToPastelHex` helper in `src/components/EventsDashboard/constants.js` mixes 18% color + 82% white to produce the soft tint used as background. Borders use `rgba(hex, 0.55)` — same hex, medium opacity.
@@ -37,7 +41,7 @@ Camp variant bars use HARDCODED yellow / peach by program type (Gymnastics = yel
 
 ---
 
-## Admin Month Filter (Audit & Review)
+## Admin Month Filter (was on the Audit & Review tab, which has since been replaced by the 🚨 Errors tab)
 
 The Month filter shows **3 months back, 6 months forward** from today's date. The range shifts automatically as time passes.
 
@@ -88,16 +92,15 @@ box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 |---------|-------------------|--------|
 | Audit & Review | `bg-purple-50` | `border-purple-200` |
 | Gym Rules | `bg-blue-50` / `bg-green-50` | `border-blue-200` / `border-green-200` |
-| Event Pricing (Clinic, KNO, Open Gym) | `bg-amber-50` | `border-amber-200` — use event-type colors per row |
-| Camp Pricing | `bg-emerald-50` | `border-emerald-200` |
+| (Event / Camp Pricing sections removed — all pricing removed 2026-10-02) | — | — |
 
 ---
 
 ## Reference in Code
 
-- **Main calendar event colors:** `src/components/EventsDashboard.js` — `getEventTypeColor()`
-- **Event type filter buttons:** `EventsDashboard.js` lines ~2869–2907
-- **Validation badges:** `AdminAuditErrorCard.js`, `AdminAuditReview.js`
+- **Main calendar event colors:** `src/components/EventsDashboard/constants.js` — `getEventTypeColor()` + `hexToPastelHex` (`EventsDashboard.js` is dead code)
+- **Event type filter buttons:** `src/components/EventsDashboard/CalendarControls.js` (driven by `event_types`)
+- **Validation badges:** `src/components/AdminDashboard/AdminErrorsCenter.js` (`AdminAuditErrorCard.js` / `AdminAuditReview.js` are deleted)
 
 ---
 

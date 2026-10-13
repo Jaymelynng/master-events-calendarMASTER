@@ -14,7 +14,7 @@
 
 ### **Step 2: Navigate to Project**
 ```bash
-cd "C:\JAYME PROJECTS\HUB -ACTIVE - master-events-calendar"
+cd "C:\Users\Jayme\JAYME PROJECTS\HUB -ACTIVE - master-events-calendar"
 ```
 
 ### **Step 3: Start the App**
@@ -48,7 +48,7 @@ Wait 2-3 minutes for packages to download.
 ### **2. Create Environment File**
 ```bash
 # Copy the example file
-cp env.example .env.local
+cp .env.example .env.local
 ```
 
 Then edit `.env.local` with your actual credentials:
@@ -57,6 +57,7 @@ REACT_APP_SUPABASE_URL=https://xftiwouxpefchwoxxgpf.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=[your-anon-key]
 REACT_APP_API_URL=https://master-events-calendarmaster-production.up.railway.app
 REACT_APP_API_KEY=[your-api-key]
+REACT_APP_ADMIN_PIN=[your-admin-pin]
 ```
 
 ### **3. Start the App**

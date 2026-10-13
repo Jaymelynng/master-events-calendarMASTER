@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): Dec 2025 snapshot. The calendar no longer collects or shows prices (all pricing removed 2026-10-02); the `gyms` table now holds more than the 10 gyms listed (read it); event types are now CLINIC, KIDS NIGHT OUT, OPEN GYM, CAMP, CAMP CARE, SPECIALTY, UNSORTED (no SPECIAL EVENT); the before/after numbers and costs were not re-verified. Current: `CLAUDE.md`, `docs/OPERATIONS/CURRENT_SYSTEM_STATUS.md`.
+
 # 🏆 Master Events System - Executive Presentation
 ## For Kim and Leadership
 

@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): March 2026 snapshot. Python tests now exist (`automation/test_validation_engine.py`, `automation/test_validation_fixtures.py`); the 4 JS test files now hold about 90 `it(`/`test(` calls, not 98; "price error parsing" covers pricing that was removed 2026-10-02. Current: run `npm run test:ci` and `docs/OPERATIONS/HOW_TO_RUN_TESTS.md`.
+
 # Test Coverage Analysis
 
 **Date:** March 5, 2026

@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): copied off a deleted branch (commit 6bb602b) — it describes the app as of its own date, not now. Oct 2025 setup assessment (single EventsDashboard.js, 10 facilities, no tests). Current: `CLAUDE.md`, `docs/OPERATIONS/CURRENT_SYSTEM_STATUS.md`.
+
 # ✅ Quick Setup Verification Guide
 
 This guide helps you verify that everything is set up correctly.

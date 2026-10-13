@@ -32,7 +32,7 @@
 
 ### "No events collected"
 
-**Cause:** Playwright couldn't collect from iClassPro
+**Cause:** Collection from iClassPro failed (Direct HTTP API by default; Playwright only if USE_DIRECT_API=false)
 
 **Fix:**
 1. Check Railway logs for specific error
@@ -44,7 +44,7 @@
 
 ### "Sync takes forever / times out"
 
-**Cause:** Playwright is slow or stuck
+**Cause:** Collection is slow or stuck
 
 **Fix:**
 1. Railway has a 5-minute timeout - should be enough

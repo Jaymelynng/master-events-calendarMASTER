@@ -24,7 +24,7 @@
 **Steps:**
 1. Open the dashboard
 2. Shift+Click **🪄 wand** → Admin Dashboard → **Quick Actions** → **Automated Sync**
-3. Select each gym → Click **🚀 SYNC ALL PROGRAMS**
+3. Click **SYNC ALL GYMS**, or select each gym → Click **🚀 SYNC ALL PROGRAMS**
 4. Wait for confirmation (green checkmarks)
 5. Click **Import** if there are new/changed events
 
@@ -114,10 +114,10 @@ SELECT COUNT(*) FROM events WHERE date < NOW() - INTERVAL '1 year';
 
 ### Adding a New Gym
 
-1. **Add to gyms table:**
+1. **Add to gyms table** (the `gyms` table has no `is_active` column — columns read 2026-10-13 include id, name, iclass_slug, iclass_account_id, iclass_location_id, manager_name, manager_email, brand_colors):
    ```sql
-   INSERT INTO gyms (id, name, is_active)
-   VALUES ('NEW', 'New Gym Name', true);
+   INSERT INTO gyms (id, name, iclass_slug)
+   VALUES ('NEW', 'New Gym Name', 'newgymslug');
    ```
 
 2. **Add gym_links for each program type:**
@@ -137,10 +137,7 @@ SELECT COUNT(*) FROM events WHERE date < NOW() - INTERVAL '1 year';
 
 ### Removing a Gym
 
-**Don't delete!** Mark as inactive instead:
-```sql
-UPDATE gyms SET is_active = false WHERE id = 'GYM';
-```
+**Don't delete!** There is no `is_active` column on `gyms` (checked 2026-10-13), so there is no "inactive" switch yet — ask Jayme how a removed gym should be handled.
 
 ### Updating iClassPro URLs
 
@@ -162,7 +159,7 @@ UPDATE gyms SET is_active = false WHERE id = 'GYM';
 
 ### 1. Check Dependencies
 ```bash
-cd "C:\JAYME PROJECTS\HUB -ACTIVE - master-events-calendar"
+cd "C:\Users\Jayme\JAYME PROJECTS\HUB -ACTIVE - master-events-calendar"
 npm outdated
 ```
 
@@ -229,7 +226,7 @@ Go to [vercel.com/dashboard](https://vercel.com/dashboard):
 | Symptom | Solution |
 |---------|----------|
 | Empty calendar | Check date range filter |
-| Missing specific gym | Check if gym is active in `gyms` table |
+| Missing specific gym | Check the gym has a row in the `gyms` table |
 | Deleted events showing | Hard refresh (Ctrl+Shift+R) |
 
 **Check database directly:**

@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): copied off a deleted branch (commit 6bb602b) — it describes the app as of its own date, not now. Nov 2025 spec for a text-paste "event scanner" prescreen; the app moved to automated Direct-API sync instead. Current: `CLAUDE.md`. (Identical copy at `cursor_investigate-and-explain-application-f8a8/docs/OPERATIONS/EVENT_SCANNER_LOGIC.md` points here.)
+
 # 🔍 Event Scanner Logic - Complete Documentation
 
 **Created:** November 5, 2025  

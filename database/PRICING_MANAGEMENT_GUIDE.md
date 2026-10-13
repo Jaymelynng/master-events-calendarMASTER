@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): all pricing was removed from the calendar 2026-10-02 — `event_pricing` / `camp_pricing` still exist but nothing reads them, and no `event_price_mismatch` error is produced any more. Current: `CLAUDE.md` › Pricing, `database/REMOVED_PRICING_2026_10_02.sql`.
+
 # 💰 PRICING MANAGEMENT GUIDE
 ## How to Update Prices in Supabase
 

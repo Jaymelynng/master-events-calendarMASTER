@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): describes the December 2025 Playwright sync. Today: collection is the Direct HTTP API (`f12_collect_and_import.py` header lines 7-14; Playwright only if USE_DIRECT_API=false) which discovers categories from iClass `bookings/{locationId}` and classifies them with the `event_type_mappings` table, not `gym_links` URLs; the sync asks for the buckets in `event_types` (7 rows, no SPECIAL EVENT); there is no price extraction, price editing or price comparison (all pricing removed 2026-10-02); validation runs in `validation_engine.py`; the gym list is the `gyms` table (14 rows), not a 10-gym `GYMS` dict; `/health` returns `{"status": "ok", "message": "Local F12 API server is running"}`; there is also `/send-email` and a SYNC ALL GYMS mode. Current: `CLAUDE.md`, `automation/f12_collect_and_import.py`, `src/components/EventsDashboard/SyncModal.js`.
+
 # 🚀 Automated Sync System - Complete Technical Breakdown
 
 **Date Created:** October 2025  

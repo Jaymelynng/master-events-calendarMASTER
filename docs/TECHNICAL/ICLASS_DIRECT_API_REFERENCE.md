@@ -65,7 +65,7 @@
 **URL:** `/{slug}/camps/{eventId}`
 **Returns:** Full event detail INCLUDING description
 **Key fields (in addition to listing fields):**
-- `description` — FULL HTML description text (contains price, times, ages, details)
+- `description` — FULL HTML description text (times, ages, details; the calendar no longer reads prices from it — removed 2026-10-02)
 - `blocks` — detailed date/time blocks with exact timestamps
 - `programName` — program category name (e.g., "KIDS NIGHT OUT")
 - `roomName` — room/area in the facility
@@ -124,7 +124,7 @@ For each gym:
 | `logo` / `primaryColor` | organizations | Gym branding in app/emails |
 | `roomName` | event detail | Show WHERE in the facility |
 | `instructors` | event detail | Show WHO is running it |
-| `blocks` | event detail | Exact date/time per session |
+| `blocks` | event detail | Now used (May 2026): first/last block set camp start/end dates; per-day hours stored in `events.daily_schedule` |
 | `programIsDeleted` | event detail | Instant deletion detection |
 | `campRegisterExpired` | event detail | Registration status |
 | `allowToRequestCampThatIsFull` | event detail | Waitlist status |
@@ -136,17 +136,17 @@ For each gym:
 Each gym has a unique portal slug used in the base URL. These are stored in
 the `gym_links` table and also discoverable from the `organizations.code` field.
 
-Example slugs:
-- `scottsdalegimnastics` → Scottsdale Gymnastics
-- `capitalgym` → Capital Gymnastics (Cedar Park, Pflugerville, Round Rock)
-- etc.
+Example slugs (from `gyms.iclass_slug`, read 2026-10-13):
+- `scottsdalegymnastics` → Scottsdale Gymnastics (SGT)
+- `capgymavery` / `capgymhp` / `capgymroundrock` → Capital Gymnastics Cedar Park / Pflugerville / Round Rock — three separate accounts, one slug each
+- etc. — read the `gyms` table for the full list
 
 ---
 
 ## Important Notes
 
 - All endpoints are PUBLIC (no auth required) — they power the public portal
-- Program type IDs vary per gym — must be discovered per gym via camp-programs
+- Program type IDs vary per gym — must be discovered per gym via `bookings/{locationId}` (NOT camp-programs — see the warning in §6)
 - Images use relative paths — prepend `https://app.iclasspro.com/media/` for full URL
 - Descriptions are HTML formatted — strip tags for plain text validation
 - Some gyms have multiple locations under one account (`hasMultipleActiveLocations`)

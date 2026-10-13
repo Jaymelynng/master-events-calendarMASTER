@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): collection is the Direct HTTP API now (Playwright only if USE_DIRECT_API=false); the gym table below lists 10 but the `gyms` table holds more (read it); SPECIAL EVENT is no longer an event type (types live in `event_types`); `/send-email` endpoint not listed. Current: `CLAUDE.md` + `automation/f12_collect_and_import.py` (its header explains the collection path).
+
 # 🚀 Master Events Calendar - Automation System
 
 **Last Updated:** December 28, 2025  
@@ -118,7 +120,7 @@ Health check endpoint.
 
 **Response:**
 ```json
-{"status": "healthy", "message": "API is running"}
+{"status": "ok", "message": "Local F12 API server is running"}
 ```
 
 ### POST /sync-events

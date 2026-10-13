@@ -8,8 +8,7 @@ This folder contains SQL scripts for the Supabase PostgreSQL database.
 
 ## 📋 CURRENT SCHEMA
 
-The complete, up-to-date view definition is in:
-- **`FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql`** - Full `events_with_gym` view with all columns
+The live view definition in Supabase is the truth: `select pg_get_viewdef('public.events_with_gym', true);`. No single file here has it — later scripts (`ADD_DAILY_SCHEDULE_COLUMN.sql`, `ADD_AI_REVIEW_COLUMNS.sql`, `ADD_CAMP_TYPE_COLUMN.sql`) each recreated the view after `FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql` (Dec 2025).
 
 ---
 
@@ -19,7 +18,7 @@ The complete, up-to-date view definition is in:
 | File | Purpose |
 |------|---------|
 | `CREATE_EVENTS_WITH_GYM_VIEW.sql` | Main view combining events + events_archive + gym info |
-| `FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql` | Complete view with ALL columns (most current) |
+| `FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql` | Dec 2025 view — superseded by later ADD_* scripts (see above) |
 | `performance_indexes.sql` | Database indexes for performance |
 
 ### Migration Scripts (Historical):
@@ -66,7 +65,7 @@ These document schema changes over time:
 4. Click "Run"
 
 ### If Recreating the View:
-Use `FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql` - it has the complete, current view definition.
+Start from the live definition (`pg_get_viewdef`), not `FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql` — that file predates openings, daily_schedule, ai_review and camp_type columns.
 
 ---
 
@@ -92,12 +91,14 @@ Use `FIX_ACKNOWLEDGED_ERRORS_COMPLETE.sql` - it has the complete, current view d
 | `link_types` | Link type definitions |
 | `monthly_requirements` | Compliance tracking — see `CREATE_MONTHLY_REQUIREMENTS_TABLE.sql` |
 | `rules` | Unified validation rules + system checks (replaces dropped `gym_valid_values`) |
-| `event_pricing` | Base prices for CLINIC, KNO, OPEN GYM (with `effective_date`) |
-| `camp_pricing` | Base prices for CAMP |
+| `event_pricing` | Old prices for CLINIC, KNO, OPEN GYM — nothing reads it since all pricing was removed 2026-10-02 |
+| `camp_pricing` | Old CAMP prices — nothing reads it since 2026-10-02 |
 | `acknowledged_patterns` | Temp overrides: "dismiss for all events of this program at this gym" |
 | `requirement_notes` | Status (In Progress / Late / Excused) for missing monthly requirements |
 | `future_plans` | Admin-managed roadmap |
-| `pricing_schedules`, `camp_type_mappings` | iClassPro pricing data (274 schedules, 243 type mappings) |
+| `archive.pricing_schedules`, `archive.camp_type_mappings` | April iClassPro pricing data (274 schedules, 243 type mappings) — moved to the `archive` schema |
+| `event_type_mappings` | iClass camp-type name → calendar bucket (Admin › Buckets); no row = UNSORTED |
+| `category_mappings`, `extractors`, `format_patterns`, `app_config`, `error_email_log`, `verified_events` | Also in `public` (listed 2026-10-13) |
 
 ---
 

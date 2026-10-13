@@ -1,6 +1,6 @@
 # Validation fixtures
 
-Small, versioned examples for regression testing price + validation behavior.
+Small, versioned examples for regression testing validation behavior. `test_validation_fixtures.py` now guards that pricing stays removed (all pricing removed 2026-10-02).
 
 | File | Purpose |
 |------|---------|

@@ -32,7 +32,7 @@ When a manager removes an event from iClassPro, here's exactly what happens:
 | 5. Manual cleanup | Run the cleanup SQL to move soft-deleted events to `events_archive` | SQL Editor |
 
 ### ⚠️ CURRENT GAP
-The midnight pg_cron job only archives events where `date < today` (past events). It does **NOT** automatically archive soft-deleted future events. This means deleted future events stay in the `events` table (hidden from UI but still there) until either:
+The midnight pg_cron job only archives events where `date < today` (past events). It does **NOT** automatically archive soft-deleted future events (an `archive_single_event()` function now also exists, but 15 soft-deleted rows were still sitting in `events` on 2026-10-13). This means deleted future events stay in the `events` table (hidden from UI but still there) until either:
 - Their date passes and the midnight job picks them up
 - You manually run the cleanup SQL in `database/ARCHIVE_SOFT_DELETED_EVENTS.sql`
 
@@ -80,6 +80,8 @@ SELECT count(*) FROM events WHERE deleted_at IS NOT NULL;
 | pg_cron job | Scheduler that runs at midnight |
 
 ### **2. The Archive Function**
+
+> ⚠️ **Live function differs from the code below (read 2026-10-13 with `select prosrc from pg_proc where proname='auto_archive_old_events'`):** the live version copies only 17 columns — id, gym_id, title, date, start_date, end_date, time, price, day_of_week, type, event_url, age_min, age_max, description, deleted_at, created_at, updated_at. Every other column (flyer, description_status, validation_errors, acknowledged_errors, openings, registration dates, daily_schedule, ai_review_flags …) is NOT carried into `events_archive` — only 10 of 1,293 archived rows have a registration_end_date. It also archives on `date < CURRENT_DATE`, i.e. the START date. Needs Jayme's go before anyone changes the function.
 
 ```sql
 CREATE OR REPLACE FUNCTION auto_archive_old_events()

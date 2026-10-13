@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): written against the March 5 code. Since then: checks run in `automation/validation_engine.py` (not inline in f12); permanent rules live in `rules` (`gym_valid_values` dropped); errors 8–10 (price_mismatch, camp_price_mismatch, event_price_mismatch) and `missing_price_in_description` are gone (all pricing removed 2026-10-02); the FORMAT errors in Part 2 are not produced by Python (no `missing_*` / `clinic_missing_skill` in `automation/*.py`); `canAddAsRule` is now only time_mismatch / program_mismatch / missing_program_in_title (`src/lib/validationHelpers.js:58`); `skill_mismatch` has no active `check_` row so it does not run; `program_ignore` IS built (commit 6d76ecf); the "Year in DESCRIPTION" gap is fixed; the Audit & Review tab is replaced by the 🚨 Errors tab. The settings-check section (registration_closes_early, Oct 5 2026) is current. Current: `automation/validation_engine.py`, `rules` table, `CLAUDE.md`.
+
 # 🔍 AUDIT DATA ERROR REFERENCE — Complete Technical Specification
 
 **Last Updated:** March 5, 2026

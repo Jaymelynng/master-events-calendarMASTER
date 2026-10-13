@@ -49,7 +49,7 @@ WHERE deleted_at IS NULL
 ORDER BY gym_id, start_date;
 ```
 
-Past events are never reviewed (nothing to fix). SPECIAL EVENT is exempt (same as engine).
+Past events are never reviewed (nothing to fix). The query exempts type `SPECIAL EVENT` (same as the engine's text checks), but no active event carries that type any more — the live types are CLINIC, KIDS NIGHT OUT, OPEN GYM, CAMP, CAMP CARE, SPECIALTY, UNSORTED (checked 2026-10-13) — so in practice nothing is exempt.
 
 ## What to check per event (the rubric)
 

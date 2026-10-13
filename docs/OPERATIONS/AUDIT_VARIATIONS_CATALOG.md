@@ -13,11 +13,11 @@ There are **three very different numbers**, and the gap between them is the most
 | Layer | Count | Reality |
 |-------|-------|---------|
 | **Documented concepts** (all time) | ~87 | The docs describe a rich history — checks, removed checks, proposed ideas, per-gym rule candidates. Treat the docs as the *spec*, not the live state. |
-| **Check functions in code** (`validation_engine.py` CHECK_REGISTRY) | 13 | Actual Python that can run. |
-| **Active rule rows** (live `rules` table) | 10 checks + 4 `valid_time` | Pricing's 3 checks deleted Jul 1; `check_skill_mismatch` is orphaned (function exists, no row → never runs). |
+| **Check functions in code** (`validation_engine.py` CHECK_REGISTRY) | 11 (re-counted 2026-10-13) | Actual Python that can run. |
+| **Active rule rows** (live `rules` table, 2026-10-13) | 10 checks + 4 `valid_time` + 12 `requirement_exception` | No price check left (last one deleted Oct 2, 2026); `check_registration_closes_early` added Oct 5; `check_skill_mismatch` is orphaned (function exists, no row → never runs). |
 | **Actually catching anything right now** | ~7 types | See below — one check does 81% of the work. |
 
-**What's actually being caught in the live database (127 stored errors):**
+**What was being caught in the live database on Aug 3, 2026 (127 stored errors — a snapshot, re-query for today):**
 
 | Error type | Count | Share |
 |------------|-------|-------|
@@ -33,7 +33,7 @@ Two checks (`impossible_date`, `ordinal_typo`) are active but catching **nothing
 
 **The real catch engine is the AI Review lane** (`events.ai_review_flags`) — it finds the semantic contradictions no regex can (wrong movie in a description, leftover "(COPY)", a Fall Break camp that says "all summer long," a day-number that doesn't match, a half-day camp with full-day hours). That's qualitatively richer than the regex layer and is doing the heavy lifting on real errors.
 
-**Three tables are seeded but not wired into the engine at all:** `extractors` (1 date-extractor row), `format_patterns` (85 recognizer rows), `category_mappings` (15 rows). The last one is a **live no-hardcoding-law violation** — the sync still reads the hardcoded `BOOKING_TITLE_TO_EVENT_TYPE` dict instead of the table.
+**Three tables are seeded but not wired into the engine at all:** `extractors` (1 date-extractor row), `format_patterns` (85 recognizer rows), `category_mappings` (15 rows). Since Aug 2026 the sync classifies from the `event_type_mappings` table (Admin › Buckets) and keeps `BOOKING_TITLE_TO_EVENT_TYPE` only as an offline fallback (`f12_collect_and_import.py:181-237`); `category_mappings` itself is still read by nothing (checked 2026-10-13).
 
 ---
 
@@ -95,10 +95,10 @@ Status legend: **ACTIVE** (running live) · **BUILT** (code exists, may not be s
 |---------|---------|--------|-------|
 | AI leftover/wrong copy | copied text from another event/gym/season; "(COPY)"; nonsense | **AI** | not grammar/typos |
 
-### 💰 PRICE — **ALL REMOVED Jul 1, 2026** (Jayme's decision; do not re-add without her go)
+### 💰 PRICE — **ALL REMOVED** (table checks Jul 1, 2026; everything else Oct 2, 2026 — Jayme's decision; do not re-add without her go)
 | Concept | Detects | Status |
 |---------|---------|--------|
-| price_mismatch | title $ vs desc $ (±$1) | **ACTIVE again** (title↔desc only, internal consistency) |
+| price_mismatch | title $ vs desc $ (±$1) | **REMOVED Oct 2, 2026** (was re-enabled Jul 12; record `database/REMOVED_PRICING_2026_10_02.sql`) |
 | camp_price_mismatch | camp $ vs `camp_pricing` table | **REMOVED** |
 | event_price_mismatch | clinic/KNO/OG $ vs `event_pricing` table | **REMOVED** |
 | valid_price / sibling_price (rules) | whitelist a valid gym price | **REMOVED** |
@@ -144,7 +144,7 @@ Everything lives in **ONE `rules` table**, with three independent scoping axes p
 
 **Three layers, one table:**
 - **Layer 1 — System checks** (universal): the `check_*` rows, toggleable, scopeable to gyms/programs.
-- **Layer 2 — Per-gym rules:** `program_synonym`, `valid_time`, (`valid_price`/`sibling_price` — parked), `program_ignore` (planned).
+- **Layer 2 — Per-gym rules:** `program_synonym`, `valid_time`, `program_ignore` (built May 6, 2026 — commit 6d76ecf). (`valid_price`/`sibling_price` removed with pricing.)
 - **Layer 3 — Exceptions:** `exception` (dismiss one), `requirement_exception`, plus the dismissal tiers below.
 
 **Dismissal strength (weakest → strongest):** `acknowledged_errors` (per-event, may re-flag) → `acknowledged_patterns` (per-gym-program bulk) → permanent `rules` row (never re-flags). `verified_errors` persists manual OK/Bug marks across syncs.
@@ -195,7 +195,7 @@ A structured editor that generates the title/description from structured fields 
 
 ## 5. What this means for the rebuild — the requirements read straight off the variations
 
-1. **Everything Jayme controls must be a DB row editable from a screen** (the #1 law). Category maps, synonyms, keyword lists, thresholds, valid values, CC emails — none hardcoded. *Current live violations: `category_mappings`, `extractors`, `format_patterns` are seeded but the code ignores them; f12 uses a hardcoded dict.*
+1. **Everything Jayme controls must be a DB row editable from a screen** (the #1 law). Category maps, synonyms, keyword lists, thresholds, valid values, CC emails — none hardcoded. *Live gaps (2026-10-13): `category_mappings`, `extractors`, `format_patterns` are seeded but the code ignores them; camp categories now come from `event_type_mappings` (the old dict is only a fallback).*
 2. **Three scoping axes + time** are non-negotiable: gym × program × event-scope × permanent/temporary. The messiness in §3 needs all four.
 3. **Universal / per-gym / exception** as first-class layers — because the same check is right for 9 gyms and wrong for the 10th.
 4. **Pairwise, no "truth side"** — the engine compares settings/title/description against each other, never assumes one is correct.

@@ -2,7 +2,7 @@
 
 **Built:** April 26, 2026
 **Status:** ✅ Live in production
-**Affected:** All 10 gyms, all event types (KNO, CLINIC, OPEN GYM, CAMP, SPECIAL EVENT)
+**Affected:** Every synced gym (10 at build time), all event types (today's buckets: CLINIC, KIDS NIGHT OUT, OPEN GYM, CAMP, CAMP CARE, SPECIALTY, UNSORTED)
 
 ---
 
@@ -85,7 +85,7 @@ Extracts `openings`, `openingsDisplay`, `showOpenings` from every event detail r
 
 `ALLOWED_EVENT_FIELDS` allowlist updated to accept the 3 new fields for upsert.
 
-**Note:** `pricing_supabase.py` was added to git in this session — it had been an untracked dependency that broke Railway sync the first time we pushed. Now committed.
+**Note:** `pricing_supabase.py` was added to git in this session — it had been an untracked dependency that broke Railway sync the first time we pushed. (Since the 2026-10-02 pricing removal the sync no longer imports it.)
 
 ### 3. Frontend
 **File:** `src/components/EventsDashboard/SyncModal.js` (4 update paths)
@@ -150,7 +150,7 @@ Hit Export → CSV. Open in Excel. Sort by `Spots Left` ascending → priority l
 - 1-3 spots = orange ⚠️ (almost full warning)
 - 4+ spots = green 🟢 (plenty of room)
 
-**X/Y format ("23/40 spots") was rejected** because iClass doesn't provide max capacity. Could be enabled later if max capacity is manually entered per camp in Supabase (similar to current pricing approach).
+**X/Y format ("23/40 spots") was rejected** because iClass doesn't provide max capacity. Could be enabled later if max capacity is manually entered per camp in Supabase (the manual-pricing approach this referred to was removed 2026-10-02).
 
 ---
 

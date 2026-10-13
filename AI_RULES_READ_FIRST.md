@@ -1,6 +1,6 @@
 # 🚨 AI AGENT - READ THIS ENTIRE FILE FIRST - MANDATORY
 
-**Last Updated**: May 14, 2026
+**Last Updated**: May 14, 2026 · fact-checked against code + Supabase `xftiwouxpefchwoxxgpf` October 13, 2026
 **Purpose**: This file contains EVERYTHING an AI needs to know about this system. Read it completely before doing ANYTHING.
 
 > **Quick Start:** Also see `CLAUDE.md` in the root for a condensed 2-minute onboarding guide with session workflow.
@@ -9,7 +9,7 @@
 
 # PART 0: iCLASSPRO PLATFORM REALITY (read BEFORE proposing anything)
 
-**This project exists BECAUSE iClassPro deliberately limits programmatic access. Before you suggest any solution that involves iClassPro, read `docs/ICLASSPRO/PLATFORM_OVERVIEW.md` (full canonical KB embedded in the repo).**
+**This project exists BECAUSE iClassPro deliberately limits programmatic access. Before you suggest any solution that involves iClassPro, grep the iClass Help Center authority `C:\Users\Jayme\JAYME PROJECTS\SOURCE-OF-TRUTH\iclass-kb\iclasspro-kb.md` and quote the line number. `docs/ICLASSPRO/` is an older synthesized copy, not the authority.**
 
 The hard, non-negotiable facts every AI agent must know:
 
@@ -29,7 +29,7 @@ Used by `automation/f12_collect_and_import.py`:
 
 ### 3. What iClass does NOT expose anywhere publicly
 
-- **Camp prices** (you must scrape the description text or maintain manual `camp_pricing` / `event_pricing` tables)
+- **Camp prices** (the calendar no longer handles prices at all — see §6 below)
 - `pricing_schedule_id` on event detail (the public detail endpoint does NOT include this field)
 - `billing_schedule_id` / `chargeCategoryId` (these fields exist in the cart-response schema but are NULL for events that don't use schedules)
 - Any setup-level admin data
@@ -54,16 +54,18 @@ The ONE iClass-sanctioned path that COULD give programmatic pricing access — b
 
 (All require some form of authentication; none use a "real" API)
 
+**⛔ ALL PRICING REMOVED October 2, 2026 (Jayme's decision, commit c4bcfc1).** The calendar does not set, show, export or check a price anywhere; `events.price` is NULL on every event. The paths below are background only — do NOT build any of them without her explicit go.
+
 1. **Service-account customer flow** — log in as a fake parent, `add-cart-item` → `validate-cart-item` to read price, `remove-all-cart-items`. Heavy build. Brittle (JWT expires hourly, captchas, ToS risk).
 2. **Admin-side pricing-schedules pull** — what we did in April to load 274 schedules into Supabase. Requires admin login. Could be re-run periodically (cron) for fresh data.
-3. **Manual** — `camp_pricing` and `event_pricing` tables, updated by you / managers (current state).
+3. **Manual** — `camp_pricing` and `event_pricing` tables. They still exist with rows, but nothing reads them since October 2, 2026.
 
 ### 7. Pricing data architecture in this project
 
 | Event type | How iClass stores pricing | Our table |
 |---|---|---|
-| Camps | Pricing schedules (per-day / per-week, full / half) | `camp_pricing` (manual) + `pricing_schedules` (April 274-row snapshot, unwired) |
-| KNO / Clinic / Open Gym | Single flat price per event | `event_pricing` (manual, supports `effective_date`) |
+| Camps | Pricing schedules (per-day / per-week, full / half) | `camp_pricing` (unread since 2026-10-02) + `archive.pricing_schedules` (April 274-row snapshot, unwired) |
+| KNO / Clinic / Open Gym | Single flat price per event | `event_pricing` (unread since 2026-10-02) |
 
 ### 8. Tier-locked features (don't suggest features the gym doesn't have)
 
@@ -79,8 +81,8 @@ The ONE iClass-sanctioned path that COULD give programmatic pricing access — b
 
 ### 9. Where to read more
 
-The full embedded KB lives in `docs/ICLASSPRO/`:
-- `PLATFORM_OVERVIEW.md` — the canonical iClassPro KB
+The authority is `C:\Users\Jayme\JAYME PROJECTS\SOURCE-OF-TRUTH\iclass-kb\iclasspro-kb.md` (grep it, quote line numbers). An older synthesized copy lives in `docs/ICLASSPRO/`:
+- `PLATFORM_OVERVIEW.md` — synthesized overview (not the authority)
 - `reference/api-and-integrations.md` — technical architecture, every integration point
 - `reference/limitations-and-workarounds.md` — every known pain point with context
 - `reference/platform-deep-dive.md` — full feature details
@@ -107,13 +109,10 @@ The doc-map hook will surface the iClassPro section at the top of every UserProm
 - ✅ Test the ENTIRE data flow from database → component
 
 ### **RULE #4: USE BROWSER CONSOLE**
-- When something doesn't work, ask Jayme to:
-  1. Open F12 console
-  2. Copy/paste console output
-  3. Share what she sees
+- When something doesn't work, read the F12 console and network calls yourself in the connected browser. Never hand Jayme clicks.
 
 ### **RULE #5: READ ALL DOCUMENTATION FIRST**
-- `docs/TECHNICAL/VALIDATION_RULES_ARCHITECTURE.md` - THE source of truth for validation
+- `automation/validation_engine.py` + the `rules` table - THE source of truth for validation (`docs/TECHNICAL/VALIDATION_RULES_ARCHITECTURE.md` explains the design but is marked stale)
 - `docs/OPERATIONS/DATA_QUALITY_VALIDATION.md` - Error categories
 - `docs/OPERATIONS/CAMP_COMPLEXITY_MASTER_GUIDE.md` - Camp handling
 - `docs/OPERATIONS/AUTO-SYNC-GUIDE.md` - How sync works
@@ -160,13 +159,14 @@ The doc-map hook will surface the iClassPro section at the top of every UserProm
 ## Database Tables (Supabase)
 | Table | Purpose |
 |-------|---------|
-| `events` | All events (KNO, Clinic, Open Gym, Camp, Special Event) |
+| `events` | All events — types come from `event_types` (CLINIC, KIDS NIGHT OUT, OPEN GYM, CAMP, CAMP CARE, SPECIALTY, UNSORTED) |
 | `events_archive` | Archived/past events + soft-deleted events |
-| `gyms` | 10 gymnastics facilities (includes manager_name, manager_email) |
+| `gyms` | Every gym — read the table (this database still stores the old codes AAG / EAG / PLG; the hub uses AAR / EGF / PGN). Includes manager_name, manager_email |
 | `gym_links` | URLs for each gym's iClassPro pages |
-| `rules` | Unified validation rules + system checks — drives all validation via validation_engine.py (17 rows: 11 system checks + 6 user rules) |
-| `camp_pricing` | Source of truth for CAMP prices |
-| `event_pricing` | Source of truth for Clinic, KNO, Open Gym prices (with effective dates) |
+| `rules` | Unified validation rules + system checks — drives all validation via validation_engine.py (26 rows on 2026-10-13: 10 system checks + 4 valid_time + 12 requirement_exception) |
+| `camp_pricing` | Old camp prices — nothing reads it since pricing was removed 2026-10-02 |
+| `event_pricing` | Old Clinic/KNO/Open Gym prices — nothing reads it since 2026-10-02 |
+| `event_type_mappings` | iClass camp-type name → calendar bucket (Admin › Buckets). No row = UNSORTED |
 | `event_audit_log` | History of all changes |
 | `sync_log` | Sync progress tracking |
 | `requirement_notes` | Status tracking for missing monthly requirements |
@@ -184,20 +184,14 @@ The doc-map hook will surface the iClassPro section at the top of every UserProm
 | **Time** | iClass API (`schedule.startTime`) | We compare this to title/description |
 | **Age Range** | iClass API (`minAge`, `maxAge`) | We compare this to title/description |
 | **Program Type** | iClass API (`link_type_id`) | Maps to KNO, CLINIC, CAMP, etc. |
-| **CAMP Price** | Supabase `camp_pricing` table | WE BUILT THIS - iClass has no price field |
-| **Clinic/KNO/Open Gym Price** | Supabase `event_pricing` table | WE BUILT THIS Feb 2026 - supports effective dates for price changes |
+| **Price** | ⛔ Not handled | All pricing removed October 2, 2026 — no price is set, shown, exported or checked |
 | **Spots Remaining** | iClass API (`openings`) | NEW Apr 26 — exact integer count of empty spots per event |
 | **Spot Display String** | iClass API (`openingsDisplay`) | NEW Apr 26 — pre-formatted (e.g. "23 Openings Available") |
 | **Show Openings Setting** | iClass API (`showOpenings`) | NEW Apr 26 — gym setting; all 10 gyms currently `true` |
 | **Total Capacity** | ❌ NOT AVAILABLE | iClass `maxStudents` is always null in public API. Cannot show "23/40" without manual entry. |
 
-### The Price Solution
-iClass does NOT provide price in their API. We built our own pricing tables:
-- **`camp_pricing`** - Camp prices (full day daily/weekly, half day daily/weekly)
-- **`event_pricing`** - Clinic, KNO, Open Gym prices with `effective_date` support
-  - Prices automatically change based on date (e.g., price increase on Monday)
-  - Each gym can have different prices
-  - System validates description price against the correct price for that date
+### Price
+iClass does NOT provide price in its public API. The old `camp_pricing` / `event_pricing` lookup was removed with all pricing on October 2, 2026 (record: `database/REMOVED_PRICING_2026_10_02.sql`). Do not re-add without Jayme's go.
 
 ---
 
@@ -208,8 +202,12 @@ iClass does NOT provide price in their API. We built our own pricing tables:
 | Kids Night Out | `KNO` | Drop-off events, usually Friday nights |
 | Clinic | `CLINIC` | Skill-focused classes |
 | Open Gym | `OPEN GYM` | Open practice time |
-| Camp | `CAMP` | Day camps (full day, half day, summer, school year) |
-| Special Event | `SPECIAL EVENT` | Birthday parties, special occasions |
+| Camp | `CAMP` | School year, summer, holiday and vacation-week camps |
+| Camp Care | `CAMP CARE` | Before/after care, extended day — an add-on to a camp, not a camp |
+| Specialty | `SPECIALTY` | Named one-off events (Boo Bash, meets, tryouts) |
+| Unsorted | `UNSORTED` | iClass camp type with no bucket mapping yet — never counted |
+
+Live list: `event_types` table (managed in Admin › Buckets). `SPECIAL EVENT` is no longer a type; 30 old archived events still carry it.
 
 ### Camp Subtypes
 - `camps` - School Year Full Day
@@ -236,18 +234,17 @@ Something is **WRONG** - mismatch between sources that could confuse customers.
 | `time_mismatch` | Title/description time vs actual | iClass `schedule.startTime` |
 | `age_mismatch` | Title/description age vs actual | iClass `minAge`/`maxAge` |
 | `program_mismatch` | Title/description keywords vs program type | iClass `link_type_id` |
-| `skill_mismatch` | Title skill word vs description skill word (clinics only) | Title vs Description |
-| `price_mismatch` | Title price vs description price | Title vs Description |
+| `skill_mismatch` | Title skill word vs description skill word (clinics only) — code exists, but there is no `check_skill_mismatch` row in `rules`, so it does not run | Title vs Description |
 | `title_desc_mismatch` | Title program keywords vs description program keywords | Title vs Description |
-| `camp_price_mismatch` | Description price vs `camp_pricing` | Supabase `camp_pricing` |
-| `event_price_mismatch` | Description price vs `event_pricing` | Supabase `event_pricing` (Clinic/KNO/Open Gym) |
+| `ordinal_typo` | Ordinal typos in dates | Title / description |
+| `registration_closes_early` | Registration closes before the event's last day | iClass settings |
 
 **FORMAT Errors: Removed.** Format/completeness errors were planned but never implemented in the Python backend. All dead code references have been cleaned up (March 17, 2026).
 
 ## System Checks (Database-Driven)
 All validation checks live in the `rules` table as rows with `rule_type` starting with `check_`. The Python engine (`validation_engine.py`) reads active checks from the database, runs them, and stores results. There are NO hardcoded validation rules in Python.
 
-Current system checks (11):
+Current system checks (10 rows in `rules`, read 2026-10-13 — query the table, don't trust this list):
 - `check_date_mismatch` — Month in description vs actual event dates
 - `check_year_mismatch` — Wrong year in title or description
 - `check_time_mismatch` — Time in description vs iClassPro time
@@ -255,10 +252,11 @@ Current system checks (11):
 - `check_program_mismatch` — Program type cross-contamination
 - `check_title_desc_mismatch` — Title and description contradict
 - `check_impossible_date` — Dates that can't exist (June 31st)
-- `check_price_mismatch` — Price in title vs description
 - `check_day_mismatch` — Day of week vs actual event day
-- `check_camp_price` — Camp prices vs pricing table
-- `check_event_price` — Event prices vs pricing table
+- `check_ordinal_typo` — Ordinal typos
+- `check_registration_closes_early` — Registration closes before the event's last day
+
+The 3 price checks were deleted July 1 / October 2, 2026.
 
 ## Configurable Rules (Database - `rules` table)
 Per-gym customization:
@@ -266,13 +264,11 @@ Per-gym customization:
 | rule_type | Purpose | Example |
 |-----------|---------|---------|
 | `program_synonym` | Alternative names for programs | "ninja night" → KIDS NIGHT OUT |
-| `valid_price` | Price exceptions | "Before Care" can have different price |
 | `valid_time` | Time exceptions | "Early Dropoff" can have different time |
+| `program_ignore` | Keyword that mentions another program but should not flag | Built (commit 6d76ecf; read in `validation_engine.py`) |
+| `requirement_exception` | Excuses a gym from a monthly requirement | — |
 
-## NOT YET IMPLEMENTED (Planned)
-| rule_type | Purpose | Status |
-|-----------|---------|--------|
-| `program_ignore` | Ignore words that cause false positives | PLANNED - not built yet |
+`valid_price` went away with pricing (October 2, 2026).
 
 ---
 
@@ -284,7 +280,7 @@ Per-gym customization:
 |-----|-------------|----------|--------|
 | Wrong year in DESCRIPTION | Now checks both title AND description for wrong year | Fixed | ✅ Fixed |
 | Holiday-week camp dates wrong | Sync now derives camp `start_date` from `blocks[0].sqlDate` (real first meeting day), not iClass bookend `startDate` | Fixed May 4, 2026 | ✅ Fixed |
-| `program_ignore` not built | Can't ignore "open gym" when it's a station in KNO | Medium | ❌ Open (in flight on `claude/evaluate-code-tool-ArddH` branch) |
+| `program_ignore` | Ignore "open gym" when it's a station in KNO | Medium | ✅ Built (commit 6d76ecf) |
 | Day-number in title vs `start_date` day-number | Engine compares months/years but not day-of-month numbers (e.g. title "May 25th" vs start_date 5/26 not flagged) | Medium | ❌ Open |
 | Date ranges not validated | "Jan 15-17" not checked against actual dates | Low | ❌ Open |
 | Flyer-only events | Can't validate anything if only image, no text | Known limitation | ❌ Open |
@@ -293,7 +289,7 @@ Per-gym customization:
 | Issue | Fix Date | Details |
 |-------|----------|---------|
 | Export bug (analytics ignoring filters) | Feb 2026 | `ExportModal.js` now uses `filteredEvents` consistently |
-| No pricing for non-camps | Feb 2026 | `event_pricing` table with `effective_date` support |
+| No pricing for non-camps | Feb 2026 | `event_pricing` table — superseded: all pricing removed October 2, 2026 |
 | Time regex false positives ("$62 a day", "Ages 4-13") | Feb 2026 | Pre-cleaning in `has_time_in_text()` and `check_times_in_text()` |
 | Day range false positives ("Monday-Friday") | Feb 2026 | Improved day range regex with "to/thru/through" support |
 | Export single Date column | Feb 23, 2026 | CSV export now includes Start Date and End Date columns for multi-day events |
@@ -305,20 +301,18 @@ Per-gym customization:
 
 # PART 7: UI LAYOUT
 
-## Main Dashboard (`EventsDashboard.js`)
+## Main Dashboard (`EventsDashboard_REFACTORED.js` — `EventsDashboard.js` is dead code)
 - **SYNC button** → Opens `SyncModal` for automated sync
 - **EXPORT button** → Opens export options
 - **Magic Wand** (centered below SYNC/EXPORT) → Shift+Click opens Admin Dashboard (SECRET - no tooltip)
 
 ## Admin Dashboard (`AdminDashboard.js`)
 - Accessed via Shift+Click on magic wand
-- 7 tabs: Audit & Review, Pricing, Gym Rules, Change History, Audit Rules, Future Plans, Quick Actions
+- 7 tabs (read from `AdminDashboard.js` 2026-10-13): 🚨 Errors, 🗂️ Buckets, 📏 Gym Rules, ✉️ Contacts, 📜 Change History, 📅 Future Plans, ⚡ Quick Actions
 - Plus Email Composer button for manager notifications
 
-## Audit Review System
-- Filter by: Gym, Category (Data Error), Status
-- 5 Status Filters: All, Pending Review, Verified Accurate, Invalid/Bug, Has Override
-- Actions: "Verified Accurate", "Invalid/Bug", "Temporary Override", "Permanent Rule"
+## Errors tab (replaced the old Audit & Review tab)
+- `AdminErrorsCenter.js` — per gym / per topic / totals; three panels: gyms with counts | event cards | detail with iClass link + Dismiss / Make Rule
 
 ---
 
@@ -326,7 +320,7 @@ Per-gym customization:
 
 | Mistake | Why It's Wrong | Correct Approach |
 |---------|----------------|------------------|
-| Assuming price comes from iClass | iClass has NO price field | Check `camp_pricing` for camps, title vs description for others |
+| Adding price handling back | All pricing was removed October 2, 2026 | Don't — not without Jayme's explicit go |
 | Not checking both start AND end date | Multi-day camps span months | Always check `endDate` too |
 | Hardcoding validation rules | Gyms have different needs | Use `rules` table |
 | Saying "it should work" | Jayme has been burned by this | Test it, then say "it works" |
@@ -355,7 +349,7 @@ Before saying ANYTHING works:
 
 **Jayme’s direction (documented April 8, 2026):**
 
-1. **Multi-sport / multi-vertical:** The product is **not** gymnastics-only forever. Architecture targets **other sports** and eventually **other data sources** while keeping the same pattern: structured fields vs marketing copy, with **one shared** `validation_engine.py` for universal logic and **per-tenant** configuration via `rules`, pricing tables, and links.
+1. **Multi-sport / multi-vertical:** The product is **not** gymnastics-only forever. Architecture targets **other sports** and eventually **other data sources** while keeping the same pattern: structured fields vs marketing copy, with **one shared** `validation_engine.py` for universal logic and **per-tenant** configuration via `rules` and links (pricing tables out of use since October 2, 2026).
 
 2. **AI startup / onboarding:** Research and future product work toward an **AI-assisted setup** flow that helps organizations configure Pricing, Rules, and links **without** technical operators — guided explanations, checklists, safe drafts — **not** unreviewed rewrites of embedded validation.
 
@@ -389,11 +383,10 @@ Agents should **read these** when asked about roadmap, sellability, onboarding, 
 # PART 11: QUICK REFERENCE
 
 ## When Jayme asks about validation:
-→ Read `docs/TECHNICAL/VALIDATION_RULES_ARCHITECTURE.md`
+→ Read `automation/validation_engine.py` and query the `rules` table (design background: `docs/TECHNICAL/VALIDATION_RULES_ARCHITECTURE.md`, stale in places)
 
 ## When Jayme asks about prices:
-→ CAMP prices: `camp_pricing` table in Supabase
-→ Other prices: `event_pricing` table with `effective_date` support (Clinic, KNO, Open Gym)
+→ The calendar has no prices since October 2, 2026. See `CLAUDE.md` › Pricing and `database/REMOVED_PRICING_2026_10_02.sql`.
 
 ## When Jayme asks about errors:
 → DATA error = something is WRONG (mismatch)

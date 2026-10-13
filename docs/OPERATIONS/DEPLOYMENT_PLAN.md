@@ -46,8 +46,9 @@ This document was originally a plan. **The deployment is now complete and verifi
 │  • /import-events     │   │  • events_archive table           │
 │  • /health            │   │  • gyms table                     │
 │  • /gyms              │   │  • gym_links table                │
-│  • /event-types       │   │  • sync_log table                 │
-│  • Playwright         │   │  • event_audit_log table          │
+│  • /event-types       │
+│  • /send-email        │   │  • sync_log table                 │
+│  • Direct HTTP API    │   │  • event_audit_log table          │
 │  • API Key Auth       │   │  • events_with_gym view           │
 │  URL: Railway URL     │   │                                    │
 └───────────────────────┘   │  URL: Supabase URL                │
@@ -60,7 +61,7 @@ This document was originally a plan. **The deployment is now complete and verifi
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| **Calendar App** | Your Vercel URL | What everyone sees |
+| **Calendar App** | https://teamcalendar.mygymtools.com (200 OK 2026-10-13) | What everyone sees |
 | **API Server** | `https://master-events-calendarmaster-production.up.railway.app` | Backend automation |
 | **Health Check** | `https://master-events-calendarmaster-production.up.railway.app/health` | Verify API is running |
 | **Supabase** | `https://supabase.com/dashboard/project/xftiwouxpefchwoxxgpf` | Database management |
@@ -140,9 +141,9 @@ if __name__ == '__main__':
    │
 3. Flask receives request
    │
-4. Playwright opens iClassPro portal
+4. Calls the iClassPro public API directly (Direct HTTP; Playwright only if USE_DIRECT_API=false)
    │
-5. Captures event data from JSON responses
+5. Reads event data from the JSON responses
    │
 6. Returns events to React
    │
@@ -205,7 +206,7 @@ The Railway backend uses the **service key** which can:
 ### **Test 1: Health Check**
 ```
 Visit: https://master-events-calendarmaster-production.up.railway.app/health
-Expected: {"status": "healthy", "message": "API is running"}
+Expected: {"status": "ok", "message": "Local F12 API server is running"}
 ```
 
 ### **Test 2: Frontend Loads**
@@ -259,7 +260,7 @@ Expected: Success message, calendar updates
 ### **"Sync takes forever / times out"**
 
 1. Railway has a 5-minute timeout - should be enough
-2. Check Railway logs for Playwright errors
+2. Check Railway logs for collection errors
 3. iClassPro portal might be slow - try again later
 
 ### **"Changes not showing on calendar"**
@@ -341,7 +342,7 @@ Use this if setting up from scratch or after a major issue:
 ### Railway (Backend)
 - [ ] Set all 4 environment variables
 - [ ] Verify Procfile exists (`web: python local_api_server.py`)
-- [ ] Test health endpoint returns `{"status": "healthy"}`
+- [ ] Test health endpoint returns `{"status": "ok"}`
 
 ### Post-Deployment Testing
 - [ ] Calendar loads with events

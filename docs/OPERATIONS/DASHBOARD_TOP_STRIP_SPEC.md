@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): the layout this describes was reverted the same night — commit a4bda34 (2026-08-28) "Revert the four layout commits - restore the dashboard Jayme had" undid d62f5c0, a3866a1, 0b0fd4c, 7d619a6; `MonthlyDigest.js` (Band 4) no longer exists, and the Monthly Requirements table with all gym rows is back. The bulk opener chips now count every upcoming event, not only the month on screen (commit 4009892, 2026-10-01). The fixed "14 gyms" is a count — read `gyms`. Current: the code in `src/components/EventsDashboard/`.
+
 > 🔄 **KEEP THIS CURRENT — every chat, every time.** If you touch this file or the work it describes: **update it the same session** · **delete what's stale or superseded** · **merge duplicates into ONE canonical copy** · **never spawn a second doc when this one already exists** · **record where things live**. A reference doc is either current or deleted — never left to rot. _(Banner intentionally on every doc — do not remove.)_
 
 # Master Events Calendar — what the top of the screen shows and does

@@ -1,6 +1,6 @@
 # Current System Status
 
-**Last Updated:** May 7, 2026
+**Last Updated:** May 7, 2026 · wrong lines fixed against code + Supabase October 13, 2026
 
 ---
 
@@ -20,30 +20,30 @@
 ## What's Working
 
 ### Core Features
-- **Calendar Display** — All 10 gyms, ~400 events, filterable by gym/type/date
+- **Calendar Display** — every gym in the `gyms` table, ~430 active events (428 on 2026-10-13), filterable by gym/type/date
 - **Automated Sync** — Sync events from iClassPro via direct HTTP API calls (replaced Playwright Mar 2026)
-- **Sync All Gyms** — One-click sync + auto-import for all 10 gyms (sequential, ~5 min total)
+- **Sync All Gyms** — One-click sync + auto-import for every gym (sequential)
 - **Event Comparison** — Detects new, changed, unchanged, and deleted events on each sync
 - **Auto-Import** — Inserts new, updates changed, refreshes validation on unchanged, soft-deletes removed
 - **Real-time Updates** — Supabase subscriptions push changes to all connected browsers
 
 ### Event Types Supported
-`KIDS NIGHT OUT` | `CLINIC` | `OPEN GYM` | `CAMP` | `SPECIAL EVENT`
+`CLINIC` | `KIDS NIGHT OUT` | `OPEN GYM` | `CAMP` | `CAMP CARE` | `SPECIALTY` | `UNSORTED` — read live from the `event_types` table (Admin › Buckets); `SPECIAL EVENT` is no longer a type
 
-### Data Validation (11 check rules, all database-driven)
+### Data Validation (10 active check rules on 2026-10-13, all database-driven)
 - **DATA errors (red)** — Something is WRONG (mismatch between title, description, and portal data)
 - **All checks come from `rules` table** — executed by `validation_engine.py`, zero hardcoded validation in Python
-- **User rules** (valid_price, valid_time, exception, etc.) also in the `rules` table
+- **User rules** (valid_time, program_synonym, program_ignore, requirement_exception, exception) also in the `rules` table — `valid_price` went away with pricing
 - **Format errors were never implemented** — the old toggle was dead code, now removed
 
-### Admin Dashboard Tabs (7 tabs) + Email Button
+### Admin Dashboard Tabs (7 tabs) + Email Button — read from `AdminDashboard.js` 2026-10-13
 | Tab | What It Does |
 |-----|-------------|
-| **Audit & Review** | View validation errors by gym, filter by error type/month/program, dismiss/acknowledge errors, verify accuracy, update prices |
-| **Pricing** | Manage event_pricing (Clinic/KNO/Open Gym with effective dates) and view camp_pricing |
-| **Gym Rules** | Unified rules system: permanent/temporary rules, keyword pricing, sibling pricing, program synonyms, requirement exceptions. 5-step Rule Wizard. |
+| **🚨 Errors** | Errors Command Center (`AdminErrorsCenter.js`): per gym / per topic / totals, plus the 🤖 AI Review lane; Dismiss / Make Rule |
+| **🗂️ Buckets** | Map iClass camp types to calendar buckets (`event_type_mappings`) |
+| **Gym Rules** | Unified rules system: permanent/temporary rules, program synonyms, program ignore, requirement exceptions, system-check toggles. Rule Wizard. |
+| **✉️ Contacts** | Manager contacts |
 | **Change History** | View all CREATE/UPDATE/DELETE audit entries with gym and action filters, pagination, CSV export |
-| **Audit Rules** | Reference table of all validation checks (all database-driven via rules table). Filterable by section and source type. |
 | **Future Plans** | Track planned features, improvements, bugs, and ideas. Add/edit/delete with category, priority, status, and target area. Both Jayme and AI sessions can add entries. |
 | **Quick Actions** | Automated Sync, JSON Import, super admin links to Supabase/Railway dashboards |
 | **Email Managers** (button) | Generate emails for managers about missing events and/or data errors. Preview per gym, open directly in Outlook. |
@@ -65,11 +65,8 @@
 - Archive kept indefinitely (no retention limit)
 - Documented in `docs/OPERATIONS/AUTO_ARCHIVE_SYSTEM.md`
 
-### Pricing System
-- **iClassPro does NOT provide prices** via their portal
-- **Camp prices:** `camp_pricing` table (full_day_daily, full_day_weekly, half_day_daily, half_day_weekly)
-- **Other prices:** `event_pricing` table with `effective_date` support (added Feb 2026)
-- Prices are parsed from event title/description and compared against these tables
+### Pricing System — REMOVED
+- **All pricing removed October 2, 2026** (Jayme's decision): no price is set, shown, exported or checked; `events.price` is NULL on every event. `camp_pricing` / `event_pricing` still exist but nothing reads them. Record: `database/REMOVED_PRICING_2026_10_02.sql`.
 
 ### Openings / Capacity (April 26, 2026)
 - **Spot count on every event card** — `🟢 23` (green = 4+ open), `⚠️ 2` (orange = 1-3 left), `🔴 FULL` badge top-left when 0
@@ -101,16 +98,17 @@
 
 | Table | Purpose | ~Rows |
 |-------|---------|-------|
-| `events` | Active/future events | ~400 |
-| `events_archive` | Past events (auto-archived at midnight) | Growing |
-| `gyms` | 10 gymnastics facilities | 10 |
-| `gym_links` | iClassPro portal URLs per gym | ~76 |
+| `events` | Active/future events | 428 (2026-10-13) |
+| `events_archive` | Past events (auto-archived at midnight) | 1,293 (2026-10-13) |
+| `gyms` | Every gym — this database stores the old codes AAG / EAG / PLG | 14 (2026-10-13) |
+| `gym_links` | iClassPro portal URLs per gym | 95 (2026-10-13) |
 | ~~`gym_valid_values`~~ | DROPPED — migrated to `rules` table | N/A |
-| `camp_pricing` | Camp price lookup | Per gym |
-| `event_pricing` | Non-camp price lookup (with effective_date) | Per gym/type |
+| `camp_pricing` | Old camp prices — unread since 2026-10-02 | 10 |
+| `event_pricing` | Old non-camp prices — unread since 2026-10-02 | 30 |
+| `event_type_mappings` | iClass camp-type name → bucket | 31 |
 | `event_audit_log` | All CREATE/UPDATE/DELETE changes | Growing |
-| `sync_log` | Sync progress tracking per gym/type | ~50 |
-| `rules` | All validation rules — 11 system checks + user rules (valid_price, valid_time, exception, etc.) | 17 |
+| `sync_log` | Sync progress tracking per gym/type | 113 (2026-10-13) |
+| `rules` | All validation rules — 10 system checks + 4 valid_time + 12 requirement_exception | 26 (2026-10-13) |
 | `requirement_notes` | Status tracking for missing requirements | Variable |
 | `future_plans` | Planned features, improvements, ideas (Admin Dashboard) | Variable |
 
@@ -126,7 +124,7 @@
 |-------|--------------|-------------|
 | **Level 1** | Visit the URL | Calendar only |
 | **Level 2** | Shift+Click magic wand | Full Admin Dashboard |
-| **Level 3** | Press `*` then enter PIN `1426` | Super Admin (Quick Actions) |
+| **Level 3** | Press `*` then enter the PIN (`REACT_APP_ADMIN_PIN`; code falls back to `1426` if unset) | Super Admin (Quick Actions) |
 
 ---
 
@@ -135,12 +133,11 @@
 | Issue | Status | Details |
 |-------|--------|---------|
 | Wrong year in DESCRIPTION | ✅ Fixed Mar 5 | Now checks both title AND description for wrong year (first 300 chars, handles multi-year spanning events) |
-| `program_ignore` rule type | ❌ Not built | Can't ignore "open gym" when it's a station name in KNO events |
+| `program_ignore` rule type | ✅ Built May 6, 2026 | Commit 6d76ecf — read in `validation_engine.py` |
 | EventsDashboard.js monolithic | ✅ Fixed | Refactored version now active in `App.js` |
 | Flyer-only events | ⚠️ Limitation | Can't validate events that only have an image flyer, no text |
-| Sync All Gyms speed | ✅ Fixed Mar 9 | Replaced Playwright with Direct HTTP API — now ~5 min for all 10 gyms (was ~10 min) |
-| Database view conflicts | ⚠️ Fixed Feb 23 | 4 different SQL files had conflicting view definitions. `CREATE_EVENTS_WITH_GYM_VIEW.sql` is now the canonical source of truth with ALL columns. |
-| Schema doc incomplete | ⚠️ Outdated | `DATABASE_COMPLETE_SCHEMA.md` missing 3 tables: `event_pricing`, `camp_pricing`, `acknowledged_patterns` |
+| Sync All Gyms speed | ✅ Fixed Mar 9 | Replaced Playwright with Direct HTTP API — ~5 min for the 10 gyms at the time (was ~10 min) |
+| Database view conflicts | ⚠️ Fixed Feb 23 | Later scripts (`ADD_DAILY_SCHEDULE_COLUMN.sql`, `ADD_AI_REVIEW_COLUMNS.sql`, `ADD_CAMP_TYPE_COLUMN.sql`) recreated the view after that; the live definition (`pg_get_viewdef('events_with_gym')`) is the truth. |
 | Day abbreviations not checked | ❌ Not fixed | Validation checks full day names but `day_abbrevs` variable is defined and never used in Python |
 | CORS wide open on backend | ⚠️ Risk | `CORS(app)` allows all origins. Should restrict to Vercel domain. |
 
@@ -211,9 +208,9 @@ These columns are **never touched by sync/import code**, so markings persist eve
 
 | What | File |
 |------|------|
-| Main UI | `src/components/EventsDashboard.js` (4000+ lines) |
+| Main UI | `src/components/EventsDashboard_REFACTORED.js` (`EventsDashboard.js` = dead code) |
 | Admin Dashboard | `src/components/AdminDashboard/AdminDashboard.js` |
-| Audit & Review | `src/components/AdminDashboard/AdminAuditReview.js` |
+| Errors tab | `src/components/AdminDashboard/AdminErrorsCenter.js` |
 | Gym Rules (unified) | `src/components/AdminDashboard/AdminGymRules.js` |
 | Rule Wizard | `src/components/AdminDashboard/RuleWizard.js` |
 | Email Composer | `src/components/AdminDashboard/EmailComposer.js` |
@@ -230,7 +227,7 @@ These columns are **never touched by sync/import code**, so markings persist eve
 | API vs Supabase comparison | `automation/test_compare_supabase.py` (read-only dry-run comparison) |
 | Auto-archive docs | `docs/OPERATIONS/AUTO_ARCHIVE_SYSTEM.md` |
 | iClassPro API map | `docs/TECHNICAL/ICLASS_DIRECT_API_REFERENCE.md` |
-| Pricing raw data | `data/gym-pricing-raw/` |
+| Pricing raw data (unused since 2026-10-02) | `data/gym-pricing-raw/` |
 | Full schema | `docs/TECHNICAL/DATABASE_COMPLETE_SCHEMA.md` |
 
 ## Rules System
@@ -240,12 +237,13 @@ The unified `rules` table is the single source of truth for ALL validation. The 
 **Rule Types:**
 | Type | What it does |
 |------|-------------|
-| `valid_price` | This price is valid for this program at this gym |
-| `sibling_price` | Per-kid pricing (kid 1, kid 2, kid 3) |
 | `valid_time` | This time is valid (e.g., before care at 8:30 AM) |
-| `program_synonym` | This name means a specific program (e.g., "Gym Fun Friday" = KNO) |
+| `program_synonym` | This name means a specific program (e.g., "Gym Fun Friday" = Open Gym) |
+| `program_ignore` | This keyword is not a program signal for this event type (e.g., "open gym" station inside KNO) |
 | `requirement_exception` | Gym is excused from a monthly requirement |
 | `exception` | One-time exception for a specific event |
+
+`valid_price` / `sibling_price` were removed with pricing (October 2, 2026).
 
 **Rule Wizard asks 2 questions for requirement exceptions:**
 1. Which gym + which requirement?

@@ -25,7 +25,7 @@ docs/
 │   ├── AUTO-SYNC-GUIDE.md      ⭐ Main workflow
 │   ├── SYNC-QUICK-REFERENCE.md ⭐ Quick reference
 │   ├── SECRET_ADMIN_MODE.md    ⭐ Admin access
-│   └── ... (19 more guides)
+│   └── ... (30 more guides — 33 files in OPERATIONS/ on 2026-10-13)
 └── TECHNICAL/                  ← Architecture, code details
     ├── TECHNICAL-REFERENCE.md  ⭐ Master overview
     ├── DATABASE_COMPLETE_SCHEMA.md
@@ -83,7 +83,7 @@ docs/
 | [AUTO_ARCHIVE_SYSTEM.md](OPERATIONS/AUTO_ARCHIVE_SYSTEM.md) | Automatic event archiving |
 | [AUDIT-SYSTEM.md](OPERATIONS/AUDIT-SYSTEM.md) | Change tracking / audit history |
 | [DATA_QUALITY_VALIDATION.md](OPERATIONS/DATA_QUALITY_VALIDATION.md) | Automatic data validation + per-gym rules |
-| **[PRICING_SOURCE_OF_TRUTH.md](OPERATIONS/PRICING_SOURCE_OF_TRUTH.md)** | Contract: `camp_pricing` / `event_pricing` / `rules` for price checks |
+| **[PRICING_SOURCE_OF_TRUTH.md](OPERATIONS/PRICING_SOURCE_OF_TRUTH.md)** | History of price checks — all pricing removed October 2, 2026 (nothing reads `camp_pricing` / `event_pricing` now) |
 | [PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md](OPERATIONS/PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md) | Roadmap: other sports + AI-assisted org setup (planned) |
 | **[AUDIT_DATA_ERROR_REFERENCE.md](OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md)** ⭐ | What gets compared for each DATA error — source of truth explained |
 | **[OPENINGS_CAPACITY_FEATURE.md](OPERATIONS/OPENINGS_CAPACITY_FEATURE.md)** ⭐ NEW | Spot-count tracking — iClass API discovery, card display, CSV export, layout decisions |
@@ -125,7 +125,7 @@ docs/
 | **Access admin/super admin features** | `OPERATIONS/SECRET_ADMIN_MODE.md` |
 | **Export data or generate reports** | `OPERATIONS/EXPORT_DATA_GUIDE.md` |
 | **Manage per-gym validation rules** | `OPERATIONS/DATA_QUALITY_VALIDATION.md` |
-| **Know which tables drive price validation** | `OPERATIONS/PRICING_SOURCE_OF_TRUTH.md` |
+| **Why there are no prices** | `CLAUDE.md` › Pricing (all pricing removed October 2, 2026) |
 | **Roadmap: multi-sport / AI onboarding product** | `memory/MEMORY.md`, `OPERATIONS/PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md` |
 | **Troubleshoot deployment issues** | `OPERATIONS/DEPLOYMENT_PLAN.md` |
 | **Understand the database** | `TECHNICAL/DATABASE_COMPLETE_SCHEMA.md` or `database/README.md` |
@@ -145,10 +145,11 @@ docs/
 
 ## 📊 Documentation Stats
 
-- **Total Documents:** 34 (updated Aug 11, 2026)
+- **Total Documents:** 44 outside `ICLASSPRO/` (counted 2026-10-13)
 - **BUSINESS:** 2 documents
 - **TECHNICAL:** 8 documents (removed BULK_LINKS_FEATURE.md)
-- **OPERATIONS:** 22 documents
+- **OPERATIONS:** 33 documents
+- **ICLASSPRO/:** 8 — an April 2026 copy of the iclasspro-kb skill, superseded by `SOURCE-OF-TRUTH\iclass-kb\iclasspro-kb.md`
 - **Root docs/:** INDEX.md, TEST_COVERAGE_ANALYSIS.md
 - **Root:** `CLAUDE.md` (AI quick-start guide)
 - **Last Major Update:** August 11, 2026 (Bulk Links feature removed)
@@ -161,7 +162,7 @@ docs/
 - **REMOVED** the Bulk Links feature. The Bulk Link PRO port was retired from the calendar — it's a separate app again (`HUB - Bulk Link PRO`). Deleted `src/components/BulkLinks/`, `src/lib/bulkLinksApi.js`, `scripts/migrate-blp-to-calendar.mjs`, `database/CREATE_BULK_LINKS_TABLES.sql`, and `docs/TECHNICAL/BULK_LINKS_FEATURE.md`. `src/App.js` is calendar-only again (the master-nav tab strip is gone). The 4 `bulk_*` tables + the `gyms_with_links` view were dropped from Calendar's Supabase (`xftiwouxpefchwoxxgpf`).
 
 ### May 14, 2026
-- **ADDED** `gyms.brand_colors TEXT[]` — hex palette per gym, populated for all 10. Schema in `database/ADD_BRAND_COLORS_TO_GYMS.sql`. (Still in use for gym-colored UI.)
+- **ADDED** `gyms.brand_colors TEXT[]` — hex palette per gym, populated for the 10 gyms in the table at the time. Schema in `database/ADD_BRAND_COLORS_TO_GYMS.sql`. (Still in use for gym-colored UI.)
 - **ADDED** the Bulk Links feature (port of standalone Bulk Link PRO) — **later removed, see August 11, 2026 above.**
 
 ### March 17, 2026

@@ -1,6 +1,6 @@
 # 🔍 FORMAT RULES — Tool Research
 
-**Status:** Research draft for Jayme to react to
+**Status:** Research draft for Jayme to react to. (Checked 2026-10-13: since this was written, `format_patterns` (85 rows) and `extractors` (1 row) were seeded in Supabase but the engine does not read them yet; the Prices category is moot — all pricing was removed 2026-10-02.)
 **Created:** May 20, 2026
 **Purpose:** Before building format-recognition rules into the validation engine, lay out the actual tool options for recognizing how humans write dates, times, prices, ages, program names, skills, and (optionally) typos/grammar. Each section says what's available, the tradeoffs, and whether the tool fits Jayme's "visible + editable + no surprises" rule.
 
@@ -17,9 +17,9 @@ The validation engine catches mistakes by comparing structured iClass data again
 
 Jayme has 3 hard requirements for any tool we use here:
 
-1. **Visible** — he can SEE which formats are accepted
+1. **Visible** — she can SEE which formats are accepted
 2. **No false positives** — won't misread "Room 215" as a date
-3. **Editable** — he can add new formats himself, from the UI, without an AI rewriting Python
+3. **Editable** — she can add new formats herself, from the UI, without an AI rewriting Python
 
 This doc evaluates real tool options against those 3 requirements, per category.
 

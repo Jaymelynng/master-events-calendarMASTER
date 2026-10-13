@@ -57,9 +57,9 @@ Before saying "duplicate detection works":
 
 ### **Sync System Verification:**
 Before saying "sync is working":
-1. Have user run a sync on ONE gym
+1. Run a sync on ONE gym yourself (drive the connected browser — never hand Jayme clicks)
 2. Compare results with live iClassPro portal
-3. Check if data matches (title, date, time, price)
+3. Check if data matches (title, date, time, ages, openings — the calendar has no prices since 2026-10-02)
 4. If matches: ✅ THEN say it works
 5. If mismatch: ❌ Find the issue
 
@@ -86,8 +86,8 @@ Before saying "sync is working":
 
 ## **BUG THAT TRIGGERED THIS PROTOCOL:**
 
-**File:** `src/components/EventsDashboard.js`  
-**Location:** Around lines 1102-1108 and 1370-1377  
+**File:** `src/components/EventsDashboard.js` (now dead code — the live dashboard is `EventsDashboard_REFACTORED.js`)  
+**Location:** Around lines 1102-1108 and 1370-1377 (as of Oct 2025)  
 **Issue:** Duplicate detection checked `events` state (client-side cache) instead of fresh database query  
 **Result:** Second/third imports didn't see events from first import  
 **Fix:** Now fetches fresh events from database before import with wide date range (2024-2026)

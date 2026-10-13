@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): the user steps still roughly hold (Quick Actions → "🚀 JSON Import (F12 Method)" → `BulkImportModal`), but the code map is out of date — `convertRawDataToJson()` / `handleBulkImport()` live only in the dead `EventsDashboard.js`; the live dashboard (`EventsDashboard_REFACTORED.js` + `useEventsDashboard.js`) opens `BulkImportModal`, and `JsonImport.js` has `parseIClassProJSON`. The main-calendar bulk buttons it describes were replaced by `BulkPortalOpener.js` (booking page + category chips). "10 gyms" and "pricing" in the parsed fields are out of date (no prices since 2026-10-02). Current: `CLAUDE.md` › Key Files.
+
 # 🚀 F12 DATA COLLECTION PROCESS - COMPLETE GUIDE
 ## Master Events Calendar - Manual Import System (Backup Method)
 

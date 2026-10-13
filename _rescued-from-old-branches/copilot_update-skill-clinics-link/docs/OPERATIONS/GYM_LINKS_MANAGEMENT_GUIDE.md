@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): copied off a deleted branch (commit 6bb602b) — it describes the app as of its own date, not now. Dec 2025 CPF clinic-link fix and gym_links guide. Sync no longer reads `gym_links` URLs — it discovers categories from iClass `bookings/{locationId}` and sorts them with `event_type_mappings`; the bulk opener is `BulkPortalOpener.js`. Current: `CLAUDE.md`.
+
 # 🔗 GYM LINKS MANAGEMENT GUIDE
 ## How to Update Program Page URLs for Bulk Openers and Auto-Sync
 

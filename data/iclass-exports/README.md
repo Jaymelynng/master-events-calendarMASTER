@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): all pricing was removed from the calendar 2026-10-02, and there is no `camp_pricing_map` table in Supabase `xftiwouxpefchwoxxgpf` today (April pricing data sits in `archive.pricing_schedules` / `archive.camp_type_mappings`); the folder holds no exports. Current: `CLAUDE.md` › Pricing.
+
 # iClass bulk exports (local)
 
 Copy snapshots from **Downloads** (or enterprise export) into a **dated subfolder** here, e.g.:

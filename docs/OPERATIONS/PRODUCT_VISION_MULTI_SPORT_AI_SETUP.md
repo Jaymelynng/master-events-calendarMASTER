@@ -12,7 +12,7 @@
 | **Collection** | Direct HTTP (or fallback) to a vendor portal | Other APIs, CSV import, or alternate LMS/registration exports — same downstream **event shape** where possible |
 | **Identity / diff** | `event_url` + `eventComparison.js` | Any stable per-event URL or composite key |
 | **Validation** | `validation_engine.py` compares **structured fields** vs **title/description** | Same **pattern** for camps, clinics, games, tournaments — wording and program types change per sport |
-| **Per-tenant config** | `rules`, pricing tables, `gym_links` | Per org / per facility without forking Python per customer |
+| **Per-tenant config** | `rules`, `event_types` / `event_type_mappings`, `gym_links` (pricing tables out of use since 2026-10-02) | Per org / per facility without forking Python per customer |
 
 **Universal embedded rules** (case-insensitive text, month windows, time regex cleanup, CAMP day skip, etc.) are **one codebase for all gyms** on purpose. Different sports mainly change **vocabulary** (program types, synonyms, pricing rows), not the idea of “does the copy match the system?”
 
@@ -25,7 +25,7 @@
 **Goal:** An onboarding experience (human + AI) that helps a new customer:
 
 - Understand **what** the system validates (plain language, linked to `AUDIT_DATA_ERROR_REFERENCE.md`).
-- Complete **Pricing** (`camp_pricing`, `event_pricing`) and **Gym Rules** (`valid_price`, `valid_time`, `program_synonym`, check toggles).
+- Complete **Gym Rules** (`valid_time`, `program_synonym`, `program_ignore`, check toggles). (Pricing setup is off the table for now — all pricing was removed 2026-10-02.)
 - Configure **gym links** and basic **program type** mapping.
 - Get **sport- or industry-aware suggestions** for rules and copy patterns (always with human review where it affects money or compliance).
 - Avoid **operator-only** workflows (e.g. DevTools JWT capture) as a requirement for core value.
@@ -34,7 +34,7 @@
 
 - **Safe:** Guided data entry, explanations, checklists, draft `rules` rows for human approval, dry-run validation reports.
 - **Requires explicit design:** Letting customers edit the **embedded** comparison logic (regex bundles) from the UI — that implies a **rules engine** or codegen pipeline with tests, not ad-hoc string edits.
-- **Contract:** Price validation stays aligned with `PRICING_SOURCE_OF_TRUTH.md` until product intentionally changes it.
+- **Contract:** No price handling at all until Jayme says go — see `PRICING_SOURCE_OF_TRUTH.md` (all pricing removed 2026-10-02).
 
 ---
 

@@ -1,3 +1,5 @@
+> SUPERSEDED BY C:\Users\Jayme\JAYME PROJECTS\SOURCE-OF-TRUTH\iclass-kb\iclasspro-kb.md (checked 2026-10-13). This is an April 2026 copy of the iclasspro-kb skill (569 articles); the authority holds 597 articles (refreshed 2026-10-12). Grep the authority and quote line numbers.
+
 # iClassPro Platform Knowledge — Embedded Reference
 
 **Purpose:** Make sure every AI agent that opens this project knows the foundational facts about iClassPro BEFORE proposing anything that involves the platform. This folder is a checked-in copy of the user-level `iclasspro-kb` skill, embedded here so the project is self-contained.

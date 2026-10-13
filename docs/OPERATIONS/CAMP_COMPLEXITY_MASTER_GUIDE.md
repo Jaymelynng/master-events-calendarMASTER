@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): the gym-by-gym camp patterns are an Oct 2025 snapshot (10 gyms; the `gyms` table now holds more). The camp display changed in May 2026: multi-day camps now render as one long bar per variant via `src/components/EventsDashboard/CampBand.js` (split in `CalendarGrid.js`), and `groupCampEventsForDisplay` now lives in `src/components/EventsDashboard/utils.js` (the `EventsDashboard.js` line refs below point at dead code). Prices are no longer stored or shown (all pricing removed 2026-10-02). `docs/TECHNICAL/SUPABASE-ARCHITECTURE.md` does not exist. Current: `CLAUDE.md` › Key Files, `CampBand.js`.
+
 # 🏕️ CAMP COMPLEXITY MASTER GUIDE
 ## Understanding How Different Gyms Structure Camp Data
 

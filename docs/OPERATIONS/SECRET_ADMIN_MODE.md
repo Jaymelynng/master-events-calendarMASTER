@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): the 3-tier access (Shift+Click wand, `*` + PIN) still matches the code, but the tab list is out of date — the Admin Dashboard now has 7 tabs: 🚨 Errors, 🗂️ Buckets, 📏 Gym Rules, ✉️ Contacts, 📜 Change History, 📅 Future Plans, ⚡ Quick Actions (`AdminDashboard.js:541-549`). Audit & Review, Pricing (`AdminPricing.js`) and their sub-files are deleted; there are no price rules. The PIN comes from `REACT_APP_ADMIN_PIN` with `1426` as the code fallback (`AdminDashboard.js:510`) — a client-side PIN anyone can read in the page source. Current: `CLAUDE.md` › Admin Access + Admin Dashboard Tabs.
+
 # 🔐 ADMIN MODE - Complete Guide
 ## Three-Tier Access System + Full-Page Admin Dashboard
 

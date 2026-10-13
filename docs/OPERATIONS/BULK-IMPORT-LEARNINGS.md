@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): history doc. The gym-code and slug tables list 10 gyms; the `gyms` table now holds more (read it — this database stores the old codes AAG / EAG / PLG). "Missing prices — now pulls from iClass settings" was never true (iClass sends no price) and all pricing was removed 2026-10-02. Current: `CLAUDE.md`, `docs/OPERATIONS/F12-IMPORT-GUIDE.md`.
+
 # 📋 BULK IMPORT LEARNINGS & FIXES
 ## Historical Record of Issues and Solutions
 

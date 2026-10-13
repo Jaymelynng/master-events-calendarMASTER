@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): the event CSV columns changed — there is no Price column any more (all pricing removed 2026-10-02); the header is now `Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Daily Schedule,Ages,Description,Description Status,Has Openings,Spots Left,Openings Display,Signup Mode,iClass Program,Type ID,URL` (`ExportModal.js:433`). "All 10 gyms" is a count — read `gyms`. The type list (5 types incl. SPECIAL EVENT) matches the code, but the code itself is out of date: `ExportModal.js:26,95` hardcode those 5 types, so CAMP CARE / SPECIALTY / UNSORTED events cannot be exported by type. Current: `src/components/EventsDashboard/ExportModal.js`.
+
 # 📤 EXPORT DATA GUIDE
 ## Comprehensive Export & Reporting System
 

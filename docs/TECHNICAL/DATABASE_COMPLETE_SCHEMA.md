@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13 with `list_tables` + `information_schema`): March 17 schema. Today `public` has 23 tables + 2 views, and `archive` holds `pricing_schedules` / `camp_type_mappings`. Missing here: `event_type_mappings`, `category_mappings`, `extractors`, `format_patterns`, `app_config`, `error_email_log`, `verified_events`. `events` / `events_archive` now have 42 columns each (added: allow_choose_days, program_name, openings, openings_display, show_openings, ai_review_flags, ai_reviewed_at, daily_schedule, camp_type, type_locked, type_id); `gyms` has 19 columns and 14 rows (old codes AAG / EAG / PLG stored); `event_types` has 7 rows (CLINIC, KIDS NIGHT OUT, OPEN GYM tracked; CAMP, CAMP CARE, SPECIALTY, UNSORTED not); `gym_links` 95 rows. `events.price` is NULL everywhere and `event_pricing` / `camp_pricing` are no longer read (all pricing removed 2026-10-02); `valid_price` / `sibling_price` rules are gone. Current: query Supabase `xftiwouxpefchwoxxgpf` directly.
+
 # 🗄️ COMPLETE DATABASE SCHEMA
 ## Master Events Calendar - All Tables & Views
 

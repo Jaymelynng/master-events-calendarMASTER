@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): all pricing was removed from the calendar 2026-10-02 — nothing reads this data. The checklist is also out of date: CCP files are here too (`CCP_camp_types.json`, `CCP_pricing_schedules.json`), not only EST. Current: `CLAUDE.md` › Pricing, `database/REMOVED_PRICING_2026_10_02.sql`.
+
 # Gym Pricing Raw Data
 
 This folder stores the raw pricing schedule JSON from each gym's iClassPro enterprise backend.

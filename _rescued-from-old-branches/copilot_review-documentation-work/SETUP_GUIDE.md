@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): copied off a deleted branch (commit 6bb602b) — it describes the app as of its own date, not now. Feb 11, 2026 cleanup-branch notes; the live repo has moved on (Direct API sync, REFACTORED dashboard live, `/health` returns status ok). Current: `CLAUDE.md`, `.env.example`.
+
 # Quick Start: Setting Up After Cleanup
 
 **For:** Jayme and future developers  

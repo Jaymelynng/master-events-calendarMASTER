@@ -1,3 +1,5 @@
+> SUPERSEDED BY HUB -ACTIVE - master-events-calendar/_rescued-from-old-branches/cursor_deep-application-file-and-folder-review-45ad/docs/OPERATIONS/EVENT_SCANNER_LOGIC.md (checked 2026-10-13) — byte-identical duplicate (cmp).
+
 # 🔍 Event Scanner Logic - Complete Documentation
 
 **Created:** November 5, 2025  

@@ -23,6 +23,7 @@
 - Daytime clinics: HGA 12–1 / 1–2, RBA 12–1, RBK 12:30–2, EST 2–3, SGT 2–3 (most gyms clinic at 6:30 PM).
 
 ## Valid price candidates (per gym, fairly fixed = good anchors)
+> Obsolete since October 2, 2026: all pricing was removed from the calendar and `valid_price` / `sibling_price` rules no longer exist. Kept as July 2026 data only.
 - OPEN GYM: CCP/CPF/CRR $10, RBK $15, HGA/OAS/RBA/TIG $20 (RBA occ. $25), SGT $30, EST $35 homeschool / $10 drop-in.
 - KNO: CCP/CRR/EST $40, HGA/OAS/SGT $45, RBA/TIG $35–$40.
 - CAMP full-week: RBA/RBK $250, CPF/CRR/OAS $315, EST $270, TIG $335, SGT $390, HGA $400. Half-day/day rates are a legit second price per gym.
@@ -35,7 +36,7 @@
 - AZ gyms (EST/OAS/SGT) camps 5–13 vs TX 4–12/4-13.
 
 ## Special Events / Showcases — IMPORTANT GAP
-- 30 archived SPECIAL EVENTs (mostly March "Showcase" split by level/discipline). **SPECIAL EVENT is SKIPPED by ALL validation** — showcases get zero checks. If Jayme wants showcases validated (wrong date/age), that's a design decision when showcase season returns.
+- 30 archived SPECIAL EVENTs (mostly March "Showcase" split by level/discipline). In July 2026 **SPECIAL EVENT was SKIPPED by ALL text validation** — showcases got zero checks. (Checked 2026-10-13: `SPECIAL EVENT` is no longer a type; named one-offs now land in `SPECIALTY`, which the engine's skip (`validation_engine.py:833`, still keyed on 'SPECIAL EVENT') does NOT cover, so they are text-checked now.) If Jayme wants showcases validated (wrong date/age), that's a design decision when showcase season returns.
 - Some showcase/fundraiser content is typed as CLINIC/KNO/OPEN GYM instead (Showcase Routines Clinic, Showcase Open Gym, IGT Team Bonding KNO, Caliber Fundraiser KNO, Cheer Fundraisers Open Gym, FALL FESTIVAL Open Gym) — those DO get checked; all intentional, whitelist if they flag.
 
 ## Xcel / team levels

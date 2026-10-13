@@ -61,17 +61,17 @@ The `typeId=7` part is hardcoded per gym. If a gym reorganizes their categories,
 |-------|-------------------|-----------------|----------------|
 | `id` | ✅ Yes (as `event_id`) | iClassPro event ID | Used for URL building |
 | `name` | ✅ Yes (as `title`) | Event title | Displayed in calendar |
-| `description` | ✅ Yes | Full HTML description | Parsed for price, time, ages |
+| `description` | ✅ Yes | Full HTML description | Parsed for time, ages, dates (no price parsing since 2026-10-02) |
 | `startDate` / `endDate` | ✅ Yes | Date range | Event dates |
 | `minAge` / `maxAge` | ✅ Yes | Age range | Age validation |
 | `schedule` | ✅ Yes | Time blocks | Parsed for time |
 | `hasOpenings` | ✅ Yes | Availability | Shown in UI |
 | `image` | ✅ Yes (as `flyer_url`) | Event flyer | Flyer detection |
 | `registrationStartDate` / `registrationEndDate` | ✅ Yes | Reg window | Displayed |
-| `programName` | ❌ **NO** | "CLINICS", "KIDS NIGHT OUT", etc. | Could validate event type mapping, detect category changes |
+| `programName` | ✅ Yes (as `program_name`, checked 2026-10-13) | "CLINICS", "KIDS NIGHT OUT", etc. | Could validate event type mapping, detect category changes |
 | `roomName` | ❌ **NO** | Room/area in facility | Show WHERE in the gym |
 | `instructors` | ❌ **NO** | Array: `[{id, firstName, lastName}]` | Show WHO runs it — valuable for parents |
-| `blocks` | ❌ **NO** | Exact timestamps per session | More precise than `schedule` — has actual dates + times |
+| `blocks` | ✅ Used since May 4, 2026 — first/last block sets camp `start_date`/`end_date`; per-day hours stored in `daily_schedule` | Exact timestamps per session | More precise than `schedule` — has actual dates + times |
 | `programIsDeleted` | ❌ **NO** | Whether program was deleted | **Instant deletion detection** — no need to compare against previous sync |
 | `campRegisterExpired` | ❌ **NO** | Registration closed | Show registration status |
 | `autoApprove` | ❌ **NO** | Auto vs manual approval | Know if registration is instant or requires gym approval |
@@ -213,10 +213,10 @@ For each gym:
 
 1. ~~**Build direct API sync** — Replaces Playwright, captures everything~~ ✅ **DONE Mar 9, 2026**
 2. ~~**Auto-discover program categories** — Eliminates hardcoded typeIds~~ ✅ **DONE Mar 9, 2026** (bookings endpoint)
-3. **Store locationId and timezone** — Correct time handling (locationId is fetched each sync but not cached yet)
+3. **Store locationId and timezone** — Correct time handling (`gyms.iclass_location_id` and `gyms.iclass_account_id` columns now exist — checked 2026-10-13; timezone still not stored)
 4. **Capture instructors + room** — Valuable parent-facing data (data is fetched but not yet stored in Supabase)
 5. **Capture deletion/registration status** — Instant status detection (data is fetched but not yet stored)
-6. **Brand colors/logos** — Nice to have for UI polish
+6. **Brand colors/logos** — Nice to have for UI polish (`gyms.brand_colors` and `gyms.logo_url` exist in this database; the hub's gym list is Supabase `wdlvgzsqvtcognddsbbv` `public.gyms`)
 
 ---
 

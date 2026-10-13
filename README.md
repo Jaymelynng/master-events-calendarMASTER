@@ -14,7 +14,7 @@ Part of the **mygymtools.com** suite of tools.
 
 ## Project Overview
 
-**Production event management system** managing 10 gymnastics facilities across Texas and Arizona.
+**Production event management system** managing every gym in the `gyms` table (live list — read it; this database still stores the old codes AAG / EAG / PLG).
 
 ### Business Impact
 - **94% Time Reduction**: 5 hours to 20 minutes per month
@@ -23,9 +23,8 @@ Part of the **mygymtools.com** suite of tools.
 - **Scalability**: Built to handle 50+ locations
 
 ### Current Scale
-- **10 Facilities** actively managed (6 Texas, 4 Arizona)
-- **400+ Events** in system
-- **2 States** (TX, AZ)
+- **Every gym in the `gyms` table** actively managed (count not written here — it grows)
+- **400+ Events** in system (428 active + 1,293 archived on 2026-10-13)
 - **Real-time** compliance monitoring
 
 ---
@@ -55,7 +54,7 @@ REACT_APP_ADMIN_PIN=[your-admin-pin]
 ### Build & Test
 ```bash
 npm run build         # Production build
-npm test              # Run tests (97 tests)
+npm test              # Run tests
 npm run test:ci       # Run tests without watch mode
 npm run test:coverage # Run tests with coverage report
 ```
@@ -68,7 +67,7 @@ npm run test:coverage # Run tests with coverage report
 |----------|----------|-------------|
 | **Business** | `docs/BUSINESS/` | ROI analysis, presentations |
 | **Technical** | `docs/TECHNICAL/` | Architecture, database, validation rules |
-| **Operations** | `docs/OPERATIONS/` | How-to guides, sync instructions (21 docs) |
+| **Operations** | `docs/OPERATIONS/` | How-to guides, sync instructions |
 
 **Start here:** `AI_RULES_READ_FIRST.md` then `docs/INDEX.md`
 
@@ -77,28 +76,28 @@ npm run test:coverage # Run tests with coverage report
 ## Key Features
 
 ### For Everyone
-- Real-time calendar across all 10 gyms
+- Real-time calendar across every gym
 - Smart filters by gym and event type
 - Click numbers to open registration pages
 - Click sparkle to open ALL pages for a gym
 
 ### For Admins (Shift+Click magic wand)
-- **Audit & Review** - View/filter/dismiss validation errors
-- **Pricing** - Manage camp and event pricing tables
-- **Gym Rules** - Rule Wizard for validation rules, synonyms, exceptions
+- **🚨 Errors** - Errors Command Center: per gym / per topic / totals, dismiss or make a rule
+- **🗂️ Buckets** - Map iClass camp types to calendar categories (`event_type_mappings`)
+- **Gym Rules** - Rule Wizard for validation rules, synonyms, exceptions, plus system-check toggles
+- **✉️ Contacts** - Manager contacts
 - **Change History** - Full audit log with filters and CSV export
-- **Audit Rules** - Reference table of all 11 validation checks
 - **Future Plans** - Track planned features, bugs, improvements
 - **Quick Actions** - Sync, import, super admin tools
 - **Email Composer** - Generate emails to gym managers about missing events and data errors
 
-### Data Quality (11 Database-Driven Checks)
+### Data Quality (Database-Driven Checks — 10 active rows in `rules` on 2026-10-13)
 - Date, time, age, day, year mismatch detection
 - Program type cross-contamination detection
 - Title vs description contradiction detection
-- Camp price validation against pricing table
-- Event price validation against pricing table (with effective dates)
+- Ordinal typo + registration-closes-before-last-day detection
 - Impossible date detection (e.g., June 31)
+- No price checks — all pricing removed October 2, 2026
 - Dismiss errors with permanent rules or temporary overrides
 - All checks configurable per-gym via the `rules` table
 
@@ -133,7 +132,7 @@ npm run test:coverage # Run tests with coverage report
 master-events-calendar/
 ├── src/
 │   ├── components/
-│   │   ├── EventsDashboard.js          # Main calendar UI
+│   │   ├── EventsDashboard_REFACTORED.js # Main calendar UI (EventsDashboard.js = dead code)
 │   │   ├── EventsDashboard/            # Sub-components
 │   │   │   ├── SyncModal.js            # Sync workflow
 │   │   │   ├── ExportModal.js          # Export options
@@ -149,17 +148,17 @@ master-events-calendar/
 │   │   │   └── constants.js            # Theme colors, helpers
 │   │   └── AdminDashboard/             # Admin panel (7 tabs)
 │   │       ├── AdminDashboard.js       # Tab orchestrator
-│   │       ├── AdminAuditReview.js     # Audit & Review tab
+│   │       ├── AdminErrorsCenter.js    # Errors tab
+│   │       ├── AdminBuckets.js         # Buckets tab
 │   │       ├── AdminGymRules.js        # Gym Rules tab
-│   │       ├── AdminPricing.js         # Pricing tab
+│   │       ├── AdminContacts.js        # Contacts tab
 │   │       ├── AdminChangeHistory.js   # Change History tab
-│   │       ├── AdminAuditRulesReference.js
 │   │       ├── AdminFuturePlans.js     # Future Plans tab
 │   │       ├── AdminQuickActions.js    # Quick Actions tab
+│   │       ├── AdminFormatRules.js
+│   │       ├── RuleManager.js
 │   │       ├── RuleWizard.js           # Rule creation wizard
-│   │       ├── EmailComposer.js        # Email generation
-│   │       ├── AdminAuditFilters.js
-│   │       └── AdminAuditErrorCard.js
+│   │       └── EmailComposer.js        # Email generation
 │   └── lib/
 │       ├── api.js                      # Supabase API functions
 │       ├── supabase.js                 # Supabase client config
@@ -183,7 +182,7 @@ master-events-calendar/
 │   ├── TECHNICAL/
 │   └── OPERATIONS/
 ├── database/                           # SQL migration scripts
-├── data/                               # Raw pricing data
+├── data/                               # Raw pricing data (unused since pricing removal 2026-10-02)
 ├── LOGOS/                              # Gym brand logos
 ├── AI_RULES_READ_FIRST.md             # AI agent instructions
 └── CLAUDE.md                          # Quick-start guide
@@ -205,11 +204,11 @@ master-events-calendar/
 
 All validation is **database-driven** via the `rules` table. The Python backend (`validation_engine.py`) reads active checks from the database — no hardcoded validation logic.
 
-**11 System Checks:** date, year, time, age, day, program, title/description, impossible date, price, camp price, event price
+**System Checks (10 active on 2026-10-13):** date, year, time, age, day, program, title/description, impossible date, ordinal typo, registration closes early
 
-**Pricing Note:** iClassPro does NOT provide prices via their API. We built custom pricing tables (`camp_pricing` and `event_pricing` with effective date support).
+**Pricing Note:** All pricing removed October 2, 2026 — the calendar sets, shows, exports and checks no price. `camp_pricing` / `event_pricing` still exist but nothing reads them.
 
-**Rule Types:** System checks, valid prices, sibling prices, valid times, program synonyms, requirement exceptions, one-time exceptions.
+**Rule Types:** System checks, valid times, program synonyms, program ignore, requirement exceptions, one-time exceptions.
 
 ---
 

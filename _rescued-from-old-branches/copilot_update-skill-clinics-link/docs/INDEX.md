@@ -1,3 +1,5 @@
+> SUPERSEDED BY HUB -ACTIVE - master-events-calendar/docs/INDEX.md (checked 2026-10-13) — Dec 9, 2025 copy rescued off a deleted branch (commit 6bb602b).
+
 # 📚 Team Calendar - Documentation Index
 
 **Live URL:** https://teamcalendar.mygymtools.com  

@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): the 10-gym checklist and "Special Events" are out of date — the sync now lists every gym from the `gyms` table and every bucket from `event_types` (CLINIC, KIDS NIGHT OUT, OPEN GYM, CAMP, CAMP CARE, SPECIALTY, UNSORTED), and there is a SYNC ALL GYMS button that does every gym in one go (`SyncModal.js:69-82, 198, 1263`). Current: `docs/OPERATIONS/AUTO-SYNC-GUIDE.md` (also stale) / the Sync modal itself.
+
 # 📋 SYNC QUICK REFERENCE
 ## For Non-Technical Users
 

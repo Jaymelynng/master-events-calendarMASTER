@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): copied off a deleted branch (commit 6bb602b) — it describes the app as of its own date, not now. Feb 2026 line-by-line map of validation that lived inside `f12_collect_and_import.py`; validation moved to `automation/validation_engine.py` (Mar 17, 2026), FORMAT errors were never produced, and all price checks are gone (2026-10-02). Current: `automation/validation_engine.py` + the `rules` table.
+
 # COMPLETE VALIDATION LOGIC REFERENCE
 ## f12_collect_and_import.py - Every Validation Check Documented
 

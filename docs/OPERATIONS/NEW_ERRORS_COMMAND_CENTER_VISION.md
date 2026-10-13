@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): April 2026 draft. Parts of it happened — the Audit & Review tab was deleted and replaced by the 🚨 Errors Command Center (`AdminErrorsCenter.js`, July 2026); a top-of-calendar digest was tried and reverted (commit a4bda34, 2026-08-28). Parts are moot — there are 10 system checks now, not 11, and no price checks or pricing table lookups (all pricing removed 2026-10-02). The Structured Event Editor / iClass push is not built. Current: `CLAUDE.md` › Admin Dashboard Tabs.
+
 # Eliminate Errors — Don't Surface Them (v2 Draft)
 
 **Status:** DRAFT — for Jayme to react to

@@ -10,12 +10,12 @@
 
 **Embedded vs configurable (strategic):**
 
-- **Same Python for every gym today:** Universal comparison logic (dates, times, ages, program words, prices vs tables, etc.) lives in `automation/validation_engine.py`. That is intentional — one codepath, many tenants.
-- **Per-gym / per-program differences** come from **data**: `rules`, `camp_pricing`, `event_pricing`, `gym_links`, synonyms, check toggles in `rules`.
+- **Same Python for every gym today:** Universal comparison logic (dates, times, ages, program words, etc. — no prices since all pricing was removed October 2, 2026) lives in `automation/validation_engine.py`. That is intentional — one codepath, many tenants.
+- **Per-gym / per-program differences** come from **data**: `rules`, `gym_links`, `event_type_mappings`, synonyms, check toggles in `rules`. (`camp_pricing` / `event_pricing` still exist but nothing reads them since 2026-10-02.)
 
 **AI startup / onboarding product (planned):**
 
-- Jayme is doing **research** toward an **AI-assisted setup** offering: help new organizations **configure** the product without being technical — explain what the embedded checks do, guide **Pricing** and **Gym Rules**, suggest `valid_price` / `program_synonym` / check toggles, validate links, **not** silently rewrite core validation code without review.
+- Jayme is doing **research** toward an **AI-assisted setup** offering: help new organizations **configure** the product without being technical — explain what the embedded checks do, guide **Gym Rules**, suggest `program_synonym` / `program_ignore` / check toggles, validate links, **not** silently rewrite core validation code without review.
 - **Value prop:** A **custom-feeling** setup that covers **small details they wouldn’t think of** — the edge cases Jayme already burned in on (copy vs system, dates/times, pricing truth, false positives) — plus **sport- or industry-specific suggestions** (terminology, program patterns, what to validate first), still with human oversight for anything high-stakes.
 - Longer narrative and constraints for builders: **`docs/OPERATIONS/PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md`**.
 
@@ -30,7 +30,7 @@
 | Topic | File |
 |--------|------|
 | Validation matrix + tolerances | `docs/OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md` |
-| Pricing contract | `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md` |
+| Pricing history (all pricing removed 2026-10-02) | `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md` |
 | Event new/changed/deleted | `docs/OPERATIONS/EVENT_COMPARISON_LOGIC.md` |
 | **Openings / capacity feature (NEW)** | `docs/OPERATIONS/OPENINGS_CAPACITY_FEATURE.md` |
 
@@ -48,7 +48,7 @@
 
 **Time was removed from cards** in the same session — accessible via hover tooltip, Table View, side panel.
 
-**Side gotcha discovered:** `automation/pricing_supabase.py` was an untracked file that f12_collect_and_import.py imports. Pushing only the openings code without it broke Railway sync. Now committed.
+**Side gotcha discovered (April 2026):** `automation/pricing_supabase.py` was an untracked file that f12_collect_and_import.py imported. Pushing only the openings code without it broke Railway sync. It was committed then; since the October 2, 2026 pricing removal the sync no longer imports it (`automation/test_validation_fixtures.py` asserts that).
 
 **Full write-up:** `docs/OPERATIONS/OPENINGS_CAPACITY_FEATURE.md`
 
@@ -56,7 +56,7 @@
 
 ## ⚠️ STALE WARNING — April 7 pricing crisis is RESOLVED
 
-The original April 7 entry below claimed "DO NOT DEPLOY" because of `find_matching_schedule()`. **That function does not exist in the codebase.** It was attempted, then backed out. Current pricing flow uses `programName` directly from API + `pricing_supabase.py` for date-aware lookups. Test fixture (`automation/test_validation_fixtures.py`) explicitly asserts the broken function stays gone. Future sessions should ignore the scary warning and trust this resolution.
+The original April 7 entry below claimed "DO NOT DEPLOY" because of `find_matching_schedule()`. **That function does not exist in the codebase.** It was attempted, then backed out. There is no pricing flow at all since October 2, 2026 (all pricing removed). Test fixture (`automation/test_validation_fixtures.py`) asserts no price check and no pricing lookup come back. Future sessions should ignore the scary warning and trust this resolution.
 
 ---
 

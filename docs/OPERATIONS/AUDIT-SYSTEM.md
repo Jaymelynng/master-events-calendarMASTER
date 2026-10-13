@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): the Audit & Review tab and its files (`AdminAuditReview.js`, `AdminAuditFilters.js`, `AdminAuditErrorCard.js`) are deleted — validation errors now live in the 🚨 Errors tab (`AdminErrorsCenter.js`); `+ Rule` writes to `rules` (`gym_valid_values` was dropped); the change log is now the 📜 Change History tab (`AdminChangeHistory.js`) which HAS gym/action filters and CSV export; prices are no longer synced (all pricing removed 2026-10-02). The PIN shown here is the code fallback when `REACT_APP_ADMIN_PIN` is unset. Current: `CLAUDE.md` › Admin Dashboard Tabs.
+
 # 🔍 Audit History System
 ## Complete Change Tracking for Events
 

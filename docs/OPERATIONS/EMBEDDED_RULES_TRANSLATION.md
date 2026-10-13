@@ -8,6 +8,8 @@
 
 ## Core audit logic (mental model)
 
+> Jayme's doctrine since July 2, 2026 (see `AI_EVENT_REVIEW.md`): "there is NO 'truth' side" — any disagreement between settings, title and description is an error. The four-step flow below is how the engine's checks are organised, not a ranking of which field is right.
+
 The audit flow **conceptually** is:
 
 1. **Pull source-of-truth data from iClassPro**  
@@ -64,8 +66,8 @@ After truth checks, **title ↔ description** catches internal contradictions.
 
 - **Order of checks** is **not** fixed to steps 2 → 3 → 4. Active `check_*` rows in the `rules` table are run in query order; each function implements its own title/description logic.
 - **Many checks** scan **both** title and description in one pass against iClass (e.g. `check_year_mismatch`, `check_time_mismatch`) and emit separate errors per field where relevant.
-- **No description:** If there is no description text (or type is SPECIAL EVENT), **`run_validation` returns no errors** — DATA checks do not run. See [AUDIT_DATA_ERROR_REFERENCE.md](./AUDIT_DATA_ERROR_REFERENCE.md) (when validation runs vs skips).
-- **Pricing:** Camp/event dollar amounts are validated against **`camp_pricing` / `event_pricing`** (and `rules`), not iClass API price fields — see [PRICING_SOURCE_OF_TRUTH.md](./PRICING_SOURCE_OF_TRUTH.md).
+- **No description:** If there is no description text (or type is SPECIAL EVENT), the text checks do not run; settings checks (`check_registration_closes_early`) still run on every event (`validation_engine.py:832-833`). See [AUDIT_DATA_ERROR_REFERENCE.md](./AUDIT_DATA_ERROR_REFERENCE.md) (when validation runs vs skips).
+- **Pricing:** No dollar amount is validated any more — all pricing was removed October 2, 2026 (record: `database/REMOVED_PRICING_2026_10_02.sql`).
 
 ---
 
@@ -102,11 +104,12 @@ The table below maps **ideas** in this doc to the **`type` string** stored per e
 | Age in text vs iClass min | `age_mismatch` | Title vs iClass, description vs iClass. |
 | Title age vs description age | `age_mismatch` | **Consistency** check, same `type` as truth checks — read the message. |
 | Program words vs iClass type | `program_mismatch` | KNO / clinic / open gym / camp keywords + `program_synonym` rules. |
-| Clinic skill in title vs description | `skill_mismatch` | CLINIC only; first matching skill each side. Not a separate `skill_program_mismatch` type. |
+| Clinic skill in title vs description | `skill_mismatch` | CLINIC only; first matching skill each side. Not a separate `skill_program_mismatch` type. Does not run today — no `check_skill_mismatch` row in `rules` (2026-10-13). |
 | Title vs description program words | `title_desc_mismatch` | e.g. clinic vs KNO vs open gym in opening description snippet. |
-| Price in title vs price in description | `price_mismatch` | Dollar amounts in text vs each other. |
-| Camp price vs tables + rules | `camp_price_mismatch` | Not iClass API. |
-| Clinic/KNO/Open Gym price vs tables + rules | `event_price_mismatch` | Not iClass API. |
+| Price in title vs price in description | — | `price_mismatch` removed October 2, 2026. |
+| Camp / event price vs tables | — | `camp_price_mismatch` / `event_price_mismatch` removed July 1, 2026. |
+| Registration closes before the event's last day | `registration_closes_early` | Settings check, added Oct 5, 2026. |
+| Ordinal typo ("29nd") | `ordinal_typo` | `check_ordinal_typo`. |
 | Impossible calendar date in text | `date_mismatch` | `check_impossible_date` appends `date_mismatch` errors. |
 | `range_mismatch` (written range vs true span) | — | **Not** a separate type; partly overlaps `date_mismatch` behavior. |
 | `duration_mismatch` (e.g. “1 hour” vs clock) | — | **Not implemented** as its own check/type. |
@@ -142,9 +145,7 @@ The table below maps **ideas** in this doc to the **`type` string** stored per e
 | Program wording vs iClass type | `program_mismatch` |
 | Clinic skill title ≠ description | `skill_mismatch` |
 | Title vs description program clash | `title_desc_mismatch` |
-| Title price ≠ description price | `price_mismatch` |
-| Camp price vs pricing table | `camp_price_mismatch` |
-| Event price vs pricing table | `event_price_mismatch` |
+| Registration closes before last day | `registration_closes_early` |
 | Impossible date | `date_mismatch` (from impossible-date check) |
 
 ---
@@ -154,4 +155,4 @@ The table below maps **ideas** in this doc to the **`type` string** stored per e
 - [AUDIT_DATA_ERROR_REFERENCE.md](./AUDIT_DATA_ERROR_REFERENCE.md) — per-check triggers, limits, rules  
 - [VALIDATION_RULES_ARCHITECTURE.md](../TECHNICAL/VALIDATION_RULES_ARCHITECTURE.md) — DB-driven checks + embedded intelligence  
 - [DATA_QUALITY_VALIDATION.md](./DATA_QUALITY_VALIDATION.md) — operator-facing validation narrative  
-- [PRICING_SOURCE_OF_TRUTH.md](./PRICING_SOURCE_OF_TRUTH.md) — price validation inputs  
+- [PRICING_SOURCE_OF_TRUTH.md](./PRICING_SOURCE_OF_TRUTH.md) — history of price validation (all removed by October 2, 2026)  

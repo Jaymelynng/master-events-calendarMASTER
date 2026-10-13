@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): copied off a deleted branch (commit 6bb602b) — it describes the app as of its own date, not now. Jan 2026 price-field investigation; moot — all pricing was removed from the calendar 2026-10-02 (`database/REMOVED_PRICING_2026_10_02.sql`). Current: `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md`.
+
 # 🔍 Price Extraction Analysis & Solutions
 
 **Date:** January 29, 2026  

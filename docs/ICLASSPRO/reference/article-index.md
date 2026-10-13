@@ -1,3 +1,5 @@
+> SUPERSEDED BY C:\Users\Jayme\JAYME PROJECTS\SOURCE-OF-TRUTH\iclass-kb\iclasspro-kb.md (checked 2026-10-13). This is an April 2026 copy of the iclasspro-kb skill (569 articles); the authority holds 597 articles (refreshed 2026-10-12). Grep the authority and quote line numbers.
+
 # iClassPro KB Article Index
 
 Full index of 569 iClassPro support articles, organized by section. Last scraped: 2026-04-21.

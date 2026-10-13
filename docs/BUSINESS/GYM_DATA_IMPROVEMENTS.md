@@ -1,3 +1,5 @@
+> ⚠️ STALE (checked 2026-10-13): the contact SQL below is typed-in data nobody re-verified — do NOT run it. Gym facts (names, contacts, links) belong to the hub Supabase `wdlvgzsqvtcognddsbbv` `public.gyms`. The NULL-price note is obsolete (all pricing removed 2026-10-02). This file lives in `docs/BUSINESS/`, not `docs/OPERATIONS/` as the header says.
+
 # 📊 GYM DATA IMPROVEMENTS
 ## Optional Data Enhancements for Supabase
 
