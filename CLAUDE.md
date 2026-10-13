@@ -19,9 +19,10 @@
 
 ## 🗄️ DATABASE + GYM CODES (read before any query)
 
-- **This app's Supabase = `xftiwouxpefchwoxxgpf`.** Not the hub.
-- **It stores the OLD gym codes for the merger gyms: AAG, EAG, PLG** (plus MGC). The central hub (`wdlvgzsqvtcognddsbbv`) uses AAR / EGF / PGN — **querying this DB with AAR, EGF or PGN returns 0 rows.** Zero rows for one gym = wrong code, not an empty gym. Never "fix" the codes in this database without Jayme's word.
-- **Never hardcode the gym count or codes** in code or docs. Live list: `select id from gyms` here; master gym facts (names, colors, logos): hub `public.gyms`, any spelling → `select public.resolve_gym('<spelling>')` in the hub.
+- **This area:** folder `JAYME PROJECTS\HUB -ACTIVE - master-events-calendar` · Supabase `xftiwouxpefchwoxxgpf` "MASTER EVENTS CALENDAR" · GitHub `Jaymelynng/master-events-calendarMASTER`. A separate area — its own folder, database and repo. Other areas (Command Center, ICLASS SUCKS, …) may be read for research only; never write into them from here, and never point this app at their databases. Known connections (checked 2026-10-13): the `monthly-events-email` skill and the Command Center's HubSpot email planning scripts READ this database's events/columns — so renaming a column here can break them.
+- **Gym facts for this app (names, slugs, logos, brand colors, managers, contacts) = this database's own `gyms` table.** Read it live: `select id, name from gyms`.
+- **This DB's codes for the merger gyms are AAG, EAG, PLG** (plus MGC), checked 2026-10-13. Other areas use other codes for the same gyms (AAR / EGF / PGN) — **querying this DB with AAR, EGF or PGN returns 0 rows.** Zero rows for one gym = wrong code, not an empty gym. Never "fix" the codes in this database without Jayme's word.
+- **Never hardcode the gym count or codes** in code or docs.
 
 ---
 
@@ -97,7 +98,7 @@
 - **DATA errors** (red) = something is WRONG (mismatch between sources)
 - **All validation is database-driven** — the active `check_*` rows in the `rules` table (10 on 2026-10-13: age, date, day, impossible_date, ordinal_typo, program, registration_closes_early, time, title_desc, year), executed by `validation_engine.py`. Re-count with `select rule_type from rules where rule_type like 'check_%'` before quoting a number.
 - **Python has zero hardcoded validation** — `f12_collect_and_import.py` calls the engine, which reads active checks from the database
-- **User rules** (valid_time, requirement_exception, program_synonym, exception) also live in the `rules` table
+- **User rules** (valid_time, requirement_exception, program_synonym, program_ignore, exception) also live in the `rules` table. `program_ignore` (built 2026-05-03, commit 6d76ecf; Rule Wizard "Ignore Keyword") stops a program-mismatch flag for a keyword in one gym + event type — e.g. "open gym" as a station inside a KNO
 - **Text checks skip** events with no description and Special Events; **settings checks** (`SETTINGS_CHECKS`, e.g. registration closes early) run on every event
 - **What gets compared:** `docs/OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md`
 
@@ -154,7 +155,6 @@
 | Check crashes swallowed | A check that throws logs and continues — a broken check looks like "no errors" |
 | Dismissed errors exact-match only | If error wording changes slightly, dismissed errors reappear |
 | Validation changes not shown in sync | `validation_errors` excluded from event comparison — new errors show as "unchanged" |
-| `program_ignore` rule type | Not built — can't ignore "open gym" when it's a station name in KNO |
 
 Fixed history (export filters, regex false positives, holiday-week start dates via `blocks[0].sqlDate`, rules-table unification, auto-archive): git log + `docs/OPERATIONS/CURRENT_SYSTEM_STATUS.md`.
 
@@ -200,7 +200,7 @@ iClass behavior claims: grep `C:\Users\Jayme\JAYME PROJECTS\SOURCE-OF-TRUTH\icla
 2. **Don't skip reading docs** — Jayme spent hours writing them. Read them.
 3. **Don't hardcode validation** — All checks come from the `rules` table via `validation_engine.py`.
 4. **Don't add prices back** — no price display, lookup or check without her explicit go (see Pricing).
-5. **Don't query with hub codes** — this DB uses AAG / EAG / PLG; AAR / EGF / PGN return 0 rows.
+5. **Don't query with another area's codes** — this DB uses AAG / EAG / PLG; AAR / EGF / PGN return 0 rows.
 6. **Don't simulate with fake data** — Use actual Supabase data
 7. **Don't edit `EventsDashboard.js`** — it's dead; the live file is `EventsDashboard_REFACTORED.js`
 8. **Be careful in huge files** — a JSX syntax error in a 4,000-line file once crashed the build
