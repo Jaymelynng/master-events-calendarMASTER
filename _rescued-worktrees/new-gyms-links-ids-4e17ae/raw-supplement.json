@@ -1,0 +1,769 @@
+{
+ "AAR": {
+  "slug": "allaroundgym",
+  "locId": 1,
+  "nav": [
+   "booking",
+   "account",
+   "login?showLogin=1",
+   "dashboard",
+   "news"
+  ],
+  "bookingTiles": [
+   [
+    "Find a Class",
+    "/allaroundgym/booking/wizard-question-01"
+   ],
+   [
+    "Book a Party",
+    "/allaroundgym/party-booking-01-date"
+   ],
+   [
+    "National Gymnastics Day",
+    "/allaroundgym/camps/8?sortBy=name"
+   ],
+   [
+    "Preschool Open Gym",
+    "/allaroundgym/camps/7?sortBy=name"
+   ],
+   [
+    "Camps",
+    "/allaroundgym/camps/6?sortBy=name"
+   ]
+  ],
+  "services": [
+   {
+    "id": 1,
+    "name": "Preschool Open Gym",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   }
+  ],
+  "productCategories": [
+   {
+    "id": 9999999,
+    "position": 0,
+    "name": "Passes",
+    "description": "Punch card passes.",
+    "image": "24269/categories/1779306054.77d0258526fe78af9c12e345390be318da4cacdc.png",
+    "hidden": 0,
+    "private": 0,
+    "locked": 1,
+    "slug": "passes",
+    "isParent": true,
+    "parentId": null,
+    "realDepth": 0,
+    "shortDescription": "Punch card passes.",
+    "socialMediaImage": "24269/categories/1779306058.77d0258526fe78af9c12e345390be318da4cacdc.png",
+    "overrideSlug": 0,
+    "createdAt": null,
+    "updatedAt": "2026-05-20T19:41:14.000000Z",
+    "deletedAt": null
+   }
+  ],
+  "products": [],
+  "appointments": [],
+  "appointmentPrograms": []
+ },
+ "EGF": {
+  "slug": "eaglegymnasticsfrisco",
+  "locId": 1,
+  "nav": [
+   "booking",
+   "account",
+   "gift-certificate",
+   "login?showLogin=1",
+   "dashboard",
+   "news"
+  ],
+  "bookingTiles": [
+   [
+    "Find a Class",
+    "/eaglegymnasticsfrisco/classes"
+   ],
+   [
+    "Book a Party",
+    "/eaglegymnasticsfrisco/party-booking-01-date"
+   ],
+   [
+    "Music Muscles and More",
+    "/eaglegymnasticsfrisco/camps/6?sortBy=time"
+   ],
+   [
+    "Open Gym",
+    "/eaglegymnasticsfrisco/camps/4?sortBy=time"
+   ],
+   [
+    "Parent Night Out",
+    "/eaglegymnasticsfrisco/camps/5?sortBy=time"
+   ]
+  ],
+  "services": [
+   {
+    "id": 1,
+    "name": "Gym Booking",
+    "description": "<p>Cheer group use facility - $20.00/athlete for one hour</p>",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 3,
+    "name": "Team Trial",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 4,
+    "name": "Week Trial",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   }
+  ],
+  "productCategories": [
+   {
+    "id": 9999999,
+    "position": 0,
+    "name": "Passes",
+    "description": "Punch card passes.",
+    "image": "44289/categories/1777041709.ba2dbc9ac7e5b9b20b427ba7380a5961987ef0a5.png",
+    "hidden": 0,
+    "private": 0,
+    "locked": 1,
+    "slug": "passes",
+    "isParent": true,
+    "parentId": null,
+    "realDepth": 0,
+    "shortDescription": "Punch card passes.",
+    "socialMediaImage": "44289/categories/1777041713.ba2dbc9ac7e5b9b20b427ba7380a5961987ef0a5.png",
+    "overrideSlug": 0,
+    "createdAt": null,
+    "updatedAt": "2026-04-24T14:41:55.000000Z",
+    "deletedAt": null
+   }
+  ],
+  "products": [],
+  "appointments": [],
+  "appointmentPrograms": []
+ },
+ "MGC": {
+  "slug": "metrogymnastics",
+  "locId": 1,
+  "nav": [
+   "booking",
+   "account",
+   "login?showLogin=1",
+   "dashboard",
+   "news"
+  ],
+  "bookingTiles": [
+   [
+    "Find a Class",
+    "/metrogymnastics/classes"
+   ],
+   [
+    "Book a Party",
+    "/metrogymnastics/party-booking-01-date"
+   ],
+   [
+    "KIDS NIGHT OUT",
+    "/metrogymnastics/camps/5?sortBy=time"
+   ]
+  ],
+  "services": [
+   {
+    "id": 1,
+    "name": "Beginner Tumbling Clinic",
+    "description": "<p>Beginner Tumbling Clinic</p>",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   }
+  ],
+  "productCategories": [],
+  "products": [],
+  "appointments": [],
+  "appointmentPrograms": []
+ },
+ "PGN": {
+  "slug": "planetgymnasticsnatick",
+  "locId": 3,
+  "nav": [
+   "booking",
+   "account",
+   "products",
+   "login?showLogin=1",
+   "dashboard",
+   "news"
+  ],
+  "bookingTiles": [
+   [
+    "Find a Class",
+    "/planetgymnasticsnatick/classes"
+   ],
+   [
+    "Book a Party",
+    "/planetgymnasticsnatick/party-booking-01-date"
+   ],
+   [
+    "RC - AM Ext. Day",
+    "/planetgymnasticsnatick/camps/8"
+   ],
+   [
+    "RC - Full Day",
+    "/planetgymnasticsnatick/camps/6"
+   ],
+   [
+    "RC - Half Day",
+    "/planetgymnasticsnatick/camps/7"
+   ],
+   [
+    "Summer Swim & Gym - Extended Day",
+    "/planetgymnasticsnatick/camps/5"
+   ],
+   [
+    "Swim & Gym - Full Day",
+    "/planetgymnasticsnatick/camps/3"
+   ],
+   [
+    "Swim & Gym - Half Day",
+    "/planetgymnasticsnatick/camps/4"
+   ],
+   [
+    "Kids Night Out",
+    "/planetgymnasticsnatick/appointments/2"
+   ]
+  ],
+  "services": [
+   {
+    "id": 5,
+    "name": "Bars & Beam",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 24,
+    "name": "Bars and Beam 90 Minutes",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 21,
+    "name": "Cheer Camp -  Extended Morning",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 9,
+    "name": "Cheer Camp Full Day",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 10,
+    "name": "Cheer Camp Half Day",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 19,
+    "name": "Evaluation",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 12,
+    "name": "Gym Show",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 2,
+    "name": "Kids Night Out",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 22,
+    "name": "Open Gym",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 6,
+    "name": "Party",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 13,
+    "name": "Rocket Cheer Tryouts",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 11,
+    "name": "Skills Clinic",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 15,
+    "name": "Summer Developmental Drop In",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 4,
+    "name": "Swim & Gym Extended Day",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 3,
+    "name": "Swim & Gym Full Day",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 1,
+    "name": "Swim & Gym Half Day",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 20,
+    "name": "Team Camp",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 25,
+    "name": "Team Choreography",
+    "description": "<p>XCEL TEAM ATHLETES ONLY (Silver, Gold &amp; Platinum)</p>",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 14,
+    "name": "Tiny/Mini Tryouts",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 7,
+    "name": "Tumbling",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 8,
+    "name": "Tumbling Clinic",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 16,
+    "name": "XCEL Mini Workout",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 26,
+    "name": "XCEL Team Yoga",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 17,
+    "name": "XCEL/Rec Workout",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   },
+   {
+    "id": 18,
+    "name": "Xtreme Workout",
+    "description": "",
+    "image": "",
+    "taxExempt": 0,
+    "hasImage": false
+   }
+  ],
+  "productCategories": [
+   {
+    "id": 9999999,
+    "position": 0,
+    "name": "Passes",
+    "description": "Punch card passes.",
+    "image": "50228/categories/1778002860.eea358274aca9be9ccbd983cc03129522f9f597b.png",
+    "hidden": 0,
+    "private": 0,
+    "locked": 1,
+    "slug": "passes",
+    "isParent": true,
+    "parentId": null,
+    "realDepth": 0,
+    "shortDescription": "Punch card passes.",
+    "socialMediaImage": "50228/categories/1778002865.eea358274aca9be9ccbd983cc03129522f9f597b.png",
+    "overrideSlug": 0,
+    "createdAt": null,
+    "updatedAt": "2026-06-01T15:29:16.000000Z",
+    "deletedAt": null
+   },
+   {
+    "id": 10000002,
+    "position": 3,
+    "name": "Rocket Cheer",
+    "description": "",
+    "image": "",
+    "hidden": 0,
+    "private": 0,
+    "locked": 0,
+    "slug": "rocket-cheer",
+    "isParent": true,
+    "parentId": null,
+    "realDepth": 0,
+    "shortDescription": "",
+    "socialMediaImage": "",
+    "overrideSlug": 0,
+    "createdAt": "2025-01-22T18:19:28.000000Z",
+    "updatedAt": "2025-01-22T18:19:28.000000Z",
+    "deletedAt": null
+   }
+  ],
+  "products": [
+   {
+    "chargeCategoryId": 331,
+    "costOfGoods": 6,
+    "enableInventory": false,
+    "overrideSlug": false,
+    "images": [],
+    "programId": 294,
+    "variations": [],
+    "salePrice": 0,
+    "salePriceStartDate": null,
+    "salePriceEndDate": null,
+    "shortDescription": "",
+    "showOnCustomerPortal": true,
+    "showOnMobileApp": false,
+    "taxRateId": null,
+    "taxRateOverride": true,
+    "vendorId": null,
+    "createdBy": "Gina Cournoyer",
+    "updatedBy": "Gina Cournoyer",
+    "createdAt": "2026-06-04T14:53:48",
+    "updatedAt": "2026-06-04T14:57:15",
+    "active": true,
+    "description": "",
+    "hidden": false,
+    "id": 70,
+    "sku": null,
+    "slug": "octobuddie",
+    "name": "octobuddie",
+    "price": "10.00",
+    "inventory": {
+     "3": [
+      {
+       "id": 202,
+       "inventory": 0,
+       "price": null,
+       "hidden": 0,
+       "private": 0,
+       "productId": 70,
+       "productSkuId": 174,
+       "locationId": 3,
+       "costOfGoods": "6.00",
+       "createdAt": "2026-06-04T14:53:48.000000Z",
+       "updatedAt": "2026-06-04T14:57:15.000000Z",
+       "deletedAt": null,
+       "alreadyInCart": 0
+      }
+     ]
+    },
+    "existingSkus": [
+     {
+      "id": 174,
+      "sku": "",
+      "upc": "",
+      "created_at": "2026-06-04T14:53:48.000000Z",
+      "updated_at": "2026-06-04T14:53:48.000000Z",
+      "deleted_at": null,
+      "options": [],
+      "productId": 70
+     }
+    ],
+    "tax": 0,
+    "taxRate": 0,
+    "programName": "All Star Cheer Team",
+    "punchCardPassId": false,
+    "activePrice": 10,
+    "sale": false,
+    "categories": {
+     "10000002": true
+    },
+    "locations": {
+     "3": true
+    },
+    "inventoryCount": 0,
+    "locationsCount": 1,
+    "currentLocationInventoryCount": 0,
+    "minPrice": 10,
+    "maxPrice": 10,
+    "priceRange": "$10.00"
+   },
+   {
+    "chargeCategoryId": 331,
+    "costOfGoods": 0,
+    "enableInventory": false,
+    "overrideSlug": false,
+    "images": [],
+    "programId": 294,
+    "variations": [],
+    "salePrice": 0,
+    "salePriceStartDate": null,
+    "salePriceEndDate": null,
+    "shortDescription": "",
+    "showOnCustomerPortal": true,
+    "showOnMobileApp": false,
+    "taxRateId": null,
+    "taxRateOverride": false,
+    "vendorId": null,
+    "createdBy": "Gina Cournoyer",
+    "updatedBy": "Gina Cournoyer",
+    "createdAt": "2026-06-04T16:09:44",
+    "updatedAt": "2026-06-04T16:09:44",
+    "active": true,
+    "description": "",
+    "hidden": false,
+    "id": 71,
+    "sku": null,
+    "slug": "rocket-cheer-water-bottle",
+    "name": "Rocket Cheer Water bottle",
+    "price": "10.00",
+    "inventory": {
+     "3": [
+      {
+       "id": 203,
+       "inventory": 0,
+       "price": null,
+       "hidden": 0,
+       "private": 0,
+       "productId": 71,
+       "productSkuId": 175,
+       "locationId": 3,
+       "costOfGoods": "0.00",
+       "createdAt": "2026-06-04T16:09:44.000000Z",
+       "updatedAt": "2026-06-04T16:09:44.000000Z",
+       "deletedAt": null,
+       "alreadyInCart": 0
+      }
+     ]
+    },
+    "existingSkus": [
+     {
+      "id": 175,
+      "sku": "",
+      "upc": "",
+      "created_at": "2026-06-04T16:09:44.000000Z",
+      "updated_at": "2026-06-04T16:09:44.000000Z",
+      "deleted_at": null,
+      "options": [],
+      "productId": 71
+     }
+    ],
+    "tax": 0,
+    "taxRate": 0,
+    "programName": "All Star Cheer Team",
+    "punchCardPassId": false,
+    "activePrice": 10,
+    "sale": false,
+    "categories": {
+     "10000002": true
+    },
+    "locations": {
+     "3": true
+    },
+    "inventoryCount": 0,
+    "locationsCount": 1,
+    "currentLocationInventoryCount": 0,
+    "minPrice": 10,
+    "maxPrice": 10,
+    "priceRange": "$10.00",
+    "productTaxRateId": null
+   }
+  ],
+  "appointments": [
+   {
+    "id": 1149,
+    "name": "Kids Night Out - 4+ - Sept. 2026",
+    "serviceId": 2,
+    "programId": 320,
+    "staffId": 232,
+    "pricingScheduleId": 4,
+    "startTime": "18:00:00",
+    "endTime": "20:30:00",
+    "maxStudents": 35,
+    "minAge": 4,
+    "maxAge": 120,
+    "rSet": "DTSTART:20260926T000000\nRRULE:FREQ=DAILY;UNTIL=20260926T000000"
+   },
+   {
+    "id": 1148,
+    "name": "Kids Night Out - 4+ - Oct. 2026",
+    "serviceId": 2,
+    "programId": 320,
+    "staffId": 232,
+    "pricingScheduleId": 4,
+    "startTime": "18:00:00",
+    "endTime": "20:30:00",
+    "maxStudents": 30,
+    "minAge": 4,
+    "maxAge": 120,
+    "rSet": "DTSTART:20261024T000000\nRRULE:FREQ=DAILY;UNTIL=20261024T000000"
+   },
+   {
+    "id": 1146,
+    "name": "Kids Night Out - 4+ - Nov. 2026",
+    "serviceId": 2,
+    "programId": 320,
+    "staffId": 232,
+    "pricingScheduleId": 4,
+    "startTime": "18:00:00",
+    "endTime": "20:30:00",
+    "maxStudents": 30,
+    "minAge": 4,
+    "maxAge": 18,
+    "rSet": "DTSTART:20261114T000000\nRRULE:FREQ=DAILY;UNTIL=20261114T000000"
+   },
+   {
+    "id": 1147,
+    "name": "Kids Night Out - 4+ - Dec. 2026",
+    "serviceId": 2,
+    "programId": 320,
+    "staffId": 232,
+    "pricingScheduleId": 4,
+    "startTime": "18:00:00",
+    "endTime": "20:30:00",
+    "maxStudents": 30,
+    "minAge": 4,
+    "maxAge": 18,
+    "rSet": "DTSTART:20261212T000000\nRRULE:FREQ=DAILY;UNTIL=20261212T000000"
+   },
+   {
+    "id": 1731,
+    "name": "Kids Night Out - 4+ - Jan. 2027",
+    "serviceId": 2,
+    "programId": 320,
+    "staffId": 232,
+    "pricingScheduleId": 4,
+    "startTime": "18:00:00",
+    "endTime": "20:30:00",
+    "maxStudents": 30,
+    "minAge": 4,
+    "maxAge": 18,
+    "rSet": "DTSTART:20270123T000000\nRRULE:FREQ=DAILY;UNTIL=20270123T000000"
+   },
+   {
+    "id": 1732,
+    "name": "Kids Night Out - 4+ - March 2027",
+    "serviceId": 2,
+    "programId": 320,
+    "staffId": 232,
+    "pricingScheduleId": 4,
+    "startTime": "18:00:00",
+    "endTime": "20:30:00",
+    "maxStudents": 30,
+    "minAge": 4,
+    "maxAge": 18,
+    "rSet": "DTSTART:20270320T000000\nRRULE:FREQ=DAILY;UNTIL=20270320T000000"
+   },
+   {
+    "id": 1730,
+    "name": "Kids Night Out - 4+ - Apr. 2027",
+    "serviceId": 2,
+    "programId": 320,
+    "staffId": 232,
+    "pricingScheduleId": 4,
+    "startTime": "18:00:00",
+    "endTime": "20:30:00",
+    "maxStudents": 30,
+    "minAge": 4,
+    "maxAge": 18,
+    "rSet": "DTSTART:20270417T000000\nRRULE:FREQ=DAILY;UNTIL=20270417T000000"
+   },
+   {
+    "id": 1733,
+    "name": "Kids Night Out - 4+ - May 2027",
+    "serviceId": 2,
+    "programId": 320,
+    "staffId": 232,
+    "pricingScheduleId": 4,
+    "startTime": "18:00:00",
+    "endTime": "20:30:00",
+    "maxStudents": 30,
+    "minAge": 4,
+    "maxAge": 18,
+    "rSet": "DTSTART:20270522T000000\nRRULE:FREQ=DAILY;UNTIL=20270522T000000"
+   }
+  ],
+  "appointmentPrograms": [
+   {
+    "id": 320,
+    "name": "Special Event"
+   }
+  ]
+ }
+}
