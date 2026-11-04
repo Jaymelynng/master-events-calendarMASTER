@@ -16,6 +16,7 @@
 // ============================================================================
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { eventTypeMappingsApi, bucketsApi, appConfigApi } from '../../lib/api';
+import { lower, isWordRule, wordMatches, resolveRule } from '../../lib/bucketRules';
 
 // The app_config row that says which gyms' iClass APPOINTMENTS the sync also
 // collects (APPOINTMENT_GYMS_KEY in automation/f12_collect_and_import.py).
@@ -30,14 +31,8 @@ const MUTED = '#5c4a4c';
 const ACCENT = '#8b6f6f';
 const LINE = '#d8cccc';
 
-const lower = (s) => (s || '').trim().toLowerCase();
-const isWord = (r) => r.match_type === 'word';
-// Whole word or phrase, any capitals, plural "s" allowed - the same test the sync uses
-// (resolve_type_mapping in automation/f12_collect_and_import.py).
-const wordMatches = (name, word) => {
-  const w = lower(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`(^|[^a-z])${w}s?($|[^a-z])`).test(lower(name));
-};
+// The rule logic lives in one place, shared with the calendar (src/lib/bucketRules.js).
+const isWord = isWordRule;
 
 // Dark text on a light fill, white text on a dark fill.
 const textOn = (hex) => {
@@ -106,17 +101,7 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
 
   // The bucket a category resolves to - same order as the sync: exact name (this gym, then every
   // gym), then a word rule (this gym, then every gym; the longest word wins), else Needs a home.
-  const resolve = useCallback((name, gymId, rules) => {
-    const active = rules.filter(r => r.is_active);
-    const exact = active.filter(r => !isWord(r) && lower(r.iclass_type_name) === lower(name));
-    const rule = exact.find(r => r.gym_id === gymId) || exact.find(r => !r.gym_id);
-    if (rule) return rule.event_type;
-    for (const g of [gymId, null]) {
-      const hits = active.filter(r => isWord(r) && (r.gym_id || null) === g && wordMatches(name, r.iclass_type_name));
-      if (hits.length) return hits.sort((a, b) => b.iclass_type_name.length - a.iclass_type_name.length)[0].event_type;
-    }
-    return UNSORTED;
-  }, []);
+  const resolve = useCallback((name, gymId, rules) => resolveRule(name, gymId, rules)?.event_type || UNSORTED, []);
 
   const load = useCallback(async () => {
     try {

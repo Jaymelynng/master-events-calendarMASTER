@@ -178,6 +178,14 @@ export default function EventDetailPanel({
           {event.title || `${event.type || event.event_type} Event`}
         </h4>
 
+        {/* Built in iClass but hidden from the portal (Show on portal is off) - parents can't see it yet. */}
+        {event.not_on_portal && (
+          <div className="mb-3 px-3 py-2 rounded-lg font-bold" style={{ background: '#2b2224', color: '#ffffff', fontSize: 14 }}>
+            NOT ON PORTAL — built in iClass, but "Show on portal" is off, so parents can't see or book it.
+            {event.registration_start_date ? ` Registration set to open ${event.registration_start_date.split('-').map(Number).slice(1).join('/')}/${event.registration_start_date.slice(0, 4)}.` : ''}
+          </div>
+        )}
+
         {/* The camp's own picture (iClass "Event Picture"), right under the title so the printed theme can be
             checked against the name. iClass has no thumbnail - its portal shrinks this same full image too. */}
         {campPictureUrl && (

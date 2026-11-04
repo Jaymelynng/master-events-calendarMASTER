@@ -1,6 +1,7 @@
 // Shared helpers for the signed-in iClass setup data (iclass_camp_setup).
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
+import { resolveRule } from './bucketRules';
 
 // The iClass camp number. events.event_id is empty on every event today (checked 2026-11-04: 0 of 507),
 // so it is read from the event's own iClass link (".../camp-details/2015") - the exact id, never a guess.
@@ -41,4 +42,65 @@ export function useCampOccupancy(campEvents) {
   }, [key]);
 
   return byCamp;
+}
+
+// Camps built in iClass that the portal does NOT show (Show on portal off), for one month. The calendar
+// draws them faded with a "NOT ON PORTAL" tag (Jayme 2026-11-04: "show it but make it a diff color or
+// transparent to show that it's there but not on portal"). They live ONLY on the calendar picture -
+// never in the events table, so no count, requirement, export, email or error total includes them.
+// A camp the calendar already has (same gym + iClass camp id) is skipped. Bucket = Jayme's Buckets rules
+// (src/lib/bucketRules.js); a category she hid from the calendar stays hidden here too.
+export function useNotOnPortalCamps(year, month, gymsList, existingEvents) {
+  const [rows, setRows] = useState([]);
+  const [rules, setRules] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    const first = new Date(year, month, 1);
+    const last = new Date(year, month + 1, 0);
+    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    Promise.all([
+      supabase.from('iclass_camp_audit')
+        .select('gym_id, camp_id, camp_name, start_date, end_date, min_age, max_age, per_day_signup, camp_type_name, registration_start, registration_end, allow_registration')
+        .is('gone_from_iclass_at', null)
+        .or('show_on_web.is.false,show_on_web.is.null')
+        .lte('start_date', iso(last)).gte('end_date', iso(first))
+        .order('gym_id').order('camp_id'),
+      supabase.from('event_type_mappings').select('*'),
+    ]).then(([camps, maps]) => {
+      if (!alive) return;
+      setRows(camps.data || []);
+      setRules(maps.data || []);
+    });
+    return () => { alive = false; };
+  }, [year, month]);
+
+  const have = new Set((existingEvents || []).map((e) => `${e.gym_id}:${iclassCampId(e)}`));
+  return rows
+    .filter((r) => !have.has(`${r.gym_id}:${r.camp_id}`))
+    .map((r) => {
+      const gym = (gymsList || []).find((g) => g.id === r.gym_id);
+      const rule = resolveRule(r.camp_type_name, r.gym_id, rules);
+      if (rule && rule.hide_from_calendar) return null;
+      return {
+        id: `notonportal-${r.gym_id}-${r.camp_id}`,
+        not_on_portal: true,
+        gym_id: r.gym_id,
+        gym_name: gym?.name,
+        title: r.camp_name,
+        date: String(r.start_date).slice(0, 10),
+        start_date: String(r.start_date).slice(0, 10),
+        end_date: String(r.end_date).slice(0, 10),
+        type: rule ? rule.event_type : 'UNSORTED',
+        camp_type: r.camp_type_name,
+        age_min: r.min_age,
+        age_max: r.max_age,
+        allow_choose_days: r.per_day_signup,
+        registration_start_date: r.registration_start ? String(r.registration_start).slice(0, 10) : null,
+        registration_end_date: r.registration_end ? String(r.registration_end).slice(0, 10) : null,
+        event_url: gym?.iclass_slug ? `https://portal.iclasspro.com/${gym.iclass_slug}/camp-details/${r.camp_id}` : null,
+        validation_errors: [],
+      };
+    })
+    .filter(Boolean);
 }

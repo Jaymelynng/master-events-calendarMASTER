@@ -87,7 +87,10 @@ export default function EventCard({
   if (showCount) tooltipParts.push(`${totalOpenings} spots open`);
   if (event.isGrouped) tooltipParts.push(`${event.optionCount} options`);
   if (event.has_openings === false) tooltipParts.push('SOLD OUT');
+  if (event.not_on_portal) tooltipParts.unshift('NOT ON PORTAL - built in iClass, parents cannot see it');
   const cardTooltip = tooltipParts.join(' · ');
+  // Built in iClass but hidden from the portal: faded + dashed + tagged (Jayme 2026-11-04).
+  const notOnPortal = !!event.not_on_portal;
 
   // Errors Focus mode: clean events fade back, issue events pop with a red ring.
   const dimmed = errorFocus && !hasIssue;
@@ -98,13 +101,14 @@ export default function EventCard({
       className="relative group cursor-pointer transition-all duration-200"
       onClick={() => onClick(event)}
       title={cardTooltip}
-      style={dimmed ? { opacity: 0.25, filter: 'grayscale(1)' } : {}}
+      style={dimmed ? { opacity: 0.25, filter: 'grayscale(1)' } : notOnPortal ? { opacity: 0.55 } : {}}
     >
       <div
         className="text-xs rounded text-gray-700 text-center font-medium transition-all duration-200 border p-2 hover:shadow-md hover:scale-105 relative"
         style={{
           backgroundColor: getEventTypeColor(eventTypeName, eventTypes),
-          borderColor: spotlit ? '#dc2626' : 'rgba(0,0,0,0.1)',
+          borderColor: spotlit ? '#dc2626' : notOnPortal ? '#4b3f40' : 'rgba(0,0,0,0.1)',
+          ...(notOnPortal ? { borderStyle: 'dashed', borderWidth: 2 } : {}),
           ...(spotlit ? { boxShadow: '0 0 0 2px #dc2626, 0 3px 10px rgba(220,38,38,.3)' } : {})
         }}
       >
@@ -112,6 +116,13 @@ export default function EventCard({
         {event.has_openings === false && (
           <span className="absolute -top-1 -left-1 bg-red-600 text-white text-[8px] font-bold px-1 rounded" title="SOLD OUT - no spots available">
             FULL
+          </span>
+        )}
+
+        {notOnPortal && (
+          <span className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded px-1 font-black"
+            style={{ background: '#2b2224', color: '#ffffff', fontSize: 8, lineHeight: '12px' }}>
+            NOT ON PORTAL
           </span>
         )}
 

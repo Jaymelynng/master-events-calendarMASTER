@@ -25,6 +25,7 @@ import CalendarGrid from './EventsDashboard/CalendarGrid';
 import TableView from './EventsDashboard/TableView';
 import EventDetailPanel from './EventsDashboard/EventDetailPanel';
 import { eventsInView, buildCopy, copyToClipboardRich } from './EventsDashboard/copyVisible';
+import { useNotOnPortalCamps } from '../lib/iclassCamp';
 
 // Lazy-loaded modals (only load when needed)
 const AddEventModal = lazy(() => import('./EventsDashboard/AddEventModal'));
@@ -94,6 +95,13 @@ const EventsDashboard = () => {
     handleAddEvent, handleEditEvent, handleDeleteEvent,
     acknowledgeValidationError, resetAcknowledgedErrors,
   } = dashboard;
+
+  // Camps built in iClass but hidden from the portal - drawn faded on the CALENDAR ONLY (never in
+  // counts, the table, exports, emails or "Copy what's shown"). Same gym / type / search filters.
+  const notOnPortal = useNotOnPortalCamps(currentYear, currentMonth, gymsList, events)
+    .filter(e => (selectedGyms.length === 0 || selectedGyms.includes(e.gym_name))
+      && (selectedEventType === 'all' || e.type === selectedEventType)
+      && (!searchTerm || (e.title || '').toLowerCase().includes(searchTerm.toLowerCase())));
 
   // The events actually on screen: in Table View every filtered row; on the
   // calendar only those that fall on the days in view. Feeds "Copy what's shown".
@@ -497,7 +505,7 @@ const EventsDashboard = () => {
                 displayDates={displayDates}
                 allGymsFromList={visibleGyms}
                 gymsList={gymsList}
-                filteredEvents={filteredEvents}
+                filteredEvents={notOnPortal.length ? [...filteredEvents, ...notOnPortal] : filteredEvents}
                 eventTypes={eventTypes}
                 currentMonth={currentMonth}
                 currentYear={currentYear}

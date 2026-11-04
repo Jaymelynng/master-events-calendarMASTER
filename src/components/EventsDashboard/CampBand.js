@@ -164,7 +164,9 @@ export default function CampBand({
     const text = `${event.title || ''} ${event.program_name || ''}`.toLowerCase();
     const isNinja = text.includes('ninja');
     const isHalf  = text.includes('half');
-    return `${isNinja ? 'ninja' : 'gym'}-${isHalf ? 'half' : 'full'}`;
+    // Camps hidden from the portal get their own rows under the live ones, so a hidden copy of a
+    // live week never sits on top of it.
+    return `${event.not_on_portal ? 'hidden-' : ''}${isNinja ? 'ninja' : 'gym'}-${isHalf ? 'half' : 'full'}`;
   };
 
   // First pass: figure out which lanes are actually used and assign each a
@@ -307,6 +309,8 @@ export default function CampBand({
         // "🤸 Full ⚠️ 2 left" in a row, which used to clip to an empty box (EST Veterans Day,
         // Jayme 2026-11-04). Narrow bars stack instead: Full/Half on top, the spots number under it.
         const narrow = span <= 2;
+        // Built in iClass but hidden from the portal: faded + dashed + tagged (Jayme 2026-11-04).
+        const notOnPortal = !!variant.not_on_portal;
         const minOpen = met.length ? Math.min(...met) : (variant.openings != null ? Number(variant.openings) : null);
 
         return (
@@ -317,11 +321,11 @@ export default function CampBand({
               gridColumn,
               gridRow,
               borderRadius: '7px',
-              ...(dimmed ? { opacity: 0.25, filter: 'grayscale(1)' } : {}),
+              ...(dimmed ? { opacity: 0.25, filter: 'grayscale(1)' } : notOnPortal ? { opacity: 0.55 } : {}),
               // When a variant has unresolved data errors, switch the border
               // to red and add a soft red glow so the bar pops as "needs
               // attention" without redrawing the whole bar.
-              border: hasErrors ? '2px solid #dc3545' : `1.5px solid ${style.border}`,
+              border: hasErrors ? '2px solid #dc3545' : notOnPortal ? '2px dashed #4b3f40' : `1.5px solid ${style.border}`,
               background: style.bg,
               color: style.color,
               padding: narrow ? '2px 2px' : perDayCells ? '2px 6px 3px' : '0 8px',
@@ -343,6 +347,7 @@ export default function CampBand({
             }}
             onClick={() => onEventSelect && onEventSelect(variant)}
             title={
+              notOnPortal ? `NOT ON PORTAL - built in iClass, parents cannot see it. ${variant.title || ''}` :
               hasErrors
                 ? `⚠️ Has data error(s) — click for details. ${variant.title || variantLabel(variant)}`
                 : (variant.title || variantLabel(variant))
@@ -414,6 +419,12 @@ export default function CampBand({
               }}>
                 {barLabel(variant)}
               </span>
+              {notOnPortal && (
+                <span className="rounded px-1 font-black whitespace-nowrap"
+                  style={{ background: '#2b2224', color: '#ffffff', fontSize: 9, lineHeight: '13px' }}>
+                  NOT ON PORTAL
+                </span>
+              )}
             </div>
             {status && (
               <span
