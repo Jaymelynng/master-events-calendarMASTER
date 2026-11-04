@@ -22,8 +22,8 @@ A gym with no login is recorded as 'no_login' — its checks show "setup not rea
 
 Test without a login (from one of Jayme's F12 recordings, nothing sent to iClass):
   python camp_setup_reader.py --har "<part 1>.har" "<part 2>.har" --gym CCP [--save]
-Live:
-  python camp_setup_reader.py --gym SGT [--save]      (or --all)
+Live (or press POST /setup-read on the backend):
+  python camp_setup_reader.py --gym SGT [--save] [--prices]      (or --all)
 Without --save it prints counts only.
 """
 
@@ -215,15 +215,16 @@ def _sb(method, path, body=None, prefer=None):
         return json.loads(text) if text else None
 
 
-def start_read(gym_id):
-    row = _sb('POST', 'iclass_setup_reads', [{'gym_id': gym_id, 'status': 'running'}], prefer='return=representation')
+def start_read(gym_id, what='full'):
+    row = _sb('POST', 'iclass_setup_reads', [{'gym_id': gym_id, 'status': 'running', 'what': what}],
+              prefer='return=representation')
     return row[0]['id']
 
 
 def finish_read(read_id, status, note, result=None):
     patch = {'status': status, 'note': note, 'finished_at': datetime.now(timezone.utc).isoformat()}
     if result:
-        patch.update({'camps_listed': result['camps_listed'], 'camps_read': len(result['camps']),
+        patch.update({'camps_listed': result.get('camps_listed'), 'camps_read': len(result.get('camps', [])),
                       'price_tables_read': len(result['price_tables'])})
     _sb('PATCH', f'iclass_setup_reads?id=eq.{read_id}', patch)
 
@@ -258,58 +259,118 @@ def save(gym_id, result, read_at):
                      f'&gone_from_iclass_at=is.null', {'gone_from_iclass_at': read_at})
 
 
+def save_prices(gym_id, tables, read_at):
+    """Prices-only read: upsert every price table, mark (never delete) the ones iClass stopped listing."""
+    rows = [{'gym_id': gym_id, 'price_table_id': t['id'], 'name': t.get('name'), 'raw': t, 'read_at': read_at,
+             'gone_from_iclass_at': None} for t in tables]
+    for i in range(0, len(rows), 200):
+        _sb('POST', 'iclass_price_tables?on_conflict=gym_id,price_table_id', rows[i:i + 200],
+            prefer='resolution=merge-duplicates')
+    if tables:
+        ids = ','.join(str(t['id']) for t in tables)
+        _sb('PATCH', f'iclass_price_tables?gym_id=eq.{gym_id}&price_table_id=not.in.({ids})'
+                     f'&gone_from_iclass_at=is.null', {'gone_from_iclass_at': read_at})
+
+
 def fetch_gyms():
     rows = _sb('GET', 'gyms?select=id,iclass_slug&order=id') or []
     return {r['id']: r['iclass_slug'] for r in rows if r.get('iclass_slug')}
 
 
-def run_gym(gym_id, slug, source, do_save, note_prefix=''):
-    read_id = start_read(gym_id) if do_save else None
+def _log(line):
+    # flush so each gym shows up in Railway's logs the moment it finishes
+    print(line, flush=True)
+
+
+def run_gym(gym_id, slug, source, do_save, what='full', note_prefix=''):
+    """Read one gym. Returns a one-line summary {gym, status, said} for the screen and the logs."""
+    read_id = start_read(gym_id, what) if do_save else None
+
+    def done(status, said, result=None, note=None):
+        _log(f"  [SETUP] {gym_id}: {said}")
+        if read_id:
+            finish_read(read_id, status, note_prefix + (note or said), result)
+        return {'gym': gym_id, 'status': status, 'said': said}
+
     ok, why = source.sign_in()
     if not ok:
-        print(f"  [SETUP] {gym_id}: NOT READ - {why}")
-        if read_id:
-            finish_read(read_id, 'sign_in_failed', why)
-        return
+        return done('sign_in_failed', f'NOT READ - {why}')
     try:
         read_at = source.read_time()
+        if what == 'prices':
+            tables = (source.get('/api/v1/pricing-schedules/') or {}).get('data')
+            if tables is None:
+                return done('stopped', 'NOT READ - the price tables did not answer')
+            if do_save:
+                save_prices(gym_id, tables, read_at)
+            boxes = sum(len(r) for t in tables for r in (t.get('tableCells') or []))
+            return done('ok', f'{len(tables)} price tables, {boxes} price boxes', {'price_tables': tables},
+                        note='price tables only')
         result, err = collect(source, slug)
     except RuntimeError as e:
-        print(f"  [SETUP] {gym_id}: STOPPED - {e}")
-        if read_id:
-            finish_read(read_id, 'stopped', str(e))
-        return
+        return done('stopped', f'STOPPED - {e}')
     if err:
-        print(f"  [SETUP] {gym_id}: NOT READ - {err}")
-        if read_id:
-            finish_read(read_id, 'stopped', err)
-        return
-    print(f"  [SETUP] {gym_id}: {result['camps_listed']} camps listed, {result['camps_kept']} not ended, "
-          f"{len(result['camps'])} read, {len(result['camps_missing'])} did not answer, "
-          f"{sum(1 for c in result['camps'] if c['occupancy'] is not None)} with per-day counts, "
-          f"{sum(1 for c in result['camps'] if c['public_raw'] is not None)} with the public reply, "
-          f"{len(result['price_tables'])} price tables, "
-          f"{len(result['settings'])} of {len(GYM_SETTINGS_CALLS)} gym settings"
-          + (f" (not read: {', '.join(result['settings_missing'])})" if result['settings_missing'] else ''))
+        return done('stopped', f'NOT READ - {err}')
+    said = (f"{result['camps_listed']} camps listed, {result['camps_kept']} not ended, "
+            f"{len(result['camps'])} read, {len(result['camps_missing'])} did not answer, "
+            f"{sum(1 for c in result['camps'] if c['occupancy'] is not None)} with per-day counts, "
+            f"{sum(1 for c in result['camps'] if c['public_raw'] is not None)} with the public reply, "
+            f"{len(result['price_tables'])} price tables, "
+            f"{len(result['settings'])} of {len(GYM_SETTINGS_CALLS)} gym settings"
+            + (f" (not read: {', '.join(result['settings_missing'])})" if result['settings_missing'] else ''))
     if do_save:
         save(gym_id, result, read_at)
-        status = 'ok' if not result['camps_missing'] else 'stopped'
-        note = note_prefix + (f"{len(result['camps_missing'])} camps did not answer: {result['camps_missing'][:20]}"
-                              if result['camps_missing'] else 'every camp answered')
-        if result['settings_missing']:
-            note += '; gym settings not read: ' + ', '.join(result['settings_missing'])
-        finish_read(read_id, status, note, result)
+    note = (f"{len(result['camps_missing'])} camps did not answer: {result['camps_missing'][:20]}"
+            if result['camps_missing'] else 'every camp answered')
+    if result['settings_missing']:
+        note += '; gym settings not read: ' + ', '.join(result['settings_missing'])
+    return done('ok' if not result['camps_missing'] else 'stopped', said, result, note=note)
+
+
+def run_gyms(gym_ids=None, what='full', do_save=True):
+    """Read the given gyms (default: every gym in the gyms table) with the logins in Railway Variables.
+    One gym at a time; a gym that fails never stops the others. Returns one summary per gym."""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise RuntimeError('SUPABASE_URL / SUPABASE_KEY not set - the gym list comes from the gyms table')
+    gyms = fetch_gyms()
+    summary = []
+    for gym_id in (gym_ids or list(gyms)):
+        if gym_id not in gyms:
+            _log(f"  [SETUP] {gym_id}: not in the gyms table (or no iclass_slug)")
+            summary.append({'gym': gym_id, 'status': 'unknown_gym', 'said': 'not in the gyms table'})
+            continue
+        # One username at every gym (Jayme made the same one everywhere); a gym can still override it.
+        user = os.environ.get(f'ICLASS_SETUP_USER_{gym_id}') or os.environ.get('ICLASS_SETUP_USER')
+        pw = os.environ.get(f'ICLASS_SETUP_PASS_{gym_id}')
+        if not user or not pw:
+            said = f'NOT READ - no ICLASS_SETUP_USER / ICLASS_SETUP_PASS_{gym_id} in Railway Variables'
+            _log(f"  [SETUP] {gym_id}: {said}")
+            if do_save:
+                try:
+                    finish_read(start_read(gym_id, what), 'no_login', said)
+                except Exception as e:
+                    _log(f"  [SETUP] {gym_id}: could not save the 'no login' status - {e}")
+            summary.append({'gym': gym_id, 'status': 'no_login', 'said': said})
+            continue
+        try:
+            summary.append(run_gym(gym_id, gyms[gym_id], LiveSource(gyms[gym_id], user, pw), do_save, what))
+        except Exception as e:  # one gym's surprise never stops the rest - and is never shown as fine
+            _log(f"  [SETUP] {gym_id}: FAILED - {e}")
+            summary.append({'gym': gym_id, 'status': 'stopped', 'said': f'FAILED - {e}'})
+    return summary
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--gym', help='gym code from the gyms table')
     ap.add_argument('--all', action='store_true', help='every gym in the gyms table')
+    ap.add_argument('--prices', action='store_true', help='read only the price tables')
     ap.add_argument('--har', nargs='+', help='read from F12 recording files instead of iClass')
     ap.add_argument('--save', action='store_true', help='write to Supabase (default: print counts only)')
     a = ap.parse_args()
     if a.save and (not SUPABASE_URL or not SUPABASE_KEY):
         sys.exit('SUPABASE_URL / SUPABASE_SERVICE_KEY not set')
+    what = 'prices' if a.prices else 'full'
 
     if a.har:
         if not a.gym:
@@ -318,26 +379,15 @@ def main():
         gyms = fetch_gyms() if SUPABASE_URL else {}
         if gyms and src.account and gyms.get(a.gym) != src.account:
             sys.exit(f"the recording is from '{src.account}', not {a.gym} ('{gyms.get(a.gym)}') - stopping")
-        run_gym(a.gym, src.account or gyms.get(a.gym), src, a.save, note_prefix='from F12 recording; ')
+        run_gym(a.gym, src.account or gyms.get(a.gym), src, a.save, what, note_prefix='from F12 recording; ')
         return
 
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        sys.exit('SUPABASE_URL / SUPABASE_KEY not set - the gym list comes from the gyms table')
-    gyms = fetch_gyms()
-    targets = list(gyms) if a.all else [a.gym]
-    for gym_id in targets:
-        if gym_id not in gyms:
-            print(f"  [SETUP] {gym_id}: not in the gyms table (or no iclass_slug)")
-            continue
-        # One username at every gym (Jayme made the same one everywhere); a gym can still override it.
-        user = os.environ.get(f'ICLASS_SETUP_USER_{gym_id}') or os.environ.get('ICLASS_SETUP_USER')
-        pw = os.environ.get(f'ICLASS_SETUP_PASS_{gym_id}')
-        if not user or not pw:
-            print(f"  [SETUP] {gym_id}: NOT READ - no login set in Railway Variables")
-            if a.save:
-                finish_read(start_read(gym_id), 'no_login', f'no ICLASS_SETUP_USER / ICLASS_SETUP_PASS_{gym_id} in Railway Variables')
-            continue
-        run_gym(gym_id, gyms[gym_id], LiveSource(gyms[gym_id], user, pw), a.save)
+    if not a.all and not a.gym:
+        sys.exit('name a gym with --gym, or use --all')
+    try:
+        run_gyms(None if a.all else [a.gym], what, a.save)
+    except RuntimeError as e:
+        sys.exit(str(e))
 
 
 if __name__ == '__main__':

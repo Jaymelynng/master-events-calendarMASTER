@@ -569,6 +569,38 @@ def send_email():
         return jsonify({"success": False, "error": f"Failed to send email: {str(e)}"}), 500
 
 
+@app.route('/setup-read', methods=['POST'])
+def setup_read():
+    """Signed-in, READ-ONLY iClass setup read (automation/camp_setup_reader.py).
+
+    Body: {"what": "prices" | "full", "gyms": ["SGT", ...]}  (gyms left out = every gym in the gyms table)
+    - prices: only the price tables; quick, so it answers with one line per gym.
+    - full:   camps + price tables + gym settings; can take minutes, so it starts in the background and
+              each gym's line appears in Railway's logs and in the iclass_setup_reads table.
+    """
+    if not check_api_key():
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    what = data.get('what', 'prices')
+    if what not in ('prices', 'full'):
+        return jsonify({"success": False, "error": "what must be 'prices' or 'full'"}), 400
+    gyms = data.get('gyms') or None
+
+    import camp_setup_reader
+    print(f"[SETUP] read started: {what} for {', '.join(gyms) if gyms else 'every gym'}", flush=True)
+    if what == 'prices':
+        try:
+            summary = camp_setup_reader.run_gyms(gyms, 'prices', do_save=True)
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": True, "what": what, "gyms": summary})
+
+    import threading
+    threading.Thread(target=camp_setup_reader.run_gyms, args=(gyms, 'full', True), daemon=True).start()
+    return jsonify({"success": True, "what": what, "started": True,
+                    "watch": "Railway logs ([SETUP] lines) or the iclass_setup_reads table"})
+
+
 if __name__ == '__main__':
     import os
     
