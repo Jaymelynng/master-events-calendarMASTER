@@ -10,6 +10,9 @@ import { appConfigApi, errorEmailLogApi } from '../../lib/api';
 import { buildErrorEmailUrl, fmtSentStamp, descriptionIssueLine } from '../../lib/errorEmail';
 import IclassSetupSection from './IclassSetupSection';
 
+const PANEL_DEFAULT_WIDTH = 384; // the panel's width before it could be resized (w-96)
+const PANEL_MIN_WIDTH = 320;
+
 export default function EventDetailPanel({
   event,
   gymsList,
@@ -28,6 +31,33 @@ export default function EventDetailPanel({
   // send history so an already-emailed error shows "Emailed N days ago".
   const [appConfig, setAppConfig] = useState({});
   const [emailLog, setEmailLog] = useState([]);
+  // Panel width: drag the left edge to resize; remembered on this browser. Double-click the edge to reset.
+  const [panelWidth, setPanelWidth] = useState(() => {
+    try {
+      const saved = parseInt(window.localStorage.getItem('eventPanelWidth'), 10);
+      return saved >= PANEL_MIN_WIDTH ? saved : PANEL_DEFAULT_WIDTH;
+    } catch { return PANEL_DEFAULT_WIDTH; }
+  });
+  const startResize = (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = panelWidth;
+    const move = (ev) => {
+      const w = Math.max(PANEL_MIN_WIDTH, Math.min(window.innerWidth * 0.95, startW + (startX - ev.clientX)));
+      setPanelWidth(Math.round(w));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      setPanelWidth((w) => { try { window.localStorage.setItem('eventPanelWidth', String(w)); } catch { /* private mode */ } return w; });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  const resetWidth = () => {
+    setPanelWidth(PANEL_DEFAULT_WIDTH);
+    try { window.localStorage.removeItem('eventPanelWidth'); } catch { /* private mode */ }
+  };
   useEffect(() => {
     appConfigApi.getAll().then(setAppConfig).catch(() => setAppConfig({}));
     errorEmailLogApi.getAll().then(setEmailLog).catch(() => setEmailLog([]));
@@ -88,11 +118,25 @@ export default function EventDetailPanel({
 
   return (
     <div
-      className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ease-in-out"
-      style={{ borderLeft: `4px solid ${theme.colors.primary}` }}
+      className="fixed right-0 top-0 h-full bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out"
+      style={{ width: `min(${panelWidth}px, 100vw)`, borderLeft: `4px solid ${theme.colors.primary}` }}
     >
+      {/* Drag handle on the left edge - resize the panel; double-click resets */}
+      <div
+        onPointerDown={startResize}
+        onDoubleClick={resetWidth}
+        title="Drag to resize · double-click to reset"
+        className="group absolute top-0 h-full z-20 flex items-center justify-center"
+        style={{ left: -10, width: 16, cursor: 'col-resize', touchAction: 'none' }}
+      >
+        <div
+          className="rounded-full shadow-md transition-all group-hover:scale-y-110"
+          style={{ width: 8, height: 56, background: theme.colors.primary, boxShadow: '0 2px 6px rgba(0,0,0,.3)' }}
+        />
+      </div>
+      <div className="h-full overflow-y-auto">
       {/* Header with close button */}
-      <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between" style={{ borderColor: theme.colors.primary }}>
+      <div className="sticky top-0 z-10 bg-white border-b p-4 flex items-center justify-between" style={{ borderColor: theme.colors.primary }}>
         <h3 className="font-bold text-lg" style={{ color: theme.colors.textPrimary }}>Event Details</h3>
         <button
           onClick={onClose}
@@ -276,6 +320,7 @@ export default function EventDetailPanel({
 
         {/* (Registration Options moved to the top of the panel —
              see right after Event Title above.) */}
+      </div>
       </div>
     </div>
   );

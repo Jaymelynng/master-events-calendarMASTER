@@ -74,7 +74,7 @@ function Chip({ value, label }) {
 function Stat({ big, label, danger }) {
   return (
     <div style={{
-      flex: 1, minWidth: 80, background: danger ? C.bad : C.card, color: danger ? '#fff' : C.ink,
+      flex: '1 1 90px', minWidth: 90, background: danger ? C.bad : C.card, color: danger ? '#fff' : C.ink,
       borderRadius: 12, boxShadow: cardLift, padding: '8px 10px', textAlign: 'center',
     }}>
       <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>{big}</div>
@@ -123,7 +123,7 @@ export default function IclassSetupSection({ event }) {
           </span>
         )}
       </div>
-      <div style={{ padding: 12, display: 'grid', gap: 10 }}>{children}</div>
+      <div style={{ padding: 12, display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', alignItems: 'start' }}>{children}</div>
     </div>
   );
 
@@ -158,11 +158,11 @@ export default function IclassSetupSection({ event }) {
         </div>
         <div style={{ marginTop: 10, fontSize: 14, color: C.ink }}>
           <span style={{ fontWeight: 800 }}>Registration open</span>{' '}
-          {fmtDate(c.registration_start)} <span style={{ fontWeight: 800 }}>→</span> {fmtDate(c.registration_end)}
+          <span style={{ whiteSpace: 'nowrap' }}>{fmtDate(c.registration_start)}</span> <span style={{ fontWeight: 800 }}>→</span> <span style={{ whiteSpace: 'nowrap' }}>{fmtDate(c.registration_end)}</span>
         </div>
       </Card>
 
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <Stat big={c.max_entries ?? '—'} label="Max kids" danger={c.max_entries === 0} />
         <Stat big={`${c.min_age ?? '—'}–${c.max_age ?? '—'}`} label="Ages" />
         <Stat big={c.due_at_signup || '—'} label="Due at sign-up" />
@@ -178,12 +178,12 @@ export default function IclassSetupSection({ event }) {
               const full = open === 0;
               return (
                 <div key={i} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                  display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: 8, rowGap: 2,
                   background: full ? C.bad : '#f7f4ef', color: full ? '#fff' : C.ink,
                   borderRadius: 10, padding: '7px 10px', boxShadow: '0 1px 3px rgba(0,0,0,.12)',
                 }}>
-                  <span style={{ fontWeight: 800, fontSize: 14 }}>{fmtDate(d.sqlDate, false)}</span>
-                  <span style={{ fontSize: 14 }}>
+                  <span style={{ fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap' }}>{fmtDate(d.sqlDate, false)}</span>
+                  <span style={{ fontSize: 14, whiteSpace: 'nowrap' }}>
                     <b style={{ fontSize: 16 }}>{occ}</b> in · <b style={{ fontSize: 16 }}>{open}</b> open
                     <span style={{ fontWeight: 600 }}> of {cap}</span>
                     {Number(d.occwait) > 0 && <b style={{ marginLeft: 6, color: full ? '#fff' : C.warn }}>· {d.occwait} waitlist</b>}
@@ -201,7 +201,7 @@ export default function IclassSetupSection({ event }) {
           {c.price_table_name || <span style={{ color: C.bad }}>No price table set</span>}
         </div>
         {cells.length > 0 && (
-          <div style={{ borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,.15)' }}>
+          <div style={{ borderRadius: 10, overflowX: 'auto', boxShadow: '0 1px 4px rgba(0,0,0,.15)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: C.head, color: '#fff' }}>
