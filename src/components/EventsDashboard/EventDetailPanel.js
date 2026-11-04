@@ -8,6 +8,7 @@ import { parseYmdLocal, formatTime, formatTimeShort, parseCampOptionFromTitle } 
 import { isErrorAcknowledgedAnywhere, inferErrorCategory, canAddAsRule, extractRuleValue } from '../../lib/validationHelpers';
 import { appConfigApi, errorEmailLogApi } from '../../lib/api';
 import { buildErrorEmailUrl, fmtSentStamp, descriptionIssueLine } from '../../lib/errorEmail';
+import IclassSetupSection from './IclassSetupSection';
 
 export default function EventDetailPanel({
   event,
@@ -235,6 +236,9 @@ export default function EventDetailPanel({
         {(event.has_openings === false || event.openings != null || event.registration_end_date) && (
           <AvailabilityStatus event={event} />
         )}
+
+        {/* iClass setup — what the signed-in setup read saved for this camp */}
+        <IclassSetupSection event={event} />
 
         {/* Validation Issues */}
         {(totalIssues > 0 || acknowledgedErrors.length > 0) && (
