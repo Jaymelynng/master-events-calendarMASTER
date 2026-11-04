@@ -1,13 +1,34 @@
 // ============================================================================
 // CALENDAR CONTROLS - Month navigation, view toggles, and filters
 // ============================================================================
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Search, List, Grid, Copy } from 'lucide-react';
 import { theme, gymColors, getEventTypeColor } from './constants';
 
 // Long bucket names get a short chip label; everything else shows as-is.
 const CHIP_LABELS = { 'KIDS NIGHT OUT': 'KNO' };
 const chipLabel = (t) => CHIP_LABELS[t] || t;
+
+// Smallest a gym tile may get before the row breaks. Only a layout size - the gym list itself
+// always comes from the gyms table, so this works for any number of gyms.
+const GYM_TILE_MIN = 56;
+const GYM_TILE_GAP = 6;
+
+// Width of an element, kept current as the window or panel resizes.
+// A callback ref, so it starts measuring whenever the element appears (not only on first mount).
+function useWidth() {
+  const [node, setNode] = useState(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    if (!node) return undefined;
+    setWidth(node.getBoundingClientRect().width);
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [node]);
+  return [setNode, width];
+}
 
 export default function CalendarControls({
   currentMonth,
@@ -32,6 +53,7 @@ export default function CalendarControls({
   shownCount = 0,
 }) {
   const [copiedCount, setCopiedCount] = useState(null);
+  const [gymRowRef, gymRowWidth] = useWidth();
   // No gym picked means every gym is showing.
   const allPicked = selectedGyms.length === 0;
   const toggleGym = (name) => {
@@ -86,75 +108,89 @@ export default function CalendarControls({
       {/* (ADD EVENT button removed 2026-11-04: every event comes from the iClass sync - 0 of 507 were
            ever added by hand. Jayme: "ADD EVENT button makes zero sense why is that there?") */}
 
-      {/* Gym picker - every gym's logo in one row. Click any number of them;
-          only those gyms show on the calendar, and the type chips, search and
-          view buttons below all act on that same set. None picked = all gyms. */}
-      <div className="flex justify-center items-start gap-1.5 flex-wrap mb-3">
-        <button
-          onClick={() => onGymsChange([])}
-          className="flex flex-col items-center justify-center rounded-xl px-2 py-1.5 transition-all hover:shadow-md"
-          style={{
-            cursor: 'pointer', minWidth: 60, height: 76,
-            backgroundColor: allPicked ? theme.colors.primary : '#ffffff',
-            color: allPicked ? '#ffffff' : '#2b2224',
-            border: `2px solid ${theme.colors.primary}`,
-          }}
-          title="Show every gym"
-        >
-          <span className="font-black" style={{ fontSize: 16 }}>ALL</span>
-          <span className="font-bold" style={{ fontSize: 15 }}>{gymsList.length}</span>
-        </button>
-        {[...gymsList].sort((a, b) => (a.id || '').localeCompare(b.id || '')).map(gym => {
-          const picked = selectedGyms.includes(gym.name);
-          const dim = !allPicked && !picked;
-          return (
-            <button
-              key={gym.id}
-              onClick={() => toggleGym(gym.name)}
-              className="flex flex-col items-center justify-center rounded-xl px-1.5 py-1.5 transition-all hover:shadow-md"
-              style={{
-                cursor: 'pointer', minWidth: 60, height: 76,
-                backgroundColor: picked ? theme.colors.secondary : '#ffffff',
-                border: `2px solid ${picked ? theme.colors.primary : '#e5dcdc'}`,
-                boxShadow: picked ? '0 2px 8px rgba(140, 100, 100, 0.35)' : 'none',
-              }}
-              title={picked ? `${gym.name} - click to remove` : `${gym.name} - click to show`}
-            >
-              {gym.logo_url ? (
-                <img
-                  src={gym.logo_url}
-                  alt=""
-                  className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
-                  style={{ opacity: dim ? 0.35 : 1, filter: dim ? 'grayscale(1)' : 'none' }}
-                />
-              ) : (
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                  style={{ backgroundColor: gymColors[gym.id] || theme.colors.accent, opacity: dim ? 0.35 : 1, fontSize: 15 }}
-                >
-                  {(gym.id || '').substring(0, 2)}
-                </div>
-              )}
-              <span className="font-black" style={{ fontSize: 15, color: '#2b2224' }}>{gym.id}</span>
-            </button>
-          );
-        })}
-        {/* One click un-picks every gym. Only shows while gyms are picked. */}
-        {!allPicked && (
-          <button
-            onClick={() => onGymsChange([])}
-            className="flex flex-col items-center justify-center rounded-xl px-3 py-1.5 transition-all hover:brightness-90 hover:shadow-md"
-            style={{
-              cursor: 'pointer', minWidth: 76, height: 76,
-              backgroundColor: '#b91c1c', color: '#ffffff', border: '2px solid #b91c1c',
-            }}
-            title="Un-pick every gym and show them all"
+      {/* Gym picker - click any number of gym logos; only those gyms show on the calendar, and the
+          type chips, search and view buttons below act on that same set. None picked = all gyms.
+          Gym tiles share the rows EVENLY and fill the width, so a new gym never ends up alone on
+          its own line (Jayme 2026-11-04: TIG sat by itself under 14 others). Fewest rows that fit,
+          then the same number of tiles in each: 15 tiles on a laptop = one row; on a narrow
+          screen = 8 + 7, never 14 + 1. The first tile is ALL; when gyms are picked it turns into
+          the red "show all" tile - same click, one tile, so the row never shifts. */}
+      {(() => {
+        const sortedGyms = [...gymsList].sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+        const tiles = sortedGyms.length + 1;
+        const perRow = gymRowWidth
+          ? Math.max(1, Math.floor((gymRowWidth + GYM_TILE_GAP) / (GYM_TILE_MIN + GYM_TILE_GAP)))
+          : tiles;
+        const rows = Math.ceil(tiles / perRow);
+        const cols = Math.ceil(tiles / rows);
+        return (
+          <div
+            ref={gymRowRef}
+            className="mb-3"
+            style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: GYM_TILE_GAP }}
           >
-            <span className="font-black" style={{ fontSize: 16 }}>✕ CLEAR</span>
-            <span className="font-bold" style={{ fontSize: 15 }}>{selectedGyms.length} picked</span>
-          </button>
-        )}
-      </div>
+            <button
+              onClick={() => onGymsChange([])}
+              className="flex flex-col items-center justify-center rounded-xl px-1 py-1.5 transition-all hover:shadow-md"
+              style={{
+                cursor: allPicked ? 'default' : 'pointer', height: 76, minWidth: 0,
+                backgroundColor: allPicked ? theme.colors.primary : '#b91c1c',
+                color: '#ffffff',
+                border: `2px solid ${allPicked ? theme.colors.primary : '#b91c1c'}`,
+                boxShadow: '0 2px 6px rgba(60, 40, 40, 0.25)',
+              }}
+              title={allPicked ? 'Every gym is showing' : 'Un-pick every gym and show them all'}
+            >
+              {allPicked ? (
+                <>
+                  <span className="font-black" style={{ fontSize: 16 }}>ALL</span>
+                  <span className="font-bold" style={{ fontSize: 15 }}>{gymsList.length}</span>
+                </>
+              ) : (
+                <>
+                  <span className="font-black" style={{ fontSize: 14, lineHeight: 1.1 }}>✕ ALL</span>
+                  <span className="font-bold" style={{ fontSize: 12, lineHeight: 1.2 }}>{selectedGyms.length} picked</span>
+                </>
+              )}
+            </button>
+            {sortedGyms.map(gym => {
+              const picked = selectedGyms.includes(gym.name);
+              const dim = !allPicked && !picked;
+              return (
+                <button
+                  key={gym.id}
+                  onClick={() => toggleGym(gym.name)}
+                  className="flex flex-col items-center justify-center rounded-xl px-1 py-1.5 transition-all hover:shadow-md"
+                  style={{
+                    cursor: 'pointer', height: 76, minWidth: 0,
+                    backgroundColor: picked ? theme.colors.secondary : '#ffffff',
+                    border: `2px solid ${picked ? theme.colors.primary : '#e5dcdc'}`,
+                    boxShadow: picked ? '0 2px 8px rgba(140, 100, 100, 0.35)' : '0 1px 3px rgba(60, 40, 40, 0.12)',
+                  }}
+                  title={picked ? `${gym.name} - click to remove` : `${gym.name} - click to show`}
+                >
+                  {gym.logo_url ? (
+                    <img
+                      src={gym.logo_url}
+                      alt=""
+                      className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
+                      style={{ opacity: dim ? 0.35 : 1, filter: dim ? 'grayscale(1)' : 'none' }}
+                    />
+                  ) : (
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                      style={{ backgroundColor: gymColors[gym.id] || theme.colors.accent, opacity: dim ? 0.35 : 1, fontSize: 15 }}
+                    >
+                      {(gym.id || '').substring(0, 2)}
+                    </div>
+                  )}
+                  <span className="font-black" style={{ fontSize: 15, color: '#2b2224' }}>{gym.id}</span>
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* All Controls in One Row */}
       <div className="flex justify-center items-end gap-3 mb-2">
