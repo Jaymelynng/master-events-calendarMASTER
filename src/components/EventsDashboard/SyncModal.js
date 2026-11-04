@@ -5,6 +5,7 @@ import { isErrorAcknowledgedAnywhere, inferErrorCategory } from '../../lib/valid
 import { compareEvents } from '../../lib/eventComparison';
 import { supabase } from '../../lib/supabase';
 import DismissRuleModal from './DismissRuleModal';
+import SetupReadChip, { useSetupReadLine } from './SetupReadChip';
 
 export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPatterns = [] }) {
   const [selectedGym, setSelectedGym] = useState('');
@@ -27,6 +28,9 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
   const [syncAllProgress, setSyncAllProgress] = useState(null);
   const [syncAllComplete, setSyncAllComplete] = useState(false);
   const abortRef = useRef(false);
+  // After each gym's sync, Railway reads that gym's iClass setup (camp settings, each day's
+  // enrollment, price tables) so the side panel and the checks are never older than the sync.
+  const setupLine = useSetupReadLine();
 
   // Load sync log on mount
   useEffect(() => {
@@ -485,6 +489,8 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
         }
 
         gymResults[i].status = 'done';
+        // This gym's events are in - put it in line for its iClass setup read while the next gym syncs
+        setupLine.queue([gym.id]);
         gymResults[i].summary = {
           eventsFound: allIncoming.length, new: importedCount, changed: updatedCount,
           deleted: softDeletedCount, unchanged: comp.unchanged.length,
@@ -901,6 +907,8 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
         }
       }
       
+      // Events are in - read this gym's iClass setup next (Railway, one gym at a time)
+      setupLine.queue([selectedGym]);
       setImportResult({
         success: true,
         imported: imported.length,
@@ -1114,7 +1122,10 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                   'bg-gray-50 border-gray-200'
                 }`}>
                   <div className="flex justify-between items-center">
-                    <span className="font-medium text-sm">{gym.gymId} — {gym.gymName}</span>
+                    <span className="font-medium text-sm flex items-center gap-2 flex-wrap">
+                      {gym.gymId} — {gym.gymName}
+                      <SetupReadChip status={setupLine.statusFor(gym.gymId)} />
+                    </span>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                       gym.status === 'pending' ? 'bg-gray-200 text-gray-600' :
                       gym.status === 'syncing' ? 'bg-blue-200 text-blue-700' :
@@ -1964,8 +1975,9 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                 <XCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
               )}
               <div className="flex-1">
-                <p className={`font-semibold ${importResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                <p className={`font-semibold flex items-center gap-2 flex-wrap ${importResult.success ? 'text-green-800' : 'text-red-800'}`}>
                   {importResult.success ? '✅ Import Successful!' : '❌ Import Failed'}
+                  {importResult.success && <SetupReadChip status={setupLine.statusFor(selectedGym)} />}
                 </p>
                 {importResult.success ? (
                   <p className="text-sm text-green-700 mt-1">

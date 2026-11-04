@@ -569,14 +569,40 @@ def send_email():
         return jsonify({"success": False, "error": f"Failed to send email: {str(e)}"}), 500
 
 
+# One setup read at a time. A sync that finishes while another gym is still being read adds its gym
+# to the line instead of starting a second read beside it (two at once would double the calls to
+# iClass). A gym already waiting is not added twice.
+import threading
+_setup_line = []            # gym codes waiting their turn; None = every gym in the gyms table
+_setup_line_lock = threading.Lock()
+_setup_reading = {'gym': None}
+
+
+def _setup_worker():
+    import camp_setup_reader
+    while True:
+        with _setup_line_lock:
+            if not _setup_line:
+                _setup_reading['gym'] = None
+                return
+            gym = _setup_line.pop(0)
+            _setup_reading['gym'] = gym or 'every gym'
+        try:
+            camp_setup_reader.run_gyms(None if gym is None else [gym], 'full', True)
+        except Exception as e:  # one gym failing never stops the line
+            print(f"[SETUP] {gym or 'every gym'}: FAILED - {e}", flush=True)
+
+
 @app.route('/setup-read', methods=['POST'])
 def setup_read():
     """Signed-in, READ-ONLY iClass setup read (automation/camp_setup_reader.py).
 
     Body: {"what": "prices" | "full", "gyms": ["SGT", ...]}  (gyms left out = every gym in the gyms table)
     - prices: only the price tables; quick, so it answers with one line per gym.
-    - full:   camps + price tables + gym settings; can take minutes, so it starts in the background and
-              each gym's line appears in Railway's logs and in the iclass_setup_reads table.
+    - full:   camps + price tables + gym settings, about a minute per gym, so the gyms join a line that
+              one background worker reads in order. Each gym's result lands in iclass_setup_reads
+              (the sync panel shows it) and in Railway's logs ([SETUP] lines).
+    The sync panel calls "full" for each gym as soon as that gym's event sync finishes.
     """
     if not check_api_key():
         return jsonify({"success": False, "error": "Unauthorized"}), 401
@@ -587,22 +613,39 @@ def setup_read():
     gyms = data.get('gyms') or None
 
     import camp_setup_reader
-    print(f"[SETUP] read started: {what} for {', '.join(gyms) if gyms else 'every gym'}", flush=True)
     if what == 'prices':
+        print(f"[SETUP] price read: {', '.join(gyms) if gyms else 'every gym'}", flush=True)
         try:
             summary = camp_setup_reader.run_gyms(gyms, 'prices', do_save=True)
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
         return jsonify({"success": True, "what": what, "gyms": summary})
 
-    import threading
-    threading.Thread(target=camp_setup_reader.run_gyms, args=(gyms, 'full', True), daemon=True).start()
-    return jsonify({"success": True, "what": what, "started": True,
-                    "watch": "Railway logs ([SETUP] lines) or the iclass_setup_reads table"})
+    with _setup_line_lock:
+        for g in (gyms or [None]):
+            if g not in _setup_line and g != _setup_reading['gym']:
+                _setup_line.append(g)
+        waiting = [g or 'every gym' for g in _setup_line]
+        start_worker = _setup_reading['gym'] is None
+        if start_worker:
+            _setup_reading['gym'] = 'starting'
+    if start_worker:
+        threading.Thread(target=_setup_worker, daemon=True).start()
+    print(f"[SETUP] full read line: {', '.join(waiting) or '(empty)'}", flush=True)
+    return jsonify({"success": True, "what": what, "started": True, "waiting": waiting})
 
 
 if __name__ == '__main__':
     import os
+
+    # A setup read cut off by the last restart is marked stopped, never left "running" on screen.
+    try:
+        import camp_setup_reader
+        closed = camp_setup_reader.close_cut_off_reads()
+        if closed:
+            print(f"[SETUP] marked {closed} cut-off read(s) as stopped", flush=True)
+    except Exception as e:
+        print(f"[SETUP] could not check for cut-off reads - {e}", flush=True)
     
     # Railway provides PORT environment variable, default to 5000 for local
     port = int(os.environ.get('PORT', 5000))

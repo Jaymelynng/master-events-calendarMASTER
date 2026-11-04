@@ -221,6 +221,16 @@ def start_read(gym_id, what='full'):
     return row[0]['id']
 
 
+def close_cut_off_reads():
+    """A read still 'running' when the server starts was cut off by a restart (a deploy). Say so,
+    so the screen never shows a gym as reading forever. Returns how many were closed."""
+    rows = _sb('PATCH', 'iclass_setup_reads?status=eq.running',
+               {'status': 'stopped', 'note': 'cut off - the server restarted during this read',
+                'finished_at': datetime.now(timezone.utc).isoformat()},
+               prefer='return=representation') or []
+    return len(rows)
+
+
 def finish_read(read_id, status, note, result=None):
     patch = {'status': status, 'note': note, 'finished_at': datetime.now(timezone.utc).isoformat()}
     if result:

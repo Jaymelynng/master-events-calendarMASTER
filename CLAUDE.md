@@ -105,7 +105,9 @@
 ### Pricing — rebuilt on the signed-in iClass read (November 4, 2026)
 - **Oct 2, 2026:** all pricing removed — her words then: not verified as correct, no system yet to compare prices. Her words Nov 4: *"those prices needed to be removed and we would add them later"* · *"forget the old pricing rules that didnt work"*.
 - **The only price source now:** the gym's own iClass price table, read signed-in and read-only by `automation/camp_setup_reader.py` into `iclass_price_tables` (view `iclass_price_cells`: child # × days → amount) and `iclass_camp_setup` (each camp's whole setup, hidden camps included). Per-gym read status: `iclass_setup_reads` — a gym not read shows "setup not read", never "no errors".
-- **Not built yet:** price checks, live logins (Railway Variables `ICLASS_SETUP_USER_<GYM>` / `ICLASS_SETUP_PASS_<GYM>`). The app still shows and exports no price; `events.price` is NULL. Never parse a price from a title or description.
+- **Logins:** Railway Variables `ICLASS_SETUP_PASS_<GYM>` for every gym + `ICLASS_SETUP_USER` (shared) with `ICLASS_SETUP_USER_<GYM>` where a gym's username differs. Typed by Jayme only.
+- **When it runs:** automatically after each gym's sync (Sync panel → Railway `POST /setup-read`, one gym at a time) — `docs/OPERATIONS/AUTO-SYNC-GUIDE.md` "After every sync".
+- **Shown:** the camp side panel shows the camp's iClass price table read-only. **Not built yet:** price checks. Exports show no price; `events.price` is NULL. Never parse a price from a title or description.
 - **Removed 2026-11-04:** the old `camp_pricing` / `event_pricing` / `archive.pricing_schedules` tables, `get_current_price`, and the old price scripts — record `database/REMOVED_OLD_PRICE_TABLES_2026_11_04.sql`. Earlier removals: `database/REMOVED_PRICING_2026_10_02.sql`, `database/REMOVED_PRICING_VALIDATION_2026_07_01.sql`. Guard test: `automation/test_validation_fixtures.py`.
 - Full contract: `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md` (top section).
 

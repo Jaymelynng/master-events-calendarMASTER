@@ -186,6 +186,32 @@ export const importEvents = async (gymId, eventType, events) => {
 };
 
 /**
+ * Ask Railway to read these gyms' iClass setup (signed-in, read-only: every camp's settings, each
+ * day's enrollment, price tables, gym settings). Railway puts them in a line and reads one gym at a
+ * time (~1 min each); each result lands in the iclass_setup_reads table. Answers right away.
+ *
+ * @param {string[]} gymIds - gym codes, e.g. ['SGT']
+ * @returns {Promise<{success: boolean, waiting?: string[], error?: string}>}
+ */
+export const startSetupRead = async (gymIds) => {
+  const API_URL = getApiUrl();
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/setup-read`, {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify({ what: 'full', gyms: gymIds }),
+    }, TIMEOUTS.read);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      return { success: false, error: data.error || `Railway answered ${response.status}` };
+    }
+    return data;
+  } catch (error) {
+    return { success: false, error: error.name === 'AbortError' ? 'Railway did not answer' : error.message };
+  }
+};
+
+/**
  * Get list of available gyms from the API
  *
  * @returns {Promise<{success: boolean, gyms?: Array, error?: string}>}

@@ -135,6 +135,15 @@ After import, you'll see two buttons:
 
 **Use these to continue syncing without closing the modal.**
 
+### After every sync: the iClass setup read (automatic, Nov 4 2026)
+
+As soon as a gym's events are imported (single-gym Import, or each gym inside **Sync All Gyms**), the panel asks Railway to read that gym's iClass **setup** — signed-in and read-only: every camp's settings, each day's enrollment, the price tables, the gym's portal settings (`automation/camp_setup_reader.py`). Nothing to press.
+
+- Railway reads **one gym at a time** (about a minute each). A gym that finishes syncing while another is being read waits its turn; a gym already waiting is not added twice. Sync All does not wait for it — the next gym's sync runs while the last gym's setup is read.
+- Each gym shows a chip beside its name: **⏳ waiting its turn → 🔄 reading now → ✅ N camps read**, or **❌** with the reason (no login saved in Railway, sign-in failed, cut off). The chip reads the `iclass_setup_reads` row Railway writes — never a guess.
+- A read cut off by a Railway restart (a deploy) is marked **stopped** when the server starts again, so no gym shows "reading" forever. Sync that gym again to re-read it.
+- The camp side panel and the camp bars' per-day spots come from this read.
+
 ---
 
 ## 📊 SYNC PROGRESS TRACKER

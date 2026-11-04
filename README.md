@@ -206,7 +206,7 @@ All validation is **database-driven** via the `rules` table. The Python backend 
 
 **System Checks (10 active on 2026-10-13):** date, year, time, age, day, program, title/description, impossible date, ordinal typo, registration closes early
 
-**Pricing Note:** All pricing was removed October 2, 2026. Since November 4, 2026 price comes only from a signed-in iClass read (`automation/camp_setup_reader.py` → `iclass_price_tables`); the old `camp_pricing` / `event_pricing` tables were removed. The app still shows and exports no price.
+**Pricing Note:** All pricing was removed October 2, 2026. Since November 4, 2026 price comes only from a signed-in iClass read (`automation/camp_setup_reader.py` → `iclass_price_tables`); the old `camp_pricing` / `event_pricing` tables were removed. The camp side panel shows the camp's iClass price table (read-only); exports show no price.
 
 **Rule Types:** System checks, valid times, program synonyms, program ignore, requirement exceptions, one-time exceptions.
 
