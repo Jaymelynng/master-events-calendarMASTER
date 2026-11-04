@@ -66,7 +66,7 @@ After truth checks, **title ↔ description** catches internal contradictions.
 
 - **Order of checks** is **not** fixed to steps 2 → 3 → 4. Active `check_*` rows in the `rules` table are run in query order; each function implements its own title/description logic.
 - **Many checks** scan **both** title and description in one pass against iClass (e.g. `check_year_mismatch`, `check_time_mismatch`) and emit separate errors per field where relevant.
-- **No description:** If there is no description text (or type is SPECIAL EVENT), the text checks do not run; settings checks (`check_registration_closes_early`) still run on every event (`validation_engine.py:832-833`). See [AUDIT_DATA_ERROR_REFERENCE.md](./AUDIT_DATA_ERROR_REFERENCE.md) (when validation runs vs skips).
+- **No description:** If there is no description text (or type is SPECIAL EVENT), the text checks do not run; the checks in `SETTINGS_CHECKS` (`check_registration_closes_early`, `check_title_date_mismatch`) still run on every event (`validation_engine.py:832-833`). See [AUDIT_DATA_ERROR_REFERENCE.md](./AUDIT_DATA_ERROR_REFERENCE.md) (when validation runs vs skips).
 - **Pricing:** No dollar amount is validated any more — all pricing was removed October 2, 2026 (record: `database/REMOVED_PRICING_2026_10_02.sql`).
 
 ---
@@ -109,6 +109,7 @@ The table below maps **ideas** in this doc to the **`type` string** stored per e
 | Price in title vs price in description | — | `price_mismatch` removed October 2, 2026. |
 | Camp / event price vs tables | — | `camp_price_mismatch` / `event_price_mismatch` removed July 1, 2026. |
 | Registration closes before the event's last day | `registration_closes_early` | Settings check, added Oct 5, 2026. |
+| Date in the title vs real first / last day | `date_mismatch` | `check_title_date_mismatch`, added Nov 4, 2026 — "May 24th" on a camp that starts Tue May 25. |
 | Ordinal typo ("29nd") | `ordinal_typo` | `check_ordinal_typo`. |
 | Impossible calendar date in text | `date_mismatch` | `check_impossible_date` appends `date_mismatch` errors. |
 | `range_mismatch` (written range vs true span) | — | **Not** a separate type; partly overlaps `date_mismatch` behavior. |

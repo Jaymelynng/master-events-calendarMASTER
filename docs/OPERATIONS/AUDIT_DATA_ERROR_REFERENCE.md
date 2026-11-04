@@ -48,6 +48,7 @@
 | Check (`rules.rule_type`) | Error type | Flags when |
 |---|---|---|
 | `check_registration_closes_early` | `registration_closes_early` (data_error) | iClass **Allowed Registration** end date (`registrationEndDate`) is before the event's **last real meeting day** (last block date). Jayme's rule: single-day event closes that day; multi-day camp closes on its last day — otherwise nobody can sign up after it. Found from OAS camp 978 (May 12, 2027 camp, registration ended Feb 12, 2027). Shows in Errors tab → 🔒 Registration. SQL: `database/ADD_REGISTRATION_CLOSES_EARLY_CHECK.sql`. |
+| `check_title_date_mismatch` | `date_mismatch` (data_error) | The first date written in the **title** ("May 24th", "June 7-11", "6/7") is not the event's **real first meeting day** (first block date) — or, for a range, its end is not the **real last day**. Month + day only (year has its own check). Reads the title, not the description, so it runs on every event too (added Nov 4, 2026). Found from EST "… \| May 24th" camp that meets Tue May 25. Shows in Errors tab → 📅 Dates. SQL: `database/ADD_TITLE_DATE_CHECK.sql`. Test: `automation/test_title_date_check.py`. |
 
 ---
 

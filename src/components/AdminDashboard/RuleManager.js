@@ -68,6 +68,11 @@ const RULE_PLAIN_LANGUAGE = {
     catches: "Catches when iClass's Allowed Registration end date is earlier than the event's last day, so families can't sign up after it.",
     example: 'Camp on May 12 but registration ends Feb 12.',
   },
+  check_title_date_mismatch: {
+    title: 'Title Date Wrong',
+    catches: "Catches when the date written in the title isn't the event's real first day — or, for a range, its real last day.",
+    example: 'Title says "May 24th" but the camp has no Monday and starts Tue May 25.',
+  },
 };
 
 // Programs the rule can be scoped to. Mirror of what RuleWizard / the rules

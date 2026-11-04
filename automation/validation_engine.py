@@ -782,6 +782,86 @@ def check_registration_closes_early(ctx):
     }]
 
 
+_TITLE_MONTHS = {}
+for _i in range(1, 13):
+    _TITLE_MONTHS[calendar.month_name[_i].lower()] = _i
+    _TITLE_MONTHS[calendar.month_abbr[_i].lower()] = _i
+_TITLE_MONTHS['sept'] = 9
+_TITLE_MONTH_RE = '|'.join(sorted(_TITLE_MONTHS, key=len, reverse=True))
+_ORD = r'(?:st|nd|rd|th)?'
+_RANGE_SEP = r'\s*(?:-|–|—|to|thru|through)\s*'
+# "May 24th", "June 7-11", "June 28 - July 2", "Jun 7th to 11th", "January, 18th"
+_TITLE_WORD_DATE = re.compile(
+    r'\b(' + _TITLE_MONTH_RE + r')\.?,?\s+(\d{1,2})' + _ORD + r'\b'
+    r'(?:' + _RANGE_SEP + r'(?:(' + _TITLE_MONTH_RE + r')\.?,?\s+)?(\d{1,2})' + _ORD + r'\b)?',
+    re.IGNORECASE)
+# "6/7", "6/7-6/11", "6/7/27" — not "1/2 Day" (half day) and not part of a longer number
+_TITLE_SLASH_DATE = re.compile(
+    r'(?<![\d/])(\d{1,2})/(\d{1,2})(?:/\d{2,4})?'
+    r'(?:' + _RANGE_SEP + r'(?:(\d{1,2})/)?(\d{1,2})(?:/\d{2,4})?)?'
+    r'(?![\d/])(?!\s*-?\s*(?:day|hr|hour))',
+    re.IGNORECASE)
+
+
+def _title_first_date(title):
+    """First date written in the title -> (start_month, start_day, end_month, end_day, text).
+    end_* are None when the title gives one date. None when the title has no date."""
+    hits = []
+    for m in _TITLE_WORD_DATE.finditer(title):
+        sm, sd = _TITLE_MONTHS[m.group(1).lower()], int(m.group(2))
+        em = _TITLE_MONTHS[m.group(3).lower()] if m.group(3) else None
+        ed = int(m.group(4)) if m.group(4) else None
+        hits.append((m.start(), sm, sd, em, ed, m.group(0)))
+    for m in _TITLE_SLASH_DATE.finditer(title):
+        sm, sd = int(m.group(1)), int(m.group(2))
+        if not (1 <= sm <= 12 and 1 <= sd <= 31):
+            continue
+        em = int(m.group(3)) if m.group(3) else None
+        ed = int(m.group(4)) if m.group(4) else None
+        hits.append((m.start(), sm, sd, em, ed, m.group(0)))
+    if not hits:
+        return None
+    _, sm, sd, em, ed, text = min(hits)
+    if ed is not None and em is None:
+        # "June 28-2" runs into the next month
+        em = sm if ed >= sd else sm % 12 + 1
+    return sm, sd, em, ed, text.strip()
+
+
+def check_title_date_mismatch(ctx):
+    """The date written in the TITLE must match the event's real dates.
+    Compares the title's first date (and its range end, if given) to iClass's
+    real first and last meeting day (ctx.start_date / end_date_str = first/last
+    block date, so a camp with no Monday starts on Tuesday). Month + day only;
+    the year has its own check. Real case (Nov 2026): EST "Week 1: Treasure
+    Island| Ninja Warrior Summer Camp Full Day | Ages 5-12 | May 24th" meets
+    Tue May 25 — only the AI review caught it."""
+    if not ctx.title or not ctx.event_date:
+        return []
+    found = _title_first_date(ctx.title)
+    if not found:
+        return []
+    sm, sd, em, ed, text = found
+    fmt = lambda d: f"{d.strftime('%a')} {d.strftime('%B')} {d.day}"
+    errors = []
+    if (sm, sd) != (ctx.event_date.month, ctx.event_date.day):
+        errors.append({
+            "type": "date_mismatch",
+            "severity": "error",
+            "category": "data_error",
+            "message": f"Title says \"{text}\" but the event starts {fmt(ctx.event_date)}"
+        })
+    end = ctx.end_date_obj or ctx.event_date
+    if ed is not None and (em, ed) != (end.month, end.day):
+        errors.append({
+            "type": "date_mismatch",
+            "severity": "error",
+            "category": "data_error",
+            "message": f"Title says \"{text}\" but the event's last day is {fmt(end)}"
+        })
+    return errors
+
+
 # ============================================================
 # CHECK REGISTRY — maps rule_type to check function
 # ============================================================
@@ -802,11 +882,13 @@ CHECK_REGISTRY = {
 CHECK_REGISTRY['check_skill_mismatch'] = check_skill_mismatch
 CHECK_REGISTRY['check_ordinal_typo'] = check_ordinal_typo
 CHECK_REGISTRY['check_registration_closes_early'] = check_registration_closes_early
+CHECK_REGISTRY['check_title_date_mismatch'] = check_title_date_mismatch
 
-# Checks that read only iClass SETTINGS (not title/description text). These run
-# on every event — including ones with no description and Special Events — since
-# a wrong setting blocks families no matter what the text says.
-SETTINGS_CHECKS = {'check_registration_closes_early'}
+# Checks that don't need description text (iClass SETTINGS, or the title vs the
+# real dates). These run on every event — including ones with no description and
+# Special Events — since a wrong setting or title date misleads families no
+# matter what the description says.
+SETTINGS_CHECKS = {'check_registration_closes_early', 'check_title_date_mismatch'}
 
 
 # ============================================================

@@ -54,7 +54,7 @@ Status legend: **ACTIVE** (running live) · **BUILT** (code exists, may not be s
 | AI title-month sweep | ANY month in the title not in the event's months → always flag | **AI** | data-verified: no innocent theme cases in ~900 titles |
 | AI day-of-week (title+desc) | wrong weekday in title too | **AI** | engine checks desc only |
 | AI wrong-year plausibility | event dated implausibly far out → likely wrong-year setting; reads 2-digit years | **AI** | |
-| day-of-month in title vs start | "May 25th" on a May 26 camp | **PROPOSED gap** | partly covered by AI |
+| title_date_mismatch | date in TITLE ≠ real first day (range end ≠ real last day) | **BUILT Nov 4, 2026** (rule row active; live once the sync code is published) | `check_title_date_mismatch`; dry run 441 events → 3 real flags |
 | day-abbreviation (Mon/Tues) | `day_abbrevs` var defined but never used | **PROPOSED / known bug** | |
 | consecutive-day / camp sequence | verify camps run Mon–Fri | **PROPOSED** (not planned) | |
 
