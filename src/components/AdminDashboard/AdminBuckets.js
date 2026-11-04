@@ -5,6 +5,10 @@
 // calendar learns them, with nothing hardcoded:
 //   • TRAIN a category  → a row in event_type_mappings (one gym, or every gym).
 //                         Every event in that category follows it on every sync.
+//   • A WORD rule       → match_type 'word': the word anywhere in the category name
+//                         ("clinic" sorts CLINIC, CLINICS, Bar Clinic). Exact rules win;
+//                         the longest word wins (2026-11-04, Jayme: names that are not
+//                         exactly the same must still be recognized).
 //   • FORCE one event   → events.type_locked. The sync leaves that event's
 //                         bucket alone, whatever category the gym filed it in.
 // Anything with no rule shows up here under "Needs a home".
@@ -27,6 +31,13 @@ const ACCENT = '#8b6f6f';
 const LINE = '#d8cccc';
 
 const lower = (s) => (s || '').trim().toLowerCase();
+const isWord = (r) => r.match_type === 'word';
+// Whole word or phrase, any capitals, plural "s" allowed - the same test the sync uses
+// (resolve_type_mapping in automation/f12_collect_and_import.py).
+const wordMatches = (name, word) => {
+  const w = lower(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^a-z])${w}s?($|[^a-z])`).test(lower(name));
+};
 
 // Dark text on a light fill, white text on a dark fill.
 const textOn = (hex) => {
@@ -53,7 +64,10 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
   const selRef = useRef(null);                // the latest selection, for reloads after a save
   const setSel = (s) => { selRef.current = s; setSelState(s); };
   const [selEvents, setSelEvents] = useState([]);
-  const [scope, setScope] = useState('gym');  // 'gym' | 'all' — only for a new rule
+  // A new rule covers EVERY gym unless she picks one gym (2026-11-04: "CLINICS" had been saved
+  // for Eagle only by the old default, so Metro's CLINICS stayed unsorted).
+  const [scope, setScope] = useState('all');  // 'all' | 'gym' | 'word' — only for a new rule
+  const [word, setWord] = useState('');
   const [busy, setBusy] = useState(false);
   const [openEvent, setOpenEvent] = useState(null); // the one event whose own bucket buttons are showing
   const [msg, setMsg] = useState(null);
@@ -90,11 +104,18 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
   const bucketLabel = (name) => bucketOf(name)?.display_name || name;
   const gymName = (id) => gyms.find(g => g.id === id)?.name || id;
 
-  // The bucket a category resolves to: the gym's own rule, else the every-gym rule.
+  // The bucket a category resolves to - same order as the sync: exact name (this gym, then every
+  // gym), then a word rule (this gym, then every gym; the longest word wins), else Needs a home.
   const resolve = useCallback((name, gymId, rules) => {
-    const hits = rules.filter(r => r.is_active && lower(r.iclass_type_name) === lower(name));
-    const rule = hits.find(r => r.gym_id === gymId) || hits.find(r => !r.gym_id);
-    return rule?.event_type || UNSORTED;
+    const active = rules.filter(r => r.is_active);
+    const exact = active.filter(r => !isWord(r) && lower(r.iclass_type_name) === lower(name));
+    const rule = exact.find(r => r.gym_id === gymId) || exact.find(r => !r.gym_id);
+    if (rule) return rule.event_type;
+    for (const g of [gymId, null]) {
+      const hits = active.filter(r => isWord(r) && (r.gym_id || null) === g && wordMatches(name, r.iclass_type_name));
+      if (hits.length) return hits.sort((a, b) => b.iclass_type_name.length - a.iclass_type_name.length)[0].event_type;
+    }
+    return UNSORTED;
   }, []);
 
   const load = useCallback(async () => {
@@ -126,6 +147,11 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
   const loadSelEvents = useCallback(async (s) => {
     if (!s || s.kind === 'forced') { setSelEvents([]); return; }
     try {
+      if (s.kind === 'rule' && s.rule && isWord(s.rule)) {
+        const rows = await bucketsApi.getByWord(s.name);
+        setSelEvents(rows.filter(ev => wordMatches(ev.camp_type, s.name) && (!s.gymId || ev.gym_id === s.gymId)));
+        return;
+      }
       setSelEvents(await bucketsApi.getByCategory(s.name, s.gymId || null));
     } catch (e) {
       setSelEvents([]);
@@ -133,7 +159,7 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
     }
   }, []);
 
-  const select = (s) => { setSel(s); setScope('gym'); setMsg(null); loadSelEvents(s); };
+  const select = (s) => { setSel(s); setScope('all'); setWord(lower(s.name)); setMsg(null); loadSelEvents(s); };
 
   // "Needs a home" — one row per gym + iClass category.
   const groups = useMemo(() => {
@@ -170,18 +196,28 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
   };
 
   // TRAIN: every event in this category goes to `bucket`.
-  const train = (bucket) => run(async () => {
+  const train = (bucket) => (sel.kind !== 'rule' && scope === 'word') ? trainWord(bucket) : run(async () => {
     const isRule = sel.kind === 'rule';
+    if (isRule && isWord(sel.rule)) {
+      // Changing a word rule's bucket: move its events that follow it (no exact rule of their own).
+      await eventTypeMappingsApi.update(sel.rule.id, { event_type: bucket, is_active: true });
+      const fresh = mappings.map(r => (r.id === sel.rule.id ? { ...r, event_type: bucket } : r));
+      const rows = (await bucketsApi.getByWord(sel.name)).filter(ev => wordMatches(ev.camp_type, sel.name));
+      const toMove = rows.filter(ev => !ev.type_locked && ev.type !== bucket && resolve(ev.camp_type, ev.gym_id, fresh) === bucket);
+      const moved = await bucketsApi.moveEvents(toMove, bucket, undefined, 'Buckets screen (word rule)');
+      setSel({ ...sel, rule: { ...sel.rule, event_type: bucket } });
+      return `Every category with “${sel.name}” in its name now goes to ${bucketLabel(bucket)}. ${moved} event${moved === 1 ? '' : 's'} moved.`;
+    }
     const ruleGym = isRule ? (sel.rule.gym_id || null) : (scope === 'gym' ? sel.gymId : null);
     const existing = isRule
       ? sel.rule
-      : mappings.find(r => lower(r.iclass_type_name) === lower(sel.name) && (r.gym_id || null) === ruleGym);
+      : mappings.find(r => !isWord(r) && lower(r.iclass_type_name) === lower(sel.name) && (r.gym_id || null) === ruleGym);
 
     if (existing) {
       await eventTypeMappingsApi.update(existing.id, { event_type: bucket, is_active: true });
     } else {
       await eventTypeMappingsApi.create({
-        iclass_type_name: sel.name, event_type: bucket, gym_id: ruleGym,
+        iclass_type_name: sel.name, event_type: bucket, gym_id: ruleGym, match_type: 'exact',
         hide_from_calendar: false, is_active: true, note: 'Set on the Buckets screen',
       });
     }
@@ -190,7 +226,7 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
     // A gym with its own rule for this name keeps its own; forced events stay put.
     const inCategory = await bucketsApi.getByCategory(sel.name, ruleGym);
     const ownRuleGyms = new Set(mappings
-      .filter(r => r.is_active && r.gym_id && lower(r.iclass_type_name) === lower(sel.name))
+      .filter(r => r.is_active && !isWord(r) && r.gym_id && lower(r.iclass_type_name) === lower(sel.name))
       .map(r => r.gym_id));
     const toMove = inCategory.filter(ev =>
       !ev.type_locked && ev.type !== bucket && (ruleGym || !ownRuleGyms.has(ev.gym_id)));
@@ -198,6 +234,29 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
 
     if (!isRule) setSel({ ...sel, kind: 'rule', gymId: ruleGym, rule: { ...(existing || {}), iclass_type_name: sel.name, gym_id: ruleGym, event_type: bucket } });
     return `“${sel.name}” ${ruleGym ? `at ${ruleGym}` : 'at every gym'} now goes to ${bucketLabel(bucket)}. ${moved} event${moved === 1 ? '' : 's'} moved.`;
+  });
+
+  // TRAIN BY WORD: every category, at every gym, with this word in its name goes to `bucket`.
+  // Only events with no exact rule of their own move - an exact rule always wins.
+  const trainWord = (bucket) => run(async () => {
+    const w = lower(word);
+    if (!w) throw new Error('Type the word first.');
+    if (!wordMatches(sel.name, w)) throw new Error(`“${sel.name}” does not contain the word “${w}”.`);
+    const existing = mappings.find(r => isWord(r) && lower(r.iclass_type_name) === w && !r.gym_id);
+    if (existing) {
+      await eventTypeMappingsApi.update(existing.id, { event_type: bucket, is_active: true });
+    } else {
+      await eventTypeMappingsApi.create({
+        iclass_type_name: w, event_type: bucket, gym_id: null, match_type: 'word',
+        hide_from_calendar: false, is_active: true, note: 'Word rule set on the Buckets screen',
+      });
+    }
+    const fresh = await eventTypeMappingsApi.getAll();
+    const rows = (await bucketsApi.getByWord(w)).filter(ev => wordMatches(ev.camp_type, w));
+    const toMove = rows.filter(ev => !ev.type_locked && ev.type !== bucket && resolve(ev.camp_type, ev.gym_id, fresh) === bucket);
+    const moved = await bucketsApi.moveEvents(toMove, bucket, undefined, 'Buckets screen (word rule)');
+    setSel(null);
+    return `Every category with “${w}” in its name, at every gym, now goes to ${bucketLabel(bucket)}. ${moved} event${moved === 1 ? '' : 's'} moved.`;
   });
 
   // FORCE: just this one event.
@@ -217,7 +276,9 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
     run(async () => {
       await eventTypeMappingsApi.delete(rule.id);
       const rest = mappings.filter(r => r.id !== rule.id);
-      const inCategory = await bucketsApi.getByCategory(rule.iclass_type_name, rule.gym_id || null);
+      const inCategory = isWord(rule)
+        ? (await bucketsApi.getByWord(rule.iclass_type_name)).filter(ev => wordMatches(ev.camp_type, rule.iclass_type_name))
+        : await bucketsApi.getByCategory(rule.iclass_type_name, rule.gym_id || null);
       let moved = 0;
       for (const ev of inCategory) {
         if (ev.type_locked) continue;
@@ -356,9 +417,11 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
             <div key={b.name} className="mb-1">
               <div className="px-2 py-0.5"><Pill name={b.name} /></div>
               {(rulesByBucket[b.name] || []).map(r => (
-                <LeftRow key={r.id} active={isSel('rule', r.gym_id, r.iclass_type_name)}
+                <LeftRow key={r.id} active={isSel('rule', r.gym_id, r.iclass_type_name) && sel?.rule?.id === r.id}
                   onClick={() => select({ kind: 'rule', gymId: r.gym_id || null, name: r.iclass_type_name, rule: r })}>
-                  {r.iclass_type_name}
+                  {isWord(r)
+                    ? <span><span className="px-1.5 rounded font-black" style={{ background: INK, color: '#fff', fontSize: 13 }}>WORD</span> “{r.iclass_type_name}”</span>
+                    : r.iclass_type_name}
                   <span className="float-right font-bold" style={{ color: MUTED }}>{r.gym_id || 'all gyms'}{r.hide_from_calendar ? ' · hidden' : ''}</span>
                 </LeftRow>
               ))}
@@ -396,9 +459,11 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
           {sel && sel.kind !== 'forced' && (
             <div>
               <div className="flex items-baseline gap-3 flex-wrap">
-                <div className="font-black" style={{ color: INK, fontSize: 20 }}>{sel.name}</div>
+                <div className="font-black" style={{ color: INK, fontSize: 20 }}>
+                  {sel.kind === 'rule' && sel.rule && isWord(sel.rule) ? `Any name with “${sel.name}”` : sel.name}
+                </div>
                 <div className="font-bold" style={{ color: MUTED, fontSize: 15 }}>
-                  iClass category · {sel.gymId ? `${sel.gymId} — ${gymName(sel.gymId)}` : 'every gym'}
+                  {sel.kind === 'rule' && sel.rule && isWord(sel.rule) ? 'Word rule' : 'iClass category'} · {sel.gymId ? `${sel.gymId} — ${gymName(sel.gymId)}` : 'every gym'}
                 </div>
               </div>
 
@@ -416,7 +481,7 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
                     </span>
                     {sel.kind === 'unsorted' && (
                       <span className="flex rounded-lg overflow-hidden ml-auto" style={{ border: `2px solid ${INK}` }}>
-                        {[['gym', `Only ${sel.gymId}`], ['all', 'Every gym']].map(([v, label]) => (
+                        {[['all', 'Every gym'], ['gym', `Only ${sel.gymId}`], ['word', 'Any name with a word']].map(([v, label]) => (
                           <button key={v} onClick={() => setScope(v)}
                             className="px-3 py-1 font-bold"
                             style={{ background: scope === v ? INK : '#fff', color: scope === v ? '#fff' : INK, fontSize: 15, cursor: 'pointer' }}>
@@ -426,6 +491,17 @@ export default function AdminBuckets({ gyms = [], eventTypes = [] }) {
                       </span>
                     )}
                   </div>
+                  {sel.kind === 'unsorted' && scope === 'word' && (
+                    <div className="flex items-center gap-2 flex-wrap mb-2" style={{ fontSize: 15, color: INK }}>
+                      <span className="font-bold">Every category, at every gym, whose name has the word</span>
+                      <input value={word} onChange={(e) => setWord(e.target.value)}
+                        className="px-2 py-1 rounded-lg font-bold" style={{ border: `2px solid ${INK}`, minWidth: 160, fontSize: 15 }} />
+                      <span className="font-bold">goes to:</span>
+                      {word && !wordMatches(sel.name, word) && (
+                        <span className="font-bold" style={{ color: '#b91c1c' }}>“{sel.name}” does not contain that word</span>
+                      )}
+                    </div>
+                  )}
                   <div className="flex gap-2 flex-wrap">
                     {buckets.map(b => (
                       <BucketButton key={b.name} b={b} active={currentRuleBucket === b.name} onClick={() => train(b.name)} />

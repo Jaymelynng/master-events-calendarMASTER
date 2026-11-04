@@ -995,6 +995,14 @@ export const bucketsApi = {
     });
   },
 
+  // Every live event whose iClass category name CONTAINS a word (a word rule's events).
+  // The screen narrows it to whole words with wordMatches().
+  async getByWord(word) {
+    const safe = (word || '').replace(/[\\%_]/g, c => '\\' + c);
+    return pageAll(() => supabase.from('events').select('*')
+      .ilike('camp_type', `%${safe}%`).is('deleted_at', null).order('start_date'));
+  },
+
   // Every event that hasn't ended yet, with just the fields the bulk opener
   // needs to count gyms per bucket and build each category's portal page.
   async getUpcoming() {

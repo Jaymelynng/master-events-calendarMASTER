@@ -212,7 +212,8 @@ def fetch_type_mappings():
         rows = None
         # iclass_type_ids (added 2026-11-04) lets a mapping survive an iClass rename. If the column
         # is not there yet, read without it - matching by name works exactly as before.
-        for cols in ("id,iclass_type_name,event_type,hide_from_calendar,gym_id,iclass_type_ids",
+        for cols in ("id,iclass_type_name,event_type,hide_from_calendar,gym_id,iclass_type_ids,match_type",
+                     "id,iclass_type_name,event_type,hide_from_calendar,gym_id,iclass_type_ids",
                      "id,iclass_type_name,event_type,hide_from_calendar,gym_id"):
             try:
                 req = Request(f"{SUPABASE_URL}/rest/v1/event_type_mappings?is_active=eq.true&select={cols}")
@@ -226,10 +227,20 @@ def fetch_type_mappings():
                     raise
         mapping = {}
         _TYPE_ID_INDEX.clear()
+        _WORD_RULES.clear()
         for r in rows or []:
             if not r.get('iclass_type_name'):
                 continue
             name = r['iclass_type_name'].strip().lower()
+            if r.get('match_type') == 'word':
+                # A word rule: the word anywhere in the name, whole word, plural s allowed.
+                _WORD_RULES.append({
+                    'word': name, 'gym_id': r.get('gym_id'),
+                    'pattern': re.compile(r'(?<![a-z])' + re.escape(name) + r's?(?![a-z])'),
+                    'rule': {'event_type': r.get('event_type'), 'hide': bool(r.get('hide_from_calendar')),
+                             'row_id': r.get('id'), 'name': r['iclass_type_name'].strip(), 'type_ids': None},
+                })
+                continue
             rule = {
                 'event_type': r.get('event_type'),
                 'hide': bool(r.get('hide_from_calendar')),
@@ -258,17 +269,21 @@ def fetch_type_mappings():
 
 # (gym, iClass type id) -> the mapping row that already matched it. Filled from iclass_type_ids.
 _TYPE_ID_INDEX = {}
+# Word rules (match_type = 'word'): [{word, gym_id, pattern, rule}]. Jayme edits them on Buckets.
+_WORD_RULES = []
 
 
 def resolve_type_mapping(mappings, title, gym_id=None, type_id=None):
     """The rule for one iClass category at one gym.
 
+    (A word rule is checked only after 1 and 2 - an exact rule always wins.)
     1. By NAME: the gym's own rule if Jayme made one, otherwise the every-gym rule.
        When the name matches, the row learns this gym's iClass type id (saved once).
     2. By iClass TYPE ID, only when the name has no rule: the same id at the same gym is the same
        iClass category with a new name (Planet renamed "Summer Swim & Gym - Full Day" to
        "Day Program - Full Day", id 3, Nov 2026) - Jayme's bucket is kept and the rename is logged.
-    3. Otherwise None (UNSORTED)."""
+    3. By WORD (match_type = 'word'): the word anywhere in the name - CLINIC / CLINICS / Bar Clinic.
+    4. Otherwise None (UNSORTED)."""
     scopes = mappings.get((title or '').strip().lower()) or {}
     rule = scopes.get(gym_id) or scopes.get('*')
     if rule:
@@ -280,6 +295,15 @@ def resolve_type_mapping(mappings, title, gym_id=None, type_id=None):
             print(f"  [MAP] RENAMED in iClass at {gym_id}: '{renamed['name']}' is now '{title}' "
                   f"(same iClass type id {type_id}) - kept your bucket {renamed['event_type']}")
             return renamed
+    # 4-5. A word rule: this gym's own first, then every gym's; the longest word wins
+    #      ("SUMMER CAMP AFTER CARE": "after care" beats "camp").
+    text = (title or '').strip().lower()
+    for scope in (gym_id, None):
+        hits = [w for w in _WORD_RULES if w['gym_id'] == scope and w['pattern'].search(text)]
+        if hits:
+            best = max(hits, key=lambda w: len(w['word']))
+            print(f"  [MAP] '{title}' at {gym_id} -> {best['rule']['event_type']} (word rule '{best['word']}')")
+            return best['rule']
     return None
 
 
