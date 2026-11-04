@@ -5,9 +5,20 @@
 
 ---
 
+## ✅ PRICE COMES BACK INTO THE AUDIT — November 4, 2026 (Jayme's go)
+
+Her words: *"i have told u a million times that those prices needed to be removed and we would add them later"* · *"forget the old pricing rules that didnt work and ... customize it to pull in the data now the way u know u can get it so the pricing table in supabase will be designed around this"*. This is the authenticated-backend connection the July 1 note below was waiting for. **Everything below the line is history — none of it is the design.**
+
+- **The only price source:** the gym's own iClass price table, read signed-in and read-only by `automation/camp_setup_reader.py`: `GET /api/v1/pricing-schedules/` (every table) matched by each camp's `pricingScheduleId` from `GET /api/v1/camps/{id}`. Never a price guessed from a title or description.
+- **Tables** (`database/ADD_ICLASS_CAMP_SETUP_TABLES.sql`, applied 2026-11-04): `iclass_price_tables` (whole reply per table), view `iclass_price_cells` (child_number × days → amount; null = blank box), `iclass_camp_setup` (whole camp setup + per-day counts, hidden camps included), `iclass_setup_reads` (per gym: read ok, or why not — "setup not read", never "no errors").
+- **iClass's shape** (proven on CCP's recording 2026-11-04): `tableCells` is rows of boxes, `studentEnum` = 1st/2nd/3rd child, `blockEnum` = number of days. KNO, clinics and open gym use price tables too.
+- **Status 2026-11-04:** tables live; CCP loaded from Jayme's recording (49 camps not ended, 41 price tables, 149 boxes). No live login yet (Railway Variables `ICLASS_SETUP_USER_<GYM>` / `ICLASS_SETUP_PASS_<GYM>`). No price CHECK built yet. The old `camp_pricing` / `event_pricing` / `archive.pricing_schedules` hold old prices nothing reads.
+
+---
+
 ## ⛔ ALL PRICING REMOVED — October 2, 2026 (Jayme's decision)
 
-**This section overrides everything below it.** The calendar no longer sets, shows, exports, or checks a price anywhere.
+**This section overrides everything below it** (except the November 4 go above, once built). The calendar no longer sets, shows, exports, or checks a price anywhere.
 
 - **Why:** the prices are not verified as correct, and there is no system yet to pull the real price from iClass or compare against it. Until that exists, no price may appear in the app.
 - **Database:** `events.price` is NULL on every event; the stored `price_mismatch` errors were stripped; the last price check (`check_price_mismatch`) was deleted from `rules`.

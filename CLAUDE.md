@@ -106,6 +106,7 @@
 - The calendar no longer sets, shows, exports, or checks a price anywhere. Reason, in her words: it is not verified as correct and there is no system yet to compare prices. `events.price` is NULL on every event, the sync has no price code, the engine has no price checks, there is no `valid_price` / `sibling_price` rule type, and the app has no price column, field, filter, or rule type.
 - **Do NOT re-add any price display, lookup, title/description price parsing, or price validation without her explicit go.** Record + backup: `database/REMOVED_PRICING_2026_10_02.sql`, `database/backups/REMOVED_PRICING_2026_10_02_backup.json`. Guard test: `automation/test_validation_fixtures.py`. Earlier July 2026 removal of the 3 price checks: `database/REMOVED_PRICING_VALIDATION_2026_07_01.sql`.
 - `camp_pricing` and `event_pricing` tables still exist with their rows, but **nothing reads them**. iClass's public API gives no prices.
+- **Nov 4, 2026 — her go ("yes"): price comes back into the AUDIT**, checked only against the gym's own iClass price table from a signed-in, read-only staff read. Not built yet. Details: `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md` (top section).
 
 ### Rules System
 - **ONE table: `rules`** — Python backend + frontend + Rule Wizard + dismiss flows all use it (`gym_valid_values` is dropped)
@@ -199,7 +200,7 @@ iClass behavior claims: grep `C:\Users\Jayme\JAYME PROJECTS\SOURCE-OF-TRUTH\icla
 1. **Don't say "it should work"** — Test it, then say "I tested it and it works"
 2. **Don't skip reading docs** — Jayme spent hours writing them. Read them.
 3. **Don't hardcode validation** — All checks come from the `rules` table via `validation_engine.py`.
-4. **Don't add prices back** — no price display, lookup or check without her explicit go (see Pricing).
+4. **Don't add prices back** — no price display or lookup without her explicit go; price CHECKS have her go (Nov 4, 2026) only against the gym's iClass price table (see Pricing).
 5. **Don't query with another area's codes** — this DB uses AAG / EAG / PLG; AAR / EGF / PGN return 0 rows.
 6. **Don't simulate with fake data** — Use actual Supabase data
 7. **Don't edit `EventsDashboard.js`** — it's dead; the live file is `EventsDashboard_REFACTORED.js`

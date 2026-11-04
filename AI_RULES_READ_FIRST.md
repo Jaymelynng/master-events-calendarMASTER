@@ -191,7 +191,7 @@ The doc-map hook will surface the iClassPro section at the top of every UserProm
 | **Total Capacity** | ❌ NOT AVAILABLE | iClass `maxStudents` is always null in public API. Cannot show "23/40" without manual entry. |
 
 ### Price
-iClass does NOT provide price in its public API. The old `camp_pricing` / `event_pricing` lookup was removed with all pricing on October 2, 2026 (record: `database/REMOVED_PRICING_2026_10_02.sql`). Do not re-add without Jayme's go.
+iClass does NOT provide price in its public API. The old `camp_pricing` / `event_pricing` lookup was removed with all pricing on October 2, 2026 (record: `database/REMOVED_PRICING_2026_10_02.sql`). Do not re-add without Jayme's go. **Nov 4, 2026:** her go to bring price back into the audit, checked only against the gym's iClass price table read by a signed-in staff read (path 2 in §6) — see `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md`.
 
 ---
 
