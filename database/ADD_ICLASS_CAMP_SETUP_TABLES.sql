@@ -57,6 +57,8 @@ select t.gym_id,
 from public.iclass_price_tables t
 cross join lateral jsonb_array_elements(coalesce(t.raw -> 'tableCells', '[]'::jsonb)) as r(row_cells)
 cross join lateral jsonb_array_elements(r.row_cells) as c;
+-- The view follows the table's own read rules (was flagged UNRESTRICTED in Supabase until this was set).
+alter view public.iclass_price_cells set (security_invoker = true);
 comment on view public.iclass_price_cells is
   'iclass_price_tables flattened: one row per price box - child_number (1st, 2nd, 3rd child), days (number of days booked), amount (null = blank box in iClass).';
 
