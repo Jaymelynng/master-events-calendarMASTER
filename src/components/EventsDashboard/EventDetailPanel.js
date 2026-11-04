@@ -180,13 +180,13 @@ export default function EventDetailPanel({
           onCopyUrl={onCopyUrl}
         />
 
-        {/* Event Details - raised tiles, two across (wraps to one on a narrow panel) */}
+        {/* Event Details - raised tiles that wrap to the panel width; the daily schedule is a wide
+            tile in the same dashboard (it is time information), filling the room beside Ages */}
         <div
-          className="mb-4 rounded-2xl p-3 grid gap-2.5"
+          className="mb-4 rounded-2xl p-3 flex flex-wrap gap-2.5"
           style={{
             background: '#f1ece4',
             boxShadow: '0 8px 25px rgba(0,0,0,.14), 0 2px 6px rgba(0,0,0,.10)',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))',
           }}
         >
           <DetailTile icon={<MapPin className="w-4 h-4" />} label="Location">
@@ -230,13 +230,11 @@ export default function EventDetailPanel({
                   : `Up to ${event.age_max} years`}
             </DetailTile>
           )}
+          {/* Daily Schedule — per-weekday hours for camps; a mis-set day shows solid red */}
+          {Array.isArray(event.daily_schedule) && event.daily_schedule.length > 0 && (
+            <DailySchedule days={event.daily_schedule} />
+          )}
         </div>
-
-        {/* Daily Schedule — per-weekday hours for camps (shows when iClass
-            gives a multi-day schedule; makes a single mis-set day obvious) */}
-        {Array.isArray(event.daily_schedule) && event.daily_schedule.length > 0 && (
-          <DailySchedule days={event.daily_schedule} />
-        )}
 
         {/* Availability Status */}
         {(event.has_openings === false || event.openings != null || event.registration_end_date) && (
@@ -288,7 +286,7 @@ export default function EventDetailPanel({
   );
 }
 
-// Daily schedule component — one row per weekday. Highlights any day whose
+// Daily schedule tile (inside the Event Details dashboard) — one chip per weekday. Highlights any day whose
 // hours differ from the majority (a mis-set day like Monday at 1hr while the
 // rest run 3hr) so a settings mistake beyond day 1 is impossible to miss.
 function DailySchedule({ days }) {
@@ -305,8 +303,11 @@ function DailySchedule({ days }) {
   const anyOddDay = days.length > 1 && Object.keys(counts).length > 1;
 
   return (
-    <div className="mb-4">
-      <div className="flex items-center justify-between mb-1.5">
+    <div
+      className="rounded-xl bg-white px-3 py-2"
+      style={{ flex: '2 1 260px', boxShadow: '0 3px 10px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.08)' }}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
         <span className="text-xs font-extrabold uppercase tracking-wide" style={{ color: '#2f6f72' }}>📅 Daily schedule</span>
         {anyOddDay && (
           <span className="text-xs font-bold text-white px-2 py-0.5 rounded-full" style={{ background: '#c62828' }}>
@@ -322,10 +323,10 @@ function DailySchedule({ days }) {
               key={i}
               className="rounded-lg px-2.5 py-1.5 text-center"
               style={{
-                background: isOdd ? '#c62828' : '#ffffff',
+                background: isOdd ? '#c62828' : '#f1ece4',
                 color: isOdd ? '#ffffff' : '#1f2a33',
-                boxShadow: '0 3px 10px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.10)',
-                minWidth: 76,
+                boxShadow: '0 2px 0 rgba(0,0,0,.12)',
+                minWidth: 70,
               }}
               title={d.duration != null && d.duration !== '' ? `${d.duration} hr` : undefined}
             >
@@ -344,7 +345,7 @@ function DailySchedule({ days }) {
 // One raised tile in the Event Details grid: small teal label + icon, near-black value.
 function DetailTile({ icon, label, children }) {
   return (
-    <div className="rounded-xl bg-white px-3 py-2" style={{ boxShadow: '0 3px 10px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.08)' }}>
+    <div className="rounded-xl bg-white px-3 py-2" style={{ flex: '1 1 150px', boxShadow: '0 3px 10px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.08)' }}>
       <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide" style={{ color: '#2f6f72' }}>
         {icon}{label}
       </div>
