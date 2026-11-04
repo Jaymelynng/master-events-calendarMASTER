@@ -103,6 +103,10 @@ export default function EventDetailPanel({
   );
   const hasDescriptionIssue = event.description_status === 'flyer_only' || event.description_status === 'none';
   const hasSchedule = Array.isArray(event.daily_schedule) && event.daily_schedule.length > 0;
+  const setupPicture = iclassSetup.camp?.picture_path;
+  const campPictureUrl = setupPicture
+    ? (/^https?:/.test(setupPicture) ? setupPicture : `https://images.iclasspro.com/images/${setupPicture}`)
+    : (/images\.iclasspro\.com\/images\/\d+\/camps\//.test(event.flyer_url || '') ? event.flyer_url : null);
 
   // Separate errors by category
   const dataErrors = activeErrors.filter(e => inferErrorCategory(e) === 'data_error');
@@ -170,9 +174,21 @@ export default function EventDetailPanel({
         </div>
 
         {/* Event Title */}
-        <h4 className="font-bold text-xl mb-4 text-gray-800">
+        <h4 className="font-bold text-xl mb-3 text-gray-800">
           {event.title || `${event.type || event.event_type} Event`}
         </h4>
+
+        {/* The camp's own picture (iClass "Event Picture"), right under the title so the printed theme can be
+            checked against the name. iClass has no thumbnail - its portal shrinks this same full image too. */}
+        {campPictureUrl && (
+          <a href={campPictureUrl} target="_blank" rel="noopener noreferrer" title="Open the full picture"
+             className="block mb-4 rounded-xl overflow-hidden transition-transform hover:-translate-y-0.5"
+             style={{ boxShadow: '0 6px 18px rgba(0,0,0,.18), 0 2px 4px rgba(0,0,0,.10)', aspectRatio: '2 / 1', background: '#f1ece4' }}>
+            <img src={campPictureUrl} alt={`Picture for ${event.title}`} loading="lazy"
+                 className="w-full h-full object-cover"
+                 onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }} />
+          </a>
+        )}
 
         {/* Registration Options — moved to top of panel (was at bottom) so
             the register/copy buttons are immediately accessible without
@@ -271,7 +287,7 @@ export default function EventDetailPanel({
         )}
 
         {/* Flyer Image */}
-        {event.flyer_url && (
+        {event.flyer_url && event.flyer_url !== campPictureUrl && (
           <FlyerImage event={event} />
         )}
 
