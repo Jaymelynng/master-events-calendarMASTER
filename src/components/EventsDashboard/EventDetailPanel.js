@@ -100,6 +100,7 @@ export default function EventDetailPanel({
     error => error.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(event, error.message, acknowledgedPatterns)
   );
   const hasDescriptionIssue = event.description_status === 'flyer_only' || event.description_status === 'none';
+  const hasSchedule = Array.isArray(event.daily_schedule) && event.daily_schedule.length > 0;
 
   // Separate errors by category
   const dataErrors = activeErrors.filter(e => inferErrorCategory(e) === 'data_error');
@@ -180,6 +181,7 @@ export default function EventDetailPanel({
           onCopyUrl={onCopyUrl}
         />
 
+        {/* (hasSchedule: a camp with a per-weekday schedule from iClass) */}
         {/* Event Details - raised tiles that wrap to the panel width; the daily schedule is a wide
             tile in the same dashboard (it is time information), filling the room beside Ages */}
         <div
@@ -206,21 +208,13 @@ export default function EventDetailPanel({
               </>
             )}
           </DetailTile>
-          <DetailTile icon={<Clock className="w-4 h-4" />} label="Time">
-            {formatTime(event.time || event.event_time) || '—'}
-            {/* Camp signup mode (only for CAMPs that have data) */}
-            {event.type === 'CAMP' && event.allow_choose_days != null && (
-              <div className="mt-1.5">
-                <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold text-white"
-                  style={{ background: event.allow_choose_days ? '#1d4ed8' : '#6d28d9', boxShadow: '0 2px 0 rgba(0,0,0,.25)' }}
-                  title={event.allow_choose_days ? 'Parents can register for individual days' : 'Parents must register for the entire camp'}
-                >
-                  {event.allow_choose_days ? '✓ Per-day sign-up' : '📦 Full week only'}
-                </span>
-              </div>
-            )}
-          </DetailTile>
+          {/* Time tile only when there is no daily schedule - the schedule chips already show every day's hours */}
+          {!hasSchedule && (
+            <DetailTile icon={<Clock className="w-4 h-4" />} label="Time">
+              {formatTime(event.time || event.event_time) || '—'}
+              <SignupMode event={event} />
+            </DetailTile>
+          )}
           {(event.age_min || event.age_max) && (
             <DetailTile icon={<Users className="w-4 h-4" />} label="Ages">
               {event.age_min && event.age_max
@@ -231,8 +225,8 @@ export default function EventDetailPanel({
             </DetailTile>
           )}
           {/* Daily Schedule — per-weekday hours for camps; a mis-set day shows solid red */}
-          {Array.isArray(event.daily_schedule) && event.daily_schedule.length > 0 && (
-            <DailySchedule days={event.daily_schedule} />
+          {hasSchedule && (
+            <DailySchedule days={event.daily_schedule} event={event} />
           )}
         </div>
 
@@ -289,7 +283,7 @@ export default function EventDetailPanel({
 // Daily schedule tile (inside the Event Details dashboard) — one chip per weekday. Highlights any day whose
 // hours differ from the majority (a mis-set day like Monday at 1hr while the
 // rest run 3hr) so a settings mistake beyond day 1 is impossible to miss.
-function DailySchedule({ days }) {
+function DailySchedule({ days, event }) {
   // Build an "hours" key per day to detect the odd one out.
   const hoursOf = (d) => {
     if (d.duration != null && d.duration !== '') return String(d.duration);
@@ -308,7 +302,10 @@ function DailySchedule({ days }) {
       style={{ flex: '2 1 260px', boxShadow: '0 3px 10px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.08)' }}
     >
       <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
-        <span className="text-xs font-extrabold uppercase tracking-wide" style={{ color: '#2f6f72' }}>📅 Daily schedule</span>
+        <span className="flex items-center gap-2">
+          <span className="text-xs font-extrabold uppercase tracking-wide" style={{ color: '#2f6f72' }}>📅 Daily schedule</span>
+          <SignupMode event={event} inline />
+        </span>
         {anyOddDay && (
           <span className="text-xs font-bold text-white px-2 py-0.5 rounded-full" style={{ background: '#c62828' }}>
             ⚠️ A day doesn't match the rest
@@ -340,6 +337,21 @@ function DailySchedule({ days }) {
       </div>
     </div>
   );
+}
+
+// Camp sign-up mode badge (only for CAMPs that have the setting): per-day vs full week.
+function SignupMode({ event, inline }) {
+  if (!event || event.type !== 'CAMP' || event.allow_choose_days == null) return null;
+  const badge = (
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold text-white whitespace-nowrap"
+      style={{ background: event.allow_choose_days ? '#1d4ed8' : '#6d28d9', boxShadow: '0 2px 0 rgba(0,0,0,.25)' }}
+      title={event.allow_choose_days ? 'Parents can register for individual days' : 'Parents must register for the entire camp'}
+    >
+      {event.allow_choose_days ? '✓ Per-day sign-up' : '📦 Full week only'}
+    </span>
+  );
+  return inline ? badge : <div className="mt-1.5">{badge}</div>;
 }
 
 // One raised tile in the Event Details grid: small teal label + icon, near-black value.
