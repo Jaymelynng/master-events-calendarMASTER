@@ -4,9 +4,13 @@ Camp setup reader — signed-in, READ ONLY.
 
 Reads what the public feed can't: hidden camps, Show on Web / Allow Registration, Maximum Number of
 Entries, each camp's price table, and per-day sign-ups. Saves every reply WHOLE into:
-  iclass_camp_setup   (one row per camp that has not ended, hidden ones included)
+  iclass_camp_setup   (one row per camp; re-read while it has not ended, hidden ones included; also the
+                       public reply, the only home of "waitlist requests on/off")
   iclass_price_tables (one row per price table; view iclass_price_cells flattens it)
+  iclass_gym_settings (the gym-wide calls in GYM_SETTINGS_CALLS, one row each)
   iclass_setup_reads  (one row per gym per read — "ok" or why it was NOT read)
+Nothing is ever deleted: an ended camp keeps its last read; a camp or price table iClass no longer
+lists gets gone_from_iclass_at.
 
 Runs AFTER the normal sync and never touches the events table, so the public sync is unchanged.
 
@@ -30,7 +34,7 @@ import re
 import sys
 from datetime import date, datetime, timezone
 from http.cookiejar import CookieJar
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 from urllib.request import HTTPCookieProcessor, Request, build_opener, HTTPRedirectHandler
 from urllib.error import HTTPError
 
@@ -46,7 +50,23 @@ ALLOWED_GETS = [
     r'/api/v1/camps/\d+',
     r'/api/v1/get-camp-occupancy/\d+',
     r'/api/v1/pricing-schedules/',
+    r'/api/v1/camp-types/',
+    r'/api/v1/programs',
+    r'/api/v1/charge-categories',
+    r'/api/v1/settings/parent-portal-camp-registration',
+    r'/api/v1/settings/parent-portal-general',
+    r'/api/open/v1/[a-z0-9]+/camps/\d+',
 ]
+
+# Gym-wide calls, read once per gym, each reply saved whole (iclass_gym_settings.setting_key = the key).
+# Every one is in Jayme's F12 recordings (_HAR-CAPTURES field map, checked 2026-11-04).
+GYM_SETTINGS_CALLS = {
+    'camp-types': '/api/v1/camp-types/',
+    'programs': '/api/v1/programs',
+    'charge-categories': '/api/v1/charge-categories',
+    'parent-portal-camp-registration': '/api/v1/settings/parent-portal-camp-registration',
+    'parent-portal-general': '/api/v1/settings/parent-portal-general',
+}
 
 
 def _allowed(path):
@@ -147,8 +167,8 @@ class HarSource:
         return self.replies.get(path)
 
 
-def collect(source, today=None):
-    """Every price table + every camp that has not ended (hidden ones included), each reply whole."""
+def collect(source, slug, today=None):
+    """Every price table + gym-wide setting + every camp that has not ended (hidden ones too), each reply whole."""
     today = (today or date.today()).isoformat()
     tables = (source.get('/api/v1/pricing-schedules/') or {}).get('data')
     listing = (source.get('/api/v1/camps/') or {}).get('data')
@@ -165,9 +185,19 @@ def collect(source, today=None):
             missing.append(camp_id)
             continue
         occ = source.get(f'/api/v1/get-camp-occupancy/{camp_id}')
-        camps.append({'camp_id': camp_id, 'raw': detail, 'occupancy': occ.get('data') if occ else None})
+        public = source.get(f'/api/open/v1/{slug}/camps/{camp_id}')
+        camps.append({'camp_id': camp_id, 'raw': detail, 'occupancy': occ.get('data') if occ else None,
+                      'public_raw': public.get('data') if public else None})
+    settings, settings_missing = {}, []
+    for key, path in GYM_SETTINGS_CALLS.items():
+        reply = source.get(path)
+        if reply is None:
+            settings_missing.append(key)
+        else:
+            settings[key] = reply
     return {'price_tables': tables, 'camps': camps, 'camps_listed': len(listing),
-            'camps_kept': len(keep), 'camps_missing': missing}, None
+            'listed_ids': [c['id'] for c in listing], 'camps_kept': len(keep), 'camps_missing': missing,
+            'settings': settings, 'settings_missing': settings_missing}, None
 
 
 # ---------------------------------------------------------------- Supabase
@@ -199,20 +229,33 @@ def finish_read(read_id, status, note, result=None):
 
 
 def save(gym_id, result, read_at):
-    """Upsert every row, then drop this gym's rows the read no longer saw (camp ended or deleted)."""
-    tables = [{'gym_id': gym_id, 'price_table_id': t['id'], 'name': t.get('name'), 'raw': t, 'read_at': read_at}
-              for t in result['price_tables']]
+    """Upsert every row. Never deletes: what iClass no longer lists gets gone_from_iclass_at."""
+    tables = [{'gym_id': gym_id, 'price_table_id': t['id'], 'name': t.get('name'), 'raw': t, 'read_at': read_at,
+               'gone_from_iclass_at': None} for t in result['price_tables']]
     camps = [{'gym_id': gym_id, 'camp_id': c['camp_id'], 'raw': c['raw'], 'occupancy': c['occupancy'],
-              'read_at': read_at} for c in result['camps']]
+              'public_raw': c['public_raw'], 'read_at': read_at, 'gone_from_iclass_at': None}
+             for c in result['camps']]
+    settings = [{'gym_id': gym_id, 'setting_key': k, 'raw': v, 'read_at': read_at}
+                for k, v in result['settings'].items()]
     for i in range(0, len(tables), 200):
         _sb('POST', 'iclass_price_tables?on_conflict=gym_id,price_table_id', tables[i:i + 200],
             prefer='resolution=merge-duplicates')
     for i in range(0, len(camps), 100):
         _sb('POST', 'iclass_camp_setup?on_conflict=gym_id,camp_id', camps[i:i + 100],
             prefer='resolution=merge-duplicates')
-    # Only after every row above saved: remove what this full read did not see.
-    _sb('DELETE', f'iclass_price_tables?gym_id=eq.{gym_id}&read_at=lt.{quote(read_at)}')
-    _sb('DELETE', f'iclass_camp_setup?gym_id=eq.{gym_id}&read_at=lt.{quote(read_at)}')
+    if settings:
+        _sb('POST', 'iclass_gym_settings?on_conflict=gym_id,setting_key', settings,
+            prefer='resolution=merge-duplicates')
+    # Mark (never delete) what iClass no longer lists. An empty list is treated as a failed read, not
+    # "everything is gone" - a suspiciously clean answer is never trusted.
+    if result['listed_ids']:
+        ids = ','.join(str(i) for i in result['listed_ids'])
+        _sb('PATCH', f'iclass_camp_setup?gym_id=eq.{gym_id}&camp_id=not.in.({ids})&gone_from_iclass_at=is.null',
+            {'gone_from_iclass_at': read_at})
+    if result['price_tables']:
+        ids = ','.join(str(t['id']) for t in result['price_tables'])
+        _sb('PATCH', f'iclass_price_tables?gym_id=eq.{gym_id}&price_table_id=not.in.({ids})'
+                     f'&gone_from_iclass_at=is.null', {'gone_from_iclass_at': read_at})
 
 
 def fetch_gyms():
@@ -220,7 +263,7 @@ def fetch_gyms():
     return {r['id']: r['iclass_slug'] for r in rows if r.get('iclass_slug')}
 
 
-def run_gym(gym_id, source, do_save, note_prefix=''):
+def run_gym(gym_id, slug, source, do_save, note_prefix=''):
     read_id = start_read(gym_id) if do_save else None
     ok, why = source.sign_in()
     if not ok:
@@ -230,7 +273,7 @@ def run_gym(gym_id, source, do_save, note_prefix=''):
         return
     try:
         read_at = source.read_time()
-        result, err = collect(source)
+        result, err = collect(source, slug)
     except RuntimeError as e:
         print(f"  [SETUP] {gym_id}: STOPPED - {e}")
         if read_id:
@@ -244,12 +287,17 @@ def run_gym(gym_id, source, do_save, note_prefix=''):
     print(f"  [SETUP] {gym_id}: {result['camps_listed']} camps listed, {result['camps_kept']} not ended, "
           f"{len(result['camps'])} read, {len(result['camps_missing'])} did not answer, "
           f"{sum(1 for c in result['camps'] if c['occupancy'] is not None)} with per-day counts, "
-          f"{len(result['price_tables'])} price tables")
+          f"{sum(1 for c in result['camps'] if c['public_raw'] is not None)} with the public reply, "
+          f"{len(result['price_tables'])} price tables, "
+          f"{len(result['settings'])} of {len(GYM_SETTINGS_CALLS)} gym settings"
+          + (f" (not read: {', '.join(result['settings_missing'])})" if result['settings_missing'] else ''))
     if do_save:
         save(gym_id, result, read_at)
         status = 'ok' if not result['camps_missing'] else 'stopped'
         note = note_prefix + (f"{len(result['camps_missing'])} camps did not answer: {result['camps_missing'][:20]}"
                               if result['camps_missing'] else 'every camp answered')
+        if result['settings_missing']:
+            note += '; gym settings not read: ' + ', '.join(result['settings_missing'])
         finish_read(read_id, status, note, result)
 
 
@@ -270,7 +318,7 @@ def main():
         gyms = fetch_gyms() if SUPABASE_URL else {}
         if gyms and src.account and gyms.get(a.gym) != src.account:
             sys.exit(f"the recording is from '{src.account}', not {a.gym} ('{gyms.get(a.gym)}') - stopping")
-        run_gym(a.gym, src, a.save, note_prefix='from F12 recording; ')
+        run_gym(a.gym, src.account or gyms.get(a.gym), src, a.save, note_prefix='from F12 recording; ')
         return
 
     if not SUPABASE_URL or not SUPABASE_KEY:
@@ -289,7 +337,7 @@ def main():
             if a.save:
                 finish_read(start_read(gym_id), 'no_login', f'no ICLASS_SETUP_USER / ICLASS_SETUP_PASS_{gym_id} in Railway Variables')
             continue
-        run_gym(gym_id, LiveSource(gyms[gym_id], user, pw), a.save)
+        run_gym(gym_id, gyms[gym_id], LiveSource(gyms[gym_id], user, pw), a.save)
 
 
 if __name__ == '__main__':

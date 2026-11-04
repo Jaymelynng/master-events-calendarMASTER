@@ -155,6 +155,7 @@ EVENT_TYPE_ALIASES = {
 USE_DIRECT_API = os.environ.get('USE_DIRECT_API', 'true').lower() in ('true', '1', 'yes')
 
 ICLASSPRO_API_BASE = "https://app.iclasspro.com/api/open/v1"
+ICLASS_IMAGE_BASE = "https://images.iclasspro.com/images/"
 
 # Map iClassPro booking category titles to our event types.
 # Categories NOT listed here are SKIPPED (e.g., CAMP AFTER CARE, CAMP BEFORE CARE).
@@ -1546,6 +1547,10 @@ def convert_event_dicts_to_flat(events, gym_id, portal_slug, camp_type_label):
         possible_image_fields = ['image', 'imageUrl', 'image_url', 'flyerUrl', 'flyer_url', 'mediaUrl', 'media_url', 'photo', 'photoUrl']
         for field in possible_image_fields:
             img_url = ev.get(field)
+            # iClass sends the camp picture as a short path ("129/camps/<file>.jpg"), not a link.
+            # Checked 2026-11-04: images.iclasspro.com/images/<path> serves it (CCP + SGT both 200).
+            if img_url and isinstance(img_url, str) and re.match(r'^\d+/', img_url):
+                img_url = ICLASS_IMAGE_BASE + img_url
             if img_url and isinstance(img_url, str) and img_url.startswith('http'):
                 has_flyer = True
                 flyer_url = img_url

@@ -162,6 +162,7 @@ The doc-map hook will surface the iClassPro section at the top of every UserProm
 | `iclass_camp_setup` | Every camp not ended (hidden too), whole signed-in iClass reply + per-day counts (added 2026-11-04) |
 | `iclass_price_tables` / view `iclass_price_cells` | Every iClass price table per gym; cells = child # × days → amount (added 2026-11-04) |
 | `iclass_setup_reads` | Per gym per read: ok, or why NOT read — "setup not read", never "no errors" |
+| `iclass_gym_settings` | Gym-wide iClass setup per gym, whole reply: camp-types, programs, charge-categories, parent-portal-camp-registration, parent-portal-general |
 | `event_type_mappings` | iClass camp-type name → calendar bucket (Admin › Buckets). No row = UNSORTED |
 | `event_audit_log` | History of all changes |
 | `sync_log` | Sync progress tracking |
