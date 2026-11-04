@@ -1,6 +1,6 @@
 # Pricing source of truth — input contract (SSoT)
 
-**Last updated:** October 2, 2026  
+**Last updated:** November 4, 2026  
 **Purpose:** Single contract for how camp/event pricing works so docs, Python, and Admin UI stay aligned.
 
 ---
@@ -12,7 +12,8 @@ Her words: *"i have told u a million times that those prices needed to be remove
 - **The only price source:** the gym's own iClass price table, read signed-in and read-only by `automation/camp_setup_reader.py`: `GET /api/v1/pricing-schedules/` (every table) matched by each camp's `pricingScheduleId` from `GET /api/v1/camps/{id}`. Never a price guessed from a title or description.
 - **Tables** (`database/ADD_ICLASS_CAMP_SETUP_TABLES.sql`, applied 2026-11-04): `iclass_price_tables` (whole reply per table), view `iclass_price_cells` (child_number × days → amount; null = blank box), `iclass_camp_setup` (whole camp setup + per-day counts, hidden camps included), `iclass_setup_reads` (per gym: read ok, or why not — "setup not read", never "no errors").
 - **iClass's shape** (proven on CCP's recording 2026-11-04): `tableCells` is rows of boxes, `studentEnum` = 1st/2nd/3rd child, `blockEnum` = number of days. KNO, clinics and open gym use price tables too.
-- **Status 2026-11-04:** tables live; CCP loaded from Jayme's recording (49 camps not ended, 41 price tables, 149 boxes). No live login yet (Railway Variables `ICLASS_SETUP_USER_<GYM>` / `ICLASS_SETUP_PASS_<GYM>`). No price CHECK built yet. The old `camp_pricing` / `event_pricing` / `archive.pricing_schedules` hold old prices nothing reads.
+- **Status 2026-11-04:** tables live; CCP loaded from Jayme's recording (49 camps not ended, 41 price tables, 149 boxes). No live login yet (Railway Variables `ICLASS_SETUP_USER_<GYM>` / `ICLASS_SETUP_PASS_<GYM>`). No price CHECK built yet.
+- **Old price tables removed 2026-11-04** at her go ("Yes, remove them"): `camp_pricing`, `event_pricing`, `archive.pricing_schedules`, function `get_current_price`, plus the old scripts (`pricing_supabase.py`, `create_master_pricing.py`, `populate_camp_pricing_map.py`) and April price snapshots. Record: `database/REMOVED_OLD_PRICE_TABLES_2026_11_04.sql`; every row: `database/backups/REMOVED_OLD_PRICE_TABLES_2026_11_04_backup.json`.
 
 ---
 
@@ -25,7 +26,7 @@ Her words: *"i have told u a million times that those prices needed to be remove
 - **Sync:** `f12_collect_and_import.py` no longer sets a price. It used to fill one from `camp_pricing` / `event_pricing`, and if that found nothing, from the first dollar amount in the title or description. All of that is gone.
 - **Engine:** `validation_engine.py` has no price checks.
 - **App:** price is gone from the event side panel, Table View, CSV export, sync preview, add-event form, Rule Wizard, and the Gym Rules filters.
-- **Still there, unused:** the `camp_pricing` and `event_pricing` tables keep their rows. Nothing reads them.
+- **Still there, unused (until 2026-11-04, now removed):** the `camp_pricing` and `event_pricing` tables kept their rows. Nothing read them.
 - **Record + backup:** `database/REMOVED_PRICING_2026_10_02.sql` and `database/backups/REMOVED_PRICING_2026_10_02_backup.json`.
 - **Do NOT re-add any of it without Jayme's explicit go.**
 

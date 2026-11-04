@@ -29,8 +29,8 @@ Used by `automation/f12_collect_and_import.py`:
 
 ### 3. What iClass does NOT expose anywhere publicly
 
-- **Camp prices** (the calendar no longer handles prices at all — see §6 below)
-- `pricing_schedule_id` on event detail (the public detail endpoint does NOT include this field)
+- **Camp prices** — only a signed-in staff read gets them (see §6 below)
+- `pricing_schedule_id` on event detail (the public detail endpoint does NOT include this field; the signed-in `GET /api/v1/camps/{id}` does: `pricingScheduleId`)
 - `billing_schedule_id` / `chargeCategoryId` (these fields exist in the cart-response schema but are NULL for events that don't use schedules)
 - Any setup-level admin data
 
@@ -54,18 +54,13 @@ The ONE iClass-sanctioned path that COULD give programmatic pricing access — b
 
 (All require some form of authentication; none use a "real" API)
 
-**⛔ ALL PRICING REMOVED October 2, 2026 (Jayme's decision, commit c4bcfc1).** The calendar does not set, show, export or check a price anywhere; `events.price` is NULL on every event. The paths below are background only — do NOT build any of them without her explicit go.
-
-1. **Service-account customer flow** — log in as a fake parent, `add-cart-item` → `validate-cart-item` to read price, `remove-all-cart-items`. Heavy build. Brittle (JWT expires hourly, captchas, ToS risk).
-2. **Admin-side pricing-schedules pull** — what we did in April to load 274 schedules into Supabase. Requires admin login. Could be re-run periodically (cron) for fresh data.
-3. **Manual** — `camp_pricing` and `event_pricing` tables. They still exist with rows, but nothing reads them since October 2, 2026.
+**THE path (Nov 4, 2026, Jayme's go):** a signed-in, READ-ONLY staff read per gym — `automation/camp_setup_reader.py`. It reads `GET /api/v1/pricing-schedules/` (every price table) and `GET /api/v1/camps/{id}` (each camp's `pricingScheduleId`, hidden camps included). The old ideas (fake-parent cart flow; the hand-kept `camp_pricing` / `event_pricing` tables) are dead — those tables were removed 2026-11-04 (`database/REMOVED_OLD_PRICE_TABLES_2026_11_04.sql`).
 
 ### 7. Pricing data architecture in this project
 
 | Event type | How iClass stores pricing | Our table |
 |---|---|---|
-| Camps | Pricing schedules (per-day / per-week, full / half) | `camp_pricing` (unread since 2026-10-02) + `archive.pricing_schedules` (April 274-row snapshot, unwired) |
-| KNO / Clinic / Open Gym | Single flat price per event | `event_pricing` (unread since 2026-10-02) |
+| Camps, KNO, Clinic, Open Gym (iClass treats them all as camps) | A price table per camp: rows of boxes, `studentEnum` = 1st/2nd/3rd child, `blockEnum` = number of days | `iclass_price_tables` (whole reply) → view `iclass_price_cells`; each camp's `pricingScheduleId` in `iclass_camp_setup.raw`. Read status per gym: `iclass_setup_reads` |
 
 ### 8. Tier-locked features (don't suggest features the gym doesn't have)
 
@@ -164,8 +159,9 @@ The doc-map hook will surface the iClassPro section at the top of every UserProm
 | `gyms` | Every gym — read the table (this database still stores the old codes AAG / EAG / PLG; the hub uses AAR / EGF / PGN). Includes manager_name, manager_email |
 | `gym_links` | URLs for each gym's iClassPro pages |
 | `rules` | Unified validation rules + system checks — drives all validation via validation_engine.py (26 rows on 2026-10-13: 10 system checks + 4 valid_time + 12 requirement_exception) |
-| `camp_pricing` | Old camp prices — nothing reads it since pricing was removed 2026-10-02 |
-| `event_pricing` | Old Clinic/KNO/Open Gym prices — nothing reads it since 2026-10-02 |
+| `iclass_camp_setup` | Every camp not ended (hidden too), whole signed-in iClass reply + per-day counts (added 2026-11-04) |
+| `iclass_price_tables` / view `iclass_price_cells` | Every iClass price table per gym; cells = child # × days → amount (added 2026-11-04) |
+| `iclass_setup_reads` | Per gym per read: ok, or why NOT read — "setup not read", never "no errors" |
 | `event_type_mappings` | iClass camp-type name → calendar bucket (Admin › Buckets). No row = UNSORTED |
 | `event_audit_log` | History of all changes |
 | `sync_log` | Sync progress tracking |
@@ -184,14 +180,14 @@ The doc-map hook will surface the iClassPro section at the top of every UserProm
 | **Time** | iClass API (`schedule.startTime`) | We compare this to title/description |
 | **Age Range** | iClass API (`minAge`, `maxAge`) | We compare this to title/description |
 | **Program Type** | iClass API (`link_type_id`) | Maps to KNO, CLINIC, CAMP, etc. |
-| **Price** | ⛔ Not handled | All pricing removed October 2, 2026 — no price is set, shown, exported or checked |
+| **Price** | Signed-in iClass read → `iclass_price_tables` (Nov 4, 2026) | Not shown or exported; price checks not built yet |
 | **Spots Remaining** | iClass API (`openings`) | NEW Apr 26 — exact integer count of empty spots per event |
 | **Spot Display String** | iClass API (`openingsDisplay`) | NEW Apr 26 — pre-formatted (e.g. "23 Openings Available") |
 | **Show Openings Setting** | iClass API (`showOpenings`) | NEW Apr 26 — gym setting; all 10 gyms currently `true` |
 | **Total Capacity** | ❌ NOT AVAILABLE | iClass `maxStudents` is always null in public API. Cannot show "23/40" without manual entry. |
 
 ### Price
-iClass does NOT provide price in its public API. The old `camp_pricing` / `event_pricing` lookup was removed with all pricing on October 2, 2026 (record: `database/REMOVED_PRICING_2026_10_02.sql`). Do not re-add without Jayme's go. **Nov 4, 2026:** her go to bring price back into the audit, checked only against the gym's iClass price table read by a signed-in staff read (path 2 in §6) — see `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md`.
+iClass does NOT provide price in its public API. Price comes ONLY from the gym's own iClass price table, read signed-in (§6) — see `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md`. Never a price parsed from a title or description. The old `camp_pricing` / `event_pricing` / `archive.pricing_schedules` tables were removed 2026-11-04 (her words: *"forget the old pricing rules that didnt work"*).
 
 ---
 

@@ -102,11 +102,12 @@
 - **Text checks skip** events with no description and Special Events; **settings checks** (`SETTINGS_CHECKS`, e.g. registration closes early) run on every event
 - **What gets compared:** `docs/OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md`
 
-### Pricing — ⛔ ALL PRICING REMOVED (October 2, 2026, Jayme's decision)
-- The calendar no longer sets, shows, exports, or checks a price anywhere. Reason, in her words: it is not verified as correct and there is no system yet to compare prices. `events.price` is NULL on every event, the sync has no price code, the engine has no price checks, there is no `valid_price` / `sibling_price` rule type, and the app has no price column, field, filter, or rule type.
-- **Do NOT re-add any price display, lookup, title/description price parsing, or price validation without her explicit go.** Record + backup: `database/REMOVED_PRICING_2026_10_02.sql`, `database/backups/REMOVED_PRICING_2026_10_02_backup.json`. Guard test: `automation/test_validation_fixtures.py`. Earlier July 2026 removal of the 3 price checks: `database/REMOVED_PRICING_VALIDATION_2026_07_01.sql`.
-- `camp_pricing` and `event_pricing` tables still exist with their rows, but **nothing reads them**. iClass's public API gives no prices.
-- **Nov 4, 2026 — her go ("yes"): price comes back into the AUDIT**, checked only against the gym's own iClass price table from a signed-in, read-only staff read. Not built yet. Details: `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md` (top section).
+### Pricing — rebuilt on the signed-in iClass read (November 4, 2026)
+- **Oct 2, 2026:** all pricing removed — her words then: not verified as correct, no system yet to compare prices. Her words Nov 4: *"those prices needed to be removed and we would add them later"* · *"forget the old pricing rules that didnt work"*.
+- **The only price source now:** the gym's own iClass price table, read signed-in and read-only by `automation/camp_setup_reader.py` into `iclass_price_tables` (view `iclass_price_cells`: child # × days → amount) and `iclass_camp_setup` (each camp's whole setup, hidden camps included). Per-gym read status: `iclass_setup_reads` — a gym not read shows "setup not read", never "no errors".
+- **Not built yet:** price checks, live logins (Railway Variables `ICLASS_SETUP_USER_<GYM>` / `ICLASS_SETUP_PASS_<GYM>`). The app still shows and exports no price; `events.price` is NULL. Never parse a price from a title or description.
+- **Removed 2026-11-04:** the old `camp_pricing` / `event_pricing` / `archive.pricing_schedules` tables, `get_current_price`, and the old price scripts — record `database/REMOVED_OLD_PRICE_TABLES_2026_11_04.sql`. Earlier removals: `database/REMOVED_PRICING_2026_10_02.sql`, `database/REMOVED_PRICING_VALIDATION_2026_07_01.sql`. Guard test: `automation/test_validation_fixtures.py`.
+- Full contract: `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md` (top section).
 
 ### Rules System
 - **ONE table: `rules`** — Python backend + frontend + Rule Wizard + dismiss flows all use it (`gym_valid_values` is dropped)
@@ -200,7 +201,7 @@ iClass behavior claims: grep `C:\Users\Jayme\JAYME PROJECTS\SOURCE-OF-TRUTH\icla
 1. **Don't say "it should work"** — Test it, then say "I tested it and it works"
 2. **Don't skip reading docs** — Jayme spent hours writing them. Read them.
 3. **Don't hardcode validation** — All checks come from the `rules` table via `validation_engine.py`.
-4. **Don't add prices back** — no price display or lookup without her explicit go; price CHECKS have her go (Nov 4, 2026) only against the gym's iClass price table (see Pricing).
+4. **Price only from the signed-in iClass price table** — never parsed from text, never a hand-kept table; no price display without her go (see Pricing).
 5. **Don't query with another area's codes** — this DB uses AAG / EAG / PLG; AAR / EGF / PGN return 0 rows.
 6. **Don't simulate with fake data** — Use actual Supabase data
 7. **Don't edit `EventsDashboard.js`** — it's dead; the live file is `EventsDashboard_REFACTORED.js`

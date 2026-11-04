@@ -83,7 +83,7 @@ docs/
 | [AUTO_ARCHIVE_SYSTEM.md](OPERATIONS/AUTO_ARCHIVE_SYSTEM.md) | Automatic event archiving |
 | [AUDIT-SYSTEM.md](OPERATIONS/AUDIT-SYSTEM.md) | Change tracking / audit history |
 | [DATA_QUALITY_VALIDATION.md](OPERATIONS/DATA_QUALITY_VALIDATION.md) | Automatic data validation + per-gym rules |
-| **[PRICING_SOURCE_OF_TRUTH.md](OPERATIONS/PRICING_SOURCE_OF_TRUTH.md)** | History of price checks — all pricing removed October 2, 2026 (nothing reads `camp_pricing` / `event_pricing` now) |
+| **[PRICING_SOURCE_OF_TRUTH.md](OPERATIONS/PRICING_SOURCE_OF_TRUTH.md)** | Price contract — Nov 4, 2026: price only from the signed-in iClass read (`iclass_price_tables`); old `camp_pricing` / `event_pricing` removed. Below that, history |
 | [PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md](OPERATIONS/PRODUCT_VISION_MULTI_SPORT_AI_SETUP.md) | Roadmap: other sports + AI-assisted org setup (planned) |
 | **[AUDIT_DATA_ERROR_REFERENCE.md](OPERATIONS/AUDIT_DATA_ERROR_REFERENCE.md)** ⭐ | What gets compared for each DATA error — source of truth explained |
 | **[OPENINGS_CAPACITY_FEATURE.md](OPERATIONS/OPENINGS_CAPACITY_FEATURE.md)** ⭐ NEW | Spot-count tracking — iClass API discovery, card display, CSV export, layout decisions |

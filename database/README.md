@@ -38,7 +38,8 @@ These document schema changes over time:
 | `CREATE_RULES_TABLE.sql` | Unified validation rules system — replaced `gym_valid_values` (Feb 23, 2026) |
 | `CREATE_REQUIREMENT_NOTES.sql` | Status tracking for missing monthly requirements |
 | `CREATE_FUTURE_PLANS_TABLE.sql` | Admin-managed roadmap items |
-| `CREATE_EVENT_PRICING_TABLE.sql` | Per-event-type pricing with `effective_date` (CLINIC, KNO, OPEN GYM) |
+| `ADD_ICLASS_CAMP_SETUP_TABLES.sql` | Signed-in iClass camp setup + price tables (2026-11-04) |
+| `REMOVED_OLD_PRICE_TABLES_2026_11_04.sql` | Removed `camp_pricing`, `event_pricing`, `archive.pricing_schedules`, `get_current_price` — rows in `backups/REMOVED_OLD_PRICE_TABLES_2026_11_04_backup.json` |
 | `CREATE_MONTHLY_REQUIREMENTS_TABLE.sql` | Per-event-type compliance threshold (admin-editable). Adds the missing FOR ALL RLS policy that was blocking writes (May 6, 2026) |
 | `ENABLE_RLS_ON_UNGUARDED_TABLES.sql` | Closes 3 RLS gaps: `sync_log` gets FOR ALL policy (anon read+write), `camp_pricing_map` and `extractors` get RLS-on-no-policy lockdown (anon denied, service-role still works). May 6, 2026 |
 | `MIGRATE_GYM_VALID_VALUES_TO_RULES.sql` | One-time migration when `gym_valid_values` was retired |
@@ -91,12 +92,11 @@ Start from the live definition (`pg_get_viewdef`), not `FIX_ACKNOWLEDGED_ERRORS_
 | `link_types` | Link type definitions |
 | `monthly_requirements` | Compliance tracking — see `CREATE_MONTHLY_REQUIREMENTS_TABLE.sql` |
 | `rules` | Unified validation rules + system checks (replaces dropped `gym_valid_values`) |
-| `event_pricing` | Old prices for CLINIC, KNO, OPEN GYM — nothing reads it since all pricing was removed 2026-10-02 |
-| `camp_pricing` | Old CAMP prices — nothing reads it since 2026-10-02 |
+| `iclass_camp_setup`, `iclass_price_tables` (+ view `iclass_price_cells`), `iclass_setup_reads` | Signed-in, read-only iClass camp setup + price tables — see `ADD_ICLASS_CAMP_SETUP_TABLES.sql` (2026-11-04). The old `camp_pricing` / `event_pricing` / `archive.pricing_schedules` were removed the same day: `REMOVED_OLD_PRICE_TABLES_2026_11_04.sql` |
 | `acknowledged_patterns` | Temp overrides: "dismiss for all events of this program at this gym" |
 | `requirement_notes` | Status (In Progress / Late / Excused) for missing monthly requirements |
 | `future_plans` | Admin-managed roadmap |
-| `archive.pricing_schedules`, `archive.camp_type_mappings` | April iClassPro pricing data (274 schedules, 243 type mappings) — moved to the `archive` schema |
+| `archive.camp_type_mappings` | April iClassPro camp-type data (243 type mappings) in the `archive` schema |
 | `event_type_mappings` | iClass camp-type name → calendar bucket (Admin › Buckets); no row = UNSORTED |
 | `category_mappings`, `extractors`, `format_patterns`, `app_config`, `error_email_log`, `verified_events` | Also in `public` (listed 2026-10-13) |
 
