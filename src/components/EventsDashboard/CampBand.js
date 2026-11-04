@@ -253,6 +253,7 @@ export default function CampBand({
       placements.push({
         variant,
         gridColumn,
+        span: endIdx - startIdx + 1,
         gridRow: laneToRow[laneKeyForVariant(variant)],
         dayCells,
       });
@@ -281,7 +282,7 @@ export default function CampBand({
         background: '#f9fafb',
       }}
     >
-      {placements.map(({ variant, gridColumn, gridRow, dayCells }) => {
+      {placements.map(({ variant, gridColumn, gridRow, dayCells, span }) => {
         const style = variantStyle(variant);
         // With per-day counts the bar's status is the TIGHTEST day (the public number is day 1 only)
         const perDayCells = Array.isArray(dayCells) ? dayCells : null;
@@ -302,6 +303,11 @@ export default function CampBand({
         // Errors Focus: dim clean variants, leave flagged ones bright.
         const hasIssue = errorFocus ? variantHasIssue(variant, acknowledgedPatterns) : false;
         const dimmed = errorFocus && !hasIssue;
+        // A one- or two-day camp (a holiday camp) gets one or two day columns - too narrow for
+        // "🤸 Full ⚠️ 2 left" in a row, which used to clip to an empty box (EST Veterans Day,
+        // Jayme 2026-11-04). Narrow bars stack instead: Full/Half on top, the spots number under it.
+        const narrow = span <= 2;
+        const minOpen = met.length ? Math.min(...met) : (variant.openings != null ? Number(variant.openings) : null);
 
         return (
           <div
@@ -318,11 +324,12 @@ export default function CampBand({
               border: hasErrors ? '2px solid #dc3545' : `1.5px solid ${style.border}`,
               background: style.bg,
               color: style.color,
-              padding: perDayCells ? '2px 6px 3px' : '0 8px',
+              padding: narrow ? '2px 2px' : perDayCells ? '2px 6px 3px' : '0 8px',
               display: 'flex',
-              flexDirection: perDayCells ? 'column' : 'row',
-              alignItems: perDayCells ? 'stretch' : 'center',
-              justifyContent: 'space-between',
+              flexDirection: narrow || perDayCells ? 'column' : 'row',
+              alignItems: narrow ? 'center' : perDayCells ? 'stretch' : 'center',
+              justifyContent: narrow ? 'center' : 'space-between',
+              gap: narrow ? 1 : undefined,
               fontSize: '11px',
               fontWeight: 800,
               cursor: 'pointer',
@@ -330,7 +337,8 @@ export default function CampBand({
                 ? '0 0 0 2px rgba(220,53,69,0.18), 0 1px 2px rgba(0,0,0,0.06)'
                 : '0 1px 2px rgba(0,0,0,0.06)',
               minWidth: 0,
-              overflow: 'hidden',
+              // narrow bars let the spots pill spill a few pixels past the edge rather than cut it
+              overflow: narrow ? 'visible' : 'hidden',
               position: 'relative',
             }}
             onClick={() => onEventSelect && onEventSelect(variant)}
@@ -357,6 +365,38 @@ export default function CampBand({
                 title="Data error — click to see what's wrong"
               />
             )}
+            {narrow ? (
+              <>
+                <span style={{ fontSize: 9.5, fontWeight: 900, lineHeight: '12px', whiteSpace: 'nowrap' }}>
+                  {barLabel(variant)}
+                </span>
+                {perDayCells && perDayCells.length > 1 ? (
+                  <div style={{ display: 'flex', gap: 2 }}>
+                    {perDayCells.map((d, i) => {
+                      const o = d ? Number(d.open || 0) : null;
+                      return (
+                        <span key={i} style={{
+                          fontSize: 10.5, fontWeight: 900, lineHeight: '15px', padding: '0 3px', borderRadius: 4,
+                          background: o === 0 ? '#c0392b' : o != null && o <= 3 ? '#fde7c8' : 'rgba(255,255,255,.85)',
+                          color: o === 0 ? '#ffffff' : o != null && o <= 3 ? '#8a4b08' : '#1f2a33',
+                        }}>
+                          {o == null ? '' : o === 0 ? 'FULL' : o}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : minOpen != null ? (
+                  <span style={{
+                    fontSize: 10.5, fontWeight: 900, lineHeight: '15px', padding: '0 3px', borderRadius: 4,
+                    whiteSpace: 'nowrap',
+                    background: minOpen === 0 ? '#c0392b' : minOpen <= 3 ? '#fde7c8' : 'rgba(255,255,255,.85)',
+                    color: minOpen === 0 ? '#ffffff' : minOpen <= 3 ? '#8a4b08' : STATUS_COLORS.open,
+                  }}>
+                    {minOpen === 0 ? 'FULL' : minOpen}
+                  </span>
+                ) : null}
+              </>
+            ) : (<>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0, gap: 6 }}>
             <div style={{
               display: 'flex',
@@ -414,6 +454,7 @@ export default function CampBand({
                 })}
               </div>
             )}
+            </>)}
           </div>
         );
       })}
