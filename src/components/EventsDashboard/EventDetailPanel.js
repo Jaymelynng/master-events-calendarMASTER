@@ -375,46 +375,49 @@ function AvailabilityStatus({ event }) {
   const isLow = hasCount && count > 0 && count <= 3;
   const isFull = event.has_openings === false || count === 0;
 
+  // Registration close date as 11/6/2026 (read as a local date - new Date('2026-11-06') would be UTC
+  // and land on the previous day in US time zones)
+  const regEnd = event.registration_end_date ? String(event.registration_end_date).slice(0, 10) : null;
+  let regLabel = null;
+  let regPassed = false;
+  if (regEnd) {
+    const [y, m, d] = regEnd.split('-').map(Number);
+    regLabel = `${m}/${d}/${y}`;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    regPassed = new Date(y, m - 1, d) < today;
+  }
+
+  const tone = isFull
+    ? { bg: '#c62828', fg: '#ffffff' }
+    : isLow
+      ? { bg: '#fff1e0', fg: '#9a3412' }
+      : { bg: '#e7f5ec', fg: '#14532d' };
+
   return (
-    <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
-      {isFull && (
-        <div className="bg-red-100 border border-red-300 rounded-lg p-3 mb-2">
-          <div className="font-bold text-red-800 flex items-center gap-2">
-            🔴 SOLD OUT
-          </div>
-          <div className="text-sm text-red-700 mt-1">
-            This event is full - no spots available
-          </div>
-        </div>
-      )}
-      {!isFull && hasCount && (
-        <div className={`border rounded-lg p-3 mb-2 ${isLow ? 'bg-orange-50 border-orange-300' : 'bg-green-50 border-green-300'}`}>
-          <div className={`font-bold flex items-center gap-2 ${isLow ? 'text-orange-800' : 'text-green-800'}`}>
+    <div
+      className="mb-4 rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-2"
+      style={{ background: tone.bg, color: tone.fg, boxShadow: '0 6px 18px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.08)' }}
+    >
+      <div>
+        {isFull && <div className="text-lg font-extrabold">🔴 SOLD OUT</div>}
+        {!isFull && hasCount && (
+          <div className="text-lg font-extrabold">
             {isLow ? '⚠️' : '🟢'} {count} {count === 1 ? 'spot' : 'spots'} remaining
-            {event.openings_display && !/\d/.test(event.openings_display) && (
-              <span className="text-xs font-normal opacity-70 ml-1">({event.openings_display})</span>
-            )}
           </div>
-          {event.show_openings === false && (
-            <div className={`text-xs mt-1 ${isLow ? 'text-orange-700' : 'text-green-700'} italic`}>
-              (Internal — gym hides this count from public)
-            </div>
-          )}
-        </div>
-      )}
-      {event.registration_end_date && (
-        <div className="text-xs text-gray-600">
-          <span className="font-semibold">Registration closes:</span> {event.registration_end_date}
-          {(() => {
-            const regEnd = new Date(event.registration_end_date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (regEnd < today) {
-              return <span className="ml-2 text-red-600 font-medium">(Registration closed)</span>;
-            }
-            return null;
-          })()}
-        </div>
+        )}
+        {!isFull && !hasCount && <div className="text-base font-bold">Spots not shown by iClass</div>}
+        {event.show_openings === false && (
+          <div className="text-xs font-semibold italic mt-0.5">Internal — gym hides this count from parents</div>
+        )}
+      </div>
+      {regLabel && (
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold whitespace-nowrap"
+          style={{ background: regPassed ? '#7f1d1d' : '#2f6f72', color: '#ffffff', boxShadow: '0 2px 0 rgba(0,0,0,.25)' }}
+        >
+          {regPassed ? 'Registration closed' : 'Registration closes'} {regLabel}
+        </span>
       )}
     </div>
   );

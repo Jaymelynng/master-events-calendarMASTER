@@ -28,8 +28,8 @@ const cardLift = '0 4px 14px rgba(0,0,0,.12), 0 1px 3px rgba(0,0,0,.10)';
 const fmtDate = (d, withYear = true) => {
   if (!d) return '—';
   const [y, m, day] = String(d).slice(0, 10).split('-').map(Number);
-  return new Date(y, m - 1, day).toLocaleDateString('en-US',
-    withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { weekday: 'short', month: 'short', day: 'numeric' });
+  if (withYear) return `${m}/${day}/${y}`; // her format: 11/6/2026
+  return new Date(y, m - 1, day).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
 const fmtMoney = (n) => (n == null ? null : `$${Number(n).toFixed(2).replace(/\.00$/, '')}`);
 
