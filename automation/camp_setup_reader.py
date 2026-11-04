@@ -10,8 +10,10 @@ Entries, each camp's price table, and per-day sign-ups. Saves every reply WHOLE 
 
 Runs AFTER the normal sync and never touches the events table, so the public sync is unchanged.
 
-Login per gym, typed by Jayme into Railway Variables (never in code or chat):
-  ICLASS_SETUP_USER_<GYM CODE>, ICLASS_SETUP_PASS_<GYM CODE>   e.g. ICLASS_SETUP_USER_SGT
+Login, typed by Jayme into Railway Variables (never in code or chat):
+  ICLASS_SETUP_USER                 the one username she made at every gym
+  ICLASS_SETUP_PASS_<GYM CODE>      that gym's password, e.g. ICLASS_SETUP_PASS_SGT
+  (ICLASS_SETUP_USER_<GYM CODE> overrides the username for one gym if ever needed)
 A gym with no login is recorded as 'no_login' — its checks show "setup not read", never "no errors".
 
 Test without a login (from one of Jayme's F12 recordings, nothing sent to iClass):
@@ -279,12 +281,13 @@ def main():
         if gym_id not in gyms:
             print(f"  [SETUP] {gym_id}: not in the gyms table (or no iclass_slug)")
             continue
-        user = os.environ.get(f'ICLASS_SETUP_USER_{gym_id}')
+        # One username at every gym (Jayme made the same one everywhere); a gym can still override it.
+        user = os.environ.get(f'ICLASS_SETUP_USER_{gym_id}') or os.environ.get('ICLASS_SETUP_USER')
         pw = os.environ.get(f'ICLASS_SETUP_PASS_{gym_id}')
         if not user or not pw:
             print(f"  [SETUP] {gym_id}: NOT READ - no login set in Railway Variables")
             if a.save:
-                finish_read(start_read(gym_id), 'no_login', 'no ICLASS_SETUP_USER / ICLASS_SETUP_PASS for this gym')
+                finish_read(start_read(gym_id), 'no_login', f'no ICLASS_SETUP_USER / ICLASS_SETUP_PASS_{gym_id} in Railway Variables')
             continue
         run_gym(gym_id, LiveSource(gyms[gym_id], user, pw), a.save)
 
