@@ -16,6 +16,7 @@
 // ============================================================================
 
 import React from 'react';
+import { iclassCampId, useCampOccupancy } from '../../lib/iclassCamp';
 import { parseYmdLocal, getActualEndDate } from './utils';
 import { inferErrorCategory, isErrorAcknowledgedAnywhere } from '../../lib/validationHelpers';
 
@@ -105,6 +106,13 @@ function variantLabel(event) {
   return `${isNinja ? 'Ninja' : 'Gym'} ${isHalf ? 'Half Day' : 'Full Day'}`;
 }
 
+// What the bar prints: the icon already says gym vs ninja, so the text only needs Full / Half -
+// short enough to fit beside the spots number in a one-week bar (it was cut to "G..." before).
+function barLabel(event) {
+  const text = `${event.title || ''} ${event.program_name || ''}`.toLowerCase();
+  return text.includes('half') ? 'Half' : 'Full';
+}
+
 // Capacity status — same logic as EventCard.js
 function spotsStatus(event) {
   if (event.has_openings === false) return { kind: 'full', text: '🔴 FULL' };
@@ -130,6 +138,8 @@ export default function CampBand({
   acknowledgedPatterns = [],
   errorFocus = false,
 }) {
+  // Per-day counts from the signed-in setup read (only for gyms that have been read)
+  const occupancyByCamp = useCampOccupancy(campEvents);
   if (!campEvents || campEvents.length === 0) return null;
 
   const runs = groupCampsByRun(campEvents).map(run =>
@@ -220,10 +230,31 @@ export default function CampBand({
       // Grid columns 1-indexed; CSS grid end is exclusive so end is +2.
       const gridColumn = `${startIdx + 1} / ${endIdx + 2}`;
 
+      // Per-day counts for this camp, laid onto the same visible day columns the bar spans.
+      // A day the camp doesn't meet (weekend inside a 2-week camp) stays an empty cell.
+      const occ = occupancyByCamp[`${variant.gym_id}:${iclassCampId(variant)}`];
+      let dayCells = null;
+      if (occ) {
+        const byDay = {};
+        occ.forEach((d) => {
+          const dt = parseYmdLocal(String(d.sqlDate).slice(0, 10));
+          if (dt.getFullYear() === currentYear && dt.getMonth() === currentMonth) byDay[dt.getDate()] = d;
+        });
+        dayCells = displayDates.slice(startIdx, endIdx + 1).map((dayNum) => byDay[dayNum] || null);
+        const opens = dayCells.filter(Boolean).map((d) => Number(d.open || 0));
+        const daysDiffer = new Set(opens).size > 1;
+        // "26 26 26 26 26" says one number five times - only show a cell per day when the camp sells
+        // single days or a day really differs (say it once, Jayme 2026-11-04)
+        if (!opens.length || !(variant.allow_choose_days || daysDiffer)) {
+          dayCells = opens.length ? { single: Math.min(...opens) } : null;
+        }
+      }
+
       placements.push({
         variant,
         gridColumn,
         gridRow: laneToRow[laneKeyForVariant(variant)],
+        dayCells,
       });
     }
   }
@@ -231,6 +262,7 @@ export default function CampBand({
   if (placements.length === 0) return null;
 
   const totalRows = sortedLaneKeys.length;
+  const anyPerDay = placements.some((pl) => Array.isArray(pl.dayCells));
 
   return (
     <div
@@ -239,7 +271,7 @@ export default function CampBand({
         gridColumn: '2 / -1',
         display: 'grid',
         gridTemplateColumns: `repeat(${displayDates.length}, 1fr)`,
-        gridTemplateRows: `repeat(${totalRows}, 28px)`,
+        gridTemplateRows: `repeat(${totalRows}, ${anyPerDay ? 46 : 28}px)`,
         gap: '3px',
         padding: '3px 4px 4px',
         // Subtle bg tint that matches the gym cell's gray-50 — visually
@@ -249,9 +281,20 @@ export default function CampBand({
         background: '#f9fafb',
       }}
     >
-      {placements.map(({ variant, gridColumn, gridRow }) => {
+      {placements.map(({ variant, gridColumn, gridRow, dayCells }) => {
         const style = variantStyle(variant);
-        const status = spotsStatus(variant);
+        // With per-day counts the bar's status is the TIGHTEST day (the public number is day 1 only)
+        const perDayCells = Array.isArray(dayCells) ? dayCells : null;
+        const met = perDayCells
+          ? perDayCells.filter(Boolean).map((d) => Number(d.open || 0))
+          : (dayCells && dayCells.single != null ? [dayCells.single] : []);
+        const status = met.length
+          ? (Math.min(...met) === 0
+              ? { kind: 'full', text: met.every((o) => o === 0) ? '🔴 FULL' : '🔴 a day FULL' }
+              : Math.min(...met) <= 3
+                ? { kind: 'low', text: `⚠️ ${Math.min(...met)} left` }
+                : { kind: 'open', text: `🟢 ${Math.min(...met)} left` })
+          : spotsStatus(variant);
         const statusColor = status ? STATUS_COLORS[status.kind] : null;
         // Error indicators (red border / dot) ONLY in Errors Focus mode —
         // normal calendar view stays clean (Jayme).
@@ -275,9 +318,10 @@ export default function CampBand({
               border: hasErrors ? '2px solid #dc3545' : `1.5px solid ${style.border}`,
               background: style.bg,
               color: style.color,
-              padding: '0 12px',
+              padding: perDayCells ? '2px 6px 3px' : '0 8px',
               display: 'flex',
-              alignItems: 'center',
+              flexDirection: perDayCells ? 'column' : 'row',
+              alignItems: perDayCells ? 'stretch' : 'center',
               justifyContent: 'space-between',
               fontSize: '11px',
               fontWeight: 800,
@@ -313,6 +357,7 @@ export default function CampBand({
                 title="Data error — click to see what's wrong"
               />
             )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0, gap: 6 }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -327,7 +372,7 @@ export default function CampBand({
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
               }}>
-                {variantLabel(variant)}
+                {barLabel(variant)}
               </span>
             </div>
             {status && (
@@ -343,6 +388,31 @@ export default function CampBand({
               >
                 {status.text}
               </span>
+            )}
+            </div>
+            {perDayCells && (
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${perDayCells.length}, 1fr)`, gap: 2 }}>
+                {perDayCells.map((d, i) => {
+                  if (!d) return <span key={i} />;
+                  const open = Number(d.open || 0);
+                  const full = open === 0;
+                  const low = !full && open <= 3;
+                  return (
+                    <span
+                      key={i}
+                      title={`${d.sqlDate}: ${d.occ} signed up, ${open} open`}
+                      style={{
+                        textAlign: 'center', fontSize: 10.5, fontWeight: 900, lineHeight: '15px', borderRadius: 4,
+                        background: full ? '#c0392b' : low ? '#fde7c8' : 'rgba(255,255,255,.85)',
+                        color: full ? '#ffffff' : low ? '#8a4b08' : '#1f2a33',
+                        whiteSpace: 'nowrap', overflow: 'hidden',
+                      }}
+                    >
+                      {full ? 'FULL' : open}
+                    </span>
+                  );
+                })}
+              </div>
             )}
           </div>
         );

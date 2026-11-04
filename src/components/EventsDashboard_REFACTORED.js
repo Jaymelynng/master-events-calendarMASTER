@@ -7,7 +7,7 @@
 // ============================================================================
 
 import React, { Suspense, lazy } from 'react';
-import { CheckCircle, ChevronUp, Plus, Loader } from 'lucide-react';
+import { CheckCircle, ChevronUp, Loader } from 'lucide-react';
 
 // Custom hook with all state and logic
 import useEventsDashboard from './EventsDashboard/useEventsDashboard';
@@ -595,16 +595,7 @@ function BottomNavigation({ currentMonth, currentYear, onPreviousMonth, onNextMo
         </button>
       </div>
 
-      <div className="flex justify-center mb-6">
-        <button
-          onClick={onAddEvent}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 shadow-md font-medium text-sm"
-          style={{ backgroundColor: theme.colors.primary, color: 'white' }}
-        >
-          <Plus className="w-4 h-4" />
-          ADD EVENT
-        </button>
-      </div>
+      {/* (ADD EVENT button removed 2026-11-04 - every event comes from the iClass sync) */}
     </>
   );
 }

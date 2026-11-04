@@ -119,9 +119,17 @@ export default function useEventsDashboard() {
     refetchEvents();
   });
 
-  // Initial data load
+  // Initial data load. fetchEvents changes with the month, so this re-runs on every month change -
+  // the full-page loader only shows the FIRST time; after that the month's events load in place, so
+  // the page doesn't blank out and jump back to the top (Jayme: "i hit next and it auto scrolls to
+  // the top and i have to scroll all the way back down again").
+  const firstLoadDone = useRef(false);
   useEffect(() => {
     const fetchAllData = async () => {
+      if (firstLoadDone.current) {
+        try { await fetchEvents(); } catch (error) { console.error('Error fetching events:', error); }
+        return;
+      }
       setLoading(true);
       try {
         const [gymsData, typesData, reqsData, rulesData, linksData] = await Promise.all([
@@ -150,6 +158,7 @@ export default function useEventsDashboard() {
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
+        firstLoadDone.current = true;
         setLoading(false);
       }
     };

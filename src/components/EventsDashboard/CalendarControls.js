@@ -2,7 +2,7 @@
 // CALENDAR CONTROLS - Month navigation, view toggles, and filters
 // ============================================================================
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Search, List, Grid, Plus, Copy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, List, Grid, Copy } from 'lucide-react';
 import { theme, gymColors, getEventTypeColor } from './constants';
 
 // Long bucket names get a short chip label; everything else shows as-is.
@@ -83,20 +83,8 @@ export default function CalendarControls({
         </button>
       </div>
 
-      {/* ADD EVENT - Centered Under Header */}
-      <div className="flex justify-center mb-2">
-        <button
-          onClick={onAddEvent}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 shadow-md font-medium text-sm"
-          style={{
-            backgroundColor: theme.colors.primary,
-            color: 'white'
-          }}
-        >
-          <Plus className="w-4 h-4" />
-          ADD EVENT
-        </button>
-      </div>
+      {/* (ADD EVENT button removed 2026-11-04: every event comes from the iClass sync - 0 of 507 were
+           ever added by hand. Jayme: "ADD EVENT button makes zero sense why is that there?") */}
 
       {/* Gym picker - every gym's logo in one row. Click any number of them;
           only those gyms show on the calendar, and the type chips, search and
