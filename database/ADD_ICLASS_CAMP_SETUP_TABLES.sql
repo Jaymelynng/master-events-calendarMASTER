@@ -89,3 +89,8 @@ alter table public.iclass_camp_setup add column if not exists gone_from_iclass_a
 alter table public.iclass_price_tables add column if not exists gone_from_iclass_at timestamptz;
 comment on table public.iclass_camp_setup is
   'Every iClass camp the signed-in setup read has seen, hidden ones included. NEVER deleted: a camp is re-read while it has not ended, then keeps its last read; gone_from_iclass_at is set when iClass no longer lists it. raw = GET /api/v1/camps/{id} data, occupancy = GET /api/v1/get-camp-occupancy/{id} data, public_raw = the public reply (waitlist requests on/off). camp_id = events.event_id.';
+
+-- ============================================================ 2026-11-04: the connected view (camp -> price table -> type -> charge category -> program)
+-- Live definition: select pg_get_viewdef('public.iclass_camp_audit'::regclass, true);
+-- Applied as migration "iclass_camp_audit_view". One row per camp; nothing copied, so it is always current.
+-- First live use: SGT full read 18:29-18:31 UTC, 83 camps, all 83 linked to price table, type, charge category, program.
