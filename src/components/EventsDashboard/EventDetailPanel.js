@@ -301,7 +301,7 @@ function DailySchedule({ days, event }) {
       className="rounded-xl bg-white px-3 py-2"
       style={{ flex: '2 1 260px', boxShadow: '0 3px 10px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.08)' }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
+      <div className="flex flex-wrap items-center justify-center gap-1 mb-1.5">
         <span className="flex items-center gap-2">
           <span className="text-xs font-extrabold uppercase tracking-wide" style={{ color: '#2f6f72' }}>📅 Daily schedule</span>
           <SignupMode event={event} inline />
@@ -312,7 +312,8 @@ function DailySchedule({ days, event }) {
           </span>
         )}
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      {/* day chips centered in the tile - one day sits in the middle, a full week fills the row */}
+      <div className="flex flex-wrap justify-center gap-1.5">
         {days.map((d, i) => {
           const isOdd = anyOddDay && majority && hoursOf(d) !== majority;
           return (
