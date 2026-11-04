@@ -178,90 +178,57 @@ export default function EventDetailPanel({
           event={event}
           copiedUrl={copiedUrl}
           onCopyUrl={onCopyUrl}
-          onEditEvent={onEditEvent}
         />
 
-        {/* Event Details */}
-        <div className="space-y-3 mb-6 text-sm text-gray-700">
-          <div className="flex items-start gap-3">
-            <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-            <div>
-              <div className="font-semibold text-xs text-gray-500 uppercase mb-1">Location</div>
-              <div>
-                {gymsList.find(g => g.gym_code === event.gym_code || g.id === event.gym_id)?.name ||
-                 event.gym_name || event.gym_code}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
-            <div>
-              <div className="font-semibold text-xs text-gray-500 uppercase mb-1">Date</div>
-              <div>
-                {parseYmdLocal(event.start_date || event.date).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
+        {/* Event Details - raised tiles, two across (wraps to one on a narrow panel) */}
+        <div
+          className="mb-4 rounded-2xl p-3 grid gap-2.5"
+          style={{
+            background: '#f1ece4',
+            boxShadow: '0 8px 25px rgba(0,0,0,.14), 0 2px 6px rgba(0,0,0,.10)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))',
+          }}
+        >
+          <DetailTile icon={<MapPin className="w-4 h-4" />} label="Location">
+            {gymsList.find(g => g.gym_code === event.gym_code || g.id === event.gym_id)?.name ||
+             event.gym_name || event.gym_code}
+          </DetailTile>
+          <DetailTile icon={<Calendar className="w-4 h-4" />} label="Date">
+            {parseYmdLocal(event.start_date || event.date).toLocaleDateString('en-US', {
+              weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+            })}
+            {event.end_date && event.end_date !== (event.start_date || event.date) && (
+              <>
+                {' – '}
+                {parseYmdLocal(event.end_date).toLocaleDateString('en-US', {
+                  weekday: 'short', month: 'short', day: 'numeric'
                 })}
-                {event.end_date && event.end_date !== (event.start_date || event.date) && (
-                  <span className="text-gray-500">
-                    {' – '}
-                    {parseYmdLocal(event.end_date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </span>
-                )}
+              </>
+            )}
+          </DetailTile>
+          <DetailTile icon={<Clock className="w-4 h-4" />} label="Time">
+            {formatTime(event.time || event.event_time) || '—'}
+            {/* Camp signup mode (only for CAMPs that have data) */}
+            {event.type === 'CAMP' && event.allow_choose_days != null && (
+              <div className="mt-1.5">
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold text-white"
+                  style={{ background: event.allow_choose_days ? '#1d4ed8' : '#6d28d9', boxShadow: '0 2px 0 rgba(0,0,0,.25)' }}
+                  title={event.allow_choose_days ? 'Parents can register for individual days' : 'Parents must register for the entire camp'}
+                >
+                  {event.allow_choose_days ? '✓ Per-day sign-up' : '📦 Full week only'}
+                </span>
               </div>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
-            <div>
-              <div className="font-semibold text-xs text-gray-500 uppercase mb-1">Time</div>
-              <div>{formatTime(event.time || event.event_time) || ''}</div>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div>
-              {/* Camp signup mode (only for CAMPs that have data) */}
-              {event.type === 'CAMP' && event.allow_choose_days != null && (
-                <div className="mt-1">
-                  {event.allow_choose_days ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-800 border border-blue-200" title="Parents can register for individual days">
-                      ✓ Per-Day Signup
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-800 border border-purple-200" title="Parents must register for the entire camp">
-                      📦 Full Week Only
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Age Range */}
+            )}
+          </DetailTile>
           {(event.age_min || event.age_max) && (
-            <div className="flex items-start gap-3">
-              <Users className="w-5 h-5 text-gray-400 mt-0.5" />
-              <div>
-                <div className="font-semibold text-xs text-gray-500 uppercase mb-1">Ages</div>
-                <div>
-                  {event.age_min && event.age_max
-                    ? `${event.age_min} - ${event.age_max} years`
-                    : event.age_min
-                      ? `${event.age_min}+ years`
-                      : `Up to ${event.age_max} years`
-                  }
-                </div>
-              </div>
-            </div>
+            <DetailTile icon={<Users className="w-4 h-4" />} label="Ages">
+              {event.age_min && event.age_max
+                ? `${event.age_min} – ${event.age_max} years`
+                : event.age_min
+                  ? `${event.age_min}+ years`
+                  : `Up to ${event.age_max} years`}
+            </DetailTile>
           )}
         </div>
 
@@ -269,11 +236,6 @@ export default function EventDetailPanel({
             gives a multi-day schedule; makes a single mis-set day obvious) */}
         {Array.isArray(event.daily_schedule) && event.daily_schedule.length > 0 && (
           <DailySchedule days={event.daily_schedule} />
-        )}
-
-        {/* Camp Quick Access Links */}
-        {event.type === 'CAMP' && (
-          <CampQuickAccess event={event} gymLinks={gymLinks} />
         )}
 
         {/* Availability Status */}
@@ -343,33 +305,34 @@ function DailySchedule({ days }) {
   const anyOddDay = days.length > 1 && Object.keys(counts).length > 1;
 
   return (
-    <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
-      <div className="font-semibold text-xs text-gray-500 uppercase mb-2 flex items-center justify-between">
-        <span>📅 Daily Schedule</span>
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-xs font-extrabold uppercase tracking-wide" style={{ color: '#2f6f72' }}>📅 Daily schedule</span>
         {anyOddDay && (
-          <span className="text-[10px] font-bold text-red-700 bg-red-100 px-1.5 py-0.5 rounded normal-case">
+          <span className="text-xs font-bold text-white px-2 py-0.5 rounded-full" style={{ background: '#c62828' }}>
             ⚠️ A day doesn't match the rest
           </span>
         )}
       </div>
-      <div className="rounded-lg border border-gray-200 overflow-hidden">
+      <div className="flex flex-wrap gap-1.5">
         {days.map((d, i) => {
           const isOdd = anyOddDay && majority && hoursOf(d) !== majority;
           return (
             <div
               key={i}
-              className={`flex items-center justify-between px-3 py-1.5 text-sm ${i > 0 ? 'border-t border-gray-100' : ''}`}
-              style={isOdd ? { background: '#fef2f2' } : {}}
+              className="rounded-lg px-2.5 py-1.5 text-center"
+              style={{
+                background: isOdd ? '#c62828' : '#ffffff',
+                color: isOdd ? '#ffffff' : '#1f2a33',
+                boxShadow: '0 3px 10px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.10)',
+                minWidth: 76,
+              }}
+              title={d.duration != null && d.duration !== '' ? `${d.duration} hr` : undefined}
             >
-              <span className={`font-medium ${isOdd ? 'text-red-800' : 'text-gray-700'}`}>
-                {d.day || `Day ${i + 1}`}
-              </span>
-              <span className={isOdd ? 'text-red-800 font-semibold' : 'text-gray-600'}>
-                {d.start_time || '—'}{d.end_time ? ` – ${d.end_time}` : ''}
-                {d.duration != null && d.duration !== '' && (
-                  <span className="text-xs text-gray-400 ml-1.5">({d.duration} hr)</span>
-                )}
-              </span>
+              <div className="text-xs font-extrabold uppercase">{d.day || `Day ${i + 1}`}</div>
+              <div className="text-xs font-semibold whitespace-nowrap">
+                {(d.start_time || '—').replace(/:00 /g, ' ')}–{(d.end_time || '').replace(/:00 /g, ' ')}
+              </div>
             </div>
           );
         })}
@@ -378,39 +341,14 @@ function DailySchedule({ days }) {
   );
 }
 
-// Camp quick access links component
-function CampQuickAccess({ event, gymLinks }) {
-  const gymId = event.gym_id;
-  const fullDayLink = gymLinks.find(gl => gl.gym_id === gymId && gl.link_type_id === 'camps');
-  const halfDayLink = gymLinks.find(gl => gl.gym_id === gymId && gl.link_type_id === 'camps_half');
-
-  if (!fullDayLink && !halfDayLink) return null;
-
+// One raised tile in the Event Details grid: small teal label + icon, near-black value.
+function DetailTile({ icon, label, children }) {
   return (
-    <div className="border-t pt-4 mb-4" style={{ borderColor: theme.colors.secondary }}>
-      <p className="font-semibold text-xs text-gray-500 uppercase mb-3">🔗 Quick Access</p>
-      <div className="flex gap-2">
-        {fullDayLink && (
-          <button
-            onClick={() => window.open(fullDayLink.url, '_blank')}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 border border-orange-200 hover:border-orange-400 transition-all hover:scale-105"
-            title="View all Full Day camps at this gym"
-          >
-            <span className="text-2xl">🏕️</span>
-            <span className="font-semibold text-sm text-orange-800">Full Day</span>
-          </button>
-        )}
-        {halfDayLink && (
-          <button
-            onClick={() => window.open(halfDayLink.url, '_blank')}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 hover:border-blue-400 transition-all hover:scale-105"
-            title="View all Half Day camps at this gym"
-          >
-            <span className="text-2xl">🕐</span>
-            <span className="font-semibold text-sm text-blue-800">Half Day</span>
-          </button>
-        )}
+    <div className="rounded-xl bg-white px-3 py-2" style={{ boxShadow: '0 3px 10px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.08)' }}>
+      <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide" style={{ color: '#2f6f72' }}>
+        {icon}{label}
       </div>
+      <div className="text-sm font-semibold mt-0.5" style={{ color: '#1f2a33' }}>{children}</div>
     </div>
   );
 }
@@ -706,7 +644,7 @@ function FlyerImage({ event }) {
 }
 
 // Registration options component
-function RegistrationOptions({ event, copiedUrl, onCopyUrl, onEditEvent }) {
+function RegistrationOptions({ event, copiedUrl, onCopyUrl }) {
   const copyToClipboard = (url, id) => {
     navigator.clipboard.writeText(url);
     onCopyUrl(id);
@@ -752,15 +690,16 @@ function RegistrationOptions({ event, copiedUrl, onCopyUrl, onEditEvent }) {
           })}
         </div>
       ) : (
-        // Single option
-        <div className="space-y-3">
+        // Single option - two equal buttons side by side (was three full-width stacked buttons,
+        // incl. an Edit Event button Jayme does not want in this panel)
+        <div className="flex gap-2 mb-4">
           <button
             onClick={() => {
               const url = event.event_url || event.registration_url;
               if (url) window.open(url, '_blank');
             }}
-            className="w-full text-white font-semibold py-3 px-4 rounded-lg transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2"
-            style={{ backgroundColor: theme.colors.primary }}
+            className="flex-1 text-white font-bold text-sm py-2.5 px-3 rounded-xl transition-all hover:-translate-y-0.5 active:translate-y-0.5 flex items-center justify-center gap-1.5 whitespace-nowrap"
+            style={{ backgroundColor: theme.colors.primary, boxShadow: '0 3px 0 rgba(0,0,0,.25), 0 6px 14px rgba(0,0,0,.15)' }}
           >
             🔗 View Event Page
           </button>
@@ -769,31 +708,14 @@ function RegistrationOptions({ event, copiedUrl, onCopyUrl, onEditEvent }) {
               const url = event.event_url || event.registration_url;
               if (url) copyToClipboard(url, event.id);
             }}
-            className={`w-full font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 ${
-              copiedUrl === event.id
-                ? 'bg-green-100 text-green-700'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
+            className="flex-1 font-bold text-sm py-2.5 px-3 rounded-xl transition-all hover:-translate-y-0.5 active:translate-y-0.5 flex items-center justify-center gap-1.5 whitespace-nowrap"
+            style={copiedUrl === event.id
+              ? { background: '#2e7d4f', color: '#fff', boxShadow: '0 3px 0 rgba(0,0,0,.25), 0 6px 14px rgba(0,0,0,.15)' }
+              : { background: '#2f6f72', color: '#fff', boxShadow: '0 3px 0 rgba(0,0,0,.25), 0 6px 14px rgba(0,0,0,.15)' }}
           >
-            {copiedUrl === event.id ? (
-              <>
-                <CheckCircle className="w-5 h-5" />
-                URL Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="w-5 h-5" />
-                Copy Registration URL
-              </>
-            )}
-          </button>
-
-          {/* Edit Button */}
-          <button
-            onClick={() => onEditEvent(event)}
-            className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
-          >
-            ✎ Edit Event
+            {copiedUrl === event.id
+              ? (<><CheckCircle className="w-4 h-4" /> Copied!</>)
+              : (<><Copy className="w-4 h-4" /> Copy Link</>)}
           </button>
         </div>
       )}
