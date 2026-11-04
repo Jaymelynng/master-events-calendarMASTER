@@ -8,7 +8,7 @@ import { parseYmdLocal, formatTime, formatTimeShort, parseCampOptionFromTitle } 
 import { isErrorAcknowledgedAnywhere, inferErrorCategory, canAddAsRule, extractRuleValue } from '../../lib/validationHelpers';
 import { appConfigApi, errorEmailLogApi } from '../../lib/api';
 import { buildErrorEmailUrl, fmtSentStamp, descriptionIssueLine } from '../../lib/errorEmail';
-import IclassSetupSection from './IclassSetupSection';
+import IclassSetupSection, { useIclassSetup } from './IclassSetupSection';
 
 const PANEL_DEFAULT_WIDTH = 384; // the panel's width before it could be resized (w-96)
 const PANEL_MIN_WIDTH = 320;
@@ -31,6 +31,8 @@ export default function EventDetailPanel({
   // send history so an already-emailed error shows "Emailed N days ago".
   const [appConfig, setAppConfig] = useState({});
   const [emailLog, setEmailLog] = useState([]);
+  // Signed-in iClass setup for this event (per-day counts, settings, price table) - read once, shared below
+  const iclassSetup = useIclassSetup(event);
   // Panel width: drag the left edge to resize; remembered on this browser. Double-click the edge to reset.
   const [panelWidth, setPanelWidth] = useState(() => {
     try {
@@ -226,17 +228,18 @@ export default function EventDetailPanel({
           )}
           {/* Daily Schedule — per-weekday hours for camps; a mis-set day shows solid red */}
           {hasSchedule && (
-            <DailySchedule days={event.daily_schedule} event={event} />
+            <DailySchedule days={event.daily_schedule} event={event} counts={iclassSetup.days || []} />
           )}
         </div>
 
         {/* Availability Status */}
-        {(event.has_openings === false || event.openings != null || event.registration_end_date) && (
-          <AvailabilityStatus event={event} />
+        {(event.has_openings === false || event.openings != null || event.registration_end_date ||
+          (iclassSetup.days || []).length > 0) && (
+          <AvailabilityStatus event={event} days={iclassSetup.days || []} />
         )}
 
         {/* iClass setup — what the signed-in setup read saved for this camp */}
-        <IclassSetupSection event={event} />
+        <IclassSetupSection setup={iclassSetup} event={event} />
 
         {/* Validation Issues */}
         {(totalIssues > 0 || acknowledgedErrors.length > 0) && (
@@ -283,7 +286,7 @@ export default function EventDetailPanel({
 // Daily schedule tile (inside the Event Details dashboard) — one chip per weekday. Highlights any day whose
 // hours differ from the majority (a mis-set day like Monday at 1hr while the
 // rest run 3hr) so a settings mistake beyond day 1 is impossible to miss.
-function DailySchedule({ days, event }) {
+function DailySchedule({ days, event, counts = [] }) {
   // Build an "hours" key per day to detect the odd one out.
   const hoursOf = (d) => {
     if (d.duration != null && d.duration !== '') return String(d.duration);
@@ -291,10 +294,36 @@ function DailySchedule({ days, event }) {
     return '';
   };
   // Find the majority hours value; anything different gets flagged.
-  const counts = {};
-  days.forEach(d => { const k = hoursOf(d); if (k) counts[k] = (counts[k] || 0) + 1; });
-  const majority = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
-  const anyOddDay = days.length > 1 && Object.keys(counts).length > 1;
+  const tally = {};
+  days.forEach(d => { const k = hoursOf(d); if (k) tally[k] = (tally[k] || 0) + 1; });
+  const majority = Object.entries(tally).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const anyOddDay = days.length > 1 && Object.keys(tally).length > 1;
+  const shortHours = (d) => `${(d.start_time || '—').replace(/:00 /g, ' ')}–${(d.end_time || '').replace(/:00 /g, ' ')}`;
+
+  // With the signed-in setup read, each chip is a real DATE with its hours (matched by weekday) and
+  // its enrolled / open count - so days, hours and spots are said once, in one row.
+  const weekdayOf = (iso) => {
+    const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
+  const chips = counts.length
+    ? counts.map((c) => {
+        const dt = weekdayOf(c.sqlDate);
+        const wd = dt.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+        const sched = days.find((d) => String(d.day || '').toLowerCase().startsWith(wd.slice(0, 3)));
+        return {
+          key: c.sqlDate,
+          top: dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          hours: sched ? shortHours(sched) : null,
+          odd: !!(sched && anyOddDay && majority && hoursOf(sched) !== majority),
+          occ: Number(c.occ || 0), open: Number(c.open || 0),
+          wait: Number(c.occwait || 0), req: Number(c.requests || 0),
+        };
+      })
+    : days.map((d, i) => ({
+        key: i, top: d.day || `Day ${i + 1}`, hours: shortHours(d),
+        odd: !!(anyOddDay && majority && hoursOf(d) !== majority),
+      }));
 
   return (
     <div
@@ -303,35 +332,46 @@ function DailySchedule({ days, event }) {
     >
       <div className="flex flex-wrap items-center justify-center gap-1 mb-1.5">
         <span className="flex items-center gap-2">
-          <span className="text-xs font-extrabold uppercase tracking-wide" style={{ color: '#2f6f72' }}>📅 Daily schedule</span>
+          <span className="text-xs font-extrabold uppercase tracking-wide" style={{ color: '#2f6f72' }}>
+            📅 {counts.length ? 'Each day' : 'Daily schedule'}
+          </span>
           <SignupMode event={event} inline />
         </span>
         {anyOddDay && (
           <span className="text-xs font-bold text-white px-2 py-0.5 rounded-full" style={{ background: '#c62828' }}>
-            ⚠️ A day doesn't match the rest
+            ⚠️ A day's hours don't match the rest
           </span>
         )}
       </div>
       {/* day chips centered in the tile - one day sits in the middle, a full week fills the row */}
       <div className="flex flex-wrap justify-center gap-1.5">
-        {days.map((d, i) => {
-          const isOdd = anyOddDay && majority && hoursOf(d) !== majority;
+        {chips.map((c) => {
+          const full = c.open === 0;
+          const red = c.odd || full;
           return (
             <div
-              key={i}
+              key={c.key}
               className="rounded-lg px-2.5 py-1.5 text-center"
               style={{
-                background: isOdd ? '#c62828' : '#f1ece4',
-                color: isOdd ? '#ffffff' : '#1f2a33',
+                background: red ? '#c62828' : '#f1ece4',
+                color: red ? '#ffffff' : '#1f2a33',
                 boxShadow: '0 2px 0 rgba(0,0,0,.12)',
-                minWidth: 70,
+                minWidth: 84,
               }}
-              title={d.duration != null && d.duration !== '' ? `${d.duration} hr` : undefined}
             >
-              <div className="text-xs font-extrabold uppercase">{d.day || `Day ${i + 1}`}</div>
-              <div className="text-xs font-semibold whitespace-nowrap">
-                {(d.start_time || '—').replace(/:00 /g, ' ')}–{(d.end_time || '').replace(/:00 /g, ' ')}
-              </div>
+              <div className="text-xs font-extrabold uppercase whitespace-nowrap">{c.top}</div>
+              {c.hours && <div className="text-xs font-semibold whitespace-nowrap">{c.hours}</div>}
+              {c.occ != null && (
+                <div className="text-sm font-extrabold whitespace-nowrap mt-0.5">
+                  {full ? 'FULL' : `${c.open} open`}
+                  <span className="text-xs font-semibold"> · {c.occ} in</span>
+                </div>
+              )}
+              {(c.wait > 0 || c.req > 0) && (
+                <div className="text-xs font-bold" style={{ color: red ? '#fff' : '#b45309' }}>
+                  {c.wait > 0 && `${c.wait} waitlist`}{c.wait > 0 && c.req > 0 && ' · '}{c.req > 0 && `${c.req} req`}
+                </div>
+              )}
             </div>
           );
         })}
@@ -368,21 +408,36 @@ function DetailTile({ icon, label, children }) {
 }
 
 // Availability status component
-function AvailabilityStatus({ event }) {
-  const hasCount = event.openings != null;
-  const count = event.openings;
+function AvailabilityStatus({ event, days = [] }) {
+  // Per-day counts from the signed-in setup read are the true numbers. The public "openings" is
+  // only the FIRST day's count (checked 2026-11-04 on 8 SGT per-day camps), so it is used only
+  // when this camp's setup has not been read yet.
+  const perDay = days.map((d) => ({
+    date: d.sqlDate, occ: Number(d.occ || 0), open: Number(d.open || 0),
+    wait: Number(d.occwait || 0), req: Number(d.requests || 0),
+  }));
+  const tightest = perDay.length ? perDay.reduce((m, d) => (d.open < m.open ? d : m), perDay[0]) : null;
+  const dayLabel = (iso, opts) => {
+    const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', opts);
+  };
+
+  const hasCount = tightest ? true : event.openings != null;
+  const count = tightest ? tightest.open : event.openings;
   // Color thresholds: 0 = red (treated as sold out), 1-3 = orange (almost full), 4+ = green
   const isLow = hasCount && count > 0 && count <= 3;
-  const isFull = event.has_openings === false || count === 0;
+  const isFull = tightest ? tightest.open === 0 : (event.has_openings === false || count === 0);
 
   // Registration close date as 11/6/2026 (read as a local date - new Date('2026-11-06') would be UTC
   // and land on the previous day in US time zones)
   const regEnd = event.registration_end_date ? String(event.registration_end_date).slice(0, 10) : null;
+  const mdy = (iso) => { const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number); return `${m}/${d}/${y}`; };
+  const regStart = event.registration_start_date ? mdy(event.registration_start_date) : null;
   let regLabel = null;
   let regPassed = false;
   if (regEnd) {
     const [y, m, d] = regEnd.split('-').map(Number);
-    regLabel = `${m}/${d}/${y}`;
+    regLabel = regStart ? `${regStart} → ${m}/${d}/${y}` : `closes ${m}/${d}/${y}`;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     regPassed = new Date(y, m - 1, d) < today;
@@ -400,10 +455,21 @@ function AvailabilityStatus({ event }) {
       style={{ background: tone.bg, color: tone.fg, boxShadow: '0 6px 18px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.08)' }}
     >
       <div>
-        {isFull && <div className="text-lg font-extrabold">🔴 SOLD OUT</div>}
+        {isFull && (
+          <div className="text-lg font-extrabold">
+            🔴 {perDay.length > 1 ? `FULL on ${dayLabel(tightest.date, { weekday: 'short', month: 'short', day: 'numeric' })}` : 'SOLD OUT'}
+          </div>
+        )}
         {!isFull && hasCount && (
           <div className="text-lg font-extrabold">
-            {isLow ? '⚠️' : '🟢'} {count} {count === 1 ? 'spot' : 'spots'} remaining
+            {isLow ? '⚠️' : '🟢'} {count} {count === 1 ? 'spot' : 'spots'} open
+            {tightest && <span className="font-bold"> of {tightest.open + tightest.occ}</span>}
+            {tightest && perDay.length === 1 && <span className="font-semibold"> · {tightest.occ} signed up</span>}
+          </div>
+        )}
+        {perDay.length > 1 && !isFull && (
+          <div className="text-sm font-bold">
+            Tightest day: {dayLabel(tightest.date, { weekday: 'short', month: 'short', day: 'numeric' })}
           </div>
         )}
         {!isFull && !hasCount && <div className="text-base font-bold">Spots not shown by iClass</div>}
@@ -416,7 +482,7 @@ function AvailabilityStatus({ event }) {
           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold whitespace-nowrap"
           style={{ background: regPassed ? '#7f1d1d' : '#2f6f72', color: '#ffffff', boxShadow: '0 2px 0 rgba(0,0,0,.25)' }}
         >
-          {regPassed ? 'Registration closed' : 'Registration closes'} {regLabel}
+          {regPassed ? 'Registration closed' : 'Registration'} {regLabel}
         </span>
       )}
     </div>

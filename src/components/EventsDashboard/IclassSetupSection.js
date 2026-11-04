@@ -1,6 +1,6 @@
 // "iClass setup" block in the event side panel.
 // Shows what the signed-in setup read (automation/camp_setup_reader.py) saved for this camp:
-// portal settings, sign-up settings, max kids, every day's enrollment, the price table it uses,
+// portal settings, sign-up settings, max kids, the price table it uses (each day's enrollment is in the spots card),
 // program and charge category. Reads the iclass_camp_audit view (camp connected to its price
 // table / type / charge category / program) + iclass_camp_setup (per-day counts) + iclass_price_cells.
 // A gym that was never read says so - a missing read is never shown as blank or "fine".
@@ -85,16 +85,18 @@ function Stat({ big, label, danger }) {
   );
 }
 
-export default function IclassSetupSection({ event }) {
+// One read per opened event, shared by the spots card (per-day counts) and this section.
+export function useIclassSetup(event) {
   const [state, setState] = useState({ loading: true });
   const campId = iclassCampId(event);
 
   useEffect(() => {
     let alive = true;
     if (!campId || !event?.gym_id) {
-      setState({ loading: false, camp: null });
+      setState({ loading: false, camp: null, days: [] });
       return undefined;
     }
+    setState({ loading: true });
     (async () => {
       const [{ data: camp }, { data: setup }] = await Promise.all([
         supabase.from('iclass_camp_audit').select('*')
@@ -109,9 +111,15 @@ export default function IclassSetupSection({ event }) {
         cells = data || [];
       }
       if (alive) setState({ loading: false, camp, days: Array.isArray(setup?.occupancy) ? setup.occupancy : [], cells });
-    })().catch(() => alive && setState({ loading: false, error: true }));
+    })().catch(() => alive && setState({ loading: false, error: true, days: [] }));
     return () => { alive = false; };
   }, [campId, event?.gym_id]);
+
+  return state;
+}
+
+export default function IclassSetupSection({ setup, event }) {
+  const state = setup || { loading: true };
 
   const frame = (children) => (
     <div style={{ background: C.frame, borderRadius: 16, boxShadow: lift, margin: '16px 0', overflow: 'hidden' }}>
@@ -144,6 +152,15 @@ export default function IclassSetupSection({ event }) {
   const kids = [...new Set(cells.map((x) => x.child_number))].sort((a, b) => a - b);
   const cell = (k, d) => cells.find((x) => x.child_number === k && x.days === d);
   const chargeExpired = c.charge_category_expires && new Date(c.charge_category_expires) < new Date();
+  // Max kids: the spots card already shows each day's limit ("of 50"). The camp's own max only shows
+  // when it says something new - it is 0, or it differs from the day limits.
+  const dayCaps = (state.days || []).map((d) => Number(d.occ || 0) + Number(d.open || 0));
+  const capsDiffer = dayCaps.length > 0 && c.max_entries != null && dayCaps.some((x) => x !== c.max_entries);
+  const showMax = c.max_entries === 0 || capsDiffer || (dayCaps.length === 0 && c.max_entries != null);
+  const maxLabel = capsDiffer ? `Camp max · days set to ${dayCaps.join(' / ')}` : 'Max kids';
+  // Ages: the top tile shows them; only show iClass's setting here when it differs.
+  const agesDiffer = event && c.min_age != null && c.max_age != null &&
+    (String(event.age_min ?? '') !== String(c.min_age) || String(event.age_max ?? '') !== String(c.max_age));
   const childLabel = (k) => (k === 1 ? '1st child' : k === 2 ? '2nd child' : k === 3 ? '3rd child' : `${k}th child`);
 
   return frame(
@@ -152,49 +169,20 @@ export default function IclassSetupSection({ event }) {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           <Chip value={c.show_on_web} label="Show on Web" />
           <Chip value={c.allow_registration} label="Registration" />
-          <Chip value={c.per_day_signup} label="Per-day" />
+          {/* per-day lives in the schedule badge; shown here only if iClass's setting disagrees with it */}
+          {event?.allow_choose_days != null && c.per_day_signup != null && c.per_day_signup !== event.allow_choose_days && (
+            <Chip value={c.per_day_signup} label="Per-day (differs from portal)" />
+          )}
           <Chip value={c.auto_approve} label="Auto-approve" />
           <Chip value={c.waitlist_requests} label="Waitlist requests" />
-        </div>
-        <div style={{ marginTop: 10, fontSize: 14, color: C.ink }}>
-          <span style={{ fontWeight: 800 }}>Registration open</span>{' '}
-          <span style={{ whiteSpace: 'nowrap' }}>{fmtDate(c.registration_start)}</span> <span style={{ fontWeight: 800 }}>→</span> <span style={{ whiteSpace: 'nowrap' }}>{fmtDate(c.registration_end)}</span>
         </div>
       </Card>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        <Stat big={c.max_entries ?? '—'} label="Max kids" danger={c.max_entries === 0} />
-        <Stat big={`${c.min_age ?? '—'}–${c.max_age ?? '—'}`} label="Ages" />
+        {showMax && <Stat big={c.max_entries ?? '—'} label={maxLabel} danger />}
+        {agesDiffer && <Stat big={`${c.min_age ?? '—'}–${c.max_age ?? '—'}`} label="Ages in iClass setting (differs)" danger />}
         <Stat big={c.due_at_signup || '—'} label="Due at sign-up" />
       </div>
-
-      {state.days.length > 0 && (
-        <Card title="Each day">
-          <div style={{ display: 'grid', gap: 6 }}>
-            {state.days.map((d, i) => {
-              const occ = Number(d.occ || 0);
-              const open = Number(d.open || 0);
-              const cap = occ + open;
-              const full = open === 0;
-              return (
-                <div key={i} style={{
-                  display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: 8, rowGap: 2,
-                  background: full ? C.bad : '#f7f4ef', color: full ? '#fff' : C.ink,
-                  borderRadius: 10, padding: '7px 10px', boxShadow: '0 1px 3px rgba(0,0,0,.12)',
-                }}>
-                  <span style={{ fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap' }}>{fmtDate(d.sqlDate, false)}</span>
-                  <span style={{ fontSize: 14, whiteSpace: 'nowrap' }}>
-                    <b style={{ fontSize: 16 }}>{occ}</b> in · <b style={{ fontSize: 16 }}>{open}</b> open
-                    <span style={{ fontWeight: 600 }}> of {cap}</span>
-                    {Number(d.occwait) > 0 && <b style={{ marginLeft: 6, color: full ? '#fff' : C.warn }}>· {d.occwait} waitlist</b>}
-                    {Number(d.requests) > 0 && <b style={{ marginLeft: 6, color: full ? '#fff' : C.warn }}>· {d.requests} requests</b>}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      )}
 
       <Card title="Price table">
         <div style={{ fontSize: 14, fontWeight: 700, color: C.ink, marginBottom: cells.length ? 8 : 0 }}>
