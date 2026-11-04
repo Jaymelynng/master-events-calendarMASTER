@@ -223,11 +223,16 @@ def sync_events():
             }), 400
         
         # Import your working script
+        import f12_collect_and_import
         from f12_collect_and_import import (
             collect_events_via_f12,
             convert_event_dicts_to_flat,
             GYMS
         )
+        # Read Jayme's Buckets fresh on every sync. The module stays loaded for the server's whole
+        # life, so without this a bucket she changed only took effect after the next deploy.
+        f12_collect_and_import._TYPE_MAPPINGS_CACHE = None
+        f12_collect_and_import._APPOINTMENT_GYMS_CACHE = None
         
         if gym_id not in GYMS:
             return jsonify({

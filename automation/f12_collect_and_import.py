@@ -209,22 +209,38 @@ def fetch_type_mappings():
         return _TYPE_MAPPINGS_CACHE
 
     try:
-        url = (f"{SUPABASE_URL}/rest/v1/event_type_mappings"
-               f"?is_active=eq.true&select=iclass_type_name,event_type,hide_from_calendar,gym_id")
-        req = Request(url)
-        req.add_header("apikey", SUPABASE_KEY)
-        req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
-        with urlopen(req, timeout=15) as response:
-            rows = json.loads(response.read().decode())
+        rows = None
+        # iclass_type_ids (added 2026-11-04) lets a mapping survive an iClass rename. If the column
+        # is not there yet, read without it - matching by name works exactly as before.
+        for cols in ("id,iclass_type_name,event_type,hide_from_calendar,gym_id,iclass_type_ids",
+                     "id,iclass_type_name,event_type,hide_from_calendar,gym_id"):
+            try:
+                req = Request(f"{SUPABASE_URL}/rest/v1/event_type_mappings?is_active=eq.true&select={cols}")
+                req.add_header("apikey", SUPABASE_KEY)
+                req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
+                with urlopen(req, timeout=15) as response:
+                    rows = json.loads(response.read().decode())
+                break
+            except HTTPError as e:
+                if e.code != 400:
+                    raise
         mapping = {}
-        for r in rows:
+        _TYPE_ID_INDEX.clear()
+        for r in rows or []:
             if not r.get('iclass_type_name'):
                 continue
             name = r['iclass_type_name'].strip().lower()
-            mapping.setdefault(name, {})[r.get('gym_id') or '*'] = {
+            rule = {
                 'event_type': r.get('event_type'),
                 'hide': bool(r.get('hide_from_calendar')),
+                'row_id': r.get('id'),
+                'name': r['iclass_type_name'].strip(),
+                'type_ids': dict(r.get('iclass_type_ids') or {}) if 'iclass_type_ids' in r else None,
             }
+            mapping.setdefault(name, {})[r.get('gym_id') or '*'] = rule
+            for gym, tid in (rule['type_ids'] or {}).items():
+                if r.get('gym_id') in (None, gym):
+                    _TYPE_ID_INDEX[(gym, str(tid))] = rule
         if mapping:
             print(f"  [MAP] Loaded {len(mapping)} camp-type mappings from the database")
             _TYPE_MAPPINGS_CACHE = mapping
@@ -240,11 +256,54 @@ def fetch_type_mappings():
     return _TYPE_MAPPINGS_CACHE
 
 
-def resolve_type_mapping(mappings, title, gym_id=None):
-    """The rule for one iClass category name at one gym: the gym's own rule if
-    Jayme made one, otherwise the every-gym rule, otherwise None (UNSORTED)."""
+# (gym, iClass type id) -> the mapping row that already matched it. Filled from iclass_type_ids.
+_TYPE_ID_INDEX = {}
+
+
+def resolve_type_mapping(mappings, title, gym_id=None, type_id=None):
+    """The rule for one iClass category at one gym.
+
+    1. By NAME: the gym's own rule if Jayme made one, otherwise the every-gym rule.
+       When the name matches, the row learns this gym's iClass type id (saved once).
+    2. By iClass TYPE ID, only when the name has no rule: the same id at the same gym is the same
+       iClass category with a new name (Planet renamed "Summer Swim & Gym - Full Day" to
+       "Day Program - Full Day", id 3, Nov 2026) - Jayme's bucket is kept and the rename is logged.
+    3. Otherwise None (UNSORTED)."""
     scopes = mappings.get((title or '').strip().lower()) or {}
-    return scopes.get(gym_id) or scopes.get('*')
+    rule = scopes.get(gym_id) or scopes.get('*')
+    if rule:
+        _learn_type_id(rule, gym_id, type_id)
+        return rule
+    if gym_id and type_id is not None:
+        renamed = _TYPE_ID_INDEX.get((gym_id, str(type_id)))
+        if renamed:
+            print(f"  [MAP] RENAMED in iClass at {gym_id}: '{renamed['name']}' is now '{title}' "
+                  f"(same iClass type id {type_id}) - kept your bucket {renamed['event_type']}")
+            return renamed
+    return None
+
+
+def _learn_type_id(rule, gym_id, type_id):
+    """Remember which iClass type id a mapped name had at this gym, so a later rename still
+    finds Jayme's bucket. Only writes when the id is new for that gym; a failed write changes
+    nothing about this sync."""
+    if not gym_id or type_id is None or rule.get('type_ids') is None or not rule.get('row_id'):
+        return
+    if str(rule['type_ids'].get(gym_id)) == str(type_id):
+        return
+    rule['type_ids'][gym_id] = type_id
+    _TYPE_ID_INDEX[(gym_id, str(type_id))] = rule
+    try:
+        req = Request(f"{SUPABASE_URL}/rest/v1/event_type_mappings?id=eq.{rule['row_id']}",
+                      method='PATCH', data=json.dumps({'iclass_type_ids': rule['type_ids']}).encode())
+        req.add_header("apikey", SUPABASE_KEY)
+        req.add_header("Authorization", f"Bearer {SUPABASE_KEY}")
+        req.add_header("Content-Type", "application/json")
+        with urlopen(req, timeout=15):
+            pass
+        print(f"  [MAP] Remembered: '{rule['name']}' is iClass type id {type_id} at {gym_id}")
+    except Exception as e:
+        print(f"  [MAP] Could not save the type id for '{rule['name']}' at {gym_id} ({e})")
 
 
 # ----------------------------------------------------------------------------
@@ -397,7 +456,7 @@ def _get_booking_categories(slug, location_id, gym_id=None):
             continue
 
         title = item.get('title', '').strip()
-        rule = resolve_type_mapping(mappings, title, gym_id)
+        rule = resolve_type_mapping(mappings, title, gym_id, type_id)
 
         if rule and rule.get('hide'):
             # Jayme switched this category off from the mappings screen. Still
