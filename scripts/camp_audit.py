@@ -220,9 +220,8 @@ def main():
     for c in late_start:
         row('Registration start date', label(c), f"Registration starts {mdy(c['registration_start'])}. Launch is {mdy(a.launch)}.", c['_href'])
     # No 'Not in the portal menu' rows: a type is missing from the menu only because none of its camps is live yet.
-    for c in camps:
-        if not c['_active']:
-            row('Status Inactive', label(c), f"Status is Inactive: won’t go live on the portal on {mdy(a.launch)}, even with the other settings on. On purpose?", c['_href'])
+    # No 'Status Inactive' rows either (Jayme 2026-11-05: "she obviously will turn them to active"): HOW a gym hides
+    # its camps before launch is the gym's choice. Inactive only keeps a camp out of 'Camps are live' / 'Goes live early'.
 
     # 2. Registration end = camp's last day
     for c in camps:
