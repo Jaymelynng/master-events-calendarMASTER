@@ -78,14 +78,21 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--page', required=True, help='folder holding the downloaded page collections gyms/ and sheets/')
     ap.add_argument('--out', required=True)
-    ap.add_argument('--from', dest='frm', required=True)
-    ap.add_argument('--to', required=True)
-    ap.add_argument('--launch', required=True)
+    # Normally all four come from the Standards page ("Dates the audit uses"), downloaded into
+    # <page>/standards/summer-2027.json; typing one here overrides it for this run only.
+    ap.add_argument('--from', dest='frm')
+    ap.add_argument('--to')
+    ap.add_argument('--launch')
     ap.add_argument('--due')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     runs = os.path.join(a.out, '_script')
     os.makedirs(runs, exist_ok=True)
+    std_path = os.path.join(a.page, 'standards', 'summer-2027.json')
+    settings = (json.load(open(std_path, encoding='utf-8')).get('settings') or {}) if os.path.exists(std_path) else {}
+    window = [a.frm or (settings.get('window') or [None, None])[0], a.to or (settings.get('window') or [None, None])[1]]
+    print(f"Dates from the Standards page: launch {a.launch or settings.get('launch')}, due {a.due or settings.get('due')}, "
+          f"summer camps {window[0]} to {window[1]}, closures {[c.get('date') for c in settings.get('closures') or []]}")
 
     page = {os.path.basename(f)[:-5]: json.load(open(f, encoding='utf-8')) for f in glob.glob(os.path.join(a.page, 'gyms', '*.json'))}
     # page code (AAR, EGF, PGN ...) <-> calendar code (AAG, EAG, PLG ...): the camp sheets carry both
@@ -112,9 +119,12 @@ def main():
 
     upload = []
     for gid, code, doc in plan:
-        cmd = [sys.executable, os.path.join(HERE, 'camp_audit.py'), gid, '--from', a.frm, '--to', a.to, '--launch', a.launch, '--out', runs]
-        if a.due:
-            cmd += ['--due', a.due]
+        cmd = [sys.executable, os.path.join(HERE, 'camp_audit.py'), gid, '--out', runs]
+        if os.path.exists(std_path):
+            cmd += ['--standards', std_path]
+        for flag, v in (('--from', a.frm), ('--to', a.to), ('--launch', a.launch), ('--due', a.due)):
+            if v:
+                cmd += [flag, v]
         r = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', env=dict(os.environ, PYTHONIOENCODING='utf-8'))
         if r.returncode != 0:
             print(f"  {code}: AUDIT FAILED - page left as it is\n{r.stderr[-800:]}")
@@ -134,7 +144,29 @@ def main():
             print(f"      - {x[0]} | {x[1]} | {x[2][:110]}")
         if added or gone:
             json.dump({'rows': rows}, open(os.path.join(a.out, f'{code}.json'), 'w', encoding='utf-8'), ensure_ascii=False)
-            upload.append(code)
+            upload.append(f'gyms/{code}')
+
+    # The camp sheets (the gym data tab) for EVERY gym on the page - sheets are data, so Sent / Ready gyms too.
+    sheets_dir = os.path.join(a.out, '_sheets')
+    r = subprocess.run([sys.executable, os.path.join(HERE, 'audit_page_sheets.py'), '--from', window[0], '--to', window[1], '--out', sheets_dir],
+                       capture_output=True, text=True, encoding='utf-8', env=dict(os.environ, PYTHONIOENCODING='utf-8'))
+    if r.returncode != 0:
+        print("CAMP SHEETS FAILED - sheets left as they are")
+        print(r.stderr[-800:])
+    else:
+        os.makedirs(os.path.join(a.out, 'sheets'), exist_ok=True)
+        for f in sorted(glob.glob(os.path.join(a.page, 'sheets', '*.json'))):
+            old = json.load(open(f, encoding='utf-8'))
+            code, gid = old.get('code') or os.path.basename(f)[:-5], old.get('dbCode') or old.get('code')
+            nf = os.path.join(sheets_dir, f'{gid}.json')
+            if not os.path.exists(nf):
+                print(f"  sheet {code}: not rebuilt (no {gid} in the gyms table)"); continue
+            new = dict(json.load(open(nf, encoding='utf-8')), code=code)
+            same = all(json.dumps(old.get(k), sort_keys=True) == json.dumps(new.get(k), sort_keys=True) for k in ('camps', 'pricing', 'ages', 'types', 'campCount'))
+            if not same:
+                json.dump(new, open(os.path.join(a.out, 'sheets', f'{code}.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+                upload.append(f'sheets/{code}')
+                print(f"  sheet {code}: changed ({old.get('campCount')} -> {new.get('campCount')} camps, read {new.get('pulled')})")
     with open(os.path.join(a.out, 'UPLOAD.txt'), 'w', encoding='utf-8') as f:
         f.write('\n'.join(upload))
     print(f"To upload ({len(upload)}): {', '.join(upload) or 'nothing changed'}")

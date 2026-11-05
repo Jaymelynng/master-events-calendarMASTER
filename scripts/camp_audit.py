@@ -112,12 +112,22 @@ def sport(c):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('gym')
-    ap.add_argument('--from', dest='frm', required=True)
-    ap.add_argument('--to', required=True)
-    ap.add_argument('--launch', required=True, help='launch date, e.g. 2026-11-16')
+    ap.add_argument('--standards', help="the audit page's Summer Camp Standards doc (JSON). Its `settings` (launch, due, "
+                    "window, closures - Jayme edits them on the Standards page) are what the audit uses; nothing typed here")
+    ap.add_argument('--from', dest='frm')
+    ap.add_argument('--to')
+    ap.add_argument('--launch', help='launch date, e.g. 2026-11-16')
     ap.add_argument('--out', required=True)
     ap.add_argument('--due', help='date camps are due in iClass, e.g. 2026-11-09 (used in the "no summer camps yet" row)')
     a = ap.parse_args()
+    std = (json.load(open(a.standards, encoding='utf-8')).get('settings') or {}) if a.standards else {}
+    a.frm = a.frm or (std.get('window') or [None, None])[0]
+    a.to = a.to or (std.get('window') or [None, None])[1]
+    a.launch = a.launch or std.get('launch')
+    a.due = a.due or std.get('due')
+    closures = {x['date']: x.get('name') or 'closed' for x in (std.get('closures') or []) if x.get('date')}
+    if not (a.frm and a.to and a.launch):
+        sys.exit('Need the summer window and launch date: pass --standards (the Standards page doc) or --from/--to/--launch')
     G = a.gym.upper()
     os.makedirs(a.out, exist_ok=True)
     today = dt.date.today()
@@ -279,6 +289,30 @@ def main():
                 row('Event Pricing Schedule', label(c), f"Payment Settings use the {c['price_table_name']} pricing schedule, so it charges {cost(mine_c)}{wk}. The other {n_t} {s_name} camps use {main_pt} ({cost(main_c)}). On purpose?", c['_href'])
                 c['_expected_table'] = tid   # the description price is then checked against the table its matching camps use
 
+    # 2c-2. Sibling discount the same across matching camps (Standards #11): what each camp's own pricing schedule
+    #       gives the 2nd and 3rd child, vs the schedule most camps of its Event Type use.
+    def sib_of(tid_):
+        t_ = price.get(tid_) or {}
+        d1 = t_.get((1, 1))
+        if not d1:
+            return None
+        return tuple(round((1 - t_[(k, 1)] / d1) * 100) if t_.get((k, 1)) else None for k in (2, 3))
+    def sib_words(v):
+        if v is None:
+            return 'no day price to compare'
+        a2, a3 = v
+        if not a2 and not a3:
+            return 'no sibling discount'
+        return f"{a2 or 0}% off the 2nd child" + ('' if a3 is None else f", {a3}% off the 3rd")
+    for t_name in {c['camp_type_name'] for c in camps}:
+        users = [c for c in camps if c['camp_type_name'] == t_name]
+        main_tid, n_main = collections.Counter(c['price_table_id'] for c in users).most_common(1)[0]
+        want = sib_of(main_tid)
+        for c in users:
+            got = sib_of(c['price_table_id'])
+            if c['price_table_id'] != main_tid and got is not None and want is not None and got != want:
+                row('Sibling discount', label(c), f"{sib_words(got)}. The other {n_main} {t_name} camps give {sib_words(want)}. On purpose?", c['_href'])
+
     # 2d. A week missing a kind of camp every other week has
     kinds_by_week = collections.defaultdict(set)
     for c in camps:
@@ -329,6 +363,12 @@ def main():
                 ampm = ' AM' if s < 12 * 3600 and cs >= 12 * 3600 else (' PM' if s >= 12 * 3600 and cs < 12 * 3600 else '')
                 want = span(cs, ce) + (' PM' if ampm == ' AM' else (' AM' if ampm == ' PM' else ''))
                 row(f"{(k or sport(c)).strip()} {DAYNAME[wd]} time", label(c), f"{DAYNAME[wd]} {span(s, e)}{ampm}. Should it be {want}?", c['_href'])
+
+    # 4a. A camp day on a KNOWN closure (Standards > Short weeks; the list lives on the Standards page)
+    for c in camps:
+        for day in sorted({x[0] for x in c['_days']}):
+            if day in closures:
+                row('Closed day', label(c), f"Has camp on {DAYNAME[d(day).weekday()]} {mon_d(day)} ({closures[day]}), a known closure. On purpose?", c['_href'])
 
     # 4. Missing day / start or end date on a no-camp day, vs the week's matching camps
     weeks = collections.defaultdict(list)
