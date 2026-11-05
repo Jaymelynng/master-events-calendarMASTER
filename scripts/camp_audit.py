@@ -116,6 +116,7 @@ def main():
     ap.add_argument('--to', required=True)
     ap.add_argument('--launch', required=True, help='launch date, e.g. 2026-11-16')
     ap.add_argument('--out', required=True)
+    ap.add_argument('--due', help='date camps are due in iClass, e.g. 2026-11-09 (used in the "no summer camps yet" row)')
     a = ap.parse_args()
     G = a.gym.upper()
     os.makedirs(a.out, exist_ok=True)
@@ -130,6 +131,15 @@ def main():
     # Day Program, OAS School Closure Camp). Kids Night Out etc. drop out by bucket.
     skipped = [c for c in camps if bucket(c['camp_type_name'], G, rules) not in ('CAMP', 'CAMP CARE') or re.search(r'school\s*(year|closure)', f"{c['camp_type_name']} {c['camp_name']}", re.I)]
     camps = [c for c in camps if c not in skipped]
+    if not camps:
+        # No summer camps entered yet: one row, the wording on the audit page since 2026-11-05.
+        due = f" (camps due {d(a.due).strftime('%A')} {d(a.due).month}/{d(a.due).day})" if a.due else ''
+        email = {'code': G, 'name': gym['name'], 'gm': (gym.get('manager_name') or '').split(' ')[0], 'status': 'auditing',
+                 'subject': f"{gym['name']} Summer Camps 2027", 'confirmed': '',
+                 'rows': [{'err': 'No summer camps yet', 'camp': '—', 'href': '', 'note': f"No summer 2027 camps are in iClass yet{due}."}]}
+        json.dump(email, open(os.path.join(a.out, f'{G}_email.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+        print(f"{G}: 0 summer camps -> {a.out}")
+        return
     setups = {s['camp_id']: s for s in get('iclass_camp_setup', {'select': 'camp_id,raw', 'gym_id': f'eq.{G}'}, 'camp_id.asc')}
     cells = get('iclass_price_cells', {'select': 'price_table_id,price_table_name,child_number,days,amount', 'gym_id': f'eq.{G}'}, 'price_table_id.asc,child_number.asc,days.asc')
 
