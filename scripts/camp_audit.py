@@ -173,7 +173,7 @@ def main():
     N = len(camps)
     # 1. What PARENTS can see and book right now - the settings AND the live portal (front end).
     #    Portal list = Show on Web + registration window started + the camp's type is in the portal MENU
-    #    (RBK 2026-11-05: camps with registration OFF still list). Direct link = registration on + window open.
+    #    (RBK 2026-11-05: camps with registration OFF still list). A camp parents can't see is never a finding.
     import urllib.request
     def pub(path):
         try:
@@ -195,7 +195,6 @@ def main():
         # 'Camps are live' counts the SETTINGS (her rule): Show on Web on and registration already started.
         # A camp whose registration END has passed still counts - that gets its own Registration end date row.
         c['_listed'] = bool(c['show_on_web'] and rs and rs <= today and c['_in_menu'])
-        c['_direct'] = bool(c['allow_registration'] and c['_window'])
     enrolled = [c for c in camps if c['_enrolled']]
     enr = ' '.join(f"{c['_enrolled']} already enrolled in {label(c)}." for c in enrolled) or '0 enrolled.'
     listed = [c for c in camps if c['_listed']]
@@ -205,15 +204,13 @@ def main():
         what = 'visible and open for registration' if open_n == len(listed) else f"visible ({open_n} open for registration)"
         row('Camps are live', who, f"{who.replace('All', 'All').replace(' of ', ' of ')} camps are currently {what} in the customer portal. Please hide the camps and close registration until the {launch_words} launch.\n\n{enr}",
             f"https://portal.iclasspro.com/{gym['iclass_slug']}/booking")
+    # No 'direct link' rows (Jayme 2026-11-05): a camp parents can't see in the portal can't be found, so an
+    # early or old registration start on a hidden camp, or one whose type isn't in the menu, is not a finding.
+    # 'Goes live early' only when the camp would really appear: Show on Web on AND its type in the portal menu.
     for c in camps:
-        if c['_direct'] and not c['_listed']:
-            row('Open by direct link', label(c), f"Not in the portal list, but registration is open (started {mdy(c['registration_start'])}), so parents with the camp’s direct link can sign up now.", c['_href'])
         rs = d(c['registration_start']) if c['registration_start'] else None
-        if rs and today < rs < launch and c['allow_registration']:
-            if c['show_on_web']:
-                row('Goes live early', label(c), f"Registration starts {mdy(c['registration_start'])}, so this camp goes live on the portal before the {launch_words} launch.", c['_href'])
-            else:
-                row('Open by direct link', label(c), f"Hidden, but registration is on and starts {mdy(c['registration_start'])}: from then parents with the camp’s direct link can sign up, before the {launch_words} launch.", c['_href'])
+        if rs and today < rs < launch and c['allow_registration'] and c['show_on_web'] and c['_in_menu']:
+            row('Goes live early', label(c), f"Registration starts {mdy(c['registration_start'])}, so this camp goes live on the portal before the {launch_words} launch.", c['_href'])
     late_start = [c for c in camps if c['registration_start'] and d(c['registration_start']) > launch]
     for c in late_start:
         row('Registration start date', label(c), f"Registration starts {mdy(c['registration_start'])}. Launch is {mdy(a.launch)}.", c['_href'])
