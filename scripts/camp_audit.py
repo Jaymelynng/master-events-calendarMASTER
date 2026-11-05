@@ -254,13 +254,20 @@ def main():
         types = collections.Counter(c['camp_type_name'] for c in group)
         tables = collections.Counter(c['price_table_id'] for c in group)
         ct, n = types.most_common(1)[0]
-        tid, _ = tables.most_common(1)[0]
+        tid, n_t = tables.most_common(1)[0]
         main_pt = next(c['price_table_name'] for c in group if c['price_table_id'] == tid)
+        # Two separate findings, in iClass's own words (Jayme 2026-11-05): Event Type = where the camp is grouped on
+        # the booking page (KB 38949); Event Pricing Schedule (Payment Settings) = what it charges (KB 38916).
         for c in group:
             nd = len({x[0] for x in c['_days']}) or 5
-            same_charge = price.get(c['price_table_id'], {}).get((1, nd)) == price.get(tid, {}).get((1, nd))
-            if c['camp_type_name'] != ct or not same_charge:
-                row('Camp type / price table', label(c), f"Set up as {c['camp_type_name']} with the {c['price_table_name']} price table. The other {n} {s_name} camps are {ct} with {main_pt}. On purpose?", c['_href'])
+            mine_c, main_c = price.get(c['price_table_id'], {}).get((1, nd)), price.get(tid, {}).get((1, nd))
+            if c['camp_type_name'] != ct:
+                row('Event Type', label(c), f"Event Type is {c['camp_type_name']}, so it shows under {c['camp_type_name']} on the booking page, not with the other {n} {s_name} camps ({ct}). On purpose?", c['_href'])
+            if mine_c != main_c:
+                wk = f" for this {nd}-day week" if nd < 5 else ''
+                cost = lambda v: 'blank' if v is None else f"${v:g}"
+                row('Event Pricing Schedule', label(c), f"Payment Settings use the {c['price_table_name']} pricing schedule, so it charges {cost(mine_c)}{wk}. The other {n_t} {s_name} camps use {main_pt} ({cost(main_c)}). On purpose?", c['_href'])
+                c['_expected_table'] = tid   # the description price is then checked against the table its matching camps use
 
     # 2d. A week missing a kind of camp every other week has
     kinds_by_week = collections.defaultdict(set)
@@ -384,7 +391,10 @@ def main():
     for c in main_camps:
         if c['_empty']:
             continue
-        t = price.get(c['price_table_id'])
+        # A camp on the wrong pricing schedule already has its own row; its description is checked against the
+        # schedule its matching camps use, so the same wrong charge is not reported twice.
+        exp = c.get('_expected_table')
+        t = price.get(exp if exp is not None else c['price_table_id'])
         nd = len({x[0] for x in c['_days']})   # camp DAYS, not time blocks (MGC all-day care has 2 a day)
         if not t or not nd:
             continue
@@ -399,7 +409,11 @@ def main():
             k_ = kind_of(c)[2].lower(); tn = (c['price_table_name'] or '').lower()
             if ('full' in k_ and 'half' in tn) or ('half' in k_ and 'full' in tn):
                 why += f" - it is on the “{c['price_table_name']}” price table"
-            row('Price in description', label(c), f"Says ${week_said:g}. Charges ${charge:g}{why}", c['_href'])
+            if exp is not None:
+                exp_name = next((x['price_table_name'] for x in camps if x['price_table_id'] == exp), 'the matching camps’ table')
+                row('Price in description', label(c), f"Says ${week_said:g}. {exp_name} charges ${charge:g}" + (f" ({nd}-day week)" if nd < 5 else ''), c['_href'])
+            else:
+                row('Price in description', label(c), f"Says ${week_said:g}. Charges ${charge:g}{why}", c['_href'])
     for c in camps:
         if not c['_care'] or c['_empty']:
             continue
