@@ -159,8 +159,12 @@ export default function IclassSetupSection({ setup, event }) {
   const showMax = c.max_entries === 0 || capsDiffer || (dayCaps.length === 0 && c.max_entries != null);
   const maxLabel = capsDiffer ? `Camp max · days set to ${dayCaps.join(' / ')}` : 'Max kids';
   // Ages: the top tile shows them; only show iClass's setting here when it differs.
+  // Compared in WHOLE years: iClass stores "13 years 11 months" as 13.9167 - that is "through 13"
+  // (up to the 14th birthday), the same as the portal's 13. Comparing the raw numbers flagged every
+  // such camp as different (EST, 2026-11-04).
+  const wholeYears = (v) => (v == null || v === '' ? null : Math.floor(Number(v)));
   const agesDiffer = event && c.min_age != null && c.max_age != null &&
-    (String(event.age_min ?? '') !== String(c.min_age) || String(event.age_max ?? '') !== String(c.max_age));
+    (wholeYears(event.age_min) !== wholeYears(c.min_age) || wholeYears(event.age_max) !== wholeYears(c.max_age));
   const childLabel = (k) => (k === 1 ? '1st child' : k === 2 ? '2nd child' : k === 3 ? '3rd child' : `${k}th child`);
 
   return frame(
@@ -180,7 +184,7 @@ export default function IclassSetupSection({ setup, event }) {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {showMax && <Stat big={c.max_entries ?? '—'} label={maxLabel} danger />}
-        {agesDiffer && <Stat big={`${c.min_age ?? '—'}–${c.max_age ?? '—'}`} label="Ages in iClass setting (differs)" danger />}
+        {agesDiffer && <Stat big={`${wholeYears(c.min_age) ?? '—'}–${wholeYears(c.max_age) ?? '—'}`} label="Ages in iClass setting (differs)" danger />}
         <Stat big={c.due_at_signup || '—'} label="Due at sign-up" />
       </div>
 
