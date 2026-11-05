@@ -90,8 +90,10 @@ def clock(sec):
 
 def plain(desc_html):
     t = desc_html or ''
-    t = re.sub(r'(?i)<br\s*/?>', '\n', t)
-    t = re.sub(r'(?i)</(p|div|li|h\d|tr)>', '\n', t)
+    # every line break iClass can store, attributes included (<br data-start="860" />) - a missed
+    # one glues two lines together and reads as a typo that parents never see (SGT "pre-paid.All", 2026-11-05)
+    t = re.sub(r'(?i)<br\b[^>]*>', '\n', t)
+    t = re.sub(r'(?i)</(p|div|li|h\d|tr|ul|ol|table|blockquote)\s*>', '\n', t)
     t = re.sub(r'<[^>]+>', '', t)
     t = html.unescape(t).replace('\xa0', ' ')
     t = re.sub(r'[ \t]+', ' ', t)
