@@ -156,6 +156,10 @@ def main():
         c['_week'] = d(c['_days'][0][0] if c['_days'] else c['start_date'])
         c['_week'] -= dt.timedelta(days=c['_week'].weekday())
         c['_enrolled'] = max([int(n) for n in re.findall(r'(\d+) in', c.get('per_day') or '')] or [0])
+        # Status (Active / Inactive) - the 4th switch (Jayme found it 2026-11-05, HGA Disney Dreamers). KB line 33688:
+        # the portal shows an event type only with an ACTIVE event set to show online and inside its registration dates.
+        # Not in the read = unknown, never treated as inactive.
+        c['_active'] = raw.get('active') != 0
     camps.sort(key=lambda c: (c['_week'], c['_care'], label(c)))
     # the same label on camps in different weeks (MGC runs "Fathoms Below" twice): add the start date
     by_lab = collections.defaultdict(set)
@@ -194,7 +198,7 @@ def main():
         c['_in_menu'] = str(c['camp_type_id']) in menu
         # 'Camps are live' counts the SETTINGS (her rule): Show on Web on and registration already started.
         # A camp whose registration END has passed still counts - that gets its own Registration end date row.
-        c['_listed'] = bool(c['show_on_web'] and rs and rs <= today and c['_in_menu'])
+        c['_listed'] = bool(c['_active'] and c['show_on_web'] and rs and rs <= today and c['_in_menu'])
     enrolled = [c for c in camps if c['_enrolled']]
     enr = ' '.join(f"{c['_enrolled']} already enrolled in {label(c)}." for c in enrolled) or '0 enrolled.'
     listed = [c for c in camps if c['_listed']]
@@ -206,17 +210,19 @@ def main():
             f"https://portal.iclasspro.com/{gym['iclass_slug']}/booking")
     # No 'direct link' rows (Jayme 2026-11-05): a camp parents can't see in the portal can't be found, so an
     # early or old registration start on a hidden camp, or one whose type isn't in the menu, is not a finding.
-    # 'Goes live early' only when the camp would really appear: Show on Web on AND its type in the portal menu.
+    # 'Goes live early' only when the camp will really appear on that date: Active + Show on Web. The type's portal
+    # tile appears by itself once one of its camps is live (KB line 33688), so the menu is not a gym step.
     for c in camps:
         rs = d(c['registration_start']) if c['registration_start'] else None
-        if rs and today < rs < launch and c['allow_registration'] and c['show_on_web'] and c['_in_menu']:
+        if rs and today < rs < launch and c['allow_registration'] and c['show_on_web'] and c['_active']:
             row('Goes live early', label(c), f"Registration starts {mdy(c['registration_start'])}, so this camp goes live on the portal before the {launch_words} launch.", c['_href'])
     late_start = [c for c in camps if c['registration_start'] and d(c['registration_start']) > launch]
     for c in late_start:
         row('Registration start date', label(c), f"Registration starts {mdy(c['registration_start'])}. Launch is {mdy(a.launch)}.", c['_href'])
-    for tid in sorted({c['camp_type_id'] for c in camps if str(c['camp_type_id']) not in menu and c['show_on_web']}, key=str):
-        users = [c for c in camps if c['camp_type_id'] == tid]
-        row('Not in the portal menu', f"All {len(users)} {users[0]['camp_type_name']}", f"{users[0]['camp_type_name']} is not in the portal menu, so parents can’t browse to these camps (only a direct link reaches them). On purpose until launch?")
+    # No 'Not in the portal menu' rows: a type is missing from the menu only because none of its camps is live yet.
+    for c in camps:
+        if not c['_active']:
+            row('Status Inactive', label(c), f"Status is Inactive: won’t go live on the portal on {mdy(a.launch)}, even with the other settings on. On purpose?", c['_href'])
 
     # 2. Registration end = camp's last day
     for c in camps:
