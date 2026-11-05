@@ -142,6 +142,8 @@ def main():
                 'bucket': bucket(c['camp_type_name'], gid, rules),
                 'link': f"https://portal.iclasspro.com/{g['iclass_slug']}/camp-details/{c['camp_id']}?typeId={c['camp_type_id']}" if g.get('iclass_slug') else None,
                 'start': c['start_date'], 'end': c['end_date'], 'days': len(days) or None, 'dayList': days,
+                # Status: iClass 'active' 1 = Active, 0 = Inactive; missing from the read = None (unknown, never a guess)
+                'active': None if raw.get('active') is None else raw.get('active') == 1,
                 'ages': age, 'singleDay': c['per_day_signup'], 'showOnWeb': c['show_on_web'], 'allowRegistration': c['allow_registration'],
                 'regStart': c['registration_start'], 'regEnd': c['registration_end'], 'maxKids': c['max_entries'],
                 'waitlistRequests': c['waitlist_requests'], 'priceTable': c['price_table_name'],
