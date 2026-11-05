@@ -8,7 +8,7 @@ import { parseYmdLocal, formatTime, formatTimeShort, parseCampOptionFromTitle } 
 import { isErrorAcknowledgedAnywhere, inferErrorCategory, canAddAsRule, extractRuleValue } from '../../lib/validationHelpers';
 import { appConfigApi, errorEmailLogApi } from '../../lib/api';
 import { buildErrorEmailUrl, fmtSentStamp, descriptionIssueLine } from '../../lib/errorEmail';
-import IclassSetupSection, { useIclassSetup } from './IclassSetupSection';
+import IclassSetupSection, { useIclassSetup, iclassAgeText } from './IclassSetupSection';
 
 const PANEL_DEFAULT_WIDTH = 384; // the panel's width before it could be resized (w-96)
 const PANEL_MIN_WIDTH = 320;
@@ -241,7 +241,17 @@ export default function EventDetailPanel({
               <SignupMode event={event} />
             </DetailTile>
           )}
-          {(event.age_min || event.age_max) && (
+          {/* Ages: iClass's own setting word for word when the setup read has it ("5 years – 13 years 11 months"),
+              otherwise the portal's numbers */}
+          {(iclassSetup.camp?.min_age != null || iclassSetup.camp?.max_age != null) ? (
+            <DetailTile icon={<Users className="w-4 h-4" />} label="Ages (iClass setting)">
+              {iclassSetup.camp.min_age != null && iclassSetup.camp.max_age != null
+                ? `${iclassAgeText(iclassSetup.camp.min_age)} – ${iclassAgeText(iclassSetup.camp.max_age)}`
+                : iclassSetup.camp.min_age != null
+                  ? `${iclassAgeText(iclassSetup.camp.min_age)} and up`
+                  : `Up to ${iclassAgeText(iclassSetup.camp.max_age)}`}
+            </DetailTile>
+          ) : (event.age_min || event.age_max) && (
             <DetailTile icon={<Users className="w-4 h-4" />} label="Ages">
               {event.age_min && event.age_max
                 ? `${event.age_min} – ${event.age_max} years`

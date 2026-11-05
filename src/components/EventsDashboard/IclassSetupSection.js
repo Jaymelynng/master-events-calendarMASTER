@@ -118,6 +118,19 @@ export function useIclassSetup(event) {
   return state;
 }
 
+// An iClass age setting in iClass's own words: 13.9167 -> "13 years 11 months", 5 -> "5 years".
+// iClass stores months as twelfths of a year, so 0.9167 x 12 = 11 months.
+export function iclassAgeText(v) {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  if (Number.isNaN(n)) return String(v);
+  let years = Math.floor(n);
+  let months = Math.round((n - years) * 12);
+  if (months === 12) { years += 1; months = 0; }
+  const y = `${years} ${years === 1 ? 'year' : 'years'}`;
+  return months ? `${y} ${months} ${months === 1 ? 'month' : 'months'}` : y;
+}
+
 export default function IclassSetupSection({ setup, event }) {
   const state = setup || { loading: true };
 
@@ -158,10 +171,10 @@ export default function IclassSetupSection({ setup, event }) {
   const capsDiffer = dayCaps.length > 0 && c.max_entries != null && dayCaps.some((x) => x !== c.max_entries);
   const showMax = c.max_entries === 0 || capsDiffer || (dayCaps.length === 0 && c.max_entries != null);
   const maxLabel = capsDiffer ? `Camp max · days set to ${dayCaps.join(' / ')}` : 'Max kids';
-  // Ages: the top tile shows them; only show iClass's setting here when it differs.
-  // Compared in WHOLE years: iClass stores "13 years 11 months" as 13.9167 - that is "through 13"
-  // (up to the 14th birthday), the same as the portal's 13. Comparing the raw numbers flagged every
-  // such camp as different (EST, 2026-11-04).
+  // Ages: the top tile shows iClass's setting word for word ("5 years – 13 years 11 months").
+  // Here only the portal's numbers show, and only when they differ in WHOLE years: iClass stores
+  // "13 years 11 months" as 13.9167 and the portal shows 13 - the same camp, not a mismatch
+  // (comparing raw numbers flagged 67 EST camps, 2026-11-04).
   const wholeYears = (v) => (v == null || v === '' ? null : Math.floor(Number(v)));
   const agesDiffer = event && c.min_age != null && c.max_age != null &&
     (wholeYears(event.age_min) !== wholeYears(c.min_age) || wholeYears(event.age_max) !== wholeYears(c.max_age));
@@ -184,7 +197,7 @@ export default function IclassSetupSection({ setup, event }) {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {showMax && <Stat big={c.max_entries ?? '—'} label={maxLabel} danger />}
-        {agesDiffer && <Stat big={`${wholeYears(c.min_age) ?? '—'}–${wholeYears(c.max_age) ?? '—'}`} label="Ages in iClass setting (differs)" danger />}
+        {agesDiffer && <Stat big={`${event.age_min ?? '—'}–${event.age_max ?? '—'}`} label="Ages the portal shows (differs from the setting)" danger />}
         <Stat big={c.due_at_signup || '—'} label="Due at sign-up" />
       </div>
 
