@@ -427,7 +427,9 @@ def main():
         else:
             note = f"On for {', '.join(label(c) for c in on)}. Off for the other {len(main_camps) - len(on)}. On purpose?"
         row('Single-day sign-up', f"All {len(main_camps)}", note)
-    for c in main_camps:
+    # Each camp's setting vs its own description - Before Care / After Care too (Jayme 2026-11-05: HGA's 12 After
+    # Care camps say "$30 per day" with single-day sign-up off; skipping care camps here missed all 12).
+    for c in camps:
         if c['_empty']:
             continue
         day_price = re.search(r'\$\s?\d+(?:\.\d\d)?\s*(?:/\s*day|per\s+day|a\s+day|daily)', c['_desc'], re.I)
