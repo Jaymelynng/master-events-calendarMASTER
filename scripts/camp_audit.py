@@ -239,7 +239,11 @@ def main():
     for group in twins.values():
         if len(group) > 1:
             for c in group:
-                row('Same camp twice', label(c), f"This camp is in iClass {len(group)} times (camp IDs {', '.join(str(x['camp_id']) for x in group)}). On purpose?", c['_href'])
+                # Jayme's wording 2026-11-05 (the GM won't know the IDs; they are for us)
+                ids = [str(x['camp_id']) for x in group]
+                times = 'twice' if len(group) == 2 else f'{len(group)} times'
+                many = 'two' if len(group) == 2 else str(len(group))
+                row('Same camp twice', label(c), f"This camp is listed {times} in iClass (IDs {', '.join(ids[:-1])} and {ids[-1]}), so parents will see {many} listings for the same camp. Is that intentional?", c['_href'])
 
     # 2c. Camp type + price table vs the other camps the NAME says it matches (an Aftercare set up as Full Day)
     by_sport = collections.defaultdict(list)
