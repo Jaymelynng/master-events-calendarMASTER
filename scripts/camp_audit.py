@@ -612,11 +612,17 @@ def main():
                 others = [x for x in names if x != n]
                 row('Picture used on more than one week', n, f"Same picture as {', '.join(others)}.")
 
-    # 15. Camp name format (Kim's): Theme | Summer Camp | (Gym or Ninja) | Age | Date
+    # 15. Camp name format (Kim's): [Week #:] Theme | Summer Camp | (Gym or Ninja) | Age | Date
+    # Kim 2026-11-05: a week number before the theme is fine, Gym or Ninja may be spelled out
+    # (Gymnastics / Parkour & Ninja), Full Day or Half Day goes right after it, Ages 5+ is fine (a range is
+    # her preference, never an error). So the second part must be exactly "Summer Camp" - no sport before it,
+    # no year after it - and nothing else here is flagged.
     off = [c for c in camps if not re.match(r'^[^|]+\|\s*Summer Camp\s*\|', c['camp_name'] or '')]
     if off:
         row('Title format', f"All {N}" if len(off) == N else f"{len(off)} of {N}",
-            f"Now: {off[0]['camp_name']}. Format: Theme | Summer Camp | Gym or Ninja | Age | Date. Full Day or Half Day is optional; if used, it goes in the Gym or Ninja spot.")
+            f"Now: {off[0]['camp_name']}. Format: Theme | Summer Camp | Gym or Ninja | Age | Date. "
+            "A week number before the theme is fine, Gym or Ninja can be spelled out, and Full Day or Half Day "
+            "goes right after it (e.g. Week 1: Beach Bash | Summer Camp | Gymnastics Full Day | Ages 5-13 | June 1-4).")
 
     # One "All N <kind>" row when the same note hits EVERY camp of that kind (her rule: "All N" only when it
     # truly is every one), otherwise one row per camp.
