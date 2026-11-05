@@ -167,6 +167,10 @@ def main():
                 json.dump(new, open(os.path.join(a.out, 'sheets', f'{code}.json'), 'w', encoding='utf-8'), ensure_ascii=False)
                 upload.append(f'sheets/{code}')
                 print(f"  sheet {code}: changed ({old.get('campCount')} -> {new.get('campCount')} camps, read {new.get('pulled')})")
+    # New camp pictures (not yet copied into the page): downloaded + resized for Claude to upload
+    r = subprocess.run([sys.executable, os.path.join(HERE, 'camp_pictures.py'), '--page', a.page, '--out', os.path.join(a.out, 'pictures')],
+                       capture_output=True, text=True, encoding='utf-8', env=dict(os.environ, PYTHONIOENCODING='utf-8'))
+    print('Pictures: ' + (r.stdout.strip() or r.stderr.strip()[-400:]))
     with open(os.path.join(a.out, 'UPLOAD.txt'), 'w', encoding='utf-8') as f:
         f.write('\n'.join(upload))
     print(f"To upload ({len(upload)}): {', '.join(upload) or 'nothing changed'}")

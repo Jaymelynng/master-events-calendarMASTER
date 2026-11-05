@@ -119,6 +119,12 @@ def main():
     for g in gyms:
         gid = g['id']
         mine = sorted([c for c in camps if c['gym_id'] == gid], key=lambda c: (c['start_date'], c['camp_type_name'] or '', c['camp_name'] or ''))
+        # The SAME summer-camp filter as the audit (camp_audit.py): bucket CAMP / CAMP CARE, minus school-year /
+        # school-closure camps in the window (OAS School Closure Camp, MGC Memorial Day camp, PLG Day Program).
+        # Left-out camps are named on the sheet, never silently dropped.
+        left_out = [c for c in mine if bucket(c['camp_type_name'], gid, rules) not in ('CAMP', 'CAMP CARE')
+                    or re.search(r'school\s*(year|closure)', f"{c['camp_type_name']} {c['camp_name']}", re.I)]
+        mine = [c for c in mine if c not in left_out]
         # when this gym was last read (any camp, so a gym with no camps in the window still shows its read time)
         read_at = max((c['read_at'] or '' for c in all_camps if c['gym_id'] == gid), default=None)
         out_camps, ages, tables = [], defaultdict(lambda: defaultdict(int)), OrderedDict()
@@ -146,6 +152,8 @@ def main():
                 'active': None if raw.get('active') is None else raw.get('active') == 1,
                 'ages': age, 'singleDay': c['per_day_signup'], 'showOnWeb': c['show_on_web'], 'allowRegistration': c['allow_registration'],
                 'regStart': c['registration_start'], 'regEnd': c['registration_end'], 'maxKids': c['max_entries'],
+                # most kids signed up on any one day (iClass per-day counts); a count, never names
+                'enrolled': max([int(n) for n in re.findall(r'(\d+) in', c.get('per_day') or '')] or [0]),
                 'waitlistRequests': c['waitlist_requests'], 'priceTable': c['price_table_name'],
                 'picture': f"https://images.iclasspro.com/images/{c['picture_path']}" if c.get('picture_path') else None,
                 'description': plain(c['description_html']),
@@ -168,6 +176,7 @@ def main():
             'pricing': pricing,
             'ages': [{'type': t, 'count': sum(v.values()), 'ages': [{'ages': k, 'camps': n} for k, n in v.items()]} for t, v in ages.items()],
             'camps': out_camps,
+            'leftOut': [{'name': c['camp_name'], 'type': c['camp_type_name']} for c in left_out],
         }
         json.dump(doc, open(os.path.join(a.out, f'{gid}.json'), 'w', encoding='utf-8'), ensure_ascii=False)
         print(f"{gid}: {len(out_camps)} camps, {len(pricing)} price tables, read {doc['pulled']}, {os.path.getsize(os.path.join(a.out, gid + '.json'))} bytes")
