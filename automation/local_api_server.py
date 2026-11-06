@@ -574,13 +574,16 @@ def send_email():
         return jsonify({"success": False, "error": f"Failed to send email: {str(e)}"}), 500
 
 
-# One setup read at a time. A sync that finishes while another gym is still being read adds its gym
-# to the line instead of starting a second read beside it (two at once would double the calls to
-# iClass). A gym already waiting is not added twice.
+# Several gyms are read at the same time (each gym signs in with its own login). Jayme 2026-11-05:
+# "try running sgt and hga at the same time" - tested: SGT + HGA price reads and a CRR full read ran at once,
+# all ok. How many at once = Railway variable SETUP_READERS (default 3). Gyms past that wait in the line;
+# a gym already waiting or being read is not added twice.
 import threading
 _setup_line = []            # gym codes waiting their turn; None = every gym in the gyms table
 _setup_line_lock = threading.Lock()
-_setup_reading = {'gym': None}
+_setup_reading = set()      # gyms being read right now ('every gym' for a no-gym request)
+_setup_workers = {'n': 0}
+SETUP_READERS = max(1, int(os.environ.get('SETUP_READERS', '3') or 3))
 
 
 def _setup_worker():
@@ -588,14 +591,17 @@ def _setup_worker():
     while True:
         with _setup_line_lock:
             if not _setup_line:
-                _setup_reading['gym'] = None
+                _setup_workers['n'] -= 1
                 return
             gym = _setup_line.pop(0)
-            _setup_reading['gym'] = gym or 'every gym'
+            _setup_reading.add(gym or 'every gym')
         try:
             camp_setup_reader.run_gyms(None if gym is None else [gym], 'full', True)
         except Exception as e:  # one gym failing never stops the line
             print(f"[SETUP] {gym or 'every gym'}: FAILED - {e}", flush=True)
+        finally:
+            with _setup_line_lock:
+                _setup_reading.discard(gym or 'every gym')
 
 
 @app.route('/setup-read', methods=['POST'])
@@ -628,18 +634,17 @@ def setup_read():
 
     with _setup_line_lock:
         for g in (gyms or [None]):
-            # compare by the name the worker shows ('every gym' for None): comparing None to an idle worker's
-            # None skipped every "all gyms" request (2026-11-05: {"what":"full"} with no gyms queued nothing)
-            if g not in _setup_line and (g or 'every gym') != _setup_reading['gym']:
+            # by the name the readers show ('every gym' for None) - comparing None to None once skipped every
+            # "all gyms" request (2026-11-05: {"what":"full"} with no gyms queued nothing)
+            if g not in _setup_line and (g or 'every gym') not in _setup_reading:
                 _setup_line.append(g)
         waiting = [g or 'every gym' for g in _setup_line]
-        start_worker = _setup_reading['gym'] is None
-        if start_worker:
-            _setup_reading['gym'] = 'starting'
-    if start_worker:
+        new = max(0, min(SETUP_READERS - _setup_workers['n'], len(_setup_line)))
+        _setup_workers['n'] += new
+    for _ in range(new):
         threading.Thread(target=_setup_worker, daemon=True).start()
-    print(f"[SETUP] full read line: {', '.join(waiting) or '(empty)'}", flush=True)
-    return jsonify({"success": True, "what": what, "started": True, "waiting": waiting})
+    print(f"[SETUP] full read line: {', '.join(waiting) or '(empty)'} | readers {_setup_workers['n']} of {SETUP_READERS}", flush=True)
+    return jsonify({"success": True, "what": what, "started": True, "waiting": waiting, "readers": _setup_workers['n']})
 
 
 if __name__ == '__main__':
