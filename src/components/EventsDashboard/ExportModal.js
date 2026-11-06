@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { isErrorAcknowledgedAnywhere, inferErrorCategory } from '../../lib/validationHelpers';
+import { eventsApi } from '../../lib/api';
+import { EVENT_COLUMNS, buildEventRows, toCSV, toClipboard, fetchDayCounts, spotsOf } from '../../lib/eventRow';
+import { copyToClipboardRich } from './copyVisible';
 
 // Real gym brand colors (primary brand color per gym)
 const GYM_BRAND_COLORS = {
@@ -23,7 +26,34 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   // NOTE: The 'events' prop is received but not used - component fetches its own data from database
   // based on the date range selector, which allows exporting any date range (not just current view)
   const [selectedGyms, setSelectedGyms] = useState(gyms.map(g => g.id)); // All selected by default
-  const [selectedTypes, setSelectedTypes] = useState(['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM', 'CAMP', 'SPECIAL EVENT']);
+  // Every bucket in Jayme's Buckets list (event_types table), all ticked. Before 2026-11-06 this was a typed
+  // list (CLINIC, KNO, OPEN GYM, CAMP, SPECIAL EVENT) that left CAMP CARE and SPECIALTY out of every export.
+  const [eventTypes, setEventTypes] = useState([]);
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  useEffect(() => {
+    supabase.from('event_types').select('name').order('name').then(({ data }) => {
+      const names = (data || []).map(r => r.name).filter(Boolean);
+      setEventTypes(names);
+      setSelectedTypes(names);
+    });
+  }, []);
+  // The buckets with a monthly requirement (from the requirements she set), never a typed list
+  const requiredTypes = Object.keys(monthlyRequirements || {}).filter(t => Number(monthlyRequirements[t]) > 0);
+
+  // Which columns the event rows carry (CSV file + Copy). All ticked; tap to drop; remembered on this computer.
+  const [pickedColumns, setPickedColumns] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('export_columns') || 'null');
+      if (Array.isArray(saved) && saved.length) return EVENT_COLUMNS.map(c => c.key).filter(k => saved.includes(k));
+    } catch (e) { /* not saved */ }
+    return EVENT_COLUMNS.map(c => c.key);
+  });
+  const toggleColumn = (key) => setPickedColumns(prev => {
+    const next = prev.includes(key) ? prev.filter(k => k !== key) : EVENT_COLUMNS.map(c => c.key).filter(k => k === key || prev.includes(k));
+    try { localStorage.setItem('export_columns', JSON.stringify(next)); } catch (e) { /* fine */ }
+    return next;
+  });
+  const [copyNote, setCopyNote] = useState('');
   const [exportFormat, setExportFormat] = useState('csv');
   const [includeEvents, setIncludeEvents] = useState(true);
   const [includeAnalytics, setIncludeAnalytics] = useState(false);
@@ -92,7 +122,6 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   // Quick preset selected
   const [activePreset, setActivePreset] = useState(null);
 
-  const eventTypes = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM', 'CAMP', 'SPECIAL EVENT'];
 
   // Fetch events when date range changes
   useEffect(() => {
@@ -111,16 +140,10 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const fetchEventsForDateRange = async () => {
     setLoadingEvents(true);
     try {
-      // Use events_with_gym view to include both active AND archived events
-      const { data, error } = await supabase
-        .from('events_with_gym')
-        .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .is('deleted_at', null)
-        .order('date', { ascending: true });
-      
-      if (error) throw error;
+      // Every event that touches the range - incl. a camp that starts before it and runs into it - read
+      // page by page (eventsApi.getAll). Before 2026-11-06 only events STARTING in the range came back,
+      // in one read capped at 1,000 rows.
+      const data = await eventsApi.getAll(startDate, endDate);
       setFetchedEvents(data || []);
     } catch (err) {
       console.error('Error fetching events:', err);
@@ -207,7 +230,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         setIncludeAuditCheck(false);
         setIncludeSyncHistory(false);
         setSelectedGyms(gyms.map(g => g.id));
-        setSelectedTypes(['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']);
+        setSelectedTypes(requiredTypes);
         setExportFormat('csv');
         break;
       case 'full-backup':
@@ -227,7 +250,7 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
         setIncludeAuditCheck(false);
         setIncludeSyncHistory(false);
         setSelectedGyms(gyms.map(g => g.id));
-        setSelectedTypes(['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM']);
+        setSelectedTypes(requiredTypes);
         setExportFormat('html');
         break;
       case 'audit-check':
@@ -263,6 +286,18 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
   const filteredEvents = activeEvents.filter(e => 
     selectedGyms.includes(e.gym_id) && selectedTypes.includes(e.type)
   );
+
+  // Each day's spots for the filtered events, read ahead whenever the filter changes (used by Copy)
+  const [readyDayCounts, setReadyDayCounts] = useState(null);
+  const filteredKey = filteredEvents.map(e => e.id).join(',');
+  useEffect(() => {
+    let alive = true;
+    setReadyDayCounts(null);
+    if (!filteredEvents.length) return undefined;
+    fetchDayCounts(filteredEvents).then(m => { if (alive) setReadyDayCounts(m); }).catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredKey]);
 
   // Get events with audit check failures (validation errors, missing descriptions, etc.)
   // This matches the "Audit Check" column in the main dashboard table
@@ -389,18 +424,38 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     return getAnalytics().filter(a => !a.meets_requirements);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const dateRangeLabel = `${startDate} to ${endDate}`;
     const timestamp = new Date().toISOString().split('T')[0];
-    
+    // Each day's spots from the iClass setup read - the same fullest-day number the calendar shows
+    let dayCounts = {};
+    try { dayCounts = await fetchDayCounts(filteredEvents); } catch (e) { console.error('Day counts not read:', e); }
+
     if (exportFormat === 'csv') {
-      exportCSV(dateRangeLabel, timestamp);
+      exportCSV(dateRangeLabel, timestamp, dayCounts);
     } else if (exportFormat === 'json') {
-      exportJSON(dateRangeLabel, timestamp);
+      exportJSON(dateRangeLabel, timestamp, dayCounts);
     } else if (exportFormat === 'html') {
       exportHTML(dateRangeLabel, timestamp);
     }
     onClose();
+  };
+
+  // Copy the events she filtered (dates, gyms, buckets) with the columns she picked - a table for email /
+  // Docs and tab-separated cells for Sheets / Excel (Jayme 2026-11-06: "if i filter and i pick what i want
+  // can there be a copy button").
+  const handleCopy = async () => {
+    setCopyNote('Copying...');
+    try {
+      // the day counts are read ahead (below), so the clipboard write happens right on the click - browsers
+      // refuse a clipboard write that comes too long after it
+      const dayCounts = readyDayCounts || await fetchDayCounts(filteredEvents);
+      const payload = toClipboard(buildEventRows(filteredEvents, { columnKeys: pickedColumns, gymsList: gyms, dayCounts }));
+      await copyToClipboardRich(payload);
+      setCopyNote(`Copied ${payload.count} events, ${pickedColumns.length} columns`);
+    } catch (err) {
+      setCopyNote(`Could not copy: ${err.message}`);
+    }
   };
 
   // Build a filename that identifies the app + use case + month so Jayme
@@ -424,60 +479,13 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     return `master-calendar-${useCaseSlug}-${monthSlug}-${timestamp}.${ext}`;
   };
 
-  const exportCSV = (monthName, timestamp) => {
+  const exportCSV = (monthName, timestamp, dayCounts = {}) => {
     let csvContent = '';
 
-    // Events section
+    // Events section - the ONE shared column list (src/lib/eventRow.js), only the columns she picked
     if (includeEvents && filteredEvents.length > 0) {
       csvContent += `EVENTS - ${monthName}\n`;
-      csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Day,Time,Daily Schedule,Ages,Description,Description Status,Has Openings,Spots Left,Openings Display,Signup Mode,iClass Program,Type ID,URL\n';
-      filteredEvents.forEach(event => {
-        const gym = gyms.find(g => g.id === event.gym_id);
-        // Use explicit null/undefined checks so age_min = 0 (infants) is
-        // preserved. The truthy-only check dropped 9 real infant-program
-        // events from CSV exports (verified May 2026).
-        const hasMin = event.age_min != null;
-        const hasMax = event.age_max != null;
-        const ageDisplay = hasMin && hasMax
-          ? `"Ages ${event.age_min}-${event.age_max}"`
-          : (hasMin ? `"Ages ${event.age_min}+"` : '');
-
-        const startDate = (event.start_date || event.date || '').split('T')[0];
-        const endDate = (event.end_date || event.start_date || event.date || '').split('T')[0];
-        const isMultiDay = startDate !== endDate;
-
-        csvContent += [
-          `"${(gym?.name || event.gym_id).replace(/"/g, '""')}"`,
-          event.gym_id || '',
-          `"${(event.title || '').replace(/"/g, '""')}"`,
-          event.type || '',
-          startDate,
-          isMultiDay ? endDate : '',
-          event.day_of_week || '',
-          event.time || '',
-          Array.isArray(event.daily_schedule) && event.daily_schedule.length
-            ? `"${event.daily_schedule.map(d => {
-                const label = d.day || '';
-                const hrs = d.start_time ? `${d.start_time}${d.end_time ? '-' + d.end_time : ''}` : '';
-                const dur = (d.duration != null && d.duration !== '') ? ` (${d.duration}hr)` : '';
-                return `${label} ${hrs}${dur}`.trim();
-              }).join(' | ').replace(/"/g, '""')}"`
-            : '',
-          ageDisplay,
-          event.description
-            ? `"${event.description.replace(/\r?\n/g, ' ').replace(/"/g, '""').trim()}"`
-            : '',
-          event.description_status || 'unknown',
-          event.has_openings === false ? 'SOLD OUT' : 'Available',
-          event.openings != null ? event.openings : '',
-          event.openings_display ? `"${event.openings_display.replace(/"/g, '""')}"` : '',
-          event.allow_choose_days === true ? 'Per-Day' : (event.allow_choose_days === false ? 'Full Week Only' : ''),
-          event.program_name ? `"${event.program_name.replace(/"/g, '""')}"` : '',
-          event.type_id != null ? event.type_id : '',
-          event.event_url || ''
-        ].join(',') + '\n';
-      });
-      csvContent += '\n';
+      csvContent += toCSV(buildEventRows(filteredEvents, { columnKeys: pickedColumns, gymsList: gyms, dayCounts })) + '\n\n';
     }
 
     // Analytics section
@@ -602,41 +610,20 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
       csvContent += '\n';
     }
 
-    // Spots & Signup Snapshot — isolated operational view
+    // Spots & Signup Snapshot - spots = the fullest day, the same number the calendar shows
     if (includeSpotsSnapshot && filteredEvents.length > 0) {
       csvContent += `SPOTS & SIGNUP SNAPSHOT - ${monthName}\n`;
-      csvContent += `Quick at-a-glance: spots remaining + signup mode per event\n\n`;
-      csvContent += 'Gym,Gym ID,Title,Type,Start Date,End Date,Spots Left,Status,Signup Mode\n';
-      filteredEvents.forEach(event => {
-        const gym = gyms.find(g => g.id === event.gym_id);
-        const startDate = (event.start_date || event.date || '').split('T')[0];
-        const endDate = (event.end_date || event.start_date || event.date || '').split('T')[0];
-        const isMultiDay = startDate !== endDate;
-        let status = 'Available';
-        if (event.has_openings === false) status = 'SOLD OUT';
-        else if (event.openings != null && event.openings > 0 && event.openings <= 3) status = 'Almost Full';
-        const signup = event.allow_choose_days === true ? 'Per-Day'
-                     : event.allow_choose_days === false ? 'Full Week Only'
-                     : '';
-        csvContent += [
-          `"${(gym?.name || event.gym_id).replace(/"/g, '""')}"`,
-          event.gym_id || '',
-          `"${(event.title || '').replace(/"/g, '""')}"`,
-          event.type || '',
-          startDate,
-          isMultiDay ? endDate : '',
-          event.openings != null ? event.openings : '',
-          status,
-          signup
-        ].join(',') + '\n';
-      });
-      csvContent += '\n';
+      csvContent += `Quick at-a-glance: spots remaining (fullest day) + signup mode per event\n\n`;
+      csvContent += toCSV(buildEventRows(filteredEvents, {
+        columnKeys: ['gym', 'gym_name', 'title', 'bucket', 'start', 'end', 'spots', 'spots_by_day', 'status', 'signup', 'reg_open', 'reg_close'],
+        gymsList: gyms, dayCounts,
+      })) + '\n\n';
     }
 
     downloadFile(csvContent, buildExportFilename('csv', monthName, timestamp), 'text/csv');
   };
 
-  const exportJSON = (monthName, timestamp) => {
+  const exportJSON = (monthName, timestamp, dayCounts = {}) => {
     const exportData = {
       exportDate: new Date().toISOString(),
       dateRange: monthName,
@@ -654,10 +641,16 @@ export default function ExportModal({ onClose, events, gyms, monthlyRequirements
     };
 
     if (includeEvents) {
-      exportData.events = filteredEvents.map(e => ({
-        ...e,
-        gym_name: gyms.find(g => g.id === e.gym_id)?.name || e.gym_id
-      }));
+      exportData.events = filteredEvents.map(e => {
+        const sp = spotsOf(e, dayCounts);
+        return {
+          ...e,
+          gym_name: gyms.find(g => g.id === e.gym_id)?.name || e.gym_id,
+          spots_left_fullest_day: sp.left,
+          spots_by_day: sp.byDay || null,
+          spots_source: sp.source || null,
+        };
+      });
       exportData.eventCount = filteredEvents.length;
     }
 
@@ -1662,7 +1655,7 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
           <div className="p-4">
           <div className="flex flex-wrap gap-3">
             {eventTypes.map(type => {
-              const isRequired = ['CLINIC', 'KIDS NIGHT OUT', 'OPEN GYM'].includes(type);
+              const isRequired = requiredTypes.includes(type);
               return (
                 <label key={type} className={`flex items-center gap-2 cursor-pointer text-sm hover:bg-purple-100 p-1 rounded ${!isRequired ? 'opacity-60' : ''}`}>
                   <input 
@@ -1685,6 +1678,32 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
           </div>
         </div>
         {/* end Event Types */}
+
+        {/* Columns picker - which columns the event rows carry (CSV file + Copy). All ticked; tap to drop. */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-gray-800 flex items-center gap-2">🧩 Columns</h3>
+              <p className="text-xs text-gray-500 mt-0.5">{pickedColumns.length} of {EVENT_COLUMNS.length} in the file and in Copy</p>
+            </div>
+            <div className="flex gap-1">
+              <button onClick={() => { const all = EVENT_COLUMNS.map(c => c.key); setPickedColumns(all); try { localStorage.setItem('export_columns', JSON.stringify(all)); } catch (e) { /* fine */ } }}
+                className="text-xs font-semibold px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white rounded-md shadow-sm transition-colors">All</button>
+            </div>
+          </div>
+          <div className="p-4 flex flex-wrap gap-1.5">
+            {EVENT_COLUMNS.map(c => {
+              const on = pickedColumns.includes(c.key);
+              return (
+                <button key={c.key} type="button" onClick={() => toggleColumn(c.key)}
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${on ? 'bg-purple-700 border-purple-700 text-white hover:bg-purple-800' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-100'}`}>
+                  {on ? '✓ ' : ''}{c.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {/* end Columns */}
 
         {/* Format Selection — inside HOW panel */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
@@ -1772,6 +1791,19 @@ ${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issue
             className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
           >
             Cancel
+          </button>
+          {copyNote && <span className="self-center text-sm font-semibold text-gray-800 mr-1">{copyNote}</span>}
+          <button
+            onClick={handleCopy}
+            disabled={filteredEvents.length === 0 || pickedColumns.length === 0}
+            title="Copy the filtered events with the picked columns - pastes as a table in email / Docs and as cells in Sheets / Excel"
+            className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+              filteredEvents.length && pickedColumns.length
+                ? 'bg-purple-700 hover:bg-purple-800 text-white shadow-lg hover:-translate-y-0.5 cursor-pointer'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            📋 Copy {filteredEvents.length} events
           </button>
           <button
             onClick={handleExport}

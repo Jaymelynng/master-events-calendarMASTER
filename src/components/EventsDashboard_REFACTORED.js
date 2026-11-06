@@ -467,8 +467,8 @@ const EventsDashboard = () => {
             onAddEvent={() => setShowAddEventModal(true)}
             shownCount={shownEvents.length}
             onCopyShown={async () => {
-              const payload = buildCopy(shownEvents, gymsList);
               try {
+                const payload = await buildCopy(shownEvents, gymsList);
                 await copyToClipboardRich(payload);
                 return payload.count;
               } catch (err) {

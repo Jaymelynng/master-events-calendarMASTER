@@ -195,9 +195,9 @@ export const eventsApi = {
   },
 
   async getAll(startDate, endDate, includeDeleted = false) {
-    // The events_with_gym view already filters WHERE deleted_at IS NULL,
-    // so when we need soft-deleted events (for sync comparison), we must
-    // query the events table directly and join gym info manually.
+    // events_with_gym does NOT hide removed events by itself (checked 2026-11-06: it returned CCP #1330,
+    // removed 8/12), so the deleted_at filter below is what keeps them out. For sync comparison (removed
+    // events wanted) we query the events table directly and join gym info manually.
     const tableName = includeDeleted ? 'events' : 'events_with_gym';
     
     // Supabase answers at most 1,000 rows per read and still says success, so read page by page,
