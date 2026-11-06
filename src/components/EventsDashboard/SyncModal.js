@@ -1279,7 +1279,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
               <span className="text-xs bg-white/20 px-2 py-1 rounded">All {gyms.length} gyms, auto-import</span>
             </button>
             <p className="text-xs text-gray-500 mt-1 text-center">
-              Syncs all {gyms.length} gyms (5 program types each) and auto-imports all changes
+              Syncs all {gyms.length} gyms at the same time ({eventTypes.length} buckets each) and auto-imports all changes
             </p>
           </div>
         )}
