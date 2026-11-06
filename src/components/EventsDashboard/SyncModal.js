@@ -256,8 +256,11 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
       }
     };
 
-    for (let i = 0; i < totalGyms; i++) {
-      if (abortRef.current) break;
+    // Every gym at once (Jayme 2026-11-06: "have them all sync at the same time"). Railway answers
+    // requests side by side - tested: all 14 gyms collected in 50s with no failures. Each gym still
+    // asks for its buckets one after another and writes only its own events.
+    const syncOneGym = async (i) => {
+      if (abortRef.current) return;
       const gym = gymList[i];
 
       gymResults[i].status = 'syncing';
@@ -314,7 +317,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
           gymResults[i].status = 'error';
           gymResults[i].error = `All types failed: ${failedTypes.map(([t]) => t).join(', ')}`;
           setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
-          continue;
+          return;
         }
 
         // Build allIncoming from accumulated per-type results
@@ -328,7 +331,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
           gymResults[i].summary = { eventsFound: 0, new: 0, changed: 0, deleted: 0, unchanged: 0 };
           for (const type of checkedTypes) await syncLogApi.log(gym.id, type, 0, 0);
           setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
-          continue;
+          return;
         }
 
         // PHASE 2: Compare
@@ -361,7 +364,7 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
             pauseReason: `${deletedCount} of ${activeCount} events would be deleted (${Math.round(ratio * 100)}%)`
           };
           setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
-          continue;
+          return;
         }
 
         // PHASE 3: Auto-import
@@ -504,7 +507,8 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
       }
 
       setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
-    }
+    };
+    await Promise.all(gymList.map((_, i) => syncOneGym(i)));
 
     setSyncAllComplete(true);
     // Refresh sync log
@@ -1097,14 +1101,11 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
               {!syncAllComplete && (
                 <p className="text-xs text-purple-600 mt-2">
                   {(() => {
-                    const current = syncAllProgress.gymResults[syncAllProgress.currentGymIndex];
-                    if (!current) return 'Preparing...';
-                    if (current.status === 'syncing') {
-                      const typeName = (current.currentType ? typeLabel(current.currentType) : '...');
-                      return `Collecting ${typeName} from ${current.gymName}... (${current.completedTypes || 0}/${eventTypes.length} types)`;
-                    }
-                    if (current.status === 'importing') return `Importing events for ${current.gymName}...`;
-                    return 'Preparing...';
+                    const g = syncAllProgress.gymResults;
+                    const collecting = g.filter(x => x.status === 'syncing').length;
+                    const importing = g.filter(x => x.status === 'importing').length;
+                    if (!collecting && !importing) return 'Preparing...';
+                    return `All gyms at once: ${collecting} collecting from iClass, ${importing} saving to the calendar`;
                   })()}
                 </p>
               )}

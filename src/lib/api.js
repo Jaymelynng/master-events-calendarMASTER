@@ -200,26 +200,37 @@ export const eventsApi = {
     // query the events table directly and join gym info manually.
     const tableName = includeDeleted ? 'events' : 'events_with_gym';
     
-    let query = supabase
-      .from(tableName)
-      .select(includeDeleted ? '*, gyms(name)' : '*')
-      .order('date', { ascending: true })
-    
-    if (startDate && endDate) {
-      query = query.or(`and(date.gte.${startDate},date.lte.${endDate}),and(start_date.lt.${startDate},end_date.gte.${startDate})`)
-    } else if (startDate) {
-      query = query.gte('date', startDate)
-    } else if (endDate) {
-      query = query.lte('date', endDate)
+    // Supabase answers at most 1,000 rows per read and still says success, so read page by page,
+    // ordered by date then id (id makes the order unique, so no row is skipped or repeated between pages).
+    // Before 2026-11-06 this was one read: past 1,000 events, Sync All would compare against a cut-off
+    // list and enter events twice.
+    const PAGE = 1000
+    const data = []
+    for (let from = 0; ; from += PAGE) {
+      let query = supabase
+        .from(tableName)
+        .select(includeDeleted ? '*, gyms(name)' : '*')
+        .order('date', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+
+      if (startDate && endDate) {
+        query = query.or(`and(date.gte.${startDate},date.lte.${endDate}),and(start_date.lt.${startDate},end_date.gte.${startDate})`)
+      } else if (startDate) {
+        query = query.gte('date', startDate)
+      } else if (endDate) {
+        query = query.lte('date', endDate)
+      }
+
+      if (!includeDeleted) {
+        query = query.is('deleted_at', null)
+      }
+
+      const { data: page, error } = await query
+      if (error) throw new Error(error.message)
+      data.push(...(page || []))
+      if (!page || page.length < PAGE) break
     }
-    
-    if (!includeDeleted) {
-      query = query.is('deleted_at', null)
-    }
-    
-    const { data, error } = await query
-    
-    if (error) throw new Error(error.message)
     
     if (includeDeleted && data) {
       return data.map(row => ({
