@@ -153,14 +153,23 @@ def theme_typos(theme_words, desc_words):
     description 'Tumbling Toons'; name 'Fordbidden', description 'forbidden'). Returns the [(name word, description
     word)] pairs that differ, or None when the theme is not there at all. Plural s is not a difference; words under
     5 letters must match exactly; at most 2 letters off in the whole theme - 3 when another theme word of 5+ letters
-    matches exactly and the odd word starts with the same letter ("tumbling tunes" / "tumbling toons" is 3 off)."""
+    matches exactly and the odd word starts with the same letter ("tumbling tunes" / "tumbling toons" is 3 off).
+    Returns [] when the theme is there exactly (whole words; plural s / es is the same word).
+    A word typed twice over ("Mayhemayhem" for "Mayhem", SGT 2026-11-06) is a typo pair too."""
+    ends = ('s', 'es', 'ing', 'ed', 'er', 'y')   # Splash / Splashing is the same word, never a typo
+    same = lambda a, b: a == b or a.rstrip('s') == b.rstrip('s') or any(b == a + e or a == b + e for e in ends)
+    doubled = lambda a, b: len(a) >= 5 and len(b) > len(a) and b.startswith(a) and a.endswith(b[len(a):])
     n = len(theme_words)
+    best = None
     for i in range(len(desc_words) - n + 1):
         win = desc_words[i:i + n]
         anchored = any(a == b and len(a) >= 5 for a, b in zip(theme_words, win))
         pairs, total = [], 0
         for a, b in zip(theme_words, win):
-            if a == b or a.rstrip('s') == b.rstrip('s'):
+            if same(a, b):
+                continue
+            if doubled(a, b) or doubled(b, a):
+                pairs.append((a, b))
                 continue
             if min(len(a), len(b)) < 5:
                 break
@@ -169,9 +178,10 @@ def theme_typos(theme_words, desc_words):
                 break
             pairs.append((a, b))
         else:
-            if pairs:
-                return pairs
-    return None
+            if not pairs:
+                return []
+            best = best or pairs
+    return best
 
 
 def main():
@@ -712,19 +722,22 @@ def main():
         # letters and digits only: AAG writes the theme as "Wicked Good" Sports / AHOY, Campers! (2026-11-06)
         words = lambda s: ' '.join(re.findall(r'[a-z0-9]+', s.lower().replace('’', '').replace("'", '')))
         th_w = words(re.sub(r'\s*week$', '', theme or '', flags=re.I))
-        if theme and th_w not in words(c['_desc']):
+        # whole words only: "Minion Mayhem" is NOT in "Minion Mayhemayhem" (SGT 2026-11-06 passed as a substring)
+        if theme and f" {th_w} " not in f" {words(c['_desc'])} ":
             typos = theme_typos(th_w.split(), words(c['_desc']).split())
-            if typos:   # the theme IS there, spelled differently: a Spelling row (15b), never "No theme"
-                c['_theme_typos'] = typos
-            else:
+            if typos is None:
                 missing.append('no theme')
+            elif typos:   # the theme IS there, spelled differently: a Spelling row (15b), never "No theme"
+                c['_theme_typos'] = typos
         dm = re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*(\d{1,2})(?:st|nd|rd|th)?\s*[-–]\s*(?:(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*)?(\d{1,2})', c['_desc'], re.I)
         if not dm:
             missing.append('no dates')
         tm = re.search(r'\d{1,2}(?::\d{2})?\s*(am|pm)', c['_desc'], re.I)
         if not tm:
             missing.append('no time')
-        if not re.search(r'\bages?\b', c['_desc'], re.I):          # Kim's list: ages and price in every description
+        # Kim's list: ages and price in every description. Ages = "Ages 5-13" / "Age: 5" / "5-12 years" - a number,
+        # never the word alone (CCP 2026-11-06: "groups based on age and ability" passed with no ages written)
+        if not re.search(r'\bages?\b\W{0,3}\d|\d+\s*(?:yrs?|years?)\b|\d\s*(?:-|–|to)\s*\d+\s*(?:yrs?|years?|year olds?)', c['_desc'], re.I):
             missing.append('no ages')
         if not re.search(r'\$\s?\d', c['_desc']):
             missing.append('no price')
@@ -921,24 +934,24 @@ def main():
         """What exactly is off in the name, in plain words (Jayme 2026-11-06: say what is wrong, not the whole format)."""
         parts = [p.strip() for p in (n or '').split('|')]
         second = parts[1] if len(parts) > 1 else ''
+        bits = []
+        # every problem in the name, not just the first group (2026-11-06: CCP's row said only "Week #" and
+        # never the hours and price parts in its names)
         if re.search(r'summer\s*camp', second, re.I):
             before = re.sub(r'\s*summer\s*camp.*', '', second, flags=re.I).strip()
-            bits = []
             if before:
                 bits.append(f"has “{before}” before Summer Camp (it goes after, as its own part)")
             after = re.sub(r'.*summer\s*camp\s*(20\d\d)?', '', second, flags=re.I).strip()
             after = re.sub(r'\bweek\s*\d+\b', 'Week #', after, flags=re.I)   # one line for every week, not ten
             if after:
                 bits.append(f"has “{after}” after Summer Camp in the same part (it goes in its own part)")
-            if bits:
-                return '; '.join(bits)
-        if not re.search(r'summer\s*camp', n or '', re.I):
+        elif not re.search(r'summer\s*camp', n or '', re.I):
             return "has no “Summer Camp” part"
-        if not re.match(r'^[^|]+\|\s*Summer Camp(\s*20\d\d)?\s*\|', n or ''):
+        else:
             return "“Summer Camp” is not the second part"
         # the rest of Kim's format (Standards #17): Full / Half Day right after Summer Camp (with Gym or Ninja),
         # an Ages part, and the dates
-        rest, bits = parts[2:], []
+        rest = parts[2:]
         fh_at = [i for i, p in enumerate(rest) if re.search(r'\b(full|half)\s*day\b', p, re.I)]
         if fh_at and fh_at[0] != 0:
             bits.append(f"has “{re.search(r'(full|half)\s*day', rest[fh_at[0]], re.I).group(0)}” in its own part, not right after Summer Camp (it goes with Gym or Ninja)")
@@ -946,6 +959,12 @@ def main():
             bits.append("has no Ages part")
         if not any(re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*\d', p, re.I) for p in rest):
             bits.append("has no dates")
+        # hours or a price as a part of the name: not in Kim's format (only a short note in parentheses after the
+        # date is). Said without the amount, so every week's name groups into one line.
+        if any(re.search(r'\d\s*(am|pm)\b', p, re.I) and not p.startswith('(') for p in rest):
+            bits.append("has the camp hours in the name")
+        if any(re.search(r'\$\s?\d', p) for p in rest):
+            bits.append("has the price in the name")
         # a year anywhere in the name is fine; a WRONG year is the error
         for y in re.findall(r'\b(20\d\d)\b', n or ''):
             if yr_want and int(y) != yr_want:
