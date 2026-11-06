@@ -46,7 +46,7 @@ FIXED = {
     'Picture used on more than one week': 'Picture · same as another week',
     'Title format': 'Name format · name vs Kim’s format',
     'AM / PM mix-up in description': 'Time · description vs schedule (AM / PM mix-up)',
-    'Camp name': 'Full / Half Day · name vs settings',
+    'Camp name': 'Name · leftover text',   # CRR 11/6: "(COPY)" left in the name (the Full/Half Day row has its own name above)
 }
 
 PATTERNS = [
