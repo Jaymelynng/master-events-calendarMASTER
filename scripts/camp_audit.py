@@ -473,7 +473,7 @@ def main():
             for (wd, s, e), _days in odd.items():
                 ampm = ' AM' if s < 12 * 3600 and cs >= 12 * 3600 else (' PM' if s >= 12 * 3600 and cs < 12 * 3600 else '')
                 want = span(cs, ce) + (' PM' if ampm == ' AM' else (' AM' if ampm == ' PM' else ''))
-                row(f"{(k or sport(c)).strip()} {DAYNAME[wd]} time", label(c), f"{DAYNAME[wd]} is {span(s, e)}{ampm}. The other days are {span(cs, ce)}. Should {DAYNAME[wd]} be {want}?", c['_href'])
+                row(f"{(k or sport(c)).strip()} {DAYNAME[wd]} time", label(c), f"{DAYNAME[wd]} is {span(s, e)}{ampm}. The other days are {want}. Should {DAYNAME[wd]} be {want}?", c['_href'])
 
     # 4a. A camp day on a KNOWN closure (Standards > Short weeks; the list lives on the Standards page)
     for c in camps:

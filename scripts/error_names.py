@@ -39,6 +39,10 @@ FIXED = {
     'Text from another camp': 'Wrong description · another camp’s text',
     'Spelling': 'Spelling · name vs description',
     'Picture missing': 'Picture missing',
+    # rows found by eye (words inside a picture - not scripted yet, Jayme has it on hold)
+    'Picture': 'Spelling · picture text',
+    'Picture dates': 'Dates · picture vs camp dates',
+    'Picture - different theme': 'Picture · another week’s theme',
     'Picture used on more than one week': 'Picture · same as another week',
     'Title format': 'Name format · name vs Kim’s format',
     'AM / PM mix-up in description': 'Time · description vs schedule (AM / PM mix-up)',
