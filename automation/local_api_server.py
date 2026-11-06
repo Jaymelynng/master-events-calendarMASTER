@@ -628,7 +628,9 @@ def setup_read():
 
     with _setup_line_lock:
         for g in (gyms or [None]):
-            if g not in _setup_line and g != _setup_reading['gym']:
+            # compare by the name the worker shows ('every gym' for None): comparing None to an idle worker's
+            # None skipped every "all gyms" request (2026-11-05: {"what":"full"} with no gyms queued nothing)
+            if g not in _setup_line and (g or 'every gym') != _setup_reading['gym']:
                 _setup_line.append(g)
         waiting = [g or 'every gym' for g in _setup_line]
         start_worker = _setup_reading['gym'] is None
