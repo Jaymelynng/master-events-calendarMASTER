@@ -187,7 +187,7 @@ export const importEvents = async (gymId, eventType, events) => {
 
 /**
  * Ask Railway to read these gyms' iClass setup (signed-in, read-only: every camp's settings, each
- * day's enrollment, price tables, gym settings). Railway puts them in a line and reads one gym at a
+ * day's enrollment, price tables, gym settings). Railway puts them in a line and reads SETUP_READERS (3) gyms at a
  * time (~1 min each); each result lands in the iclass_setup_reads table. Answers right away.
  *
  * @param {string[]} gymIds - gym codes, e.g. ['SGT']

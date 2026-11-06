@@ -2,7 +2,7 @@
 // SETUP READ CHIP - the iClass setup read that runs after each gym's sync
 // ============================================================================
 // When a gym's event sync finishes, the sync panel asks Railway to read that gym's iClass setup
-// (camp settings, each day's enrollment, price tables). Railway reads one gym at a time, so this
+// (camp settings, each day's enrollment, price tables). Railway reads SETUP_READERS gyms at a time (3), so this
 // shows where each gym stands: waiting its turn -> reading -> camps read (or why it failed).
 // Status comes from the iclass_setup_reads table - the row Railway writes - never from a guess.
 // ============================================================================

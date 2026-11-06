@@ -492,8 +492,6 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
         }
 
         gymResults[i].status = 'done';
-        // This gym's events are in - put it in line for its iClass setup read while the next gym syncs
-        setupLine.queue([gym.id]);
         gymResults[i].summary = {
           eventsFound: allIncoming.length, new: importedCount, changed: updatedCount,
           deleted: softDeletedCount, unchanged: comp.unchanged.length,
@@ -508,7 +506,12 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
 
       setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
     };
-    await Promise.all(gymList.map((_, i) => syncOneGym(i)));
+    // Every gym's iClass setup read (all camps incl. hidden ones: shown on the portal, active, per-day sign-up,
+    // price tables...) goes in line when its calendar sync ends - done, PAUSED or failed. It reads iClass
+    // signed in and does not depend on the calendar import (before 2026-11-06 a paused gym got no read).
+    await Promise.all(gymList.map((g, i) => syncOneGym(i).finally(() => {
+      if (!abortRef.current) setupLine.queue([g.id]);
+    })));
 
     setSyncAllComplete(true);
     // Refresh sync log
