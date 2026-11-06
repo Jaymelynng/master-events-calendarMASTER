@@ -113,7 +113,7 @@ def main():
         plan.append((gid, code, doc))   # every gym is audited (the camp sheet's per-camp record); Sent/Ready rows stay as they are
 
     print(f"Will audit {len(plan)} gyms: {', '.join(c for _, c, _ in plan)}")
-    print(f"Email rows not touched (sent / ready to send): {', '.join(skipped) or 'none'}")
+    print(f"Sent / ready to send (current audit shown, the earlier email kept in earlierRows): {', '.join(skipped) or 'none'}")
     if missing:
         print(f"In the gyms table but not on the audit page (not created): {', '.join(missing)}")
 
@@ -132,11 +132,16 @@ def main():
             continue
         cov_f = os.path.join(runs, f'{gid}_coverage.json')
         coverage[gid] = json.load(open(cov_f, encoding='utf-8')) if os.path.exists(cov_f) else {}
-        if (doc.get('status') or '').lower() in SKIP_STATUS:
-            continue   # Sent / Ready: the email rows are never touched
+        # Sent / Ready gyms get the CURRENT audit too (Jayme 2026-11-06: "then why does sgt show 78 rows errors
+        # still" - skipping them left the page showing errors the gym had already fixed). The email as it stood
+        # is kept once in `earlierRows`, never overwritten, so what was sent is never lost.
         new = json.load(open(os.path.join(runs, f'{gid}_email.json'), encoding='utf-8'))
         old_rows = doc.get('rows') or []
         rows = merge(new['rows'], old_rows, doc.get('hidden'))
+        extra = {}
+        if (doc.get('status') or '').lower() in SKIP_STATUS and not doc.get('earlierRows'):
+            import datetime as _dt
+            extra['earlierRows'] = {'status': doc.get('status'), 'saved': _dt.date.today().isoformat(), 'rows': old_rows}
         ok = lambda rs: [(x.get('err'), x.get('camp'), x.get('note')) for x in rs]
         added = [x for x in ok(rows) if x not in ok(old_rows)]
         gone = [x for x in ok(old_rows) if x not in ok(rows)]
@@ -148,7 +153,7 @@ def main():
         for x in gone:
             print(f"      - {x[0]} | {x[1]} | {x[2][:110]}")
         if added or gone:
-            json.dump({'rows': rows}, open(os.path.join(a.out, f'{code}.json'), 'w', encoding='utf-8'), ensure_ascii=False)
+            json.dump({'rows': rows, **extra}, open(os.path.join(a.out, f'{code}.json'), 'w', encoding='utf-8'), ensure_ascii=False)
             upload.append(f'gyms/{code}')
 
     # The camp sheets (the gym data tab) for EVERY gym on the page - sheets are data, so Sent / Ready gyms too.
