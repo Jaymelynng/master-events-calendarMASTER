@@ -1058,8 +1058,19 @@ def main():
             continue
         sp = sport_of.get(r['camp'])
         same = [j for j, x in enumerate(rows) if x['err'] == r['err'] and x['note'] == r['note'] and sport_of.get(x['camp']) == sp] if sp else [i]
+        plural = lambda t: t.replace('Description offers', 'Descriptions offer').replace('Description doesn’t', 'Descriptions don’t')
         if sp and len(same) > 1 and len(same) == count_sport[sp]:
-            grouped.append({'err': r['err'], 'camp': f"All {len(same)} {sp}", 'href': '', 'note': r['note'].replace('Description offers', 'Descriptions offer').replace('Description doesn’t', 'Descriptions don’t')})
+            grouped.append({'err': r['err'], 'camp': f"All {len(same)} {sp}", 'href': '', 'note': plural(r['note'])})
+            done.update(same)
+        elif sp and len(same) >= 3 and len(same) > count_sport[sp] / 2:
+            # most camps of the kind, same note: ONE "9 of 10 Full Day" row that names the ones it is NOT about
+            # (2026-11-06: RBK got 9 identical single-day lines per kind). True as written: the rest are named.
+            hit = {rows[j]['camp'] for j in same}
+            rest = sorted(l for l, s in sport_of.items() if s == sp and l not in hit)
+            own_row = {x['camp'] for x in rows if x['err'] == r['err']}   # an excluded camp may have its own wording
+            rest = [l + (' (its own row)' if l in own_row else '') for l in rest]
+            grouped.append({'err': r['err'], 'camp': f"{len(same)} of {count_sport[sp]} {sp}", 'href': '',
+                            'note': f"{plural(r['note'])} (Every {sp} camp except {', '.join(rest)}.)"})
             done.update(same)
         else:
             grouped.append(r)
