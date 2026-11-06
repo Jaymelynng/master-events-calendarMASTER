@@ -919,6 +919,11 @@ def main():
 
     for c in camps:
         ran(c, 'Name format')
+        # leftover "copy" text in the name (CRR 2026-11-06: "... WK9 July 26–30 (COPY)", the week's other 3 camps
+        # have no such tail). Parents see the name at launch.
+        cp_ = re.search(r'\(?\bcopy\b\)?', c['camp_name'] or '', re.I)
+        if cp_:
+            row('Camp name', label(c), f"Name has “{cp_.group(0)}” in it: {c['camp_name']}. Leftover text?", c['_href'])
         if c.get('_name_vs_settings'):
             said, set_up = c['_name_vs_settings']
             hrs = collections.Counter((s, e) for (_, s, e) in c['_days']).most_common(1)
