@@ -652,8 +652,11 @@ def main():
         body = c['_desc'].lower()
         if re.search(r'ninja|parkour', sport(c), re.I) and re.search(r'vault, bars, beam|gymnastics skills', body) and not re.search(r'ninja (course|equipment|warrior)|obstacle', body):
             row('Description from another camp', label(c), 'Ninja camp, but the description is the Gymnastics one (“Learn gymnastics skills … vault, bars, beam”).', c['_href'])
-    for c in camps:   # every camp, care too (Kim's list; Jayme 2026-11-05)
-        if c['_empty']:
+    for c in camps:
+        # Before / After / Extended Care are NOT checked for what to wear or bring (Jayme 2026-11-06: "aftercare
+        # doesnt need to say what to wear or bring its after care"). Care = its settings say care, or its name does
+        # (HGA's Memorial Week Aftercare is set up under SUMMER CAMP - FULL DAY).
+        if c['_empty'] or c['_care'] or re.search(r'\b(after|before|extended)\s*care\b|aftercare', c['camp_name'] or '', re.I):
             continue
         ran(c, 'What to wear and bring')
         no_wear = not re.search(r'\bwear\b|clothing|leotard', c['_desc'], re.I)
