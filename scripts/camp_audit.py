@@ -329,7 +329,9 @@ def main():
     listed = [c for c in camps if c['_listed']]
     if listed:
         who = f"All {N}" if len(listed) == N else f"{len(listed)} of {N}"
-        open_n = sum(1 for c in listed if c['allow_registration'])
+        # open = registration on AND its end date not passed (EST 2026-11-06: "All 40 ... open for registration" while
+        # one camp's registration had ended 6/12/2026 - that camp has its own Registration end date row)
+        open_n = sum(1 for c in listed if c['allow_registration'] and not (c['registration_end'] and d(c['registration_end']) < today))
         what = 'visible and open for registration' if open_n == len(listed) else f"visible ({open_n} open for registration)"
         row('Camps are live', who, f"{who.replace('All', 'All').replace(' of ', ' of ')} camps are currently {what} in the customer portal. Please hide the camps and close registration until the {launch_words} launch.\n\n{enr}",
             f"https://portal.iclasspro.com/{gym['iclass_slug']}/booking", who=listed)
@@ -553,8 +555,12 @@ def main():
         if c['_empty']:
             continue
         ran(c, 'Single-day sign-up')
-        day_price = re.search(r'\$\s?\d+(?:\.\d\d)?\s*(?:/\s*day|per\s+day|a\s+day|daily)', c['_desc'], re.I)
-        explained = re.search(r'single[- ]?days?\b[^.]*\b(open|available)', c['_desc'], re.I)
+        # a day price = "$62 per day" or "Single Day: $62" (RBK)
+        day_price = re.search(r'\$\s?\d+(?:\.\d\d)?\s*(?:/\s*day|per\s+day|a\s+day|daily)|single[- ]?day\w*\W{0,4}\$\s?\d+(?:\.\d\d)?', c['_desc'], re.I)
+        # explained = single days open LATER ("Single-Day will open 1 week prior if spots are still available", SGT).
+        # "individual day registration available!" is a promise of single days NOW, not an explanation (RBK 2026-11-06:
+        # 18 camps with single-day sign-up off passed because the old test only looked for the word "available")
+        explained = re.search(r'single[- ]?days?\b[^.]*?\b(will\s+(?:open|be\s+(?:open|available))|open(?:s|ing)?\s+(?:\d+\s+\w+\s+)?(?:prior|before|later|closer)|if\s+spots)', c['_desc'], re.I)
         if not c['per_day_signup'] and day_price and not explained:
             row('Single-day sign-up (description)', label(c), f"Single-day sign-up off. Description offers {re.sub(r'\s+', ' ', day_price.group(0))}.", c['_href'])
         if c['per_day_signup'] and not day_price:
@@ -664,7 +670,8 @@ def main():
                 after.append(w)
                 if re.search(r'[.,;!?]$', w) or w.lower().strip('.,;!?') in ('day', 'week', 'days', 'weeks'):
                     break
-            quote = ' '.join(before + [m.group(0)] + after).strip(' ,;.')
+            sep = ' ' if txt[m.end():m.end() + 1].isspace() else ''   # "$62—individual" stays joined, as written
+            quote = (' '.join(before + [m.group(0)]) + (sep + ' '.join(after) if after else '')).strip(' ,;.')
             bad.append(f"“{quote}”")
         if bad:
             one = sorted(v for (k, n), v in t.items() if k == 1 and v is not None)
@@ -705,6 +712,24 @@ def main():
         if pm and nd and t.get((1, nd)) is not None and abs(float(pm.group(1).replace(',', '')) - t[(1, nd)]) > 0.009:
             row('Price in camp name', label(c), f"Name says ${pm.group(1)}. Charges ${t[(1, nd)]:g}" + (f" ({nd}-day week)" if nd < 5 else ''), c['_href'])
 
+    # Themes of every camp (used by 11 and 14b)
+    def theme_of(c):
+        wk_, th_, _ = kind_of(c)
+        if not th_:
+            th_, _k = _kim_kind(c)
+        return re.sub(r'\s*week$', '', (th_ or '').strip(), flags=re.I) or None
+    words_ = lambda s: ' '.join(re.findall(r'[a-z0-9]+', (s or '').lower().replace('’', '').replace("'", '')))
+    themes = {theme_of(c) for c in camps if theme_of(c)}
+
+    def other_theme_in_heading(c):
+        """Another week's theme in the description HEADING (first ~160 characters) and not its own. RBK descriptions
+        list every week's theme further down, which hid a copied heading when the whole text was searched."""
+        own = theme_of(c)
+        head = words_(c['_desc'][:160])
+        others = [t for t in themes if t != own and len(words_(t)) > 3 and words_(t) in head
+                  and not (own and words_(t) in words_(own))]
+        return others[0] if own and words_(own) not in head and others else None
+
     # 11 + 12. Description has theme / dates / time; dates and time match; copied from another camp
     for c in camps:
         if c.get('_template'):
@@ -727,7 +752,7 @@ def main():
         # whole words only: "Minion Mayhem" is NOT in "Minion Mayhemayhem" (SGT 2026-11-06 passed as a substring)
         if theme and f" {th_w} " not in f" {words(c['_desc'])} ":
             typos = theme_typos(th_w.split(), words(c['_desc']).split())
-            if typos is None:
+            if typos is None and not other_theme_in_heading(c):   # another week's theme: its own row (14b), said once
                 missing.append('no theme')
             elif typos:   # the theme IS there, spelled differently: a Spelling row (15b), never "No theme"
                 c['_theme_typos'] = typos
@@ -834,26 +859,36 @@ def main():
 
     # 14b. Text copied from another camp (Standards #14): the description names another week's theme and not its
     # own, or says school-year / school-closure in a summer camp (EST "School Closure Camps", PLG Superheroes
-    # with the "Secret Agent Academy!" heading)
-    def theme_of(c):
-        wk_, th_, _ = kind_of(c)
-        if not th_:
-            th_, _k = _kim_kind(c)
-        return re.sub(r'\s*week$', '', (th_ or '').strip(), flags=re.I) or None
-    words_ = lambda s: ' '.join(re.findall(r'[a-z0-9]+', (s or '').lower().replace('’', '').replace("'", '')))
-    themes = {theme_of(c) for c in camps if theme_of(c)}
+    # with the "Secret Agent Academy!" heading), or carries a WEEK-SPECIFIC paragraph from another week's camps
+    # (PLG 2026-11-06: Gold Medal Moves AM Half Day = the Gold Medal heading over the Time Travelers body).
+    # Week-specific = a sentence of 60+ letters found in exactly two weeks: in 2+ camps of the other week and in
+    # this camp only, in its own week. Text a gym uses every week is never week-specific.
+    def sentences(c):
+        return {words_(s) for s in re.split(r'(?<=[.!?])\s+|\n', c['_desc']) if len(words_(s)) >= 60}
+    sent_of = {c['camp_id']: sentences(c) for c in camps if not c['_empty']}
+    where = collections.defaultdict(list)   # sentence -> camps that have it
+    for c in camps:
+        for s in sent_of.get(c['camp_id'], ()):
+            where[s].append(c)
     for c in camps:
         ran(c, 'Text from another camp')
         if c['_empty']:
             continue
         own = theme_of(c)
-        # the HEADING (first ~160 characters): RBK descriptions list every week's theme further down, which hid a
-        # copied heading when the whole text was searched (Pirates had "THE GREAT OUTDOORS at ..." on top)
-        head = words_(c['_desc'][:160])
-        others = [t for t in themes if t != own and len(words_(t)) > 3 and words_(t) in head
-                  and not (own and words_(t) in words_(own))]
-        if own and words_(own) not in head and others:
-            row('Text from another camp', label(c), f"Description names “{others[0]}”, another week's theme, not “{own}”.", c['_href'])
+        other = other_theme_in_heading(c)
+        if other:
+            row('Text from another camp', label(c), f"Description names “{other}”, another week's theme, not “{own}”.", c['_href'])
+        else:
+            for s in sorted(sent_of.get(c['camp_id'], ())):
+                wks = collections.Counter(o['_week'] for o in where[s])
+                if len(wks) == 2 and wks[c['_week']] == 1:
+                    w2 = next(w for w in wks if w != c['_week'])
+                    if wks[w2] >= 2:
+                        src = next(o for o in where[s] if o['_week'] == w2)
+                        th2 = theme_of(src) or f"week of {mon_d(w2.isoformat())}"
+                        quote = next((x.strip() for x in re.split(r'(?<=[.!?])\s+|\n', c['_desc']) if words_(x) == s), '')
+                        row('Text from another camp', label(c), f"Description has the {th2} camps’ text: “{quote[:90].rstrip()}…”", c['_href'])
+                        break
         sy = re.search(r'school\s*(year|closure)s?\s*(camp|program)s?', c['_desc'], re.I)
         if sy:
             row('Text from another camp', label(c), f"Description says “{sy.group(0)}” in a summer camp.", c['_href'])
@@ -921,6 +956,11 @@ def main():
 
     for c in camps:
         ran(c, 'Name format')
+        # leftover "copy" text in the name (CRR 2026-11-06: "... WK9 July 26–30 (COPY)", the week's other 3 camps
+        # have no such tail). Parents see the name at launch.
+        cp_ = re.search(r'\(?\bcopy\b\)?', c['camp_name'] or '', re.I)
+        if cp_:
+            row('Camp name', label(c), f"Name has “{cp_.group(0)}” in it: {c['camp_name']}. Leftover text?", c['_href'])
         if c.get('_name_vs_settings'):
             said, set_up = c['_name_vs_settings']
             hrs = collections.Counter((s, e) for (_, s, e) in c['_days']).most_common(1)
@@ -979,11 +1019,14 @@ def main():
                 bits.append(f"says {y}, but the camp is in {yr_want}")
         return '; '.join(bits) or None
     off = [c for c in camps if name_problem(c['camp_name'], d(c['start_date']).year)]
+    # Kim's format: "Gym or Ninja" only at a gym with both (AAG 2026-11-06 is gymnastics only and was shown the other)
+    has_ninja = any(re.search(r'ninja|parkour', c['camp_name'] or '', re.I) for c in camps)
+    fmt = 'Theme | Summer Camp | Gym or Ninja | Age | Date' if has_ninja else 'Theme | Summer Camp | Age | Date'
     if off:
         probs = collections.Counter(name_problem(c['camp_name'], d(c['start_date']).year) for c in off)
         what = ' · '.join(f"{p}" + (f" ({k} camps)" if len(probs) > 1 else '') for p, k in probs.most_common())
         row('Title format', f"All {N}" if len(off) == N else f"{len(off)} of {N}",
-            f"Now: {off[0]['camp_name']}. The name {what}. Format: Theme | Summer Camp | Gym or Ninja | Age | Date.", who=off)
+            f"Now: {off[0]['camp_name']}. The name {what}. Format: {fmt}.", who=off)
 
     # One "All N <kind>" row when the same note hits EVERY camp of that kind (her rule: "All N" only when it
     # truly is every one), otherwise one row per camp.
