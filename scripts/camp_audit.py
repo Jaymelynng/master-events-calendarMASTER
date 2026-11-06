@@ -564,6 +564,54 @@ def main():
         day_t = t.get((1, 1))
         if said_days and day_t is not None and all(abs(v - day_t) > 0.009 for v in said_days):
             row('Price in description', label(c), f"Says ${said_days[0]:g} per day. Charges ${day_t:g} per day", c['_href'])
+    # 8c. EVERY dollar amount the manager wrote vs the camp's own price table (Jayme 2026-11-06: "every price table
+    # connected to any and all camps are verified in settings then compared to the text the manager put in").
+    # An amount that is no box of this camp's table (any child, any number of days) is a finding, quoted with the
+    # words around it. Not a finding: an amount whose own words name Before / After Care and that IS a box of one
+    # of this gym's care tables (RBK Full Day: "After Care: 3PM-5:30PM for $20 per day").
+    care_boxes = {round(v, 2) for c in camps if is_care(c) for v in (price.get(c['price_table_id']) or {}).values() if v is not None}
+    for c in camps:
+        ran(c, 'Every price in the description')
+        if c['_empty']:
+            continue
+        exp_ = c.get('_expected_table')
+        t = price.get(exp_ if exp_ is not None else c['price_table_id']) or {}
+        boxes = {round(v, 2) for v in t.values() if v is not None}
+        if not boxes:
+            continue
+        txt = re.sub(r'\s+', ' ', c['_desc'])
+        bad, seen_v = [], set()
+        for m in re.finditer(r'\$\s?(\d[\d,]*(?:\.\d\d)?)', txt):
+            v = round(float(m.group(1).replace(',', '')), 2)
+            if v in boxes or v in seen_v:
+                continue
+            around = txt[max(0, m.start() - 70):m.end() + 25]
+            if not is_care(c) and v in care_boxes and re.search(r'(after|before|extended)\s*care|aftercare', around, re.I):
+                continue
+            seen_v.add(v)
+            # quote just the price words: up to 4 words before (stopping at a number, date or | ) and up to 3 after,
+            # so the same price on every week reads the same and groups into one "All N" row
+            before = []
+            for w in reversed(txt[:m.start()].split()[-6:]):
+                if re.search(r'\d|\||[.!?]$', w) or not re.search(r'[A-Za-z]', w):
+                    break
+                before.insert(0, w)
+            before = before[-4:]
+            while before and before[0].lower().strip(',:') in ('per', 'day', 'week', 'or', 'and', 'for', 'the', 'a', 'days', 'weeks'):
+                before.pop(0)
+            after = []
+            for w in txt[m.end():].split()[:3]:
+                if re.search(r'\d|\|', w):
+                    break
+                after.append(w)
+                if re.search(r'[.,;!?]$', w) or w.lower().strip('.,;!?') in ('day', 'week', 'days', 'weeks'):
+                    break
+            quote = ' '.join(before + [m.group(0)] + after).strip(' ,;.')
+            bad.append(f"“{quote}”")
+        if bad:
+            one = sorted(v for (k, n), v in t.items() if k == 1 and v is not None)
+            row('Price not in price table', label(c), f"Description says {' and '.join(bad)}. That amount is not a price in this camp's price table "
+                f"({c['price_table_name']}: 1st child ${' / $'.join(f'{v:g}' for v in one)}).", c['_href'])
     seen_blank = set()
     for c in camps:
         ran(c, 'Price table filled in')
