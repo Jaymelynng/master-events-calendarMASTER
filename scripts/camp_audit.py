@@ -439,8 +439,8 @@ def main():
         if c['per_day_signup'] and not day_price:
             row('Single-day sign-up', label(c), 'Single-day sign-up on. Description only gives the week price.', c['_href'])
 
-    # 8. Description price vs what the price table charges; blank boxes
-    for c in main_camps:
+    # 8. Description price vs what the price table charges; blank boxes. Every camp, care too (Jayme 2026-11-05).
+    for c in camps:
         if c['_empty']:
             continue
         # A camp on the wrong pricing schedule already has its own row; its description is checked against the
@@ -457,6 +457,17 @@ def main():
         week_said = float(wm.group(1).replace(',', '')) if wm else (float(said[0].replace(',', '')) if said else None)
         first_is_day = (not wm) and said and re.search(r'\$\s?' + re.escape(said[0]) + r'\s*(?:/\s*day|per\s+day)', c['_desc'], re.I)
         if charge is not None and week_said is not None and abs(week_said - charge) > 0.009 and not first_is_day:
+            day_charge = t.get((1, 1))
+            if c['_care'] and day_charge is not None:   # care is charged by the day: word the row so it is true
+                wk_txt = f"${charge:g} for the {nd}-day week" if nd < 5 else f"${charge:g} for the week"
+                said_day = re.search(r'\$\s?(\d+(?:\.\d\d)?)\s*(?:/\s*day|per\s+day|a\s+day)', c['_desc'], re.I)
+                if not wm and not said_day and abs(week_said - day_charge) <= 0.009:
+                    row('Price in description', label(c), f"Says ${week_said:g} without “per day” or “for the week”. Charges ${day_charge:g} per day ({wk_txt}). On purpose?", c['_href'])
+                elif said_day and abs(float(said_day.group(1)) - day_charge) <= 0.009:
+                    row('Price in description', label(c), f"Also says ${week_said:g}, which is not this camp’s price (another camp’s prices are in this description). Charges ${day_charge:g} per day ({wk_txt}).", c['_href'])
+                else:
+                    row('Price in description', label(c), f"Says ${week_said:g}. Charges {wk_txt} (${day_charge:g} per day).", c['_href'])
+                continue
             why = f" ({nd}-day week)" if nd < 5 else ''
             k_ = kind_of(c)[2].lower(); tn = (c['price_table_name'] or '').lower()
             if ('full' in k_ and 'half' in tn) or ('half' in k_ and 'full' in tn):
@@ -498,7 +509,7 @@ def main():
         elif not tm_ and len([x for x in camps if re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*\d', x['camp_name'], re.I)]) > len(camps) / 2:
             row('Dates in camp name', label(c), 'Name has no dates. The other camps’ names do.', c['_href'])
 
-    for c in main_camps:
+    for c in camps:   # price written in the camp NAME - care too
         pm = re.search(r'\$\s?(\d[\d,]*(?:\.\d\d)?)', c['camp_name'])
         t = price.get(c['price_table_id']) or {}
         nd = len({x[0] for x in c['_days']})   # camp DAYS, not time blocks (MGC all-day care has 2 a day)
@@ -543,10 +554,9 @@ def main():
                 row('Dates in description', label(c), f"Says {dm.group(0)}. Camp is {mon_d(f.isoformat())}–{l.day}", c['_href'])
             elif yr and int(yr.group(1)) != f.year:
                 row('Dates in description', label(c), f"Says {dm.group(0)}, {yr.group(1)}. Camp is {f.year}.", c['_href'])
-        if not c['_care']:
-            for word, what in (('snack', 'snack'), ):
-                if not re.search(r'\bsnacks?\b', c['_desc'], re.I):
-                    c['_nosnack'] = True
+        # Kim's list applies to EVERY camp, Before Care and After Care too (Jayme 2026-11-05: no care skips)
+        if not re.search(r'\bsnacks?\b', c['_desc'], re.I):
+            c['_nosnack'] = True
     # one row when every camp is missing the same things, else one row per camp
     miss = [c for c in camps if c.get('_missing')]
     if miss and len(miss) == N and len({c['_missing'] for c in miss}) == 1:
@@ -571,11 +581,14 @@ def main():
         body = c['_desc'].lower()
         if re.search(r'ninja|parkour', sport(c), re.I) and re.search(r'vault, bars, beam|gymnastics skills', body) and not re.search(r'ninja (course|equipment|warrior)|obstacle', body):
             row('Description from another camp', label(c), 'Ninja camp, but the description is the Gymnastics one (“Learn gymnastics skills … vault, bars, beam”).', c['_href'])
-    for c in main_camps:
-        if c['_empty'] or sport(c).lower().startswith(('after', 'before', 'extended')):
-            continue   # care camps are not checked for wear / bring, even when set up as a camp type
-        if not re.search(r'\bwear\b|clothing|leotard', c['_desc'], re.I) or not re.search(r'\bbring\b|pack', c['_desc'], re.I):
-            row('What to wear or bring missing', label(c), 'Description doesn’t say what to wear or what to bring.', c['_href'])
+    for c in camps:   # every camp, care too (Kim's list; Jayme 2026-11-05)
+        if c['_empty']:
+            continue
+        no_wear = not re.search(r'\bwear\b|clothing|leotard', c['_desc'], re.I)
+        no_bring = not re.search(r'\bbring\b|pack', c['_desc'], re.I)
+        if no_wear or no_bring:   # say exactly which one is missing
+            what = 'what to wear or what to bring' if no_wear and no_bring else ('what to wear' if no_wear else 'what to bring')
+            row('What to wear or bring missing', label(c), f'Description doesn’t say {what}.', c['_href'])
 
     # 12b. Every time range written in the description vs the camp's own schedule (AM/PM mix-ups, wrong hours)
     def secs(t):
