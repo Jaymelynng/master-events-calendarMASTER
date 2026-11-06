@@ -31,6 +31,7 @@ import argparse, glob, json, os, subprocess, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from audit_page_sheets import get  # noqa: E402
+from error_names import name as error_name  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KEEP_TAGS = ('eye', 'hand')
@@ -41,8 +42,15 @@ def key(r):
     return ((r.get('err') or '').strip(), (r.get('camp') or '').strip())
 
 
+def renamed(rows):
+    # rows already on the page carry the error's name from when they were written; give them today's
+    # fixed name so a kept or deleted row still matches its script twin after a rename (error_names.py)
+    return [dict(r, err=error_name(r.get('err'))) for r in rows or []]
+
+
 def merge(script_rows, page_rows, hidden):
-    hide = {key(h) for h in hidden or []}
+    page_rows = renamed(page_rows)
+    hide = {key(h) for h in renamed(hidden)}
     kept = [r for r in page_rows if r.get('by') in KEEP_TAGS]
     kept_by_key = {}
     for r in kept:
@@ -139,6 +147,8 @@ def main():
         old_rows = doc.get('rows') or []
         rows = merge(new['rows'], old_rows, doc.get('hidden'))
         extra = {}
+        if doc.get('hidden') and renamed(doc['hidden']) != doc['hidden']:
+            extra['hidden'] = renamed(doc['hidden'])
         if (doc.get('status') or '').lower() in SKIP_STATUS and not doc.get('earlierRows'):
             import datetime as _dt
             extra['earlierRows'] = {'status': doc.get('status'), 'saved': _dt.date.today().isoformat(), 'rows': old_rows}
@@ -152,7 +162,7 @@ def main():
             print(f"      + {x[0]} | {x[1]} | {x[2][:110]}")
         for x in gone:
             print(f"      - {x[0]} | {x[1]} | {x[2][:110]}")
-        if added or gone:
+        if added or gone or extra.get('hidden'):
             json.dump({'rows': rows, **extra}, open(os.path.join(a.out, f'{code}.json'), 'w', encoding='utf-8'), ensure_ascii=False)
             upload.append(f'gyms/{code}')
 

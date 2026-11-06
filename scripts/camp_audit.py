@@ -25,6 +25,7 @@ import argparse, collections, datetime as dt, json, os, re, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from audit_page_sheets import get, bucket, plain, age_text, clock  # noqa: E402
+from error_names import name as error_name  # noqa: E402
 
 MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 DAYNAME = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -279,6 +280,7 @@ def main():
 
     def row(err, camp, note, href='', who=None):
         # who = the camps a group row ("All 12 Aftercare") is about, so each of them carries the finding
+        err = error_name(err)   # the ONE fixed name: what was checked against what (scripts/error_names.py)
         rows.append({'err': err, 'camp': camp, 'href': href, 'note': note})
         for cid in ([x['camp_id'] for x in who] if who is not None else lab2ids.get(camp, [])):
             found_on[cid].append(err)
@@ -442,7 +444,7 @@ def main():
             for c in group:
                 for day, v in sorted(per_date[id(c)].items()):
                     if tuple(sorted(v)) != cp:
-                        row(f"{(k or sport(c)).strip()} {DAYNAME[d(day).weekday()]} time", label(c), f"{DAYNAME[d(day).weekday()]} {txt(sorted(v))}. Should it be {txt(cp)}?", c['_href'])
+                        row(f"{(k or sport(c)).strip()} {DAYNAME[d(day).weekday()]} time", label(c), f"{DAYNAME[d(day).weekday()]} is {txt(sorted(v))}. The other days are {txt(cp)}. Should {DAYNAME[d(day).weekday()]} be {txt(cp)}?", c['_href'])
             continue
         common = collections.Counter((s, e) for c in group for (_, s, e) in c['_days'])
         if not common:
@@ -461,7 +463,7 @@ def main():
             for (wd, s, e), _days in odd.items():
                 ampm = ' AM' if s < 12 * 3600 and cs >= 12 * 3600 else (' PM' if s >= 12 * 3600 and cs < 12 * 3600 else '')
                 want = span(cs, ce) + (' PM' if ampm == ' AM' else (' AM' if ampm == ' PM' else ''))
-                row(f"{(k or sport(c)).strip()} {DAYNAME[wd]} time", label(c), f"{DAYNAME[wd]} {span(s, e)}{ampm}. Should it be {want}?", c['_href'])
+                row(f"{(k or sport(c)).strip()} {DAYNAME[wd]} time", label(c), f"{DAYNAME[wd]} is {span(s, e)}{ampm}. The other days are {span(cs, ce)}. Should {DAYNAME[wd]} be {want}?", c['_href'])
 
     # 4a. A camp day on a KNOWN closure (Standards > Short weeks; the list lives on the Standards page)
     for c in camps:
@@ -534,7 +536,7 @@ def main():
                     else f"On for every camp in the week{'s' if len(whole) > 1 else ''} {nums}.") + f" Off for the other {len(wk_all) - len(whole)} weeks. On purpose?"
         else:
             note = f"On for {', '.join(label(c) for c in on)}. Off for the other {len(main_camps) - len(on)}. On purpose?"
-        row('Single-day sign-up', f"All {len(main_camps)}", note, who=main_camps)
+        row('Single-day sign-up (pattern)', f"All {len(main_camps)}", note, who=main_camps)
     # Each camp's setting vs its own description - Before Care / After Care too (Jayme 2026-11-05: HGA's 12 After
     # Care camps say "$30 per day" with single-day sign-up off; skipping care camps here missed all 12).
     for c in camps:
@@ -544,9 +546,9 @@ def main():
         day_price = re.search(r'\$\s?\d+(?:\.\d\d)?\s*(?:/\s*day|per\s+day|a\s+day|daily)', c['_desc'], re.I)
         explained = re.search(r'single[- ]?days?\b[^.]*\b(open|available)', c['_desc'], re.I)
         if not c['per_day_signup'] and day_price and not explained:
-            row('Single-day sign-up', label(c), f"Single-day sign-up off. Description offers {re.sub(r'\s+', ' ', day_price.group(0))}.", c['_href'])
+            row('Single-day sign-up (description)', label(c), f"Single-day sign-up off. Description offers {re.sub(r'\s+', ' ', day_price.group(0))}.", c['_href'])
         if c['per_day_signup'] and not day_price:
-            row('Single-day sign-up', label(c), 'Single-day sign-up on. Description only gives the week price.', c['_href'])
+            row('Single-day sign-up (description)', label(c), 'Single-day sign-up on. Description only gives the week price.', c['_href'])
 
     # 8. Description price vs what the price table charges; blank boxes. Every camp, care too (Jayme 2026-11-05).
     for c in camps:
@@ -910,8 +912,14 @@ def main():
             said, set_up = c['_name_vs_settings']
             hrs = collections.Counter((s, e) for (_, s, e) in c['_days']).most_common(1)
             hrs_txt = f", {clock(hrs[0][0][0])}–{clock(hrs[0][0][1])}" if hrs else ''
-            row('Camp name', label(c), f"Name says {said}, but the camp is set up as {set_up} (Event Type {c['camp_type_name']}, "
-                f"price table {c['price_table_name']}{hrs_txt}). Should the name say {set_up}?", c['_href'])
+            # Jayme 2026-11-06: "Camp name" read as if the name format was wrong. It is a MISMATCH: the name
+            # against the camp's own settings, and the description is said too, so nobody has to open it.
+            dsays = {k for k in ('Full Day', 'Half Day') if re.search(k.replace(' ', r'\s*-?\s*'), c['_desc'], re.I)}
+            dtxt = (f" The description also says {set_up}." if dsays == {set_up}
+                    else f" The description says {said} too." if dsays == {said}
+                    else " The description says both Full Day and Half Day." if dsays else " The description does not say.")
+            row(f'Name says {said}, setup says {set_up}', label(c), f"Name says {said}, but the camp is set up as {set_up} (Event Type {c['camp_type_name']}, "
+                f"price table {c['price_table_name']}{hrs_txt}).{dtxt} Should the name say {set_up}?", c['_href'])
     # 15. Camp name format (Kim's): [Week #:] Theme | Summer Camp | (Gym or Ninja) | Age | Date
     # Kim 2026-11-05: a week number before the theme is fine, Gym or Ninja may be spelled out
     # (Gymnastics / Parkour & Ninja), Full Day or Half Day goes right after it, Ages 5+ is fine (a range is
