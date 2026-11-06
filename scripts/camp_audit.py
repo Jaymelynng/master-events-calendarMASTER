@@ -137,6 +137,43 @@ def name_vs_settings(c):
     return (said, set_up) if said and set_up and said != set_up else None
 
 
+def edits(a, b):
+    """How many letters differ between two words (insert / delete / change)."""
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def theme_typos(theme_words, desc_words):
+    """The theme written in the description with a letter or two off (MGC 2026-11-06: name 'Tumbling Tunes',
+    description 'Tumbling Toons'; name 'Fordbidden', description 'forbidden'). Returns the [(name word, description
+    word)] pairs that differ, or None when the theme is not there at all. Plural s is not a difference; words under
+    5 letters must match exactly; at most 2 letters off in the whole theme - 3 when another theme word of 5+ letters
+    matches exactly and the odd word starts with the same letter ("tumbling tunes" / "tumbling toons" is 3 off)."""
+    n = len(theme_words)
+    for i in range(len(desc_words) - n + 1):
+        win = desc_words[i:i + n]
+        anchored = any(a == b and len(a) >= 5 for a, b in zip(theme_words, win))
+        pairs, total = [], 0
+        for a, b in zip(theme_words, win):
+            if a == b or a.rstrip('s') == b.rstrip('s'):
+                continue
+            if min(len(a), len(b)) < 5:
+                break
+            total += edits(a, b)
+            if total > (3 if anchored and a[0] == b[0] else 2):
+                break
+            pairs.append((a, b))
+        else:
+            if pairs:
+                return pairs
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('gym')
@@ -579,20 +616,29 @@ def main():
         boxes = {round(v, 2) for v in t.values() if v is not None}
         if not boxes:
             continue
-        txt = re.sub(r'\s+', ' ', c['_desc'])
+        # line breaks kept: a quote never runs into the next line (RBK 2026-11-06 read “$250, Monday–Friday Single Day:”)
+        txt = re.sub(r'[ \t\xa0]+', ' ', c['_desc'])
+        # an amount another price row on this camp already names is not reported twice (AAG $430 / $86 got 3 rows)
+        said_before = ' '.join(n['note'] for n in notes_on[c['camp_id']] if n['err'].startswith('Price'))
         bad, seen_v = [], set()
         for m in re.finditer(r'\$\s?(\d[\d,]*(?:\.\d\d)?)', txt):
             v = round(float(m.group(1).replace(',', '')), 2)
             if v in boxes or v in seen_v:
                 continue
+            if re.search(r'\$' + re.escape(f"{v:g}") + r'(?!\d)', said_before):
+                continue
             around = txt[max(0, m.start() - 70):m.end() + 25]
             if not is_care(c) and v in care_boxes and re.search(r'(after|before|extended)\s*care|aftercare', around, re.I):
                 continue
+            # an add-on is not the camp's price (PLG 2026-11-06: "Swimming is an additional $10 per day")
+            if re.search(r'\b(additional|extra|add-?on)\s*$', txt[max(0, m.start() - 30):m.start()], re.I):
+                continue
             seen_v.add(v)
+            ls, le = txt.rfind('\n', 0, m.start()) + 1, (txt.find('\n', m.end()) + 1 or len(txt) + 1) - 1
             # quote just the price words: up to 4 words before (stopping at a number, date or | ) and up to 3 after,
             # so the same price on every week reads the same and groups into one "All N" row
             before = []
-            for w in reversed(txt[:m.start()].split()[-6:]):
+            for w in reversed(txt[ls:m.start()].split()[-6:]):
                 if re.search(r'\d|\||[.!?]$', w) or not re.search(r'[A-Za-z]', w):
                     break
                 before.insert(0, w)
@@ -600,7 +646,7 @@ def main():
             while before and before[0].lower().strip(',:') in ('per', 'day', 'week', 'or', 'and', 'for', 'the', 'a', 'days', 'weeks'):
                 before.pop(0)
             after = []
-            for w in txt[m.end():].split()[:3]:
+            for w in txt[m.end():le].split()[:3]:
                 if re.search(r'\d|\|', w):
                     break
                 after.append(w)
@@ -665,8 +711,13 @@ def main():
         missing = []
         # letters and digits only: AAG writes the theme as "Wicked Good" Sports / AHOY, Campers! (2026-11-06)
         words = lambda s: ' '.join(re.findall(r'[a-z0-9]+', s.lower().replace('’', '').replace("'", '')))
-        if theme and words(re.sub(r'\s*week$', '', theme, flags=re.I)) not in words(c['_desc']):
-            missing.append('no theme')
+        th_w = words(re.sub(r'\s*week$', '', theme or '', flags=re.I))
+        if theme and th_w not in words(c['_desc']):
+            typos = theme_typos(th_w.split(), words(c['_desc']).split())
+            if typos:   # the theme IS there, spelled differently: a Spelling row (15b), never "No theme"
+                c['_theme_typos'] = typos
+            else:
+                missing.append('no theme')
         dm = re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*(\d{1,2})(?:st|nd|rd|th)?\s*[-–]\s*(?:(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*)?(\d{1,2})', c['_desc'], re.I)
         if not dm:
             missing.append('no dates')
@@ -793,8 +844,9 @@ def main():
             row('Text from another camp', label(c), f"Description says “{sy.group(0)}” in a summer camp.", c['_href'])
 
     # 15b. Spelling between the NAME and the DESCRIPTION (Standards #15): a word in one that is one or two letters
-    # off a word in the other ("ummer"/"Summer", "Fordbidden"/"forbidden", "Toons"/"Tunes") is a typo in one of
-    # them. No dictionary: the camp's own name and description are compared with each other.
+    # off a word in the other ("ummer"/"Summer", "Fordbidden"/"forbidden") is a typo in one of them. Words under 7
+    # letters may be only ONE letter off here, so "Tunes"/"Toons" (3 off) is caught by the theme check instead
+    # (theme_typos). No dictionary: the camp's own name and description are compared with each other.
     def near(a, b):
         if a == b or a.rstrip('s') == b.rstrip('s') or abs(len(a) - len(b)) > 2:
             return False
@@ -819,6 +871,10 @@ def main():
             if hits and (nw, hits[0]) not in seen_pairs:
                 seen_pairs.add((nw, hits[0]))
                 row('Spelling', label(c), f"Name says “{nw}”, description says “{hits[0]}”. One of them is spelled wrong.", c['_href'])
+        for nw, dw in c.get('_theme_typos') or []:   # the theme spelled differently in the two (Tunes / Toons)
+            if (nw, dw) not in seen_pairs:
+                seen_pairs.add((nw, dw))
+                row('Spelling', label(c), f"Name says “{nw}”, description says “{dw}”. One of them is spelled wrong.", c['_href'])
 
     # 14. Pictures: every camp has one, no two weeks share one
     # "Same picture" = the same picture FILE (its bytes). Never the iClass file name: its long middle part is
