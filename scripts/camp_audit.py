@@ -656,16 +656,29 @@ def main():
                 break
 
     # 14. Pictures: every camp has one, no two weeks share one
+    # "Same picture" = the same picture FILE (its bytes). Never the iClass file name: its long middle part is
+    # NOT unique to a picture (2026-11-05, SGT: Beach Bash After Care and Color Wars Gymnastics share the name
+    # part and are different pictures, 75 KB vs 98 KB) - comparing names gave false "same picture" rows.
+    import hashlib
+    _pic_hash = {}
+    def pic_key(path):
+        if path not in _pic_hash:
+            try:
+                raw_ = urllib.request.urlopen(urllib.request.Request(f"https://images.iclasspro.com/images/{path}", headers={'User-Agent': 'camp-audit'}), timeout=30).read()
+                _pic_hash[path] = hashlib.sha256(raw_).hexdigest()
+            except Exception:
+                _pic_hash[path] = None   # could not open it: never counted as matching another picture
+        return _pic_hash[path]
     pic_weeks = collections.defaultdict(set)
     for c in camps:
         ran(c, 'Picture on file, not shared with another week')
         if not c['picture_path']:
             row('Picture missing', label(c), 'No thumbnail picture.', c['_href'])
-        else:
-            pic_weeks[c['picture_path'].split('.')[-2]].add(c['_week'])
+        elif pic_key(c['picture_path']):
+            pic_weeks[pic_key(c['picture_path'])].add(c['_week'])
     for h, wks in pic_weeks.items():
         if len(wks) > 1:
-            names = sorted({label(c) for c in camps if c['picture_path'] and c['picture_path'].split('.')[-2] == h})
+            names = sorted({label(c) for c in camps if c['picture_path'] and pic_key(c['picture_path']) == h})
             for n in names:
                 others = [x for x in names if x != n]
                 row('Picture used on more than one week', n, f"Same picture as {', '.join(others)}.")
