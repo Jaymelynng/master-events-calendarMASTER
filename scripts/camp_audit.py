@@ -111,24 +111,9 @@ def label(c):
 
 
 def sport(c):
-    """What kind of camp it is: the Gym / Ninja / care word in the name, else from the camp type.
-    A camp whose NAME says Full / Half Day against its own settings is grouped by its SETTINGS
-    (c['_set_kind'], see name_vs_settings) - the settings are the truth, the name is the finding."""
-    if c.get('_set_kind'):
-        return c['_set_kind']
+    """What kind of camp it is: the Gym / Ninja / care word in the name, else from the camp type."""
     th, kk = _kim_kind(c)
     return kk or kind_of(c)[2] or (c['camp_type_name'] or '')
-
-
-def name_vs_settings(c):
-    """The name says Half Day but the camp is set up as Full Day (or the other way round): Event Type AND
-    price table both say the other one. SGT 2026-11-06: the 9-3 Candyland Ninja camp was renamed "Half Day";
-    the audit then blamed its correct Event Type + price table (4 rows). Returns (said, set_up) or None."""
-    n = c['camp_name'] or ''
-    said = 'Full Day' if re.search(r'full\s*day', n, re.I) else ('Half Day' if re.search(r'half\s*day', n, re.I) else None)
-    t, pt = (c['camp_type_name'] or '').upper(), (c['price_table_name'] or '').upper()
-    set_up = 'Full Day' if ('FULL' in t and 'FULL' in pt) else ('Half Day' if ('HALF' in t and 'HALF' in pt) else None)
-    return (said, set_up) if said and set_up and said != set_up else None
 
 
 def main():
@@ -202,10 +187,6 @@ def main():
         # the portal shows an event type only with an ACTIVE event set to show online and inside its registration dates.
         # Not in the read = unknown, never treated as inactive.
         c['_active'] = raw.get('active') != 0
-        nvs = name_vs_settings(c)
-        if nvs:   # group it with the camps its SETTINGS match; the name gets its own row (below)
-            c['_name_vs_settings'] = nvs
-            c['_set_kind'] = sport(c).replace(nvs[0], nvs[1])
     camps.sort(key=lambda c: (c['_week'], c['_care'], label(c)))
     # the same label on camps in different weeks (MGC runs "Fathoms Below" twice): add the start date
     by_lab = collections.defaultdict(set)
@@ -716,12 +697,6 @@ def main():
 
     for c in camps:
         ran(c, 'Camp name format')
-        if c.get('_name_vs_settings'):
-            said, set_up = c['_name_vs_settings']
-            hrs = collections.Counter((s, e) for (_, s, e) in c['_days']).most_common(1)
-            hrs_txt = f", {clock(hrs[0][0][0])}–{clock(hrs[0][0][1])}" if hrs else ''
-            row('Camp name', label(c), f"Name says {said}, but the camp is set up as {set_up} (Event Type {c['camp_type_name']}, "
-                f"price table {c['price_table_name']}{hrs_txt}). Should the name say {set_up}?", c['_href'])
     # 15. Camp name format (Kim's): [Week #:] Theme | Summer Camp | (Gym or Ninja) | Age | Date
     # Kim 2026-11-05: a week number before the theme is fine, Gym or Ninja may be spelled out
     # (Gymnastics / Parkour & Ninja), Full Day or Half Day goes right after it, Ages 5+ is fine (a range is
