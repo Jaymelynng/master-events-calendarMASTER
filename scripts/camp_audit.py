@@ -698,6 +698,42 @@ def main():
                     f"Says “{m.group(0)}”. Schedule is {clock(cs)}–{clock(ce)}", c['_href'])
                 break
 
+    # 8b. Ages written in the DESCRIPTION vs the age settings (Standards #8; 13 yrs 11 mos = through 13)
+    for c in camps:
+        ran(c, 'Ages in description')
+        if c['_empty'] or c['min_age'] is None or c['max_age'] is None:
+            continue
+        lo, hi = int(float(c['min_age'])), int(float(c['max_age']))
+        m = re.search(r'\bages?\s*:?\s*(\d{1,2})\s*(?:yrs?|years?)?\s*(?:[-–]|to)\s*(\d{1,2})', c['_desc'], re.I)
+        p = None if m else re.search(r'\bages?\s*:?\s*(\d{1,2})\s*\+', c['_desc'], re.I)
+        if m and (int(m.group(1)), int(m.group(2))) != (lo, hi):
+            row('Ages in description', label(c), f"Description says Ages {m.group(1)}-{m.group(2)}. Setting is {age_text(c['min_age'])} – {age_text(c['max_age'])}.", c['_href'])
+        elif p and int(p.group(1)) != lo:
+            row('Ages in description', label(c), f"Description says Ages {p.group(1)}+. Setting is {age_text(c['min_age'])} – {age_text(c['max_age'])}.", c['_href'])
+
+    # 14b. Text copied from another camp (Standards #14): the description names another week's theme and not its
+    # own, or says school-year / school-closure in a summer camp (EST "School Closure Camps", PLG Superheroes
+    # with the "Secret Agent Academy!" heading)
+    def theme_of(c):
+        wk_, th_, _ = kind_of(c)
+        if not th_:
+            th_, _k = _kim_kind(c)
+        return re.sub(r'\s*week$', '', (th_ or '').strip(), flags=re.I) or None
+    words_ = lambda s: ' '.join(re.findall(r'[a-z0-9]+', (s or '').lower().replace('’', '').replace("'", '')))
+    themes = {theme_of(c) for c in camps if theme_of(c)}
+    for c in camps:
+        ran(c, 'Text from another camp')
+        if c['_empty']:
+            continue
+        own, body = theme_of(c), words_(c['_desc'])
+        others = [t for t in themes if t != own and len(words_(t)) > 3 and words_(t) in body
+                  and not (own and words_(t) in words_(own))]
+        if own and words_(own) not in body and others:
+            row('Text from another camp', label(c), f"Description names “{others[0]}”, another week's theme, not “{own}”.", c['_href'])
+        sy = re.search(r'school\s*(year|closure)s?\s*(camp|program)s?', c['_desc'], re.I)
+        if sy:
+            row('Text from another camp', label(c), f"Description says “{sy.group(0)}” in a summer camp.", c['_href'])
+
     # 14. Pictures: every camp has one, no two weeks share one
     # "Same picture" = the same picture FILE (its bytes). Never the iClass file name: its long middle part is
     # NOT unique to a picture (2026-11-05, SGT: Beach Bash After Care and Color Wars Gymnastics share the name
@@ -759,7 +795,20 @@ def main():
                 return '; '.join(bits)
         if not re.search(r'summer\s*camp', n or '', re.I):
             return "has no “Summer Camp” part"
-        return "“Summer Camp” is not the second part"
+        if not re.match(r'^[^|]+\|\s*Summer Camp\s*\|', n or ''):
+            return "“Summer Camp” is not the second part"
+        # the rest of Kim's format (Standards #17): Full / Half Day right after Summer Camp (with Gym or Ninja),
+        # an Ages part, and the dates
+        rest, bits = parts[2:], []
+        fh_at = [i for i, p in enumerate(rest) if re.search(r'\b(full|half)\s*day\b', p, re.I)]
+        if fh_at and fh_at[0] != 0:
+            bits.append(f"has “{re.search(r'(full|half)\s*day', rest[fh_at[0]], re.I).group(0)}” in its own part, not right after Summer Camp (it goes with Gym or Ninja)")
+        if not any(re.search(r'\bages?\b', p, re.I) for p in rest):
+            bits.append("has no Ages part")
+        if not any(re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*\d', p, re.I) for p in rest):
+            bits.append("has no dates")
+        return '; '.join(bits) or None
+    off = [c for c in camps if name_problem(c['camp_name'])]
     if off:
         probs = collections.Counter(name_problem(c['camp_name']) for c in off)
         what = ' · '.join(f"{p}" + (f" ({k} camps)" if len(probs) > 1 else '') for p, k in probs.most_common())
