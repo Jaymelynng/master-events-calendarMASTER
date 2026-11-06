@@ -273,10 +273,14 @@ export default function CampBand({
       style={{
         gridColumn: '2 / -1',
         display: 'grid',
-        gridTemplateColumns: `repeat(${displayDates.length}, 1fr)`,
+        // The band USES THE DAY COLUMNS OF THE ROW ABOVE (subgrid), so a bar starts and ends exactly under its
+        // days. Before 2026-11-06 it had its own 30 equal columns while the day cells above are as wide as
+        // their events (22-94px measured), so bars sat up to 107px - several days - off their real dates.
+        gridTemplateColumns: 'subgrid',
         gridTemplateRows: `repeat(${totalRows}, ${anyPerDay ? 46 : 28}px)`,
-        gap: '3px',
-        padding: '3px 4px 4px',
+        columnGap: '0px',
+        rowGap: '3px',
+        padding: '3px 0 4px',
         // Subtle bg tint that matches the gym cell's gray-50 — visually
         // claims this strip as part of the same gym row rather than letting
         // it look like a new row starting. No top border (dashed line was
@@ -284,6 +288,12 @@ export default function CampBand({
         background: '#f9fafb',
       }}
     >
+      {/* The day lines of the row above, carried down through the camp bars (Jayme 2026-11-06: "why are
+          these lines missing") - one per day column, the same gray-200 right edge as the day cells. */}
+      {displayDates.map((d, i) => (
+        <div key={`line-${i}`} aria-hidden="true"
+          style={{ gridColumn: i + 1, gridRow: '1 / -1', borderRight: '1px solid #e5e7eb', pointerEvents: 'none' }} />
+      ))}
       {placements.map(({ variant, gridColumn, gridRow, dayCells, span }) => {
         const style = variantStyle(variant);
         // With per-day counts the bar's status is the TIGHTEST day (the public number is day 1 only)
@@ -320,6 +330,7 @@ export default function CampBand({
             style={{
               gridColumn,
               gridRow,
+              margin: '0 2px',   // back-to-back weeks keep a small space (the band has no column gap - see above)
               borderRadius: '7px',
               ...(dimmed ? { opacity: 0.25, filter: 'grayscale(1)' } : notOnPortal ? { opacity: 0.55 } : {}),
               // When a variant has unresolved data errors, switch the border
@@ -340,7 +351,8 @@ export default function CampBand({
               boxShadow: hasErrors
                 ? '0 0 0 2px rgba(220,53,69,0.18), 0 1px 2px rgba(0,0,0,0.06)'
                 : '0 1px 2px rgba(0,0,0,0.06)',
-              minWidth: 0,
+              // the bar's full content sets its least width, so its days' columns grow to fit it (never cut off)
+              minWidth: 'max-content',
               // narrow bars let the spots pill spill a few pixels past the edge rather than cut it
               overflow: narrow ? 'visible' : 'hidden',
               position: 'relative',
