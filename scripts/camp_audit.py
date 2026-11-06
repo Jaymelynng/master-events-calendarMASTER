@@ -861,27 +861,24 @@ def main():
     # (Gymnastics / Parkour & Ninja), Full Day or Half Day goes right after it, Ages 5+ is fine (a range is
     # her preference, never an error). So the second part must be exactly "Summer Camp" - no sport before it,
     # no year after it - and nothing else here is flagged.
-    off = [c for c in camps if not re.match(r'^[^|]+\|\s*Summer Camp\s*\|', c['camp_name'] or '')]
-    def name_problem(n):
+    def name_problem(n, yr_want=None):
         """What exactly is off in the name, in plain words (Jayme 2026-11-06: say what is wrong, not the whole format)."""
         parts = [p.strip() for p in (n or '').split('|')]
         second = parts[1] if len(parts) > 1 else ''
         if re.search(r'summer\s*camp', second, re.I):
-            yr = re.search(r'summer\s*camp\s*(20\d\d)', second, re.I)
             before = re.sub(r'\s*summer\s*camp.*', '', second, flags=re.I).strip()
             bits = []
-            if yr:
-                bits.append(f"has the year “{yr.group(1)}” after Summer Camp (no year in Kim's format)")
             if before:
                 bits.append(f"has “{before}” before Summer Camp (it goes after, as its own part)")
             after = re.sub(r'.*summer\s*camp\s*(20\d\d)?', '', second, flags=re.I).strip()
+            after = re.sub(r'\bweek\s*\d+\b', 'Week #', after, flags=re.I)   # one line for every week, not ten
             if after:
                 bits.append(f"has “{after}” after Summer Camp in the same part (it goes in its own part)")
             if bits:
                 return '; '.join(bits)
         if not re.search(r'summer\s*camp', n or '', re.I):
             return "has no “Summer Camp” part"
-        if not re.match(r'^[^|]+\|\s*Summer Camp\s*\|', n or ''):
+        if not re.match(r'^[^|]+\|\s*Summer Camp(\s*20\d\d)?\s*\|', n or ''):
             return "“Summer Camp” is not the second part"
         # the rest of Kim's format (Standards #17): Full / Half Day right after Summer Camp (with Gym or Ninja),
         # an Ages part, and the dates
@@ -893,10 +890,14 @@ def main():
             bits.append("has no Ages part")
         if not any(re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*\d', p, re.I) for p in rest):
             bits.append("has no dates")
+        # a year anywhere in the name is fine; a WRONG year is the error
+        for y in re.findall(r'\b(20\d\d)\b', n or ''):
+            if yr_want and int(y) != yr_want:
+                bits.append(f"says {y}, but the camp is in {yr_want}")
         return '; '.join(bits) or None
-    off = [c for c in camps if name_problem(c['camp_name'])]
+    off = [c for c in camps if name_problem(c['camp_name'], d(c['start_date']).year)]
     if off:
-        probs = collections.Counter(name_problem(c['camp_name']) for c in off)
+        probs = collections.Counter(name_problem(c['camp_name'], d(c['start_date']).year) for c in off)
         what = ' · '.join(f"{p}" + (f" ({k} camps)" if len(probs) > 1 else '') for p, k in probs.most_common())
         row('Title format', f"All {N}" if len(off) == N else f"{len(off)} of {N}",
             f"Now: {off[0]['camp_name']}. The name {what}. Format: Theme | Summer Camp | Gym or Ninja | Age | Date.", who=off)
