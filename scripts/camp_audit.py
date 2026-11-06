@@ -64,6 +64,9 @@ def kind_of(c):
         if m2:
             wk, theme = m2.group(1), m2.group(2).strip(' -,!')
     if theme:
+        # "Week 1|AM Camp: Passport to Fun| June 21..." (AAG 2026-11-06): the theme ends at the next "|"
+        theme = theme.split('|')[0].strip(' -,!') or None
+    if theme:
         theme = theme.replace("'", '’')
     t = (c['camp_type_name'] or '').upper()
     if 'BEFORE' in t or re.search(r'before ?care', n, re.I):
@@ -75,6 +78,10 @@ def kind_of(c):
         fh = 'Full Day' if 'FULL' in t or re.search(r'full day', n, re.I) else ('Half Day' if 'HALF' in t or re.search(r'half day', n, re.I) else '')
         if not fh:   # AM / PM half-day camps named that way (AAG "AM Camp", "PM Camp")
             fh = 'AM' if re.search(r'\bAM\b', n) else ('PM' if re.search(r'\bPM\b', n) else '')
+        elif fh == 'Half Day':   # PLG "Summer - AM Half Day" / "PM Half Day": two different camps, never one group
+            ap = re.search(r'\b(AM|PM)\b', n)
+            if ap:
+                fh = f"{ap.group(1)} Half Day"
         k = ' '.join(x for x in (sport, fh) if x)
     return wk, theme, k
 
@@ -456,8 +463,11 @@ def main():
             wk_all[c['_week']].append(c)
         whole = [w for w, g in wk_all.items() if all(c['per_day_signup'] for c in g)]
         if sum(len(wk_all[w]) for w in whole) == len(on):   # follows the week: whole weeks on, the rest off
-            nums = ', '.join(kind_of(wk_all[w][0])[0] for w in sorted(whole))
-            note = f"On for all {len(wk_all[whole[0]])} camps in Weeks {nums}. Off for the other {len(wk_all) - len(whole)} weeks. On purpose?"
+            # week numbers when the names have them, else the week's date (RBK names have no week number)
+            have_nums = all(kind_of(wk_all[w][0])[0] for w in whole)
+            nums = ', '.join(kind_of(wk_all[w][0])[0] if have_nums else f"of {mon_d(w.isoformat())}" for w in sorted(whole))
+            note = (f"On for all {len(wk_all[whole[0]])} camps in Weeks {nums}." if have_nums
+                    else f"On for every camp in the week{'s' if len(whole) > 1 else ''} {nums}.") + f" Off for the other {len(wk_all) - len(whole)} weeks. On purpose?"
         else:
             note = f"On for {', '.join(label(c) for c in on)}. Off for the other {len(main_camps) - len(on)}. On purpose?"
         row('Single-day sign-up', f"All {len(main_camps)}", note, who=main_camps)
@@ -571,7 +581,9 @@ def main():
             th_, _ = _kim_kind(c)
             theme = re.sub(r'^\W+', '', th_ or '').strip() or None
         missing = []
-        if theme and re.sub(r'\s*week$', '', theme, flags=re.I).lower().replace('’', "'") not in c['_desc'].lower().replace('’', "'"):
+        # letters and digits only: AAG writes the theme as "Wicked Good" Sports / AHOY, Campers! (2026-11-06)
+        words = lambda s: ' '.join(re.findall(r'[a-z0-9]+', s.lower().replace('’', '').replace("'", '')))
+        if theme and words(re.sub(r'\s*week$', '', theme, flags=re.I)) not in words(c['_desc']):
             missing.append('no theme')
         dm = re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*(\d{1,2})(?:st|nd|rd|th)?\s*[-–]\s*(?:(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*)?(\d{1,2})', c['_desc'], re.I)
         if not dm:
