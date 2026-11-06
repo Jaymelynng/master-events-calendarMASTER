@@ -109,15 +109,16 @@ def main():
         if doc is None:
             missing.append(gid); continue
         if (doc.get('status') or '').lower() in SKIP_STATUS:
-            skipped.append(f"{code} ({doc.get('status')})"); continue
-        plan.append((gid, code, doc))
+            skipped.append(f"{code} ({doc.get('status')})")
+        plan.append((gid, code, doc))   # every gym is audited (the camp sheet's per-camp record); Sent/Ready rows stay as they are
 
-    print(f"Will update {len(plan)} gyms: {', '.join(c for _, c, _ in plan)}")
-    print(f"Not touched (sent / ready to send): {', '.join(skipped) or 'none'}")
+    print(f"Will audit {len(plan)} gyms: {', '.join(c for _, c, _ in plan)}")
+    print(f"Email rows not touched (sent / ready to send): {', '.join(skipped) or 'none'}")
     if missing:
         print(f"In the gyms table but not on the audit page (not created): {', '.join(missing)}")
 
     upload = []
+    coverage = {}   # calendar gym code -> {camp id: {on, checks, found}} from camp_audit.py
     for gid, code, doc in plan:
         cmd = [sys.executable, os.path.join(HERE, 'camp_audit.py'), gid, '--out', runs]
         if os.path.exists(std_path):
@@ -129,6 +130,10 @@ def main():
         if r.returncode != 0:
             print(f"  {code}: AUDIT FAILED - page left as it is\n{r.stderr[-800:]}")
             continue
+        cov_f = os.path.join(runs, f'{gid}_coverage.json')
+        coverage[gid] = json.load(open(cov_f, encoding='utf-8')) if os.path.exists(cov_f) else {}
+        if (doc.get('status') or '').lower() in SKIP_STATUS:
+            continue   # Sent / Ready: the email rows are never touched
         new = json.load(open(os.path.join(runs, f'{gid}_email.json'), encoding='utf-8'))
         old_rows = doc.get('rows') or []
         rows = merge(new['rows'], old_rows, doc.get('hidden'))
@@ -162,7 +167,15 @@ def main():
             if not os.path.exists(nf):
                 print(f"  sheet {code}: not rebuilt (no {gid} in the gyms table)"); continue
             new = dict(json.load(open(nf, encoding='utf-8')), code=code)
-            same = all(json.dumps(old.get(k), sort_keys=True) == json.dumps(new.get(k), sort_keys=True) for k in ('camps', 'pricing', 'ages', 'types', 'campCount'))
+            # each camp carries its audit record (what checks ran on it, what they found); a camp the audit
+            # did not cover gets none, and the sheet shows it as not audited
+            cov = coverage.get(gid) or {}
+            for cp in new.get('camps') or []:
+                if str(cp.get('id')) in cov:
+                    cp['audit'] = cov[str(cp.get('id'))]
+            strip = lambda cs: [{k: v for k, v in c.items() if k != 'audit'} | ({'audit': {k: v for k, v in c['audit'].items() if k != 'on'}} if c.get('audit') else {}) for c in (cs or [])]
+            same = all(json.dumps(old.get(k), sort_keys=True) == json.dumps(new.get(k), sort_keys=True) for k in ('pricing', 'ages', 'types', 'campCount')) \
+                and json.dumps(strip(old.get('camps')), sort_keys=True) == json.dumps(strip(new.get('camps')), sort_keys=True)
             if not same:
                 json.dump(new, open(os.path.join(a.out, 'sheets', f'{code}.json'), 'w', encoding='utf-8'), ensure_ascii=False)
                 upload.append(f'sheets/{code}')

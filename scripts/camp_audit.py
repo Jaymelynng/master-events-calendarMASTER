@@ -190,9 +190,30 @@ def main():
         if len(by_lab[base]) > 1:
             c['_label'] = f"{base} ({mon_d(c['start_date'])})"
     rows = []
+    # Per-camp audit record (Jayme 2026-11-05: "for every camp week u need some kind of symbol that marks it was
+    # audited"). ran() is called INSIDE each check's loop, so the list is what really ran on that camp - never a
+    # typed list. A row whose Camp cell is that camp's label is a finding on it.
+    ran_on = collections.defaultdict(list)
+    found_on = collections.defaultdict(list)
+    lab2ids = collections.defaultdict(list)
+    for c in camps:
+        lab2ids[label(c)].append(c['camp_id'])
 
-    def row(err, camp, note, href=''):
+    hit_on = collections.defaultdict(set)   # camp id -> the checks that found something on it
+    cur = [None]                             # the check running now (set by ran(), or by hand before a group row)
+
+    def ran(c, name):
+        cur[0] = name
+        if name not in ran_on[c['camp_id']]:
+            ran_on[c['camp_id']].append(name)
+
+    def row(err, camp, note, href='', who=None):
+        # who = the camps a group row ("All 12 Aftercare") is about, so each of them carries the finding
         rows.append({'err': err, 'camp': camp, 'href': href, 'note': note})
+        for cid in ([x['camp_id'] for x in who] if who is not None else lab2ids.get(camp, [])):
+            found_on[cid].append(err)
+            if cur[0]:
+                hit_on[cid].add(cur[0])
 
     N = len(camps)
     # 1. What PARENTS can see and book right now - the settings AND the live portal (front end).
@@ -213,6 +234,7 @@ def main():
     LM = ['January','February','March','April','May','June','July','August','September','October','November','December']
     launch_words = f"{LM[launch.month-1]} {launch.day}"
     for c in camps:
+        ran(c, 'Visible to parents now')
         rs, re_ = (d(c['registration_start']) if c['registration_start'] else None), (d(c['registration_end']) if c['registration_end'] else None)
         c['_window'] = bool(rs and rs <= today and (not re_ or re_ >= today))
         c['_in_menu'] = str(c['camp_type_id']) in menu
@@ -227,12 +249,13 @@ def main():
         open_n = sum(1 for c in listed if c['allow_registration'])
         what = 'visible and open for registration' if open_n == len(listed) else f"visible ({open_n} open for registration)"
         row('Camps are live', who, f"{who.replace('All', 'All').replace(' of ', ' of ')} camps are currently {what} in the customer portal. Please hide the camps and close registration until the {launch_words} launch.\n\n{enr}",
-            f"https://portal.iclasspro.com/{gym['iclass_slug']}/booking")
+            f"https://portal.iclasspro.com/{gym['iclass_slug']}/booking", who=listed)
     # No 'direct link' rows (Jayme 2026-11-05): a camp parents can't see in the portal can't be found, so an
     # early or old registration start on a hidden camp, or one whose type isn't in the menu, is not a finding.
     # 'Goes live early' only when the camp will really appear on that date: Active + Show on Web. The type's portal
     # tile appears by itself once one of its camps is live (KB line 33688), so the menu is not a gym step.
     for c in camps:
+        ran(c, 'Registration start / goes live early')
         rs = d(c['registration_start']) if c['registration_start'] else None
         if rs and today < rs < launch and c['allow_registration'] and c['show_on_web'] and c['_active']:
             row('Goes live early', label(c), f"Registration starts {mdy(c['registration_start'])}, so this camp goes live on the portal before the {launch_words} launch.", c['_href'])
@@ -245,6 +268,7 @@ def main():
 
     # 2. Registration end = camp's last day
     for c in camps:
+        ran(c, 'Registration end date')
         last = c['_days'][-1][0] if c['_days'] else c['end_date']
         if c['registration_end'] and d(c['registration_end']) != d(last):
             note = f"Registration ends {mdy(c['registration_end'])} instead of {mdy(last)} (last day of camp)."
@@ -255,6 +279,7 @@ def main():
     # 2b. The same camp entered twice (same name, same dates)
     twins = collections.defaultdict(list)
     for c in camps:
+        ran(c, 'Not entered twice')
         twins[(re.sub(r'\s+', ' ', c['camp_name']).strip().lower(), c['start_date'], c['end_date'])].append(c)
     for group in twins.values():
         if len(group) > 1:
@@ -279,6 +304,7 @@ def main():
         # Two separate findings, in iClass's own words (Jayme 2026-11-05): Event Type = where the camp is grouped on
         # the booking page (KB 38949); Event Pricing Schedule (Payment Settings) = what it charges (KB 38916).
         for c in group:
+            ran(c, 'Event Type and Event Pricing Schedule vs matching camps')
             nd = len({x[0] for x in c['_days']}) or 5
             mine_c, main_c = price.get(c['price_table_id'], {}).get((1, nd)), price.get(tid, {}).get((1, nd))
             if c['camp_type_name'] != ct:
@@ -309,6 +335,7 @@ def main():
         main_tid, n_main = collections.Counter(c['price_table_id'] for c in users).most_common(1)[0]
         want = sib_of(main_tid)
         for c in users:
+            ran(c, 'Sibling discount vs matching camps')
             got = sib_of(c['price_table_id'])
             if c['price_table_id'] != main_tid and got is not None and want is not None and got != want:
                 row('Sibling discount', label(c), f"{sib_words(got)}. The other {n_main} {t_name} camps give {sib_words(want)}. On purpose?", c['_href'])
@@ -333,6 +360,7 @@ def main():
     for (t, k), group in by_kind.items():
         per_date = {id(c): collections.defaultdict(list) for c in group}
         for c in group:
+            ran(c, 'Hours every day vs matching camps')
             for day, s, e in c['_days']:
                 per_date[id(c)][day].append((s, e))
         if any(len(v) > 1 for c in group for v in per_date[id(c)].values()):
@@ -366,6 +394,7 @@ def main():
 
     # 4a. A camp day on a KNOWN closure (Standards > Short weeks; the list lives on the Standards page)
     for c in camps:
+        ran(c, 'Known closures')
         for day in sorted({x[0] for x in c['_days']}):
             if day in closures:
                 row('Closed day', label(c), f"Has camp on {DAYNAME[d(day).weekday()]} {mon_d(day)} ({closures[day]}), a known closure. On purpose?", c['_href'])
@@ -378,6 +407,7 @@ def main():
         allwd = collections.Counter(d(day).weekday() for c in group for (day, _, _) in c['_days'])
         common_days = {w for w, n in allwd.items() if n > len(group) / 2}
         for c in group:
+            ran(c, 'Days, start and end dates vs the week')
             have = {d(day).weekday() for (day, _, _) in c['_days']}
             for w in sorted(common_days - have):
                 date = wk + dt.timedelta(days=w)
@@ -394,10 +424,12 @@ def main():
 
     # 5. 0 spots while waitlist requests are on
     for c in camps:
+        ran(c, 'Spots vs waitlist')
         if c['max_entries'] == 0 and c['waitlist_requests']:
             row('Spots not consistent', label(c), 'Max students is set to 0, so it shows as full and parents can only ask for the waitlist. On purpose?', c['_href'])
 
     # 6. Ages: settings consistent within the same kind; title ages vs setting (whole years) and description
+    cur[0] = 'Ages: settings match matching camps and the title'   # its group rows come before its camp loop
     for s_name, group in by_sport.items():
         for fld, word in (('min_age', 'Min age'), ('max_age', 'Max age')):
             vals = collections.Counter(int(float(c[fld])) for c in group if c[fld] is not None)
@@ -407,6 +439,7 @@ def main():
                     if c[fld] is not None and int(float(c[fld])) != common:
                         row(f'{word} not consistent', label(c), f"{word} {int(float(c[fld]))}. The other {n_common} {s_name} camps are {common}. On purpose?", c['_href'])
     for c in camps:
+        ran(c, 'Ages: settings match matching camps and the title')
         m = re.search(r'Ages?\s*(\d+)\s*[-–]\s*(\d+)', c['camp_name'], re.I)
         if m and c['min_age'] is not None and c['max_age'] is not None:
             if (int(m.group(1)), int(m.group(2))) != (int(float(c['min_age'])), int(float(c['max_age']))):
@@ -414,6 +447,7 @@ def main():
                 row('Ages in title', label(c), f"Title says Ages {m.group(1)}-{m.group(2)}. Setting is {age_text(c['min_age'])} – {age_text(c['max_age'])}." + (f" Description says {dm.group(1).replace(' ', '')}." if dm else ''), c['_href'])
 
     # 7. Single-day sign-up: pattern row if mixed, then each camp vs its description
+    cur[0] = 'Single-day sign-up vs description'   # the pattern row comes before its camp loop
     main_camps = [c for c in camps if not c['_care']]
     on = [c for c in main_camps if c['per_day_signup']]
     if on and len(on) != len(main_camps):
@@ -426,12 +460,13 @@ def main():
             note = f"On for all {len(wk_all[whole[0]])} camps in Weeks {nums}. Off for the other {len(wk_all) - len(whole)} weeks. On purpose?"
         else:
             note = f"On for {', '.join(label(c) for c in on)}. Off for the other {len(main_camps) - len(on)}. On purpose?"
-        row('Single-day sign-up', f"All {len(main_camps)}", note)
+        row('Single-day sign-up', f"All {len(main_camps)}", note, who=main_camps)
     # Each camp's setting vs its own description - Before Care / After Care too (Jayme 2026-11-05: HGA's 12 After
     # Care camps say "$30 per day" with single-day sign-up off; skipping care camps here missed all 12).
     for c in camps:
         if c['_empty']:
             continue
+        ran(c, 'Single-day sign-up vs description')
         day_price = re.search(r'\$\s?\d+(?:\.\d\d)?\s*(?:/\s*day|per\s+day|a\s+day|daily)', c['_desc'], re.I)
         explained = re.search(r'single[- ]?days?\b[^.]*\b(open|available)', c['_desc'], re.I)
         if not c['per_day_signup'] and day_price and not explained:
@@ -443,6 +478,7 @@ def main():
     for c in camps:
         if c['_empty']:
             continue
+        ran(c, 'Price in description vs price table')
         # A camp on the wrong pricing schedule already has its own row; its description is checked against the
         # schedule its matching camps use, so the same wrong charge is not reported twice.
         exp = c.get('_expected_table')
@@ -486,15 +522,17 @@ def main():
             row('Price in description', label(c), f"Says ${dm_.group(1)} per day. Charges ${t[(1, 1)]:g} per day", c['_href'])
     seen_blank = set()
     for c in camps:
+        ran(c, 'Price table: no blank boxes')
         t = price.get(c['price_table_id']) or {}
         for (k, n), v in t.items():
             if v is None and (c['price_table_id'], k, n) not in seen_blank:
                 seen_blank.add((c['price_table_id'], k, n))
                 users = [x for x in camps if x['price_table_id'] == c['price_table_id']]
-                row('Price table blank', f"All {len(users)} {users[0]['camp_type_name']}", f"{['1st','2nd','3rd'][k-1] if k <= 3 else str(k)+'th'} child, {n} day{'s' if n > 1 else ''} has no price. Every other box is filled")
+                row('Price table blank', f"All {len(users)} {users[0]['camp_type_name']}", f"{['1st','2nd','3rd'][k-1] if k <= 3 else str(k)+'th'} child, {n} day{'s' if n > 1 else ''} has no price. Every other box is filled", who=users)
 
     # 16. The dates written in the camp NAME vs the camp's real days
     for c in camps:
+        ran(c, 'Dates in camp name')
         tm_ = re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*(\d{1,2})(?:st|nd|rd|th)?(?:\s*[-–]\s*(?:(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*)?(\d{1,2}))?', c['camp_name'], re.I)
         if tm_ and c['_days']:
             f, l = d(c['_days'][0][0]), d(c['_days'][-1][0])
@@ -510,6 +548,7 @@ def main():
             row('Dates in camp name', label(c), 'Name has no dates. The other camps’ names do.', c['_href'])
 
     for c in camps:   # price written in the camp NAME - care too
+        ran(c, 'Price in camp name')
         pm = re.search(r'\$\s?(\d[\d,]*(?:\.\d\d)?)', c['camp_name'])
         t = price.get(c['price_table_id']) or {}
         nd = len({x[0] for x in c['_days']})   # camp DAYS, not time blocks (MGC all-day care has 2 a day)
@@ -526,6 +565,7 @@ def main():
             row('No description', label(c), 'The description is empty.', c['_href'])
             c['_empty'] = True
             continue
+        ran(c, 'Description: theme, dates, time, ages, price, snack')
         wk, theme, k = kind_of(c)
         if not theme:   # Kim-format names: the theme is the first part (CCP, HGA, RBK)
             th_, _ = _kim_kind(c)
@@ -560,7 +600,7 @@ def main():
     # one row when every camp is missing the same things, else one row per camp
     miss = [c for c in camps if c.get('_missing')]
     if miss and len(miss) == N and len({c['_missing'] for c in miss}) == 1:
-        row('Theme, dates or time missing from description', f"All {N}", miss[0]['_missing'])
+        row('Theme, dates or time missing from description', f"All {N}", miss[0]['_missing'], who=miss)
     else:
         for c in miss:
             row('Theme, dates or time missing from description', label(c), c['_missing'], c['_href'])
@@ -572,7 +612,7 @@ def main():
         total = sum(1 for c in camps if kind_of(c)[2] == k)
         cell = f"All {total} {k}" if len(group) == total else None
         if cell:
-            row('Snack not in description', cell, "Descriptions don’t mention snack. Confirming you are not providing one?")
+            row('Snack not in description', cell, "Descriptions don’t mention snack. Confirming you are not providing one?", who=group)
         else:
             for c in group:
                 row('Snack not in description', label(c), "Description doesn’t mention snack. Confirming you are not providing one?", c['_href'])
@@ -584,6 +624,7 @@ def main():
     for c in camps:   # every camp, care too (Kim's list; Jayme 2026-11-05)
         if c['_empty']:
             continue
+        ran(c, 'What to wear and bring')
         no_wear = not re.search(r'\bwear\b|clothing|leotard', c['_desc'], re.I)
         no_bring = not re.search(r'\bbring\b|pack', c['_desc'], re.I)
         if no_wear or no_bring:   # say exactly which one is missing
@@ -596,6 +637,7 @@ def main():
         h = int(m.group(1)) % 12 + (12 if m.group(3).lower() == 'p' else 0)
         return h * 3600 + int(m.group(2) or 0) * 60
     for c in camps:
+        ran(c, 'Times in description')
         sched = collections.Counter((s, e) for (_, s, e) in c['_days'])
         if not sched:
             continue
@@ -616,6 +658,7 @@ def main():
     # 14. Pictures: every camp has one, no two weeks share one
     pic_weeks = collections.defaultdict(set)
     for c in camps:
+        ran(c, 'Picture on file, not shared with another week')
         if not c['picture_path']:
             row('Picture missing', label(c), 'No thumbnail picture.', c['_href'])
         else:
@@ -627,6 +670,8 @@ def main():
                 others = [x for x in names if x != n]
                 row('Picture used on more than one week', n, f"Same picture as {', '.join(others)}.")
 
+    for c in camps:
+        ran(c, 'Camp name format')
     # 15. Camp name format (Kim's): [Week #:] Theme | Summer Camp | (Gym or Ninja) | Age | Date
     # Kim 2026-11-05: a week number before the theme is fine, Gym or Ninja may be spelled out
     # (Gymnastics / Parkour & Ninja), Full Day or Half Day goes right after it, Ages 5+ is fine (a range is
@@ -637,7 +682,7 @@ def main():
         row('Title format', f"All {N}" if len(off) == N else f"{len(off)} of {N}",
             f"Now: {off[0]['camp_name']}. Format: Theme | Summer Camp | Gym or Ninja | Age | Date. "
             "A week number before the theme is fine, Gym or Ninja can be spelled out, and Full Day or Half Day "
-            "goes right after it (e.g. Week 1: Beach Bash | Summer Camp | Gymnastics Full Day | Ages 5-13 | June 1-4).")
+            "goes right after it (e.g. Week 1: Beach Bash | Summer Camp | Gymnastics Full Day | Ages 5-13 | June 1-4).", who=off)
 
     # One "All N <kind>" row when the same note hits EVERY camp of that kind (her rule: "All N" only when it
     # truly is every one), otherwise one row per camp.
@@ -723,6 +768,12 @@ def main():
         'confirmed': '\n'.join(conf), 'rows': rows, 'signoff': 'Thank you,\nJayme',
     }
     json.dump(email, open(os.path.join(a.out, f'{G}_email.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    # Per-camp audit record for the camp sheet: when it ran, every check that ran on the camp, and its own findings.
+    # A camp the audit left out (not a summer camp) has no record - the sheet shows "not audited", never a check.
+    cov = {str(c['camp_id']): {'on': today.isoformat(), 'checks': ran_on[c['camp_id']], 'found': sorted(set(found_on[c['camp_id']])),
+                               'hit': [k for k in ran_on[c['camp_id']] if k in hit_on[c['camp_id']]]}
+           for c in camps}
+    json.dump(cov, open(os.path.join(a.out, f'{G}_coverage.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
     # What a person still reads by eye
     with open(os.path.join(a.out, f'{G}_review.txt'), 'w', encoding='utf-8') as f:
