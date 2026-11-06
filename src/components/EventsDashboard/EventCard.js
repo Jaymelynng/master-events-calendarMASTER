@@ -87,7 +87,7 @@ export default function EventCard({
   if (showCount) tooltipParts.push(`${totalOpenings} spots open`);
   if (event.isGrouped) tooltipParts.push(`${event.optionCount} options`);
   if (event.has_openings === false) tooltipParts.push('SOLD OUT');
-  if (event.not_on_portal) tooltipParts.unshift('NOT ON PORTAL - built in iClass, parents cannot see it');
+  if (event.not_on_portal) tooltipParts.unshift(`NOT ON PORTAL - ${(event.not_live_reasons || ['parents cannot see it']).join('; ')}`);
   const cardTooltip = tooltipParts.join(' · ');
   // Built in iClass but hidden from the portal: faded + dashed + tagged (Jayme 2026-11-04).
   const notOnPortal = !!event.not_on_portal;

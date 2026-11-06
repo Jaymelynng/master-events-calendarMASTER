@@ -44,7 +44,26 @@ export function useCampOccupancy(campEvents) {
   return byCamp;
 }
 
-// Camps built in iClass that the portal does NOT show (Show on portal off), for one month. The calendar
+// Why a camp built in iClass is not live on the portal - read from its own iClass settings, never guessed.
+// Jayme 2026-11-06: "show faded ... to see errors or if things are on the calendar but something is stopping
+// it from being live". Checked against the data that day: every active camp missing from the portal had one
+// of these (PLG: 24 camps of one category listed, the 1 whose registration opens 11/16 was not; EST #739 and
+// SGT #2077 dropped off when their registration END passed). None of them = shown on the portal list but not
+// synced into the calendar yet.
+const mdy = (iso) => { const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number); return `${m}/${d}/${y}`; };
+export function notLiveReasons(r, today = new Date()) {
+  const t = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const rs = r.registration_start ? String(r.registration_start).slice(0, 10) : null;
+  const re = r.registration_end ? String(r.registration_end).slice(0, 10) : null;
+  const out = [];
+  if (r.show_on_web === false || r.show_on_web === null) out.push('"Show on portal" is off');
+  if (rs && rs > t) out.push(`Registration opens ${mdy(rs)} - the portal lists a camp only after it opens`);
+  if (re && re < t) out.push(`Registration closed ${mdy(re)} - the portal stops listing a camp when it closes`);
+  if (!out.length) out.push('On the portal, but not synced into the calendar yet - press Sync');
+  return out;
+}
+
+// Camps built in iClass that the portal does NOT show, for one month (see notLiveReasons). The calendar
 // draws them faded with a "NOT ON PORTAL" tag (Jayme 2026-11-04: "show it but make it a diff color or
 // transparent to show that it's there but not on portal"). They live ONLY on the calendar picture -
 // never in the events table, so no count, requirement, export, email or error total includes them.
@@ -60,16 +79,30 @@ export function useNotOnPortalCamps(year, month, gymsList, existingEvents) {
     const last = new Date(year, month + 1, 0);
     const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     Promise.all([
+      // every camp of the month (not only "Show on portal" off): the ones the calendar already has are
+      // dropped below, so what is left is exactly what is built but not live
       supabase.from('iclass_camp_audit')
-        .select('gym_id, camp_id, camp_name, start_date, end_date, min_age, max_age, per_day_signup, camp_type_name, registration_start, registration_end, allow_registration')
+        .select('gym_id, camp_id, camp_name, start_date, end_date, min_age, max_age, per_day_signup, camp_type_name, registration_start, registration_end, allow_registration, show_on_web')
         .is('gone_from_iclass_at', null)
-        .or('show_on_web.is.false,show_on_web.is.null')
         .lte('start_date', iso(last)).gte('end_date', iso(first))
-        .order('gym_id').order('camp_id'),
+        .order('gym_id').order('camp_id')
+        .range(0, 999),
       supabase.from('event_type_mappings').select('*'),
-    ]).then(([camps, maps]) => {
+    ]).then(async ([camps, maps]) => {
+      const list = camps.data || [];
+      // Inactive camps stay off (Jayme 2026-11-06: "just bringing in live events that are active").
+      // "active" is in the camp's stored iClass record, read by exact gym + camp id.
+      const active = new Set();
+      const gyms = [...new Set(list.map((c) => c.gym_id))];
+      const ids = [...new Set(list.map((c) => c.camp_id))];
+      if (ids.length) {
+        const { data } = await supabase.from('iclass_camp_setup')
+          .select('gym_id, camp_id, active:raw->>active')
+          .in('gym_id', gyms).in('camp_id', ids).range(0, 999);
+        (data || []).forEach((x) => { if (String(x.active) === '1') active.add(`${x.gym_id}:${x.camp_id}`); });
+      }
       if (!alive) return;
-      setRows(camps.data || []);
+      setRows(list.filter((c) => active.has(`${c.gym_id}:${c.camp_id}`)));
       setRules(maps.data || []);
     });
     return () => { alive = false; };
@@ -85,7 +118,9 @@ export function useNotOnPortalCamps(year, month, gymsList, existingEvents) {
       return {
         id: `notonportal-${r.gym_id}-${r.camp_id}`,
         not_on_portal: true,
+        not_live_reasons: notLiveReasons(r),
         gym_id: r.gym_id,
+        gym_code: r.gym_id,
         gym_name: gym?.name,
         title: r.camp_name,
         date: String(r.start_date).slice(0, 10),

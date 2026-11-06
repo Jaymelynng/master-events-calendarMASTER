@@ -181,8 +181,10 @@ export default function EventDetailPanel({
         {/* Built in iClass but hidden from the portal (Show on portal is off) - parents can't see it yet. */}
         {event.not_on_portal && (
           <div className="mb-3 px-3 py-2 rounded-lg font-bold" style={{ background: '#2b2224', color: '#ffffff', fontSize: 14 }}>
-            NOT ON PORTAL — built in iClass, but "Show on portal" is off, so parents can't see or book it.
-            {event.registration_start_date ? ` Registration set to open ${event.registration_start_date.split('-').map(Number).slice(1).join('/')}/${event.registration_start_date.slice(0, 4)}.` : ''}
+            <div>NOT ON PORTAL — built in iClass, but parents can't see or book it. What is stopping it:</div>
+            <ul className="mt-1 ml-5 list-disc font-semibold">
+              {(event.not_live_reasons || []).map((r) => <li key={r}>{r}</li>)}
+            </ul>
           </div>
         )}
 
@@ -218,7 +220,7 @@ export default function EventDetailPanel({
           }}
         >
           <DetailTile icon={<MapPin className="w-4 h-4" />} label="Location">
-            {gymsList.find(g => g.gym_code === event.gym_code || g.id === event.gym_id)?.name ||
+            {gymsList.find(g => (event.gym_code && g.gym_code === event.gym_code) || g.id === event.gym_id)?.name ||
              event.gym_name || event.gym_code}
           </DetailTile>
           <DetailTile icon={<Calendar className="w-4 h-4" />} label="Date">

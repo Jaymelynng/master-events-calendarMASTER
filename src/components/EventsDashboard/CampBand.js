@@ -347,7 +347,7 @@ export default function CampBand({
             }}
             onClick={() => onEventSelect && onEventSelect(variant)}
             title={
-              notOnPortal ? `NOT ON PORTAL - built in iClass, parents cannot see it. ${variant.title || ''}` :
+              notOnPortal ? `NOT ON PORTAL - ${(variant.not_live_reasons || ['parents cannot see it']).join('; ')}. ${variant.title || ''}` :
               hasErrors
                 ? `⚠️ Has data error(s) — click for details. ${variant.title || variantLabel(variant)}`
                 : (variant.title || variantLabel(variant))
