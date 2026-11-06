@@ -120,6 +120,12 @@ def sport(c):
     return kk or kind_of(c)[2] or (c['camp_type_name'] or '')
 
 
+def is_care(c):
+    """Before / After / Extended Care: its settings say care, or its name does (HGA's Memorial Week Aftercare
+    is set up under SUMMER CAMP - FULL DAY). Their text is not checked for snack, what to wear or bring."""
+    return bool(c.get('_care') or re.search(r'\b(after|before|extended)\s*care\b|aftercare', c['camp_name'] or '', re.I))
+
+
 def name_vs_settings(c):
     """The name says Half Day but the camp is set up as Full Day (or the other way round): Event Type AND
     price table both say the other one. SGT 2026-11-06: the 9-3 Candyland Ninja camp was renamed "Half Day";
@@ -625,8 +631,8 @@ def main():
                 row('Dates in description', label(c), f"Says {dm.group(0)}. Camp is {mon_d(f.isoformat())}–{l.day}", c['_href'])
             elif yr and int(yr.group(1)) != f.year:
                 row('Dates in description', label(c), f"Says {dm.group(0)}, {yr.group(1)}. Camp is {f.year}.", c['_href'])
-        # Kim's list applies to EVERY camp, Before Care and After Care too (Jayme 2026-11-05: no care skips)
-        if not re.search(r'\bsnacks?\b', c['_desc'], re.I):
+        # Before / After / Extended Care text does not need snack, what to wear or what to bring (Jayme 2026-11-06)
+        if not is_care(c) and not re.search(r'\bsnacks?\b', c['_desc'], re.I):
             c['_nosnack'] = True
     # one row when every camp is missing the same things, else one row per camp
     miss = [c for c in camps if c.get('_missing')]
@@ -656,7 +662,7 @@ def main():
         # Before / After / Extended Care are NOT checked for what to wear or bring (Jayme 2026-11-06: "aftercare
         # doesnt need to say what to wear or bring its after care"). Care = its settings say care, or its name does
         # (HGA's Memorial Week Aftercare is set up under SUMMER CAMP - FULL DAY).
-        if c['_empty'] or c['_care'] or re.search(r'\b(after|before|extended)\s*care\b|aftercare', c['camp_name'] or '', re.I):
+        if c['_empty'] or is_care(c):
             continue
         ran(c, 'What to wear and bring')
         no_wear = not re.search(r'\bwear\b|clothing|leotard', c['_desc'], re.I)
