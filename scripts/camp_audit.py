@@ -551,12 +551,19 @@ def main():
             else:
                 row('Price in description', label(c), f"Says ${week_said:g}. Charges ${charge:g}{why}", c['_href'])
     for c in camps:
-        if not c['_care'] or c['_empty']:
+        # the DAY price written in the description vs the table's 1-day price - every camp (2026-11-06: this ran on
+        # care camps only, so a wrong Full / Half Day day price was never caught)
+        if c['_empty']:
             continue
-        t = price.get(c['price_table_id']) or {}
-        dm_ = re.search(r'\$\s?(\d+(?:\.\d\d)?)\s*(?:/\s*day|per\s+day|a\s+day)', c['_desc'], re.I)   # only a price SAID per day
-        if dm_ and t.get((1, 1)) is not None and abs(float(dm_.group(1)) - t[(1, 1)]) > 0.009:
-            row('Price in description', label(c), f"Says ${dm_.group(1)} per day. Charges ${t[(1, 1)]:g} per day", c['_href'])
+        exp_ = c.get('_expected_table')
+        t = price.get(exp_ if exp_ is not None else c['price_table_id']) or {}
+        # every price the description SAYS is per day, plus "Single Day: $62" (RBK); one matching the table is enough -
+        # RBK descriptions also say "After Care ... $20 per day", which is not this camp's day price
+        said_days = [float(x) for x in re.findall(r'\$\s?(\d+(?:\.\d\d)?)\s*(?:/\s*day|per\s+day|a\s+day)', c['_desc'], re.I)]
+        said_days += [float(x) for x in re.findall(r'single[- ]?day\w*\W{0,4}\$\s?(\d+(?:\.\d\d)?)', c['_desc'], re.I)]
+        day_t = t.get((1, 1))
+        if said_days and day_t is not None and all(abs(v - day_t) > 0.009 for v in said_days):
+            row('Price in description', label(c), f"Says ${said_days[0]:g} per day. Charges ${day_t:g} per day", c['_href'])
     seen_blank = set()
     for c in camps:
         ran(c, 'Price table filled in')
@@ -725,14 +732,45 @@ def main():
         ran(c, 'Text from another camp')
         if c['_empty']:
             continue
-        own, body = theme_of(c), words_(c['_desc'])
-        others = [t for t in themes if t != own and len(words_(t)) > 3 and words_(t) in body
+        own = theme_of(c)
+        # the HEADING (first ~160 characters): RBK descriptions list every week's theme further down, which hid a
+        # copied heading when the whole text was searched (Pirates had "THE GREAT OUTDOORS at ..." on top)
+        head = words_(c['_desc'][:160])
+        others = [t for t in themes if t != own and len(words_(t)) > 3 and words_(t) in head
                   and not (own and words_(t) in words_(own))]
-        if own and words_(own) not in body and others:
+        if own and words_(own) not in head and others:
             row('Text from another camp', label(c), f"Description names “{others[0]}”, another week's theme, not “{own}”.", c['_href'])
         sy = re.search(r'school\s*(year|closure)s?\s*(camp|program)s?', c['_desc'], re.I)
         if sy:
             row('Text from another camp', label(c), f"Description says “{sy.group(0)}” in a summer camp.", c['_href'])
+
+    # 15b. Spelling between the NAME and the DESCRIPTION (Standards #15): a word in one that is one or two letters
+    # off a word in the other ("ummer"/"Summer", "Fordbidden"/"forbidden", "Toons"/"Tunes") is a typo in one of
+    # them. No dictionary: the camp's own name and description are compared with each other.
+    def near(a, b):
+        if a == b or a.rstrip('s') == b.rstrip('s') or abs(len(a) - len(b)) > 2:
+            return False
+        prev = list(range(len(b) + 1))   # edit distance
+        for i, ca in enumerate(a, 1):
+            cur = [i]
+            for j, cb in enumerate(b, 1):
+                cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+            prev = cur
+        return prev[-1] <= (1 if min(len(a), len(b)) < 7 else 2)
+    for c in camps:
+        ran(c, 'Spelling: name vs description')
+        if c['_empty']:
+            continue
+        name_w = {w for w in re.findall(r'[a-z]+', (c['camp_name'] or '').lower()) if len(w) >= 5}
+        desc_w = set(re.findall(r'[a-z]+', c['_desc'].lower()))
+        seen_pairs = set()
+        for nw in sorted(name_w):
+            if nw in desc_w:
+                continue
+            hits = sorted(dw for dw in desc_w if len(dw) >= 4 and near(nw, dw))
+            if hits and (nw, hits[0]) not in seen_pairs:
+                seen_pairs.add((nw, hits[0]))
+                row('Spelling', label(c), f"Name says “{nw}”, description says “{hits[0]}”. One of them is spelled wrong.", c['_href'])
 
     # 14. Pictures: every camp has one, no two weeks share one
     # "Same picture" = the same picture FILE (its bytes). Never the iClass file name: its long middle part is
