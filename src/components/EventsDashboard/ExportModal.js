@@ -1,1820 +1,437 @@
-import React, { useState, useEffect } from 'react';
+// ============================================================================
+// EXPORT & COPY - pick the dates, gyms, buckets, sections and columns; then Download OR Copy the same thing
+// ============================================================================
+// Rebuilt 2026-11-07. Jayme: "the export needs to be totally redone to include everything we have just done
+// and also i want the option that whatever is chosen to download can also be bulk copied".
+//
+// - Every section is built once (src/lib/exportData.js) and the same tables go to the CSV / JSON file, the
+//   printable page and the clipboard, so a download and a copy can never disagree.
+// - The data behind every section is read as soon as the filters change, so Copy writes to the clipboard
+//   right on the click (browsers refuse a clipboard write that comes too long after it).
+// - Nothing typed: buckets from event_types, requirements from monthly_requirements, gym colors from
+//   gyms.brand_colors, prices from the signed-in iClass price tables. Before this rebuild the window had a
+//   typed gym-color list (AGA instead of AAG, MGC's old color, no EAG), typed requirement fallbacks
+//   (1 / 2 / 1) and a "SPECIAL EVENT" count for a bucket that no longer exists.
+// - Your picks (sections, dropped columns) are remembered on this computer.
+// ============================================================================
+import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { isErrorAcknowledgedAnywhere, inferErrorCategory } from '../../lib/validationHelpers';
+import { isErrorAcknowledgedAnywhere } from '../../lib/validationHelpers';
 import { eventsApi } from '../../lib/api';
-import { EVENT_COLUMNS, buildEventRows, toCSV, toClipboard, fetchDayCounts, spotsOf } from '../../lib/eventRow';
+import { EVENT_COLUMNS, COLUMN_GROUPS } from '../../lib/eventRow';
+import { fetchNotLiveRows, toNotLiveEvents } from '../../lib/iclassCamp';
+import {
+  SECTIONS, buildSections, fetchExportExtras, fetchSetupReads,
+  toCSVFile, toJSONFile, toClipboardAll, toHTMLPage,
+} from '../../lib/exportData';
 import { copyToClipboardRich } from './copyVisible';
+import { getErrorLabel } from './constants';
 
-// Real gym brand colors (primary brand color per gym)
-const GYM_BRAND_COLORS = {
-  'AGA': '#053A99',
-  'CCP': '#1f53a3',
-  'CPF': '#1f53a3',
-  'CRR': '#ff1493',
-  'EST': '#011837',
-  'HGA': '#c91724',
-  'MGC': '#33c7c9',
-  'OAS': '#3eb29f',
-  'PLG': '#C4149B',
-  'RBA': '#1a3c66',
-  'RBK': '#1a3c66',
-  'SGT': '#c72b12',
-  'TIG': '#f57f20',
-};
+const ALL_COLUMNS = EVENT_COLUMNS.map((c) => c.key);
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const mdyShort = (s) => { const [y, m, d] = s.split('-').map(Number); return `${m}/${d}/${y}`; };
+const load = (key, fallback) => { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v ?? fallback; } catch (e) { return fallback; } };
+const save = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { /* private mode */ } };
 
-export default function ExportModal({ onClose, events, gyms, monthlyRequirements, currentMonth, currentYear, acknowledgedPatterns = [] }) {
-  // NOTE: The 'events' prop is received but not used - component fetches its own data from database
-  // based on the date range selector, which allows exporting any date range (not just current view)
-  const [selectedGyms, setSelectedGyms] = useState(gyms.map(g => g.id)); // All selected by default
-  // Every bucket in Jayme's Buckets list (event_types table), all ticked. Before 2026-11-06 this was a typed
-  // list (CLINIC, KNO, OPEN GYM, CAMP, SPECIAL EVENT) that left CAMP CARE and SPECIALTY out of every export.
+// One-tap starting points. Each sets the sections and the event columns; change anything after.
+const QUICK_PICKS = [
+  { key: 'everything', label: 'Everything', sections: ['events', 'price_tables', 'requirements', 'audit', 'dismissed', 'setup_reads'], columns: ALL_COLUMNS },
+  { key: 'spots', label: 'Spots check', sections: ['events'], columns: ['gym', 'gym_name', 'bucket', 'title', 'start', 'end', 'spots', 'spots_by_day', 'status', 'max_kids', 'signup', 'reg_open', 'reg_close', 'link'] },
+  { key: 'prices', label: 'Prices', sections: ['events', 'price_tables'], columns: ['gym', 'gym_name', 'bucket', 'title', 'start', 'end', 'category', 'price_table', 'prices', 'due_at_signup', 'link'] },
+  { key: 'live', label: 'Live on the portal?', sections: ['events'], columns: ['gym', 'gym_name', 'bucket', 'title', 'start', 'end', 'live', 'why_not_live', 'show_on_web', 'registration_on', 'reg_open', 'reg_close', 'link'], notLive: true },
+  { key: 'requirements', label: 'Monthly requirements', sections: ['requirements'], columns: null },
+  { key: 'audit', label: 'Audit', sections: ['audit', 'dismissed', 'setup_reads'], columns: null },
+];
+
+export default function ExportModal({ onClose, gyms, monthlyRequirements, currentMonth, currentYear, acknowledgedPatterns = [] }) {
+  // ---------------------------------------------------------------- picks
+  const [startDate, setStartDate] = useState(iso(new Date(currentYear, currentMonth, 1)));
+  const [endDate, setEndDate] = useState(iso(new Date(currentYear, currentMonth + 1, 0)));
+  const [selectedGyms, setSelectedGyms] = useState(gyms.map((g) => g.id));
   const [eventTypes, setEventTypes] = useState([]);
   const [selectedTypes, setSelectedTypes] = useState([]);
+  const [sections, setSections] = useState(() => load('export_sections', ['events']));
+  const [dropped, setDropped] = useState(() => load('export_columns_dropped', []));
+  const [includeNotLive, setIncludeNotLive] = useState(false);
+  const [format, setFormat] = useState('csv');
+  const [note, setNote] = useState('');
+
   useEffect(() => {
     supabase.from('event_types').select('name').order('name').then(({ data }) => {
-      const names = (data || []).map(r => r.name).filter(Boolean);
+      const names = (data || []).map((r) => r.name).filter(Boolean);
       setEventTypes(names);
       setSelectedTypes(names);
     });
   }, []);
-  // The buckets with a monthly requirement (from the requirements she set), never a typed list
-  const requiredTypes = Object.keys(monthlyRequirements || {}).filter(t => Number(monthlyRequirements[t]) > 0);
+  useEffect(() => save('export_sections', sections), [sections]);
+  useEffect(() => save('export_columns_dropped', dropped), [dropped]);
 
-  // Which columns the event rows carry (CSV file + Copy). All ticked; tap to drop; remembered on this computer.
-  const [pickedColumns, setPickedColumns] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('export_columns') || 'null');
-      if (Array.isArray(saved) && saved.length) return EVENT_COLUMNS.map(c => c.key).filter(k => saved.includes(k));
-    } catch (e) { /* not saved */ }
-    return EVENT_COLUMNS.map(c => c.key);
-  });
-  const toggleColumn = (key) => setPickedColumns(prev => {
-    const next = prev.includes(key) ? prev.filter(k => k !== key) : EVENT_COLUMNS.map(c => c.key).filter(k => k === key || prev.includes(k));
-    try { localStorage.setItem('export_columns', JSON.stringify(next)); } catch (e) { /* fine */ }
-    return next;
-  });
-  const [copyNote, setCopyNote] = useState('');
-  const [exportFormat, setExportFormat] = useState('csv');
-  const [includeEvents, setIncludeEvents] = useState(true);
-  const [includeAnalytics, setIncludeAnalytics] = useState(false);
-  const [includeMissing, setIncludeMissing] = useState(false);
-  const [includeAuditCheck, setIncludeAuditCheck] = useState(false);
-  const [includeSyncHistory, setIncludeSyncHistory] = useState(false);
-  const [includeDismissedWarnings, setIncludeDismissedWarnings] = useState(false);
-  const [includeSpotsSnapshot, setIncludeSpotsSnapshot] = useState(false);
+  const requiredTypes = Object.keys(monthlyRequirements || {}).filter((t) => Number(monthlyRequirements[t]) > 0);
+  const columnKeys = useMemo(() => ALL_COLUMNS.filter((k) => !dropped.includes(k)), [dropped]);
 
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
-  // Each "What are you exporting for?" card maps to one or more underlying
-  // section flags. Cards are MULTI-SELECT — check any combination (some or all)
-  // and the export bundles every checked section into a single file.
-  const USE_CASE_FLAGS = {
-    full: ['includeEvents'],
-    spots: ['includeSpotsSnapshot'],
-    compliance: ['includeAnalytics', 'includeMissing'],
-    audit: ['includeAuditCheck', 'includeDismissedWarnings'],
-    sync: ['includeSyncHistory'],
-  };
-
-  // A card is "on" when every underlying flag it controls is on.
-  const isUseCaseOn = (key) => {
-    const values = {
-      includeEvents, includeAnalytics, includeMissing, includeAuditCheck,
-      includeDismissedWarnings, includeSpotsSnapshot, includeSyncHistory,
+  // Sync log: only after the * PIN unlock (same unlock as before this rebuild)
+  const ADMIN_PIN = process.env.REACT_APP_ADMIN_PIN || '1426';
+  const [isAdmin, setIsAdmin] = useState(() => sessionStorage.getItem('export_admin_unlocked') === 'true');
+  useEffect(() => {
+    if (isAdmin) return undefined;
+    const onKey = (e) => {
+      if (e.key !== '*') return;
+      const pin = prompt('Enter PIN to unlock the Sync log:');
+      if (pin === ADMIN_PIN) { setIsAdmin(true); sessionStorage.setItem('export_admin_unlocked', 'true'); }
     };
-    return (USE_CASE_FLAGS[key] || []).every(flag => values[flag]);
-  };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isAdmin, ADMIN_PIN]);
 
-  // Toggle a card on/off — flips all of its underlying section flags together.
-  const toggleUseCase = (key) => {
-    const turnOn = !isUseCaseOn(key);
-    const setters = {
-      includeEvents: setIncludeEvents,
-      includeAnalytics: setIncludeAnalytics,
-      includeMissing: setIncludeMissing,
-      includeAuditCheck: setIncludeAuditCheck,
-      includeDismissedWarnings: setIncludeDismissedWarnings,
-      includeSpotsSnapshot: setIncludeSpotsSnapshot,
-      includeSyncHistory: setIncludeSyncHistory,
-    };
-    (USE_CASE_FLAGS[key] || []).forEach(flag => setters[flag](turnOn));
-    setActivePreset(null);
-  };
-
-  // Admin check for Sync History (hidden feature)
-  // PIN from environment variable (fallback for local dev)
-  const SUPER_ADMIN_PIN = process.env.REACT_APP_ADMIN_PIN || '1426';
-  const [isAdmin, setIsAdmin] = useState(() => {
-    // Check if admin was unlocked in this session (stored in sessionStorage)
-    return sessionStorage.getItem('export_admin_unlocked') === 'true';
-  });
-  
-  // Date range - default to current month
-  const [startDate, setStartDate] = useState(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`);
-  const [endDate, setEndDate] = useState(new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0]);
-  
-  // Events fetched from database based on date range
-  const [fetchedEvents, setFetchedEvents] = useState([]);
+  // ---------------------------------------------------------------- data
+  const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [notLiveRaw, setNotLiveRaw] = useState(null);
+  const [extrasState, setExtrasState] = useState({ key: '', dayCounts: {}, extras: {} });
+  const [setupReads, setSetupReads] = useState([]);
   const [syncLog, setSyncLog] = useState([]);
-  const [loadingSyncLog, setLoadingSyncLog] = useState(false);
+  const [dbRange, setDbRange] = useState(null);
 
-  // Quick preset selected
-  const [activePreset, setActivePreset] = useState(null);
-
-
-  // Fetch events when date range changes
-  useEffect(() => {
-    fetchEventsForDateRange();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate]);
-
-  // Fetch sync log when needed
-  useEffect(() => {
-    if (includeSyncHistory && syncLog.length === 0) {
-      fetchSyncLog();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeSyncHistory]);
-
-  const fetchEventsForDateRange = async () => {
-    setLoadingEvents(true);
-    try {
-      // Every event that touches the range - incl. a camp that starts before it and runs into it - read
-      // page by page (eventsApi.getAll). Before 2026-11-06 only events STARTING in the range came back,
-      // in one read capped at 1,000 rows.
-      const data = await eventsApi.getAll(startDate, endDate);
-      setFetchedEvents(data || []);
-    } catch (err) {
-      console.error('Error fetching events:', err);
-      setFetchedEvents([]);
-    }
-    setLoadingEvents(false);
-  };
-
-  const fetchSyncLog = async () => {
-    setLoadingSyncLog(true);
-    try {
-      const { data, error } = await supabase
-        .from('sync_log')
-        .select('*')
-        .order('last_synced', { ascending: false })
-        .limit(100);
-      
-      if (error) throw error;
-      setSyncLog(data || []);
-    } catch (err) {
-      console.error('Error fetching sync log:', err);
-      setSyncLog([]);
-    }
-    setLoadingSyncLog(false);
-  };
-
-  // Data flow:
-  // - activeEvents: All events in selected date range (unfiltered by user selections)
-  // - filteredEvents: Events matching user's gym AND event type selections
-  // All export functions should use filteredEvents to respect user selections
-  const activeEvents = fetchedEvents;
-
-  const toggleGym = (gymId) => {
-    setActivePreset(null);
-    setSelectedGyms(prev => 
-      prev.includes(gymId) 
-        ? prev.filter(id => id !== gymId)
-        : [...prev, gymId]
-    );
-  };
-
-  const toggleType = (type) => {
-    setActivePreset(null);
-    setSelectedTypes(prev => 
-      prev.includes(type) 
-        ? prev.filter(t => t !== type)
-        : [...prev, type]
-    );
-  };
-
-  const selectAllGyms = () => { setActivePreset(null); setSelectedGyms(gyms.map(g => g.id)); };
-  const selectNoGyms = () => { setActivePreset(null); setSelectedGyms([]); };
-  const selectAllTypes = () => { setActivePreset(null); setSelectedTypes([...eventTypes]); };
-  const selectNoTypes = () => { setActivePreset(null); setSelectedTypes([]); };
-
-  // Listen for * key to unlock admin (Sync History access)
-  useEffect(() => {
-    if (isAdmin) return; // Already unlocked, no need to listen
-
-    const handleKeyDown = (e) => {
-      if (e.key === '*') {
-        const pin = prompt('Enter PIN to unlock Sync History:');
-        if (pin === SUPER_ADMIN_PIN) {
-          setIsAdmin(true);
-          sessionStorage.setItem('export_admin_unlocked', 'true');
-        } else if (pin !== null) {
-          alert('Incorrect PIN');
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAdmin, SUPER_ADMIN_PIN]);
-
-  // ===== QUICK PRESETS =====
-  const applyPreset = (presetName) => {
-    setActivePreset(presetName);
-    
-    switch (presetName) {
-      case 'monthly-compliance':
-        setIncludeEvents(false);
-        setIncludeAnalytics(true);
-        setIncludeMissing(true);
-        setIncludeAuditCheck(false);
-        setIncludeSyncHistory(false);
-        setSelectedGyms(gyms.map(g => g.id));
-        setSelectedTypes(requiredTypes);
-        setExportFormat('csv');
-        break;
-      case 'full-backup':
-        setIncludeEvents(true);
-        setIncludeAnalytics(true);
-        setIncludeMissing(true);
-        setIncludeAuditCheck(true);
-        setIncludeSyncHistory(isAdmin); // Only include if admin unlocked
-        setSelectedGyms(gyms.map(g => g.id));
-        setSelectedTypes([...eventTypes]);
-        setExportFormat('json');
-        break;
-      case 'printable-report':
-        setIncludeEvents(false);
-        setIncludeAnalytics(true);
-        setIncludeMissing(true);
-        setIncludeAuditCheck(false);
-        setIncludeSyncHistory(false);
-        setSelectedGyms(gyms.map(g => g.id));
-        setSelectedTypes(requiredTypes);
-        setExportFormat('html');
-        break;
-      case 'audit-check':
-        setIncludeEvents(false);
-        setIncludeAnalytics(false);
-        setIncludeMissing(false);
-        setIncludeAuditCheck(true);
-        setIncludeSyncHistory(false);
-        setSelectedGyms(gyms.map(g => g.id));
-        setSelectedTypes([...eventTypes]);
-        setExportFormat('csv');
-        break;
-      case 'sync-status':
-        if (!isAdmin) {
-          alert('Sync History requires admin access. Press * key to unlock.');
-          return;
-        }
-        setIncludeEvents(false);
-        setIncludeAnalytics(false);
-        setIncludeMissing(false);
-        setIncludeAuditCheck(false);
-        setIncludeSyncHistory(true);
-        setSelectedGyms(gyms.map(g => g.id));
-        setSelectedTypes([...eventTypes]);
-        setExportFormat('csv');
-        break;
-      default:
-        break;
-    }
-  };
-
-  // Filter events based on selections
-  const filteredEvents = activeEvents.filter(e => 
-    selectedGyms.includes(e.gym_id) && selectedTypes.includes(e.type)
-  );
-
-  // Each day's spots for the filtered events, read ahead whenever the filter changes (used by Copy)
-  const [readyDayCounts, setReadyDayCounts] = useState(null);
-  const filteredKey = filteredEvents.map(e => e.id).join(',');
   useEffect(() => {
     let alive = true;
-    setReadyDayCounts(null);
-    if (!filteredEvents.length) return undefined;
-    fetchDayCounts(filteredEvents).then(m => { if (alive) setReadyDayCounts(m); }).catch(() => {});
+    setLoadingEvents(true);
+    // every event that touches the dates, page by page
+    eventsApi.getAll(startDate, endDate)
+      .then((d) => { if (alive) setEvents(d || []); })
+      .catch(() => { if (alive) setEvents([]); })
+      .finally(() => { if (alive) setLoadingEvents(false); });
+    return () => { alive = false; };
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    let alive = true;
+    setNotLiveRaw(null);
+    if (!includeNotLive) return undefined;
+    fetchNotLiveRows(startDate, endDate).then((r) => { if (alive) setNotLiveRaw(r); }).catch(() => { if (alive) setNotLiveRaw({ rows: [], rules: [] }); });
+    return () => { alive = false; };
+  }, [includeNotLive, startDate, endDate]);
+
+  // The first and last event dates in the database, for "Entire database"
+  useEffect(() => {
+    Promise.all([
+      supabase.from('events').select('start_date').is('deleted_at', null).order('start_date', { ascending: true }).limit(1),
+      supabase.from('events').select('end_date').is('deleted_at', null).order('end_date', { ascending: false }).limit(1),
+    ]).then(([a, b]) => {
+      const first = a.data?.[0]?.start_date; const last = b.data?.[0]?.end_date;
+      if (first && last) setDbRange({ first: String(first).slice(0, 10), last: String(last).slice(0, 10) });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isAdmin || !sections.includes('sync') || syncLog.length) return;
+    supabase.from('sync_log').select('*').order('last_synced', { ascending: false }).limit(100)
+      .then(({ data }) => setSyncLog(data || []));
+  }, [isAdmin, sections, syncLog.length]);
+
+  const gymEvents = useMemo(() => events.filter((e) => selectedGyms.includes(e.gym_id)), [events, selectedGyms]);
+  const notLiveEvents = useMemo(() => (includeNotLive && notLiveRaw
+    ? toNotLiveEvents(notLiveRaw.rows, notLiveRaw.rules, gyms, events).filter((e) => selectedGyms.includes(e.gym_id))
+    : []), [includeNotLive, notLiveRaw, gyms, events, selectedGyms]);
+  const pickedEvents = useMemo(() => [...gymEvents, ...notLiveEvents].filter((e) => selectedTypes.includes(e.type)),
+    [gymEvents, notLiveEvents, selectedTypes]);
+
+  // Read the iClass setup facts for exactly these events as soon as they change
+  const eventsKey = pickedEvents.map((e) => e.id).join(',');
+  useEffect(() => {
+    let alive = true;
+    if (!pickedEvents.length) { setExtrasState({ key: eventsKey, dayCounts: {}, extras: {} }); return undefined; }
+    fetchExportExtras(pickedEvents)
+      .then((r) => { if (alive) setExtrasState({ key: eventsKey, ...r }); })
+      .catch((err) => { if (alive) setExtrasState({ key: eventsKey, dayCounts: {}, extras: {}, error: err.message }); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredKey]);
+  }, [eventsKey]);
+  const extrasReady = extrasState.key === eventsKey;
 
-  // Get events with audit check failures (validation errors, missing descriptions, etc.)
-  // This matches the "Audit Check" column in the main dashboard table
-  // NOTE: Sold out (type: 'sold_out') is excluded - it's informational, not a data quality issue
-  const getAuditCheckIssues = () => {
-    return filteredEvents.filter(e => {
-      const errors = e.validation_errors || [];
-      const unacknowledged = errors.filter(err =>
-        err.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(e, err.message, acknowledgedPatterns)
-      );
-      return unacknowledged.length > 0 ||
-             e.description_status === 'none' ||
-             e.description_status === 'flyer_only';
-    }).map(e => {
-      const errors = e.validation_errors || [];
-      const unacknowledgedErrors = errors.filter(err =>
-        err.type !== 'sold_out' && !isErrorAcknowledgedAnywhere(e, err.message, acknowledgedPatterns)
-      );
-      
-      // Separate by category for better display
-      const dataErrors = unacknowledgedErrors.filter(err => inferErrorCategory(err) === 'data_error');
+  const gymsKey = selectedGyms.join(',');
+  useEffect(() => {
+    let alive = true;
+    fetchSetupReads(selectedGyms).then((r) => { if (alive) setSetupReads(r); }).catch(() => { if (alive) setSetupReads([]); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gymsKey]);
 
-      return {
-        gym_id: e.gym_id,
-        gym_name: e.gym_name || e.gym_id,
-        title: e.title,
-        date: e.date,
-        start_date: e.start_date,
-        end_date: e.end_date,
-        type: e.type,
-        data_error_count: dataErrors.length,
-        issues: [
-          ...dataErrors.map(err => `[DATA ERROR] ${err.message}`),
-          e.description_status === 'none' ? '[MISSING] No description' : null,
-          e.description_status === 'flyer_only' ? '[INCOMPLETE] Flyer only (no text)' : null
-        ].filter(Boolean),
-        has_flyer: e.has_flyer || false,
-        flyer_url: e.flyer_url || null,
-        event_url: e.event_url
-      };
-    });
+  // ---------------------------------------------------------------- the tables
+  const ctx = useMemo(() => ({
+    events: pickedEvents,
+    reqEvents: gymEvents,
+    columnKeys,
+    gyms,
+    gymIds: selectedGyms,
+    gymName: (id) => gyms.find((g) => g.id === id)?.name || '',
+    dayCounts: extrasState.dayCounts,
+    extras: extrasState.extras,
+    isDismissed: (e, msg) => isErrorAcknowledgedAnywhere(e, msg, acknowledgedPatterns),
+    errorLabel: (t) => getErrorLabel(t) || t,
+    requirements: monthlyRequirements,
+    startDate, endDate, setupReads, syncLog,
+  }), [pickedEvents, gymEvents, columnKeys, gyms, selectedGyms, extrasState, acknowledgedPatterns, monthlyRequirements, startDate, endDate, setupReads, syncLog]);
+
+  const visibleSections = SECTIONS.filter((s) => !s.admin || isAdmin);
+  const activeKeys = sections.filter((k) => visibleSections.some((s) => s.key === k));
+  // Every section's table, built once - the counts on the cards and what downloads / copies are the same thing
+  const allTables = useMemo(() => {
+    // requirements count by gym only (every bucket), whatever buckets are ticked for the other sections
+    const tables = buildSections(visibleSections.map((s) => s.key), ctx);
+    const req = buildSections(['requirements'], { ...ctx, events: ctx.reqEvents })[0];
+    return tables.map((t) => (t.key === 'requirements' ? req : t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx, isAdmin]);
+  const tableOf = (k) => allTables.find((t) => t.key === k);
+  const chosenTables = activeKeys.map(tableOf).filter(Boolean);
+
+  const busy = loadingEvents || !extrasReady || (includeNotLive && !notLiveRaw);
+  const totalRows = chosenTables.reduce((n, t) => n + t.rows.length, 0);
+  const canGo = !busy && chosenTables.length > 0 && !(activeKeys.length === 1 && activeKeys[0] === 'events' && !columnKeys.length);
+
+  // ---------------------------------------------------------------- actions
+  const toggle = (list, setList, v) => setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  const applyQuick = (q) => {
+    setSections(q.sections);
+    if (q.columns) setDropped(ALL_COLUMNS.filter((k) => !q.columns.includes(k)));
+    setIncludeNotLive(!!q.notLive);
   };
+  const setRange = (a, b) => { setStartDate(a); setEndDate(b); };
+  const today = new Date();
 
-  // Get events with dismissed warnings (for "View All Exceptions" feature)
-  const getDismissedWarnings = () => {
-    return filteredEvents.filter(e => {
-      const acknowledged = e.acknowledged_errors || [];
-      return acknowledged.length > 0;
-    }).map(e => {
-      const acknowledged = e.acknowledged_errors || [];
-      return {
-        gym_id: e.gym_id,
-        gym_name: e.gym_name || e.gym_id,
-        title: e.title,
-        date: e.date,
-        start_date: e.start_date,
-        end_date: e.end_date,
-        type: e.type,
-        event_url: e.event_url,
-        dismissed_count: acknowledged.length,
-        dismissed_warnings: acknowledged.map(ack => {
-          if (typeof ack === 'string') {
-            return { message: ack, note: null, dismissed_at: null };
-          }
-          return {
-            message: ack.message,
-            note: ack.note || null,
-            dismissed_at: ack.dismissed_at || null
-          };
-        })
-      };
-    });
-  };
+  const heading = `Master Events Calendar - ${mdyShort(startDate)} to ${mdyShort(endDate)}`;
+  const subheading = `${selectedGyms.length} of ${gyms.length} gyms · ${selectedTypes.length} of ${eventTypes.length} buckets · made ${new Date().toLocaleString('en-US')}`;
+  const fileName = (ext) => `master-calendar-${activeKeys.length > 2 ? 'combined' : activeKeys.join('-').replace(/_/g, '-')}-${startDate}_to_${endDate}.${ext}`;
 
-  // Calculate analytics for selected gyms
-  // NOTE: Uses filteredEvents to respect both gym AND event type selections
-  // Analytics shows ALL gyms with their counts and whether they meet requirements
-  const getAnalytics = () => {
-    const analytics = [];
-    selectedGyms.forEach(gymId => {
-      const gym = gyms.find(g => g.id === gymId);
-      // FIX: Use filteredEvents instead of activeEvents to respect event type selections
-      const gymEvents = filteredEvents.filter(e => e.gym_id === gymId);
-      
-      const stats = {
-        gym_id: gymId,
-        gym_name: gym?.name || gymId,
-        clinic_count: gymEvents.filter(e => e.type === 'CLINIC').length,
-        kno_count: gymEvents.filter(e => e.type === 'KIDS NIGHT OUT').length,
-        open_gym_count: gymEvents.filter(e => e.type === 'OPEN GYM').length,
-        camp_count: gymEvents.filter(e => e.type === 'CAMP').length,
-        special_event_count: gymEvents.filter(e => e.type === 'SPECIAL EVENT').length,
-        total_events: gymEvents.length,
-        clinic_required: monthlyRequirements?.['CLINIC'] || 1,
-        kno_required: monthlyRequirements?.['KIDS NIGHT OUT'] || 2,
-        open_gym_required: monthlyRequirements?.['OPEN GYM'] || 1,
-        meets_requirements: true,
-        missing: []
-      };
-
-      // Check requirements
-      if (stats.clinic_count < stats.clinic_required) {
-        stats.meets_requirements = false;
-        stats.missing.push(`${stats.clinic_required - stats.clinic_count} CLINIC`);
-      }
-      if (stats.kno_count < stats.kno_required) {
-        stats.meets_requirements = false;
-        stats.missing.push(`${stats.kno_required - stats.kno_count} KNO`);
-      }
-      if (stats.open_gym_count < stats.open_gym_required) {
-        stats.meets_requirements = false;
-        stats.missing.push(`${stats.open_gym_required - stats.open_gym_count} OPEN GYM`);
-      }
-
-      analytics.push(stats);
-    });
-    return analytics;
-  };
-
-  // Get only gyms with missing requirements
-  // NOTE: This is a filtered subset of Analytics - only shows gyms that DON'T meet requirements
-  // Analytics = all gyms with counts, Missing Requirements = only failing gyms
-  const getMissingGyms = () => {
-    return getAnalytics().filter(a => !a.meets_requirements);
-  };
-
-  const handleExport = async () => {
-    const dateRangeLabel = `${startDate} to ${endDate}`;
-    const timestamp = new Date().toISOString().split('T')[0];
-    // Each day's spots from the iClass setup read - the same fullest-day number the calendar shows
-    let dayCounts = {};
-    try { dayCounts = await fetchDayCounts(filteredEvents); } catch (e) { console.error('Day counts not read:', e); }
-
-    if (exportFormat === 'csv') {
-      exportCSV(dateRangeLabel, timestamp, dayCounts);
-    } else if (exportFormat === 'json') {
-      exportJSON(dateRangeLabel, timestamp, dayCounts);
-    } else if (exportFormat === 'html') {
-      exportHTML(dateRangeLabel, timestamp);
+  const download = () => {
+    if (!canGo) return;
+    if (format === 'html') {
+      const url = URL.createObjectURL(new Blob([toHTMLPage(chosenTables, heading, subheading)], { type: 'text/html' }));
+      window.open(url, '_blank');
+      setNote(`Opened the printable page: ${chosenTables.length} section${chosenTables.length === 1 ? '' : 's'}, ${totalRows} rows`);
+      return;
     }
-    onClose();
-  };
-
-  // Copy the events she filtered (dates, gyms, buckets) with the columns she picked - a table for email /
-  // Docs and tab-separated cells for Sheets / Excel (Jayme 2026-11-06: "if i filter and i pick what i want
-  // can there be a copy button").
-  const handleCopy = async () => {
-    setCopyNote('Copying...');
-    try {
-      // the day counts are read ahead (below), so the clipboard write happens right on the click - browsers
-      // refuse a clipboard write that comes too long after it
-      const dayCounts = readyDayCounts || await fetchDayCounts(filteredEvents);
-      const payload = toClipboard(buildEventRows(filteredEvents, { columnKeys: pickedColumns, gymsList: gyms, dayCounts }));
-      await copyToClipboardRich(payload);
-      setCopyNote(`Copied ${payload.count} events, ${pickedColumns.length} columns`);
-    } catch (err) {
-      setCopyNote(`Could not copy: ${err.message}`);
-    }
-  };
-
-  // Build a filename that identifies the app + use case + month so Jayme
-  // can tell exports apart in her Downloads folder. Filename pattern:
-  //   master-calendar-{usecase}-{month-slug}-{YYYY-MM-DD}.{ext}
-  // e.g. "master-calendar-audit-issues-may-2026-2026-05-07.csv"
-  const buildExportFilename = (ext, monthName, timestamp) => {
-    // Name the file from whatever sections are actually included. With
-    // multi-select a file can bundle several sections, so build the slug from
-    // the live flags (3+ sections → "combined" to keep the name short).
-    const parts = [];
-    if (includeEvents) parts.push('events');
-    if (includeSpotsSnapshot) parts.push('spots');
-    if (includeAnalytics || includeMissing) parts.push('compliance');
-    if (includeAuditCheck || includeDismissedWarnings) parts.push('audit');
-    if (includeSyncHistory) parts.push('sync');
-    const useCaseSlug = parts.length === 0 ? 'export'
-                      : parts.length > 2 ? 'combined'
-                      : parts.join('-');
-    const monthSlug = (monthName || 'all').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    return `master-calendar-${useCaseSlug}-${monthSlug}-${timestamp}.${ext}`;
-  };
-
-  const exportCSV = (monthName, timestamp, dayCounts = {}) => {
-    let csvContent = '';
-
-    // Events section - the ONE shared column list (src/lib/eventRow.js), only the columns she picked
-    if (includeEvents && filteredEvents.length > 0) {
-      csvContent += `EVENTS - ${monthName}\n`;
-      csvContent += toCSV(buildEventRows(filteredEvents, { columnKeys: pickedColumns, gymsList: gyms, dayCounts })) + '\n\n';
-    }
-
-    // Analytics section
-    if (includeAnalytics) {
-      const analytics = getAnalytics();
-      csvContent += `ANALYTICS - ${monthName}\n`;
-      csvContent += 'Gym,Gym ID,Clinics,Clinics Req,KNO,KNO Req,Open Gym,Open Gym Req,Camps,Special Events,Total,Meets Requirements,Missing\n';
-      analytics.forEach(stat => {
-        csvContent += [
-          `"${stat.gym_name}"`,
-          stat.gym_id,
-          stat.clinic_count,
-          stat.clinic_required,
-          stat.kno_count,
-          stat.kno_required,
-          stat.open_gym_count,
-          stat.open_gym_required,
-          stat.camp_count,
-          stat.special_event_count,
-          stat.total_events,
-          stat.meets_requirements ? 'YES' : 'NO',
-          `"${stat.missing.join(', ')}"`
-        ].join(',') + '\n';
-      });
-      csvContent += '\n';
-    }
-
-    // Missing section
-    if (includeMissing) {
-      const missing = getMissingGyms();
-      csvContent += `GYMS WITH MISSING REQUIREMENTS - ${monthName}\n`;
-      csvContent += 'Gym,Gym ID,Missing Events,Clinics Have,KNO Have,Open Gym Have\n';
-      missing.forEach(stat => {
-        csvContent += [
-          `"${stat.gym_name}"`,
-          stat.gym_id,
-          `"${stat.missing.join(', ')}"`,
-          stat.clinic_count,
-          stat.kno_count,
-          stat.open_gym_count
-        ].join(',') + '\n';
-      });
-      csvContent += '\n';
-    }
-
-    // Audit Check section (matches "Audit Check" column in main dashboard)
-    if (includeAuditCheck) {
-      const issues = getAuditCheckIssues();
-      csvContent += `AUDIT CHECK ISSUES - ${monthName}\n`;
-      csvContent += `Total events with issues: ${issues.length} out of ${filteredEvents.length} events\n`;
-      const totalDataErrors = issues.reduce((sum, i) => sum + i.data_error_count, 0);
-      csvContent += `Data Errors (wrong info): ${totalDataErrors}\n\n`;
-      
-      if (issues.length > 0) {
-        csvContent += 'Gym,Title,Start Date,End Date,Type,Data Errors,All Issues,Event URL\n';
-        issues.forEach(issue => {
-          const iStartDate = (issue.start_date || issue.date || '').split('T')[0];
-          const iEndDate = (issue.end_date || issue.start_date || issue.date || '').split('T')[0];
-          const iIsMultiDay = iStartDate !== iEndDate;
-          csvContent += [
-            `"${issue.gym_name}"`,
-            `"${(issue.title || '').replace(/"/g, '""')}"`,
-            iStartDate,
-            iIsMultiDay ? iEndDate : '',
-            issue.type,
-            issue.data_error_count,
-            `"${issue.issues.join('; ')}"`,
-            issue.event_url || ''
-          ].join(',') + '\n';
-        });
-      } else {
-        csvContent += 'Status,Message\n';
-        csvContent += `"✅ No Issues Found","All ${filteredEvents.length} events in the selected date range have complete descriptions and no validation errors."\n`;
-      }
-      csvContent += '\n';
-    }
-
-    // Sync History section
-    if (includeSyncHistory && syncLog.length > 0) {
-      csvContent += `SYNC HISTORY - Last 100 Syncs\n`;
-      csvContent += 'Gym ID,Event Type,Last Synced,Events Found,Events Imported\n';
-      syncLog.forEach(log => {
-        csvContent += [
-          log.gym_id,
-          log.event_type,
-          new Date(log.last_synced).toLocaleString(),
-          log.events_found,
-          log.events_imported
-        ].join(',') + '\n';
-      });
-      csvContent += '\n';
-    }
-
-    // Dismissed Warnings section (View All Exceptions)
-    if (includeDismissedWarnings) {
-      const dismissed = getDismissedWarnings();
-      csvContent += `DISMISSED WARNINGS (EXCEPTIONS) - ${monthName}\n`;
-      if (dismissed.length > 0) {
-        csvContent += 'Gym,Title,Start Date,End Date,Type,Dismissed Warning,Note,Dismissed Date,Event URL\n';
-        dismissed.forEach(event => {
-          const dStartDate = (event.start_date || event.date || '').split('T')[0];
-          const dEndDate = (event.end_date || event.start_date || event.date || '').split('T')[0];
-          const dIsMultiDay = dStartDate !== dEndDate;
-          event.dismissed_warnings.forEach(warning => {
-            csvContent += [
-              `"${event.gym_name}"`,
-              `"${(event.title || '').replace(/"/g, '""')}"`,
-              dStartDate,
-              dIsMultiDay ? dEndDate : '',
-              event.type,
-              `"${(warning.message || '').replace(/"/g, '""')}"`,
-              `"${(warning.note || '').replace(/"/g, '""')}"`,
-              warning.dismissed_at ? new Date(warning.dismissed_at).toLocaleDateString() : '',
-              event.event_url || ''
-            ].join(',') + '\n';
-          });
-        });
-      } else {
-        csvContent += 'Status,Message\n';
-        csvContent += `"✅ No Exceptions","No dismissed warnings found in the selected date range."\n`;
-      }
-      csvContent += '\n';
-    }
-
-    // Spots & Signup Snapshot - spots = the fullest day, the same number the calendar shows
-    if (includeSpotsSnapshot && filteredEvents.length > 0) {
-      csvContent += `SPOTS & SIGNUP SNAPSHOT - ${monthName}\n`;
-      csvContent += `Quick at-a-glance: spots remaining (fullest day) + signup mode per event\n\n`;
-      csvContent += toCSV(buildEventRows(filteredEvents, {
-        columnKeys: ['gym', 'gym_name', 'title', 'bucket', 'start', 'end', 'spots', 'spots_by_day', 'status', 'signup', 'reg_open', 'reg_close'],
-        gymsList: gyms, dayCounts,
-      })) + '\n\n';
-    }
-
-    downloadFile(csvContent, buildExportFilename('csv', monthName, timestamp), 'text/csv');
-  };
-
-  const exportJSON = (monthName, timestamp, dayCounts = {}) => {
-    const exportData = {
-      exportDate: new Date().toISOString(),
-      dateRange: monthName,
-      filters: {
-        gyms: selectedGyms,
-        eventTypes: selectedTypes
-      },
-      summary: {
-        totalEvents: filteredEvents.length,
-        totalGyms: selectedGyms.length,
-        gymsMeetingRequirements: getAnalytics().filter(a => a.meets_requirements).length,
-        gymsWithIssues: getMissingGyms().length,
-        auditCheckIssues: getAuditCheckIssues().length
-      }
-    };
-
-    if (includeEvents) {
-      exportData.events = filteredEvents.map(e => {
-        const sp = spotsOf(e, dayCounts);
-        return {
-          ...e,
-          gym_name: gyms.find(g => g.id === e.gym_id)?.name || e.gym_id,
-          spots_left_fullest_day: sp.left,
-          spots_by_day: sp.byDay || null,
-          spots_source: sp.source || null,
-        };
-      });
-      exportData.eventCount = filteredEvents.length;
-    }
-
-    if (includeAnalytics) {
-      exportData.analytics = getAnalytics();
-    }
-
-    if (includeMissing) {
-      exportData.missingRequirements = getMissingGyms();
-    }
-
-    if (includeAuditCheck) {
-      exportData.auditCheckIssues = getAuditCheckIssues();
-    }
-
-    if (includeSyncHistory) {
-      exportData.syncHistory = syncLog;
-    }
-
-    if (includeDismissedWarnings) {
-      exportData.dismissedWarnings = getDismissedWarnings();
-    }
-
-    const json = JSON.stringify(exportData, null, 2);
-    downloadFile(json, buildExportFilename('json', monthName, timestamp), 'application/json');
-  };
-
-  // NEW: HTML Report for Boss/Email
-  const exportHTML = (monthName, timestamp) => {
-    const analytics = getAnalytics();
-    const missing = getMissingGyms();
-    const auditCheckCount = getAuditCheckIssues().length;
-    const gymsMet = analytics.filter(a => a.meets_requirements).length;
-    const totalGyms = analytics.length;
-    const compliancePercent = totalGyms > 0 ? Math.round((gymsMet / totalGyms) * 100) : 0;
-
-    const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Master Events Calendar Report - ${monthName}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: #f8f9fa; 
-      color: #333;
-      line-height: 1.6;
-    }
-    .container { max-width: 900px; margin: 0 auto; padding: 20px; }
-    .header {
-      background: linear-gradient(135deg, #b48f8f 0%, #8f93a0 100%);
-      color: white;
-      padding: 30px;
-      border-radius: 12px;
-      text-align: center;
-      margin-bottom: 24px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .header h1 { font-size: 28px; margin-bottom: 8px; }
-    .header .date-range { font-size: 16px; opacity: 0.9; }
-    .header .generated { font-size: 12px; opacity: 0.7; margin-top: 8px; }
-    
-    .summary-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .summary-card {
-      background: white;
-      border-radius: 10px;
-      padding: 20px;
-      text-align: center;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-    }
-    .summary-card .number { font-size: 36px; font-weight: bold; }
-    .summary-card .label { font-size: 14px; color: #666; margin-top: 4px; }
-    .summary-card.green .number { color: #22c55e; }
-    .summary-card.red .number { color: #ef4444; }
-    .summary-card.blue .number { color: #3b82f6; }
-    .summary-card.purple .number { color: #8b5cf6; }
-    
-    .section {
-      background: white;
-      border-radius: 10px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-    }
-    .section h2 { 
-      font-size: 18px; 
-      margin-bottom: 16px; 
-      padding-bottom: 12px;
-      border-bottom: 2px solid #f0f0f0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-    th { background: #f8f9fa; font-weight: 600; color: #555; }
-    tr:hover { background: #f8f9fa; }
-    
-    .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .badge.success { background: #dcfce7; color: #166534; }
-    .badge.danger { background: #fee2e2; color: #991b1b; }
-    .badge.warning { background: #fef3c7; color: #92400e; }
-    
-    .progress-bar {
-      background: #e5e7eb;
-      border-radius: 10px;
-      height: 20px;
-      overflow: hidden;
-      margin-top: 8px;
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #22c55e, #16a34a);
-      transition: width 0.3s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 12px;
-      font-weight: bold;
-    }
-    
-    .footer {
-      text-align: center;
-      padding: 20px;
-      color: #888;
-      font-size: 12px;
-    }
-    
-    @media print {
-      body { background: white; }
-      .container { max-width: 100%; }
-      .section { box-shadow: none; border: 1px solid #ddd; }
-    }
-    
-    .email-copy {
-      background: #fffbeb;
-      border: 1px solid #fcd34d;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 24px;
-    }
-    .email-copy h3 { font-size: 14px; color: #92400e; margin-bottom: 8px; }
-    .email-copy pre {
-      background: white;
-      padding: 12px;
-      border-radius: 4px;
-      font-size: 13px;
-      white-space: pre-wrap;
-      font-family: inherit;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>✨ Master Events Calendar Report</h1>
-      <div class="date-range">📅 ${monthName}</div>
-      <div class="generated">Generated: ${new Date().toLocaleString()}</div>
-    </div>
-    
-    <!-- Email-Ready Summary -->
-    <div class="email-copy">
-      <h3>📧 Copy-Paste Email Summary:</h3>
-      <pre>Monthly Events Report (${monthName})
-
-✅ Compliance: ${gymsMet}/${totalGyms} gyms meeting requirements (${compliancePercent}%)
-📊 Total Events: ${filteredEvents.length}
-${missing.length > 0 ? `\n⚠️ Gyms Needing Attention:\n${missing.map(m => `   • ${m.gym_name}: needs ${m.missing.join(', ')}`).join('\n')}` : '✅ All gyms are compliant!'}
-${auditCheckCount > 0 ? `\n🔍 ${auditCheckCount} events have audit check issues` : ''}</pre>
-    </div>
-    
-    <div class="summary-cards">
-      <div class="summary-card blue">
-        <div class="number">${filteredEvents.length}</div>
-        <div class="label">Total Events</div>
-      </div>
-      <div class="summary-card ${compliancePercent === 100 ? 'green' : compliancePercent >= 80 ? 'purple' : 'red'}">
-        <div class="number">${compliancePercent}%</div>
-        <div class="label">Compliance Rate</div>
-      </div>
-      <div class="summary-card green">
-        <div class="number">${gymsMet}</div>
-        <div class="label">Gyms Compliant</div>
-      </div>
-      <div class="summary-card ${missing.length > 0 ? 'red' : 'green'}">
-        <div class="number">${missing.length}</div>
-        <div class="label">Gyms Needing Action</div>
-      </div>
-    </div>
-    
-    <div class="section">
-      <h2>📊 Compliance Progress</h2>
-      <div class="progress-bar">
-        <div class="progress-fill" style="width: ${compliancePercent}%">${compliancePercent}%</div>
-      </div>
-      <p style="margin-top: 8px; font-size: 14px; color: #666;">
-        ${gymsMet} of ${totalGyms} gyms have met their monthly event requirements
-      </p>
-    </div>
-    
-    <div class="section">
-      <h2>🏢 Gym Performance Summary</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Gym</th>
-            <th style="text-align:center">Clinics</th>
-            <th style="text-align:center">KNO</th>
-            <th style="text-align:center">Open Gym</th>
-            <th style="text-align:center">Total</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${analytics.map(stat => `
-          <tr>
-            <td><strong>${stat.gym_name}</strong><br><small style="color:#888">${stat.gym_id}</small></td>
-            <td style="text-align:center">${stat.clinic_count}/${stat.clinic_required}</td>
-            <td style="text-align:center">${stat.kno_count}/${stat.kno_required}</td>
-            <td style="text-align:center">${stat.open_gym_count}/${stat.open_gym_required}</td>
-            <td style="text-align:center">${stat.total_events}</td>
-            <td>
-              ${stat.meets_requirements 
-                ? '<span class="badge success">✅ Complete</span>' 
-                : `<span class="badge danger">❌ Missing: ${stat.missing.join(', ')}</span>`}
-            </td>
-          </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-    
-    ${missing.length > 0 ? `
-    <div class="section" style="border-left: 4px solid #ef4444;">
-      <h2>⚠️ Action Required</h2>
-      <p style="margin-bottom: 16px; color: #666;">The following gyms need additional events to meet monthly requirements:</p>
-      <table>
-        <thead>
-          <tr>
-            <th>Gym</th>
-            <th>Missing</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${missing.map(m => `
-          <tr>
-            <td><strong>${m.gym_name}</strong></td>
-            <td><span class="badge warning">${m.missing.join(', ')}</span></td>
-          </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-    ` : `
-    <div class="section" style="border-left: 4px solid #22c55e;">
-      <h2>🎉 All Gyms Compliant!</h2>
-      <p>Every gym has met their monthly event requirements. Great work!</p>
-    </div>
-    `}
-    
-    ${includeAuditCheck ? `
-    <div class="section" style="border-left: 4px solid #f59e0b;">
-      <h2>🔍 Audit Check Issues (${getAuditCheckIssues().length} events)</h2>
-      ${getAuditCheckIssues().length > 0 ? `
-      
-      <!-- Filter Controls -->
-      <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-        <div style="margin-bottom: 8px;">
-          <strong style="font-size: 12px; color: #555;">Filter by Error Type:</strong>
-          <div style="margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap;">
-            <button onclick="filterByType('all')" class="filter-btn active" data-filter="all" style="padding: 6px 12px; border: 2px solid #6366f1; background: #6366f1; color: white; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
-              📋 All Issues
-            </button>
-            <button onclick="filterByType('data')" class="filter-btn" data-filter="data" style="padding: 6px 12px; border: 2px solid #dc2626; background: white; color: #dc2626; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
-              🚨 Data Errors Only
-            </button>
-          </div>
-        </div>
-        <div>
-          <strong style="font-size: 12px; color: #555;">Filter by Gym:</strong>
-          <div style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
-            <button onclick="filterByGym('all')" class="gym-btn active" data-gym="all" style="padding: 4px 10px; border: 1px solid #6366f1; background: #6366f1; color: white; border-radius: 4px; cursor: pointer; font-size: 11px;">
-              All Gyms
-            </button>
-            ${(() => {
-              const gymIds = [...new Set(getAuditCheckIssues().map(i => i.gym_id))].sort();
-              return gymIds.map(gid => `
-                <button onclick="filterByGym('${gid}')" class="gym-btn" data-gym="${gid}" style="padding: 4px 10px; border: 1px solid #9ca3af; background: white; color: #374151; border-radius: 4px; cursor: pointer; font-size: 11px;">
-                  ${gid}
-                </button>
-              `).join('');
-            })()}
-          </div>
-        </div>
-      </div>
-      
-      <p style="margin-bottom: 16px; color: #666; font-size: 13px;">Events grouped by gym. Click 🔗 to open in iClassPro.</p>
-      
-      ${(() => {
-        // Group issues by gym
-        const issuesByGym = {};
-        getAuditCheckIssues().forEach(issue => {
-          const gymKey = issue.gym_id;
-          if (!issuesByGym[gymKey]) {
-            issuesByGym[gymKey] = {
-              gym_name: issue.gym_name || issue.gym_id,
-              gym_id: issue.gym_id,
-              issues: []
-            };
-          }
-          issuesByGym[gymKey].issues.push(issue);
-        });
-        
-        // Sort gyms alphabetically by name
-        const sortedGyms = Object.values(issuesByGym).sort((a, b) => a.gym_name.localeCompare(b.gym_name));
-        
-        return sortedGyms.map(gym => `
-          <div class="gym-section" data-gym="${gym.gym_id}" style="margin-bottom: 24px;">
-            <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <strong style="font-size: 16px;">🏢 ${gym.gym_name}</strong>
-                <span style="opacity: 0.8; margin-left: 8px; font-size: 12px;">(${gym.gym_id})</span>
-              </div>
-              <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px;">${gym.issues.length} issue${gym.issues.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div style="border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; padding: 12px;">
-              ${gym.issues.map(issue => `
-              <div class="event-card" data-has-data="${issue.data_error_count > 0}" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-                  <div>
-                    <strong style="color: #333; font-size: 13px;">${issue.title?.substring(0, 55)}${issue.title?.length > 55 ? '...' : ''}</strong>
-                    <div style="font-size: 11px; color: #666; margin-top: 2px;">
-                      📅 ${issue.date} &nbsp;|&nbsp; ${issue.type}
-                    </div>
-                  </div>
-                  ${issue.event_url ? `<a href="${issue.event_url}" target="_blank" style="background: #3b82f6; color: white; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; white-space: nowrap;">🔗 Open</a>` : ''}
-                </div>
-                
-                ${issue.data_error_count > 0 ? `
-                <div class="data-errors" style="margin-bottom: 6px;">
-                  <div style="background: #dc2626; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; display: inline-block;">HIGH PRIORITY</div>
-                  <ul style="margin: 4px 0 0 0; padding: 0; list-style: none;">
-                    ${issue.issues.filter(i => i.startsWith('[DATA ERROR]')).map(i => `
-                    <li style="background: #fee2e2; padding: 4px 8px; border-radius: 4px; margin: 3px 0; border-left: 3px solid #dc2626; font-size: 11px;">
-                      🚨 ${i.replace('[DATA ERROR] ', '')}
-                    </li>
-                    `).join('')}
-                  </ul>
-                </div>
-                ` : ''}
-                
-                ${issue.issues.filter(i => i.startsWith('[MISSING]') || i.startsWith('[INCOMPLETE]')).length > 0 ? `
-                <div>
-                  <ul style="margin: 4px 0 0 0; padding: 0; list-style: none;">
-                    ${issue.issues.filter(i => i.startsWith('[MISSING]') || i.startsWith('[INCOMPLETE]')).map(i => `
-                    <li style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; margin: 3px 0; border-left: 3px solid #9ca3af; font-size: 11px;">
-                      ${i.replace('[MISSING] ', '').replace('[INCOMPLETE] ', '')}
-                    </li>
-                    `).join('')}
-                  </ul>
-                </div>
-                ` : ''}
-              </div>
-              `).join('')}
-            </div>
-          </div>
-        `).join('');
-      })()}
-      ` : `
-      <p style="color: #22c55e;">✅ No audit issues found! All events have complete descriptions and no validation errors.</p>
-      `}
-    </div>
-    ` : ''}
-    
-    <div class="footer">
-      <p>Master Events Calendar • Report generated automatically</p>
-      <p style="margin-top: 8px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-        <button onclick="window.print()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
-          🖨️ Print Report
-        </button>
-        <button onclick="downloadHTML()" style="padding: 8px 16px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer;">
-          💾 Download HTML
-        </button>
-      </p>
-    </div>
-    
-    <script>
-      let currentTypeFilter = 'all';
-      let currentGymFilter = 'all';
-      
-      function filterByType(type) {
-        currentTypeFilter = type;
-        applyFilters();
-        // Update button styles
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-          if (btn.dataset.filter === type) {
-            btn.style.background = btn.dataset.filter === 'all' ? '#6366f1' : '#dc2626';
-            btn.style.color = 'white';
-          } else {
-            btn.style.background = 'white';
-            btn.style.color = btn.dataset.filter === 'all' ? '#6366f1' : '#dc2626';
-          }
-        });
-      }
-      
-      function filterByGym(gym) {
-        currentGymFilter = gym;
-        applyFilters();
-        // Update button styles
-        document.querySelectorAll('.gym-btn').forEach(btn => {
-          if (btn.dataset.gym === gym) {
-            btn.style.background = '#6366f1';
-            btn.style.borderColor = '#6366f1';
-            btn.style.color = 'white';
-          } else {
-            btn.style.background = 'white';
-            btn.style.borderColor = '#9ca3af';
-            btn.style.color = '#374151';
-          }
-        });
-      }
-      
-      function applyFilters() {
-        document.querySelectorAll('.gym-section').forEach(section => {
-          const gymId = section.dataset.gym;
-          const showGym = currentGymFilter === 'all' || currentGymFilter === gymId;
-          
-          if (!showGym) {
-            section.style.display = 'none';
-            return;
-          }
-          
-          let hasVisibleEvents = false;
-          section.querySelectorAll('.event-card').forEach(card => {
-            const hasData = card.dataset.hasData === 'true';
-
-            let show = false;
-            if (currentTypeFilter === 'all') show = true;
-            else if (currentTypeFilter === 'data' && hasData) show = true;
-            
-            card.style.display = show ? 'block' : 'none';
-            if (show) hasVisibleEvents = true;
-          });
-          
-          section.style.display = hasVisibleEvents ? 'block' : 'none';
-        });
-      }
-      
-      function downloadHTML() {
-        const html = document.documentElement.outerHTML;
-        const blob = new Blob([html], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = '${buildExportFilename('html', monthName, timestamp)}';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-    </script>
-  </div>
-</body>
-</html>
-    `;
-
-    // Open in new tab for viewing/printing
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-  };
-
-  const downloadFile = (content, filename, mimeType) => {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const content = format === 'json'
+      ? toJSONFile(chosenTables, { made: new Date().toISOString(), dates: { from: startDate, to: endDate }, gyms: selectedGyms, buckets: selectedTypes },
+        activeKeys.includes('events') ? pickedEvents : null)
+      : toCSVFile(chosenTables, `${heading} (${subheading})`);
+    const url = URL.createObjectURL(new Blob([content], { type: format === 'json' ? 'application/json' : 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = fileName(format);
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    setNote(`Downloaded ${fileName(format)}: ${totalRows} rows`);
   };
 
-  const canExport = (includeEvents || includeAnalytics || includeMissing || includeAuditCheck || includeSyncHistory || includeDismissedWarnings || includeSpotsSnapshot) &&
-                   (selectedGyms.length > 0 || includeMissing || includeSyncHistory || includeDismissedWarnings);
+  const copy = async () => {
+    if (!canGo) return;
+    try {
+      const payload = toClipboardAll(chosenTables);
+      await copyToClipboardRich(payload);
+      setNote(`Copied ${chosenTables.length} section${chosenTables.length === 1 ? '' : 's'}, ${payload.rows} rows - paste into email, Docs, Sheets or Excel`);
+    } catch (err) {
+      setNote(`Could not copy: ${err.message}`);
+    }
+  };
 
-  // Calculate audit check issues count for display (matches "Audit Check" column in main dashboard)
-  const auditCheckCount = getAuditCheckIssues().length;
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  // ---------------------------------------------------------------- screen
+  const chip = (on) => `text-sm font-semibold px-3 py-1.5 rounded-full border-2 transition-colors cursor-pointer ${on ? 'bg-gray-900 border-gray-900 text-white hover:bg-gray-700' : 'bg-white border-gray-300 text-gray-800 hover:border-gray-500'}`;
+  const smallBtn = 'text-xs font-bold px-2.5 py-1 rounded-md bg-white border border-gray-400 text-gray-800 hover:bg-gray-100 cursor-pointer';
+  const panel = 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex flex-col min-h-0';
+  const panelHead = 'px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-2';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4 backdrop-blur-sm">
-      <div className="bg-gray-50 rounded-2xl w-full max-w-7xl mx-4 max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-gray-200">
-        {/* Sticky Header — clean white with shadow */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 z-30 px-6 py-4 flex justify-between items-center shadow-sm">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            📤 Export & Reports
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-3xl font-light leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">×</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-3 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-gray-100 rounded-2xl w-full max-w-7xl max-h-[96vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+
+        {/* Header + dates */}
+        <div className="bg-white border-b border-gray-200 px-5 py-3 flex flex-wrap items-center gap-3">
+          <h2 className="text-xl font-bold text-gray-900 mr-2">📤 Export &amp; Copy</h2>
+          <div className="flex flex-wrap gap-1.5">
+            <button className={chip(false)} onClick={() => setRange(iso(new Date(today.getFullYear(), today.getMonth(), 1)), iso(new Date(today.getFullYear(), today.getMonth() + 1, 0)))}>This month</button>
+            <button className={chip(false)} onClick={() => setRange(iso(new Date(today.getFullYear(), today.getMonth() + 1, 1)), iso(new Date(today.getFullYear(), today.getMonth() + 2, 0)))}>Next month</button>
+            <button className={chip(false)} onClick={() => setRange(iso(today), dbRange?.last || iso(new Date(today.getFullYear() + 1, 11, 31)))}>Today on</button>
+            <button className={chip(false)} disabled={!dbRange} onClick={() => dbRange && setRange(dbRange.first, dbRange.last)}>Entire database</button>
+          </div>
+          <div className="flex items-center gap-1.5 text-sm text-gray-800">
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="px-2 py-1 border border-gray-400 rounded-md" />
+            <span>to</span>
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="px-2 py-1 border border-gray-400 rounded-md" />
+          </div>
+          <div className="ml-auto text-sm font-semibold text-gray-800">
+            {loadingEvents ? 'Loading events…' : `${events.length} events in these dates`}
+          </div>
+          <button onClick={onClose} className="text-gray-700 hover:text-black text-3xl leading-none w-9 h-9 rounded-full hover:bg-gray-100" aria-label="Close">×</button>
         </div>
 
-        {/* Scrollable Body */}
-        <div className="overflow-y-auto p-6 flex-1 space-y-6">
+        {/* Three panels: WHO · WHAT · COLUMNS */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1.25fr)]">
 
-        {/* ═══════════════════════════════════════════════════════════
-            SECTION 1 — QUICK PRESETS (full width, elevated)
-        ═══════════════════════════════════════════════════════════ */}
-        <div className="p-5 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200 shadow-md">
-          <h3 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
-            ⚡ Quick Presets
-            <span className="text-xs font-normal text-purple-600">(One-click export configurations)</span>
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            <button
-              onClick={() => applyPreset('monthly-compliance')}
-              className={`p-3 rounded-xl border-2 transition-all text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 ${
-                activePreset === 'monthly-compliance'
-                  ? 'border-purple-500 bg-purple-100 shadow-purple-200'
-                  : 'border-gray-200 bg-white hover:border-purple-300'
-              }`}
-            >
-              <div className="text-xl mb-1">📊</div>
-              <div className="text-xs font-semibold text-gray-800">Monthly Compliance</div>
-            </button>
-            <button
-              onClick={() => applyPreset('printable-report')}
-              className={`p-3 rounded-xl border-2 transition-all text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 ${
-                activePreset === 'printable-report'
-                  ? 'border-purple-500 bg-purple-100 shadow-purple-200'
-                  : 'border-gray-200 bg-white hover:border-purple-300'
-              }`}
-            >
-              <div className="text-xl mb-1">🖨️</div>
-              <div className="text-xs font-semibold text-gray-800">Printable Report</div>
-              <div className="text-xs text-purple-600">HTML</div>
-            </button>
-            <button
-              onClick={() => applyPreset('full-backup')}
-              className={`p-3 rounded-xl border-2 transition-all text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 ${
-                activePreset === 'full-backup'
-                  ? 'border-purple-500 bg-purple-100 shadow-purple-200'
-                  : 'border-gray-200 bg-white hover:border-purple-300'
-              }`}
-            >
-              <div className="text-xl mb-1">💾</div>
-              <div className="text-xs font-semibold text-gray-800">Full Backup</div>
-              <div className="text-xs text-blue-600">JSON</div>
-            </button>
-            <button
-              onClick={() => applyPreset('audit-check')}
-              className={`p-3 rounded-xl border-2 transition-all text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 ${
-                activePreset === 'audit-check'
-                  ? 'border-purple-500 bg-purple-100 shadow-purple-200'
-                  : 'border-gray-200 bg-white hover:border-purple-300'
-              }`}
-            >
-              <div className="text-xl mb-1">🔍</div>
-              <div className="text-xs font-semibold text-gray-800">Audit Check</div>
-              {auditCheckCount > 0 && (
-                <div className="text-xs text-red-600">{auditCheckCount} issues</div>
-              )}
-            </button>
-            {/* Sync History Preset - Admin Only */}
-            {isAdmin && (
-              <button
-                onClick={() => applyPreset('sync-status')}
-                className={`p-3 rounded-xl border-2 transition-all text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 ${
-                  activePreset === 'sync-status'
-                    ? 'border-purple-500 bg-purple-100 shadow-purple-200'
-                    : 'border-gray-200 bg-white hover:border-purple-300'
-                }`}
-              >
-                <div className="text-xl mb-1">🔄</div>
-                <div className="text-xs font-semibold text-gray-800">Sync History</div>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ═══════════════════════════════════════════════════════════
-            SECTION 2 — DATE RANGE (horizontal bar, full width)
-        ═══════════════════════════════════════════════════════════ */}
-        <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-md">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 font-semibold text-gray-800 mr-2">
-              <span className="text-lg">📅</span>
-              <span>Date Range:</span>
-            </div>
-
-          {/* Quick date range chips */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => {
-                const today = new Date();
-                const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                const lastOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                setStartDate(firstOfMonth.toISOString().split('T')[0]);
-                setEndDate(lastOfMonth.toISOString().split('T')[0]);
-              }}
-              className="px-3 py-1.5 text-xs bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
-            >
-              📆 This Month
-            </button>
-            <button
-              onClick={() => {
-                const today = new Date();
-                setStartDate(today.toISOString().split('T')[0]);
-                // Set end date to Dec 31 of next year (covers all future events)
-                const endOfNextYear = new Date(today.getFullYear() + 1, 11, 31);
-                setEndDate(endOfNextYear.toISOString().split('T')[0]);
-              }}
-              className="px-3 py-1.5 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors font-medium"
-            >
-              🚀 All Future (from today)
-            </button>
-            <button
-              onClick={() => {
-                const today = new Date();
-                const startOfYear = new Date(today.getFullYear(), 0, 1);
-                const endOfYear = new Date(today.getFullYear(), 11, 31);
-                setStartDate(startOfYear.toISOString().split('T')[0]);
-                setEndDate(endOfYear.toISOString().split('T')[0]);
-              }}
-              className="px-3 py-1.5 text-xs bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
-            >
-              📅 Full Year {new Date().getFullYear()}
-            </button>
-            <button
-              onClick={() => {
-                // Everything in database - Jan 2024 to Dec 2027
-                setStartDate('2024-01-01');
-                setEndDate('2027-12-31');
-              }}
-              className="px-3 py-1.5 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition-colors"
-            >
-              💾 Entire Database
-            </button>
-          </div>
-          
-          {/* From / To inline */}
-          <div className="flex items-center gap-2 ml-2">
-            <span className="text-xs text-gray-500">From:</span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => { setStartDate(e.target.value); setActivePreset(null); }}
-              className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none shadow-sm"
-            />
-            <span className="text-xs text-gray-500">To:</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => { setEndDate(e.target.value); setActivePreset(null); }}
-              className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none shadow-sm"
-            />
-          </div>
-
-          {/* Count + loading on the right */}
-          <div className="ml-auto text-sm text-gray-600">
-            {loadingEvents ? (
-              <span className="text-blue-600 flex items-center gap-1"><span className="animate-spin">⏳</span> Loading...</span>
-            ) : (
-              <span>Found <span className="font-semibold text-blue-600">{activeEvents.length}</span> events</span>
-            )}
-          </div>
-          </div>
-        </div>
-
-        {/* ═══════════════════════════════════════════════════════════
-            SECTION 3 — 3-PANEL GRID (WHO | WHAT | HOW)
-            Source order: WHAT, GYMS, EVENT TYPES + FORMAT
-            Visual order at xl: WHO (gyms) | WHAT (sections) | HOW (types+format)
-            via xl:order classes
-        ═══════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-        {/* PANEL: WHAT — use-case picker (5 radio cards by user intent) */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden lg:order-2">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="font-bold text-gray-800 flex items-center gap-2 text-base">
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-600 text-sm">⏱</span>
-              What are you exporting for?
-            </h3>
-            <p className="text-xs text-gray-500 mt-1">Check one or more — everything you pick downloads together in a single file.</p>
-          </div>
-          <div className="p-4 space-y-2.5">
-          {/* USE-CASE OPTION CARDS — multi-select, bundle into one file */}
-          {(() => {
-            const auditCount = getAuditCheckIssues().length;
-            const dismissedCount = getDismissedWarnings().length;
-            const missingCount = getMissingGyms().length;
-            // Smart "Recommended" — picks based on what's actionable right now
-            const recommendedKey = auditCount > 0 ? 'audit'
-                                : missingCount > 0 ? 'compliance'
-                                : 'full';
-            const cards = [
-              { key: 'full', icon: '📋', iconBg: 'from-rose-100 to-pink-100 text-rose-600',
-                title: 'Full event spreadsheet',
-                desc: 'Every event with all details.',
-                meta: loadingEvents ? 'Loading...' : `${filteredEvents.length} events`,
-              },
-              { key: 'spots', icon: '📅', iconBg: 'from-violet-100 to-purple-100 text-violet-600',
-                title: 'Quick spots & availability check',
-                desc: 'Just spots remaining + camp signup mode.',
-                meta: loadingEvents ? '' : (() => {
-                  const camps = filteredEvents.filter(e => e.type === 'CAMP').length;
-                  const sold = filteredEvents.filter(e => e.has_openings === false).length;
-                  return `${filteredEvents.length} events · ${sold} sold out`;
-                })(),
-              },
-              { key: 'compliance', icon: '📊', iconBg: 'from-blue-100 to-indigo-100 text-blue-600',
-                title: 'Monthly compliance report',
-                desc: 'Per-gym counts vs goals + gyms that missed.',
-                meta: missingCount > 0 ? `${missingCount} gym${missingCount === 1 ? '' : 's'} missing requirements` : 'All gyms meeting requirements ✓',
-              },
-              { key: 'audit', icon: '⚠', iconBg: 'from-amber-100 to-orange-100 text-amber-700',
-                title: 'Audit findings',
-                desc: 'Manager errors caught + past dismissed warnings.',
-                meta: auditCount > 0 ? `${auditCount} event${auditCount === 1 ? '' : 's'} with issues` : 'No issues found ✓',
-              },
-            ];
-            if (isAdmin) {
-              cards.push({
-                key: 'sync', icon: '🔒', iconBg: 'from-gray-100 to-slate-100 text-gray-600',
-                title: 'Sync log', desc: 'Admin only.',
-                meta: loadingSyncLog ? 'Loading...' : `${syncLog.length} sync records`,
-                badge: 'ADMIN ONLY',
-              });
-            }
-            return cards.map(card => {
-              const isSelected = isUseCaseOn(card.key);
-              const isRecommended = card.key === recommendedKey;
-              return (
-                <label
-                  key={card.key}
-                  className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border-2 transition-all ${
-                    isSelected
-                      ? 'border-rose-300 bg-gradient-to-br from-rose-50 to-pink-50 shadow-md'
-                      : 'border-gray-200 bg-white hover:border-rose-200 hover:bg-rose-50/30 hover:shadow-sm'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    value={card.key}
-                    checked={isSelected}
-                    onChange={() => toggleUseCase(card.key)}
-                    className="w-4 h-4 accent-rose-500 flex-shrink-0"
-                  />
-                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br ${card.iconBg} flex items-center justify-center text-lg shadow-sm`}>
-                    {card.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`font-semibold text-sm ${isSelected ? 'text-rose-900' : 'text-gray-800'}`}>{card.title}</span>
-                      {isRecommended && !isSelected && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700 border border-rose-200">
-                          Recommended
-                        </span>
-                      )}
-                      {card.badge && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-200 text-gray-700">
-                          🔒 {card.badge}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-0.5">{card.desc}</div>
-                    {card.meta && (
-                      <div className={`text-[11px] mt-1 ${isSelected ? 'text-rose-700' : 'text-gray-400'}`}>{card.meta}</div>
-                    )}
-                  </div>
-                </label>
-              );
-            });
-          })()}
-
-          {/* ADVANCED — power-user customization (existing checkboxes hidden behind disclosure) */}
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full mt-2 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 flex items-center justify-center gap-1 border-t border-gray-100 pt-3"
-          >
-            {showAdvanced ? '▾' : '▸'} Advanced: customize included sections
-          </button>
-          {showAdvanced && (
-            <div className="space-y-2 pt-2 border-t border-gray-100">
-              <p className="text-[11px] text-gray-500 italic">Override the use-case selection. Pick exactly which sections to include.</p>
-              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                <input type="checkbox" checked={includeEvents} onChange={(e) => { setIncludeEvents(e.target.checked); }} className="w-3 h-3" />
-                <span>📋 Event Details ({filteredEvents.length})</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                <input type="checkbox" checked={includeAnalytics} onChange={(e) => { setIncludeAnalytics(e.target.checked); }} className="w-3 h-3" />
-                <span>📊 Analytics Dashboard</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                <input type="checkbox" checked={includeMissing} onChange={(e) => { setIncludeMissing(e.target.checked); }} className="w-3 h-3" />
-                <span>⚠️ Missing Requirements</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                <input type="checkbox" checked={includeAuditCheck} onChange={(e) => { setIncludeAuditCheck(e.target.checked); }} className="w-3 h-3" />
-                <span>🔍 Audit Check</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                <input type="checkbox" checked={includeDismissedWarnings} onChange={(e) => { setIncludeDismissedWarnings(e.target.checked); }} className="w-3 h-3" />
-                <span>✓ Dismissed Warnings</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                <input type="checkbox" checked={includeSpotsSnapshot} onChange={(e) => { setIncludeSpotsSnapshot(e.target.checked); }} className="w-3 h-3" />
-                <span>🟢 Spots &amp; Signup Snapshot</span>
-              </label>
-              {isAdmin && (
-                <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 text-xs">
-                  <input type="checkbox" checked={includeSyncHistory} onChange={(e) => { setIncludeSyncHistory(e.target.checked); }} className="w-3 h-3" />
-                  <span>🔄 Sync History</span>
-                </label>
-              )}
-            </div>
-          )}
-
-          {/* Preview of missing gyms - ONLY shows when checkbox is checked */}
-          {includeMissing && !loadingEvents && (
-            <div className={`mt-3 p-2 rounded border text-xs ${getMissingGyms().length > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-              <div className="font-semibold text-gray-600 mb-1">
-                📅 Checking date range: {startDate} to {endDate}
+          {/* WHO: gyms + buckets */}
+          <div className={panel}>
+            <div className={panelHead}>
+              <div>
+                <h3 className="font-bold text-gray-900">🏢 Gyms</h3>
+                <p className="text-xs text-gray-700">{selectedGyms.length} of {gyms.length}</p>
               </div>
-              {getMissingGyms().length > 0 ? (
-                <>
-                  <div className="font-semibold text-red-700 mb-1">
-                    ⚠️ {getMissingGyms().length} gym{getMissingGyms().length !== 1 ? 's' : ''} missing requirements:
-                  </div>
-                  {getMissingGyms().map(gym => (
-                    <div key={gym.gym_id} className="text-red-600">
-                      • {gym.gym_id}: needs {gym.missing.join(', ')}
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <div className="font-semibold text-green-700">
-                  ✅ All {selectedGyms.length} gyms meet requirements for this date range!
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Preview of audit check issues - ONLY shows when checkbox is checked */}
-          {includeAuditCheck && !loadingEvents && (
-            <div className={`mt-3 p-2 rounded border text-xs ${getAuditCheckIssues().length > 0 ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}`}>
-              <div className="font-semibold text-gray-600 mb-1">
-                📅 Checking date range: {startDate} to {endDate}
+              <div className="flex gap-1">
+                <button className={smallBtn} onClick={() => setSelectedGyms(gyms.map((g) => g.id))}>All</button>
+                <button className={smallBtn} onClick={() => setSelectedGyms([])}>None</button>
               </div>
-              <div className="text-gray-500 mb-2 text-xs italic">
-                Checks for: validation errors, missing descriptions, flyer-only descriptions
+            </div>
+            <div className="p-3 grid grid-cols-2 gap-2">
+              {gyms.map((g) => {
+                const on = selectedGyms.includes(g.id);
+                const color = (g.brand_colors && g.brand_colors[0]) || '#4b5563';
+                return (
+                  <button key={g.id} type="button" onClick={() => toggle(selectedGyms, setSelectedGyms, g.id)}
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-left cursor-pointer transition-all hover:shadow-md"
+                    style={{ border: `2px solid ${on ? color : '#d1d5db'}`, borderLeftWidth: 6, borderLeftColor: color, background: on ? `${color}18` : '#fff' }}>
+                    {g.logo_url
+                      ? <img src={g.logo_url} alt="" className="w-7 h-7 rounded-full object-cover border border-white shadow" />
+                      : <span className="w-7 h-7 rounded-full" style={{ background: color }} />}
+                    <span className="font-bold text-sm text-gray-900">{g.id}</span>
+                    <span className="ml-auto text-sm font-bold" style={{ color: on ? color : '#9ca3af' }}>{on ? '✓' : ''}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className={`${panelHead} border-t`}>
+              <div>
+                <h3 className="font-bold text-gray-900">🎯 Buckets</h3>
+                <p className="text-xs text-gray-700">{selectedTypes.length} of {eventTypes.length} · <span className="text-red-700 font-bold">*</span> has a monthly requirement</p>
               </div>
-              {getAuditCheckIssues().length > 0 ? (
-                <>
-                  <div className="font-semibold text-orange-700 mb-1">
-                    ⚠️ Found {getAuditCheckIssues().length} event{getAuditCheckIssues().length !== 1 ? 's' : ''} with audit check issues
-                  </div>
-                  <div className="text-orange-600 text-xs">
-                    Export will include: event details + specific issues found
-                  </div>
-                </>
-              ) : (
-                <div className="font-semibold text-green-700">
-                  ✅ No audit check issues found! All {filteredEvents.length} events have complete descriptions and no validation errors.
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Preview of dismissed warnings - ONLY shows when checkbox is checked */}
-          {includeDismissedWarnings && !loadingEvents && (
-            <div className={`mt-3 p-2 rounded border text-xs ${getDismissedWarnings().length > 0 ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-              <div className="font-semibold text-gray-600 mb-1">
-                📅 Checking date range: {startDate} to {endDate}
+              <div className="flex gap-1">
+                <button className={smallBtn} onClick={() => setSelectedTypes([...eventTypes])}>All</button>
+                <button className={smallBtn} onClick={() => setSelectedTypes([])}>None</button>
               </div>
-              {getDismissedWarnings().length > 0 ? (
-                <>
-                  <div className="font-semibold text-green-700 mb-1">
-                    ✓ Found {getDismissedWarnings().length} event{getDismissedWarnings().length !== 1 ? 's' : ''} with dismissed warnings
-                  </div>
-                  <div className="text-green-600 text-xs mb-2">
-                    Export will include: event details + dismissed warnings + notes
-                  </div>
-                  <div className="max-h-32 overflow-y-auto">
-                    {getDismissedWarnings().slice(0, 5).map((event, idx) => (
-                      <div key={idx} className="text-green-700 text-xs mb-1">
-                        • {event.gym_name}: {event.title?.substring(0, 40)}... ({event.dismissed_count} dismissed)
-                      </div>
-                    ))}
-                    {getDismissedWarnings().length > 5 && (
-                      <div className="text-green-500 text-xs italic">
-                        ... and {getDismissedWarnings().length - 5} more
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="font-semibold text-gray-500">
-                  No dismissed warnings found in the selected date range.
-                </div>
-              )}
             </div>
-          )}
-        </div>
-
-          </div>
-        {/* END PANEL: WHAT */}
-
-        {/* PANEL: WHO (Gyms with logos + brand-colored outline) — visual left (xl:order-1) */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden lg:order-1">
-          <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-            <div>
-              <h3 className="font-bold text-gray-800 flex items-center gap-2 text-base">
-                🏢 Who — Gyms
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">{selectedGyms.length} of {gyms.length} selected</p>
-            </div>
-            <div className="flex gap-1">
-              <button onClick={selectAllGyms} className="text-xs font-semibold px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white rounded-md shadow-sm transition-colors">All</button>
-              <button onClick={selectNoGyms} className="text-xs font-semibold px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-md shadow-sm transition-colors">Clear</button>
-            </div>
-          </div>
-          <div className="p-3 grid grid-cols-2 gap-2.5">
-            {gyms.map(gym => {
-              const isSelected = selectedGyms.includes(gym.id);
-              const brandColor = GYM_BRAND_COLORS[gym.id] || '#6b7280';
-              return (
-                <label
-                  key={gym.id}
-                  className={`flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-lg transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 bg-white`}
-                  style={{
-                    borderLeft: `5px solid ${brandColor}`,
-                    border: `2px solid ${isSelected ? brandColor : '#e5e7eb'}`,
-                    borderLeftWidth: '5px',
-                    borderLeftColor: brandColor,
-                    backgroundColor: isSelected ? `${brandColor}15` : '#ffffff',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleGym(gym.id)}
-                    className="w-4 h-4 rounded flex-shrink-0 cursor-pointer"
-                    style={{ accentColor: brandColor }}
-                  />
-                  {gym.logo_url ? (
-                    <img
-                      src={gym.logo_url}
-                      alt={gym.id}
-                      className="w-9 h-9 rounded-full object-cover shadow-md border-2 border-white flex-shrink-0"
-                      onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                    />
-                  ) : null}
-                  <div
-                    className="w-9 h-9 rounded-full text-white font-bold text-[10px] items-center justify-center shadow-md border-2 border-white flex-shrink-0"
-                    style={{ display: gym.logo_url ? 'none' : 'flex', backgroundColor: brandColor }}
-                  >
-                    {gym.id}
-                  </div>
-                  <span className="font-bold text-sm flex-1" style={{ color: isSelected ? brandColor : '#1f2937' }}>{gym.id}</span>
-                </label>
-              );
-            })}
-          </div>
-        </div>
-        {/* END PANEL: WHO */}
-
-        {/* PANEL: HOW (Event Types + Format + Summary) — visual right (xl:order-3) */}
-        <div className="space-y-4 lg:order-3">
-
-        {/* Event Types Selection — inside HOW panel */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                🎯 Event Types
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">{selectedTypes.length} of {eventTypes.length} selected</p>
-            </div>
-            <div className="flex gap-1">
-              <button onClick={selectAllTypes} className="text-xs font-semibold px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white rounded-md shadow-sm transition-colors">All</button>
-              <button onClick={selectNoTypes} className="text-xs font-semibold px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-md shadow-sm transition-colors">Clear</button>
-            </div>
-          </div>
-          <div className="p-4">
-          <div className="flex flex-wrap gap-3">
-            {eventTypes.map(type => {
-              const isRequired = requiredTypes.includes(type);
-              return (
-                <label key={type} className={`flex items-center gap-2 cursor-pointer text-sm hover:bg-purple-100 p-1 rounded ${!isRequired ? 'opacity-60' : ''}`}>
-                  <input 
-                    type="checkbox" 
-                    checked={selectedTypes.includes(type)} 
-                    onChange={() => toggleType(type)}
-                    className="w-4 h-4 text-purple-600"
-                  />
-                  <span className="text-gray-700">
-                    {type}
-                    {isRequired && <span className="text-red-500 ml-0.5">*</span>}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-          <div className="mt-2 text-xs text-gray-500">
-            <span className="text-red-500">*</span> = Required for monthly compliance
-          </div>
-          </div>
-        </div>
-        {/* end Event Types */}
-
-        {/* Columns picker - which columns the event rows carry (CSV file + Copy). All ticked; tap to drop. */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">🧩 Columns</h3>
-              <p className="text-xs text-gray-500 mt-0.5">{pickedColumns.length} of {EVENT_COLUMNS.length} in the file and in Copy</p>
-            </div>
-            <div className="flex gap-1">
-              <button onClick={() => { const all = EVENT_COLUMNS.map(c => c.key); setPickedColumns(all); try { localStorage.setItem('export_columns', JSON.stringify(all)); } catch (e) { /* fine */ } }}
-                className="text-xs font-semibold px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white rounded-md shadow-sm transition-colors">All</button>
-            </div>
-          </div>
-          <div className="p-4 flex flex-wrap gap-1.5">
-            {EVENT_COLUMNS.map(c => {
-              const on = pickedColumns.includes(c.key);
-              return (
-                <button key={c.key} type="button" onClick={() => toggleColumn(c.key)}
-                  className={`text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${on ? 'bg-purple-700 border-purple-700 text-white hover:bg-purple-800' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-100'}`}>
-                  {on ? '✓ ' : ''}{c.label}
+            <div className="p-3 flex flex-wrap gap-1.5">
+              {eventTypes.map((t) => (
+                <button key={t} type="button" className={chip(selectedTypes.includes(t))} onClick={() => toggle(selectedTypes, setSelectedTypes, t)}>
+                  {t}{requiredTypes.includes(t) && <span className={selectedTypes.includes(t) ? 'text-red-300' : 'text-red-700'}> *</span>}
                 </button>
-              );
-            })}
-          </div>
-        </div>
-        {/* end Columns */}
-
-        {/* Format Selection — inside HOW panel */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50">
-            <h3 className="font-bold text-gray-800 flex items-center gap-2">
-              📊 Format
-            </h3>
-            <p className="text-xs text-gray-500 mt-0.5">How the file is delivered</p>
-          </div>
-          <div className="p-4">
-          <h3 className="sr-only">Export Format:</h3>
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="radio" 
-                name="format" 
-                value="csv" 
-                checked={exportFormat === 'csv'} 
-                onChange={() => { setExportFormat('csv'); setActivePreset(null); }}
-                className="w-4 h-4 text-green-600"
-              />
-              <span className="text-gray-700">📊 CSV <span className="text-xs text-gray-500">(Excel, Sheets)</span></span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="radio" 
-                name="format" 
-                value="json" 
-                checked={exportFormat === 'json'} 
-                onChange={() => { setExportFormat('json'); setActivePreset(null); }}
-                className="w-4 h-4 text-green-600"
-              />
-              <span className="text-gray-700">📋 JSON <span className="text-xs text-gray-500">(Data backup)</span></span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="radio" 
-                name="format" 
-                value="html" 
-                checked={exportFormat === 'html'} 
-                onChange={() => { setExportFormat('html'); setActivePreset(null); }}
-                className="w-4 h-4 text-green-600"
-              />
-              <span className="text-gray-700">🖨️ HTML Report <span className="text-xs text-purple-600">(Print/Email)</span></span>
-            </label>
-          </div>
-          {exportFormat === 'html' && (
-            <div className="mt-3 p-2 bg-green-100 rounded text-xs text-green-800">
-              📧 HTML report includes a copy-paste email summary and print button
+              ))}
             </div>
-          )}
+          </div>
+
+          {/* WHAT: quick picks + sections */}
+          <div className={panel}>
+            <div className={panelHead}>
+              <div>
+                <h3 className="font-bold text-gray-900">📦 What to include</h3>
+                <p className="text-xs text-gray-700">Tick any. Download and Copy both give you exactly these.</p>
+              </div>
+            </div>
+            <div className="px-3 pt-3 flex flex-wrap gap-1.5">
+              <span className="text-xs font-bold text-gray-800 self-center mr-1">Quick pick:</span>
+              {QUICK_PICKS.map((q) => (
+                <button key={q.key} type="button" onClick={() => applyQuick(q)}
+                  className="text-xs font-bold px-2.5 py-1 rounded-md bg-indigo-700 text-white hover:bg-indigo-800 cursor-pointer shadow-sm">{q.label}</button>
+              ))}
+            </div>
+            <div className="p-3 space-y-2">
+              {visibleSections.map((s) => {
+                const on = sections.includes(s.key);
+                const t = tableOf(s.key);
+                const count = busy ? '…' : (t ? t.rows.length : 0);
+                return (
+                  <div key={s.key} className={`rounded-xl border-2 transition-colors ${on ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 bg-white hover:border-gray-400'}`}>
+                    <button type="button" onClick={() => toggle(sections, setSections, s.key)} className="w-full flex items-center gap-3 p-2.5 text-left cursor-pointer">
+                      <span className={`w-6 h-6 rounded-md flex items-center justify-center text-sm font-bold flex-shrink-0 ${on ? 'bg-indigo-600 text-white' : 'bg-white border-2 border-gray-400 text-transparent'}`}>✓</span>
+                      <span className="text-lg flex-shrink-0">{s.icon}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-bold text-sm text-gray-900">{s.label}{s.admin && <span className="ml-2 text-[11px] font-bold bg-gray-800 text-white px-1.5 py-0.5 rounded">ADMIN</span>}</span>
+                        <span className="block text-xs text-gray-700">{s.desc}</span>
+                      </span>
+                      <span className={`text-sm font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${on ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-900'}`}>{count}</span>
+                    </button>
+                    {s.key === 'events' && (
+                      <label className="flex items-center gap-2 px-3 pb-2.5 -mt-1 text-sm text-gray-900 cursor-pointer">
+                        <input type="checkbox" checked={includeNotLive} onChange={(e) => setIncludeNotLive(e.target.checked)} className="w-4 h-4 accent-indigo-600" />
+                        <span>Also add camps built in iClass but <b>not live</b> on the portal yet
+                          {includeNotLive && notLiveRaw && <b> ({notLiveEvents.filter((e) => selectedTypes.includes(e.type)).length})</b>}</span>
+                      </label>
+                    )}
+                    {on && t?.note && !busy && <div className="px-3 pb-2.5 -mt-1 text-xs text-gray-800">{t.note}</div>}
+                  </div>
+                );
+              })}
+              {extrasState.error && <div className="text-sm font-bold text-red-700">iClass setup facts did not load: {extrasState.error}. Those columns will be blank.</div>}
+            </div>
+          </div>
+
+          {/* COLUMNS (Events section) */}
+          <div className={`${panel} ${sections.includes('events') ? '' : 'opacity-60'}`}>
+            <div className={panelHead}>
+              <div>
+                <h3 className="font-bold text-gray-900">🧩 Event columns</h3>
+                <p className="text-xs text-gray-700">{columnKeys.length} of {ALL_COLUMNS.length} · used by the Events section</p>
+              </div>
+              <div className="flex gap-1">
+                <button className={smallBtn} onClick={() => setDropped([])}>All</button>
+                <button className={smallBtn} onClick={() => setDropped([...ALL_COLUMNS])}>None</button>
+              </div>
+            </div>
+            <div className="p-3 space-y-3 overflow-y-auto">
+              {COLUMN_GROUPS.map((grp) => {
+                const cols = EVENT_COLUMNS.filter((c) => c.group === grp);
+                const allOn = cols.every((c) => !dropped.includes(c.key));
+                return (
+                  <div key={grp}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold uppercase tracking-wide text-gray-900">{grp}</span>
+                      <button className="text-xs font-bold text-indigo-800 hover:underline cursor-pointer"
+                        onClick={() => setDropped(allOn ? [...new Set([...dropped, ...cols.map((c) => c.key)])] : dropped.filter((k) => !cols.some((c) => c.key === k)))}>
+                        {allOn ? 'none' : 'all'}
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {cols.map((c) => {
+                        const on = !dropped.includes(c.key);
+                        return (
+                          <button key={c.key} type="button" onClick={() => toggle(dropped, setDropped, c.key)}
+                            className={`text-xs font-semibold px-2.5 py-1 rounded-full border-2 cursor-pointer transition-colors ${on ? 'bg-indigo-700 border-indigo-700 text-white hover:bg-indigo-800' : 'bg-white border-gray-300 text-gray-800 hover:border-gray-500'}`}>
+                            {on ? '✓ ' : ''}{c.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-        {/* end Format */}
 
-        {/* Summary card — inside HOW panel */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50">
-            <h3 className="font-bold text-gray-800 flex items-center gap-2">
-              📋 Summary
-            </h3>
+        {/* Footer: what will happen, format, Copy, Download */}
+        <div className="bg-white border-t border-gray-200 px-5 py-3 flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-[240px] text-sm text-gray-900">
+            {busy ? <span className="font-semibold">Reading the data…</span>
+              : chosenTables.length === 0 ? <span className="font-semibold text-red-700">Tick at least one section.</span>
+                : <span><b>Will include:</b> {chosenTables.map((t) => `${t.title} ${t.rows.length}${t.key === 'events' ? ` rows × ${columnKeys.length} columns` : ''}`).join(' · ')}</span>}
+            {note && <div className="text-sm font-bold text-green-800 mt-0.5">{note}</div>}
           </div>
-          <div className="p-4 text-sm text-gray-700 space-y-1.5">
-            <div className="flex justify-between"><span>📅 Events in range:</span> <strong>{filteredEvents.length}</strong></div>
-            <div className="flex justify-between"><span>🏢 Gyms selected:</span> <strong>{selectedGyms.length} of {gyms.length}</strong></div>
-            <div className="flex justify-between"><span>🎯 Types selected:</span> <strong>{selectedTypes.length} of {eventTypes.length}</strong></div>
-            <div className="flex justify-between border-t border-gray-100 pt-1.5 mt-1.5"><span>Format:</span> <strong>{exportFormat.toUpperCase()}</strong></div>
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            {[['csv', 'CSV (Excel, Sheets)'], ['json', 'JSON (backup)'], ['html', 'Printable page']].map(([k, label]) => (
+              <button key={k} type="button" onClick={() => setFormat(k)}
+                className={`text-sm font-semibold px-3 py-1.5 rounded-md cursor-pointer ${format === k ? 'bg-gray-900 text-white' : 'text-gray-900 hover:bg-white'}`}>{label}</button>
+            ))}
           </div>
-        </div>
-        {/* end Summary */}
-
-        </div>
-        {/* END PANEL: HOW */}
-
-        </div>
-        {/* END 3-PANEL GRID */}
-
-        </div>
-        {/* END SCROLLABLE BODY */}
-
-        {/* Sticky Footer — Cancel + Export always visible */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end gap-3 z-30 shadow-lg">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
-          >
-            Cancel
+          <button onClick={copy} disabled={!canGo}
+            title="Copies every section you ticked: tables for email / Docs, cells for Sheets / Excel"
+            className={`px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 ${canGo ? 'bg-indigo-700 hover:bg-indigo-800 text-white shadow-lg cursor-pointer' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}>
+            📋 Copy {busy ? '' : `${totalRows} rows`}
           </button>
-          {copyNote && <span className="self-center text-sm font-semibold text-gray-800 mr-1">{copyNote}</span>}
-          <button
-            onClick={handleCopy}
-            disabled={filteredEvents.length === 0 || pickedColumns.length === 0}
-            title="Copy the filtered events with the picked columns - pastes as a table in email / Docs and as cells in Sheets / Excel"
-            className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-              filteredEvents.length && pickedColumns.length
-                ? 'bg-purple-700 hover:bg-purple-800 text-white shadow-lg hover:-translate-y-0.5 cursor-pointer'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            📋 Copy {filteredEvents.length} events
-          </button>
-          <button
-            onClick={handleExport}
-            disabled={!canExport}
-            className={`px-8 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-              canExport
-                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            📤 Export {exportFormat.toUpperCase()}
+          <button onClick={download} disabled={!canGo}
+            className={`px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 ${canGo ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-lg cursor-pointer' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}>
+            {format === 'html' ? '🖨️ Open page' : `⬇️ Download ${format.toUpperCase()}`}
           </button>
         </div>
       </div>
