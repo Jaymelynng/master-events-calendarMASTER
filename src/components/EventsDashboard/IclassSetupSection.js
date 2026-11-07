@@ -4,6 +4,8 @@
 // program and charge category. Reads the iclass_camp_audit view (camp connected to its price
 // table / type / charge category / program) + iclass_camp_setup (per-day counts) + iclass_price_cells.
 // A gym that was never read says so - a missing read is never shown as blank or "fine".
+// An APPOINTMENT (Planet's Open Gym / KNO / tryouts - link ".../appointment-details/1768") reads
+// iclass_appointment_setup + iclass_appointment_price_cells instead: a separate price-table numbering.
 //
 // Look (Jayme's CORE-VISUAL-DESIGN-PHILOSOPHY): every layer contrasts with the one it touches and
 // lifts off the page - cream container floating on the white panel, teal header bar, white raised
@@ -85,13 +87,44 @@ function Stat({ big, label, danger }) {
   );
 }
 
+// The iClass appointment number, from the event's own link (".../appointment-details/1768?serviceId=13").
+// Proven on Jayme's Planet recording 2026-11-07: GET /api/v1/appointments/1768 is that same appointment.
+const iclassAppointmentId = (event) => {
+  const m = String(event?.event_url || '').match(/\/appointment-details\/(\d+)/);
+  return m ? Number(m[1]) : null;
+};
+
 // One read per opened event, shared by the spots card (per-day counts) and this section.
 export function useIclassSetup(event) {
   const [state, setState] = useState({ loading: true });
-  const campId = iclassCampId(event);
+  const appointmentId = iclassAppointmentId(event);
+  const campId = appointmentId ? null : iclassCampId(event);
 
   useEffect(() => {
     let alive = true;
+    if (appointmentId && event?.gym_id) {
+      setState({ loading: true });
+      (async () => {
+        const { data: appt } = await supabase.from('iclass_appointment_setup')
+          .select('appointment_id, raw, bookings_summary, read_at')
+          .eq('gym_id', event.gym_id).eq('appointment_id', appointmentId).maybeSingle();
+        const tableId = appt?.raw?.pricingScheduleId;
+        let cells = [];
+        let tableName = null;
+        if (tableId != null) {
+          const [{ data: c }, { data: t }] = await Promise.all([
+            supabase.from('iclass_appointment_price_cells').select('child_number, time_slots, amount')
+              .eq('gym_id', event.gym_id).eq('price_table_id', tableId),
+            supabase.from('iclass_appointment_price_tables').select('name')
+              .eq('gym_id', event.gym_id).eq('price_table_id', tableId).maybeSingle(),
+          ]);
+          cells = c || [];
+          tableName = t?.name || null;
+        }
+        if (alive) setState({ loading: false, camp: null, appointment: appt || null, isAppointment: true, days: [], cells, tableName });
+      })().catch(() => alive && setState({ loading: false, error: true, days: [] }));
+      return () => { alive = false; };
+    }
     if (!campId || !event?.gym_id) {
       setState({ loading: false, camp: null, days: [] });
       return undefined;
@@ -113,9 +146,93 @@ export function useIclassSetup(event) {
       if (alive) setState({ loading: false, camp, days: Array.isArray(setup?.occupancy) ? setup.occupancy : [], cells });
     })().catch(() => alive && setState({ loading: false, error: true, days: [] }));
     return () => { alive = false; };
-  }, [campId, event?.gym_id]);
+  }, [campId, appointmentId, event?.gym_id]);
 
   return state;
+}
+
+// An APPOINTMENT's setup: portal + online sign-up, max kids, how many signed up, its price table
+// (rows = number of time slots booked, columns = 1st / 2nd / 3rd child - iClass's own grid).
+function AppointmentSetup({ state }) {
+  const a = state.appointment;
+  if (!a) {
+    return (
+      <Card>
+        <div style={{ color: C.ink, fontSize: 14, fontWeight: 600 }}>Setup not read yet for this appointment.</div>
+        <div style={{ color: C.ink, fontSize: 13, marginTop: 2 }}>It appears after this gym's iClass setup read runs.</div>
+      </Card>
+    );
+  }
+  const r = a.raw || {};
+  const cells = state.cells || [];
+  const slotRows = [...new Set(cells.map((x) => x.time_slots))].sort((x, y) => x - y);
+  const kids = [...new Set(cells.map((x) => x.child_number))].sort((x, y) => x - y);
+  const cell = (k, t) => cells.find((x) => x.child_number === k && x.time_slots === t);
+  const kidLabel = (k) => (k === 1 ? '1st' : k === 2 ? '2nd' : k === 3 ? '3rd' : `${k}th`);
+  return (
+    <>
+      <Card title="Portal & sign-up">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <Chip value={r.showOnCustomerPortal ?? null} label="Show on portal" />
+          <Chip value={r.allowWebRegistration ?? null} label="Online sign-up" />
+        </div>
+      </Card>
+
+      {/* Spots left is on the card (the portal's own number). No "signed up" tile: iClass's booking list
+          (12 on #1768) did not match max minus spots left (30 - 19 = 11) on 2026-11-07, cause unknown. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <Stat big={r.maxStudents ?? '—'} label="Max kids" />
+      </div>
+
+      <Card title="Price table">
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.ink, marginBottom: cells.length ? 8 : 0 }}>
+          {r.pricingScheduleId == null
+            ? <span style={{ color: C.bad }}>No price table set</span>
+            : (state.tableName || <span style={{ color: C.bad }}>Price table {r.pricingScheduleId} not read yet</span>)}
+        </div>
+        {cells.length > 0 && (
+          <div style={{ borderRadius: 10, overflowX: 'auto', boxShadow: '0 1px 4px rgba(0,0,0,.15)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: C.head, color: '#fff' }}>
+                  <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 800, whiteSpace: 'nowrap' }}>Time slots · child →</th>
+                  {kids.map((k) => (
+                    <th key={k} style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 800, whiteSpace: 'nowrap' }}>{kidLabel(k)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {slotRows.map((t, i) => (
+                  <tr key={t} style={{ background: i % 2 ? '#f7f4ef' : '#ffffff' }}>
+                    <td style={{ padding: '6px 8px', fontWeight: 700, color: C.ink, whiteSpace: 'nowrap' }}>{t} {t === 1 ? 'slot' : 'slots'}</td>
+                    {kids.map((k) => {
+                      const x = cell(k, t);
+                      const blank = !x || x.amount == null;
+                      return (
+                        <td key={k} style={{
+                          padding: '6px 8px', textAlign: 'right', fontWeight: blank ? 800 : 600,
+                          background: blank ? C.bad : undefined, color: blank ? '#fff' : C.ink,
+                        }}>
+                          {blank ? 'BLANK' : fmtMoney(x.amount)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card title="Where it lives in iClass">
+        <div style={{ display: 'grid', gap: 4, fontSize: 14, color: C.ink }}>
+          <div><b>Service</b> · {r.service?.name || '—'}</div>
+          <div><b>Appointment</b> · #{a.appointment_id}</div>
+        </div>
+      </Card>
+    </>
+  );
 }
 
 // An iClass age setting in iClass's own words: 13.9167 -> "13 years 11 months", 5 -> "5 years".
@@ -138,9 +255,9 @@ export default function IclassSetupSection({ setup, event }) {
     <div style={{ background: C.frame, borderRadius: 16, boxShadow: lift, margin: '16px 0', overflow: 'hidden' }}>
       <div style={{ background: C.head, color: '#fff', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: '.02em' }}>🔐 iClass setup</span>
-        {state.camp?.read_at && (
+        {(state.camp?.read_at || state.appointment?.read_at) && (
           <span style={{ fontSize: 12, fontWeight: 600, color: '#fff', background: 'rgba(255,255,255,.18)', padding: '3px 8px', borderRadius: 999 }}>
-            read {new Date(state.camp.read_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            read {new Date(state.camp?.read_at || state.appointment.read_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
           </span>
         )}
       </div>
@@ -150,6 +267,7 @@ export default function IclassSetupSection({ setup, event }) {
 
   if (state.loading) return frame(<Card><span style={{ color: C.ink, fontSize: 14 }}>Loading…</span></Card>);
   if (state.error) return frame(<Card><span style={{ color: C.bad, fontSize: 14, fontWeight: 700 }}>Could not load the iClass setup.</span></Card>);
+  if (state.isAppointment) return frame(<AppointmentSetup state={state} />);
   if (!state.camp) {
     return frame(
       <Card>

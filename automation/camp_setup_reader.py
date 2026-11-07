@@ -9,6 +9,9 @@ Entries, each camp's price table, and per-day sign-ups. Saves every reply WHOLE 
   iclass_price_tables (one row per price table; view iclass_price_cells flattens it)
   iclass_gym_settings (the gym-wide calls in GYM_SETTINGS_CALLS, one row each)
   iclass_setup_reads  (one row per gym per read — "ok" or why it was NOT read)
+  iclass_appointment_setup        (one row per APPOINTMENT with a time slot from today on, hidden ones too;
+                                   the sign-up lists are taken out - they name children - and counted instead)
+  iclass_appointment_price_tables (one row per appointment price table - a separate numbering from camps')
 Nothing is ever deleted: an ended camp keeps its last read; a camp or price table iClass no longer
 lists gets gone_from_iclass_at.
 
@@ -22,6 +25,7 @@ A gym with no login is recorded as 'no_login' — its checks show "setup not rea
 
 Test without a login (from one of Jayme's F12 recordings, nothing sent to iClass):
   python camp_setup_reader.py --har "<part 1>.har" "<part 2>.har" --gym CCP [--save]
+  (a network recorder .capture.jsonl file works the same way as a .har)
 Live (or press POST /setup-read on the backend):
   python camp_setup_reader.py --gym SGT [--save] [--prices]      (or --all)
 Without --save it prints counts only.
@@ -56,6 +60,16 @@ ALLOWED_GETS = [
     r'/api/v1/settings/parent-portal-camp-registration',
     r'/api/v1/settings/parent-portal-general',
     r'/api/open/v1/[a-z0-9]+/camps/\d+',
+    # Appointments (Planet runs main events as appointments). Proven on her Planet recording 2026-11-07.
+    r'/api/v1/appointments/\d+',
+    r'/api/v1/appointment-pricing-schedules/',
+    r'/api/v1/appointments-settings',
+]
+
+# The ONLY POST this reader may send: the appointment calendar's own SEARCH. It changes nothing in iClass -
+# it answers which time slots exist between two dates (the screen sends the same call on every page view).
+ALLOWED_POSTS = [
+    r'/api/v1/appointment-timeslots/filtered',
 ]
 
 # Gym-wide calls, read once per gym, each reply saved whole (iclass_gym_settings.setting_key = the key).
@@ -69,8 +83,8 @@ GYM_SETTINGS_CALLS = {
 }
 
 
-def _allowed(path):
-    return any(re.fullmatch(p, path) for p in ALLOWED_GETS)
+def _allowed(path, method='GET'):
+    return any(re.fullmatch(p, path) for p in (ALLOWED_POSTS if method == 'POST' else ALLOWED_GETS))
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -124,35 +138,80 @@ class LiveSource:
             print(f"  [SETUP] HTTP {e.code}: {path}")
             return None
 
+    def post(self, path, body):
+        """Only the search calls in ALLOWED_POSTS - never a save."""
+        if not _allowed(path, 'POST'):
+            raise RuntimeError(f"refused: POST {path} is not on the read-only search list")
+        req = Request(ICLASS + path, data=json.dumps(body).encode(), method='POST')
+        req.add_header('x-icp-account', self.slug)
+        req.add_header('accept', 'application/json')
+        req.add_header('content-type', 'application/json')
+        try:
+            with self.opener.open(req, timeout=60) as r:
+                return json.loads(r.read().decode())
+        except HTTPError as e:
+            if e.code in (403, 429):
+                raise RuntimeError(f"iClass answered {e.code} on {path} - stopping, never retrying past a block")
+            print(f"  [SETUP] HTTP {e.code}: POST {path}")
+            return None
+
 
 class HarSource:
     """Serves the same calls from Jayme's F12 recording. Sends nothing to iClass."""
 
     def __init__(self, har_files):
-        self.replies = {}
+        self.replies = {}       # (method, path) -> reply
         self.account = None
         self.recorded_at = None
         for f in har_files:
-            with open(f, encoding='utf-8') as fh:
-                entries = json.load(fh)['log']['entries']
-            for e in entries:
-                if e['request']['method'] != 'GET' or 'iclasspro.com/api/' not in e['request']['url']:
+            for method, url, status, text, started, headers in self._entries(f):
+                if method not in ('GET', 'POST') or 'iclasspro.com/api/' not in url:
                     continue
-                path = e['request']['url'].split('iclasspro.com', 1)[1].split('?')[0]
-                if not _allowed(path):
+                path = url.split('iclasspro.com', 1)[1].split('?')[0]
+                if not _allowed(path, method):
                     continue
-                text = (e['response'].get('content') or {}).get('text')
-                if e['response']['status'] != 200 or not text:
+                if status != 200 or not text:
                     continue
                 try:
-                    self.replies[path] = json.loads(text)
+                    self.replies[(method, path)] = json.loads(text)
                 except ValueError:
                     continue
-                if not self.recorded_at or e['startedDateTime'] > self.recorded_at:
-                    self.recorded_at = e['startedDateTime']
-                for h in e['request']['headers']:
-                    if h['name'].lower() == 'x-icp-account':
-                        self.account = h['value']
+                if started and (not self.recorded_at or started > self.recorded_at):
+                    self.recorded_at = started
+                for name, value in headers.items():
+                    if name.lower() == 'x-icp-account':
+                        self.account = value
+
+    @staticmethod
+    def _entries(f):
+        """(method, url, status, reply text, started, request headers) from a .har file or from the
+        network recorder's .capture.jsonl (one JSON record per line: request records + body records)."""
+        import base64
+        if f.lower().endswith('.jsonl'):
+            reqs, bodies = {}, {}
+            with open(f, encoding='utf-8') as fh:
+                for line in fh:
+                    try:
+                        o = json.loads(line)
+                    except ValueError:
+                        continue
+                    v = o.get('value') or {}
+                    if o.get('type') == 'request':
+                        reqs[v.get('key')] = v
+                    elif o.get('type') == 'body':
+                        b = v.get('body') or ''
+                        bodies[v.get('key')] = base64.b64decode(b).decode('utf-8', 'replace') if v.get('base64Encoded') else b
+            for k, v in reqs.items():
+                r = v.get('request') or {}
+                yield (r.get('method'), r.get('url') or '', (v.get('response') or {}).get('status'),
+                       bodies.get(k), v.get('startedAt'), r.get('headers') or {})
+            return
+        with open(f, encoding='utf-8') as fh:
+            entries = json.load(fh)['log']['entries']
+        for e in entries:
+            yield (e['request']['method'], e['request']['url'], e['response']['status'],
+                   (e['response'].get('content') or {}).get('text'), e['startedDateTime'],
+                   {h['name']: h['value'] for h in e['request']['headers']})
 
     def sign_in(self):
         return True, 'recording'
@@ -164,7 +223,13 @@ class HarSource:
     def get(self, path):
         if not _allowed(path):
             raise RuntimeError(f"refused: {path} is not on the read-only list")
-        return self.replies.get(path)
+        return self.replies.get(('GET', path))
+
+    def post(self, path, body):
+        # A recording holds the search for the dates Jayme looked at, whatever dates are asked for here.
+        if not _allowed(path, 'POST'):
+            raise RuntimeError(f"refused: POST {path} is not on the read-only search list")
+        return self.replies.get(('POST', path))
 
 
 def collect(source, slug, today=None):
@@ -198,6 +263,53 @@ def collect(source, slug, today=None):
     return {'price_tables': tables, 'camps': camps, 'camps_listed': len(listing),
             'listed_ids': [c['id'] for c in listing], 'camps_kept': len(keep), 'camps_missing': missing,
             'settings': settings, 'settings_missing': settings_missing}, None
+
+
+# Sign-up lists inside an appointment reply. They name children, and these tables are readable by the app's
+# public key - so they are taken out before saving and counted instead. Everything else is stored whole.
+APPOINTMENT_PEOPLE_KEYS = ('bookings', 'bookingTimeslots', 'attendances', 'tempBookings')
+APPOINTMENT_DAYS_AHEAD = 400   # how far ahead the time-slot search looks (a bit over a year)
+
+
+def collect_appointments(source, today=None):
+    """Every appointment with a time slot from today on (hidden ones too), its whole setup, and every
+    appointment price table. Returns (result, None) or (None, why it was not read)."""
+    from datetime import timedelta
+    start = today or date.today()
+    end = start + timedelta(days=APPOINTMENT_DAYS_AHEAD)
+    tables = (source.get('/api/v1/appointment-pricing-schedules/') or {}).get('data')
+    if tables is None:
+        return None, 'the appointment price tables did not answer'
+    ids, page, last = [], 1, 1
+    while page <= last and page <= 200:
+        reply = source.post('/api/v1/appointment-timeslots/filtered', {'filters': {
+            'searchString': '', 'startDate': start.isoformat(), 'endDate': end.isoformat(),
+            'startTime': '', 'endTime': '', 'booked': None, 'inSession': None, 'recurring': None,
+            'checkedIn': None, 'group': None, 'zones': [], 'programs': [], 'services': [], 'days': [],
+            'instructors': [], 'genders': [], 'keywords': [], 'startAge': None, 'endAge': None,
+            'onlineSettings': [], 'bookingId': None, 'smartFilterId': None,
+            'page': page, 'pageSize': 50, 'sortType': '', 'sortReverse': False}})
+        data = (reply or {}).get('data')
+        if data is None:
+            return None, f'the appointment time-slot search did not answer (page {page})'
+        for o in data.get('objects') or []:
+            if o.get('appointmentId') and o['appointmentId'] not in ids:
+                ids.append(o['appointmentId'])
+        last = int(data.get('lastPage') or 1)
+        page += 1
+    appts, missing = [], []
+    for appt_id in ids:
+        detail = (source.get(f'/api/v1/appointments/{appt_id}') or {}).get('data')
+        if not detail:
+            missing.append(appt_id)
+            continue
+        bookings = detail.get('bookings') or []
+        summary = {'listed': len(bookings), 'not_cancelled': sum(1 for b in bookings if not b.get('cancelledAt'))}
+        raw = {k: v for k, v in detail.items() if k not in APPOINTMENT_PEOPLE_KEYS}
+        appts.append({'appointment_id': appt_id, 'raw': raw, 'bookings_summary': summary})
+    settings = source.get('/api/v1/appointments-settings')
+    return {'appointments': appts, 'appointment_ids': ids, 'appointments_missing': missing,
+            'appointment_price_tables': tables, 'appointments_settings': settings}, None
 
 
 # ---------------------------------------------------------------- Supabase
@@ -236,6 +348,10 @@ def finish_read(read_id, status, note, result=None):
     if result:
         patch.update({'camps_listed': result.get('camps_listed'), 'camps_read': len(result.get('camps', [])),
                       'price_tables_read': len(result['price_tables'])})
+        appt = result.get('appointment_read')
+        if appt:
+            patch.update({'appointments_read': len(appt['appointments']),
+                          'appointment_price_tables_read': len(appt['appointment_price_tables'])})
     _sb('PATCH', f'iclass_setup_reads?id=eq.{read_id}', patch)
 
 
@@ -282,6 +398,42 @@ def save_prices(gym_id, tables, read_at):
                      f'&gone_from_iclass_at=is.null', {'gone_from_iclass_at': read_at})
 
 
+def save_appointments(gym_id, appt, read_at):
+    """Upsert every appointment + appointment price table. Never deletes: an appointment keeps its last read
+    after its last time slot passes; a price table iClass stopped listing gets gone_from_iclass_at."""
+    rows = [{'gym_id': gym_id, 'appointment_id': a['appointment_id'], 'raw': a['raw'],
+             'bookings_summary': a['bookings_summary'], 'read_at': read_at} for a in appt['appointments']]
+    for i in range(0, len(rows), 100):
+        _sb('POST', 'iclass_appointment_setup?on_conflict=gym_id,appointment_id', rows[i:i + 100],
+            prefer='resolution=merge-duplicates')
+    tables = [{'gym_id': gym_id, 'price_table_id': t['id'], 'name': t.get('name'), 'raw': t, 'read_at': read_at,
+               'gone_from_iclass_at': None} for t in appt['appointment_price_tables']]
+    for i in range(0, len(tables), 200):
+        _sb('POST', 'iclass_appointment_price_tables?on_conflict=gym_id,price_table_id', tables[i:i + 200],
+            prefer='resolution=merge-duplicates')
+    # An empty list is treated as "nothing to mark", never as "every price table is gone".
+    if tables:
+        ids = ','.join(str(t['price_table_id']) for t in tables)
+        _sb('PATCH', f'iclass_appointment_price_tables?gym_id=eq.{gym_id}&price_table_id=not.in.({ids})'
+                     f'&gone_from_iclass_at=is.null', {'gone_from_iclass_at': read_at})
+    if appt.get('appointments_settings') is not None:
+        _sb('POST', 'iclass_gym_settings?on_conflict=gym_id,setting_key',
+            [{'gym_id': gym_id, 'setting_key': 'appointments-settings', 'raw': appt['appointments_settings'],
+              'read_at': read_at}], prefer='resolution=merge-duplicates')
+
+
+def read_appointments(source):
+    """The appointment part of a read. It runs AFTER the camps and never stops them: a problem here is
+    returned as words for the read's note, and the camps are still saved."""
+    try:
+        appt, err = collect_appointments(source)
+    except RuntimeError as e:
+        return None, f'appointments STOPPED - {e}'
+    if err:
+        return None, f'appointments NOT READ - {err}'
+    return appt, None
+
+
 def fetch_gyms():
     rows = _sb('GET', 'gyms?select=id,iclass_slug&order=id') or []
     return {r['id']: r['iclass_slug'] for r in rows if r.get('iclass_slug')}
@@ -317,6 +469,10 @@ def run_gym(gym_id, slug, source, do_save, what='full', note_prefix=''):
             return done('ok', f'{len(tables)} price tables, {boxes} price boxes', {'price_tables': tables},
                         note='price tables only')
         result, err = collect(source, slug)
+        if not err:
+            appt, appt_err = read_appointments(source)
+            result['appointment_read'] = appt
+            result['appointment_error'] = appt_err
     except RuntimeError as e:
         return done('stopped', f'STOPPED - {e}')
     if err:
@@ -328,12 +484,25 @@ def run_gym(gym_id, slug, source, do_save, what='full', note_prefix=''):
             f"{len(result['price_tables'])} price tables, "
             f"{len(result['settings'])} of {len(GYM_SETTINGS_CALLS)} gym settings"
             + (f" (not read: {', '.join(result['settings_missing'])})" if result['settings_missing'] else ''))
+    appt = result.get('appointment_read')
+    if appt:
+        said += (f"; {len(appt['appointments'])} appointments read"
+                 + (f", {len(appt['appointments_missing'])} did not answer" if appt['appointments_missing'] else '')
+                 + f", {len(appt['appointment_price_tables'])} appointment price tables")
+    else:
+        said += f"; {result.get('appointment_error')}"
     if do_save:
         save(gym_id, result, read_at)
+        if appt:
+            save_appointments(gym_id, appt, read_at)
     note = (f"{len(result['camps_missing'])} camps did not answer: {result['camps_missing'][:20]}"
             if result['camps_missing'] else 'every camp answered')
     if result['settings_missing']:
         note += '; gym settings not read: ' + ', '.join(result['settings_missing'])
+    if appt and appt['appointments_missing']:
+        note += f"; {len(appt['appointments_missing'])} appointments did not answer: {appt['appointments_missing'][:20]}"
+    elif not appt:
+        note += '; ' + (result.get('appointment_error') or 'appointments not read')
     return done('ok' if not result['camps_missing'] else 'stopped', said, result, note=note)
 
 

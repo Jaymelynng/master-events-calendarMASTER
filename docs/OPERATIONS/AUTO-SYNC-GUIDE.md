@@ -143,6 +143,7 @@ As soon as a gym's events are imported (single-gym Import, or each gym inside **
 - Each gym shows a chip beside its name: **⏳ waiting its turn → 🔄 reading now → ✅ N camps read**, or **❌** with the reason (no login saved in Railway, sign-in failed, cut off). The chip reads the `iclass_setup_reads` row Railway writes — never a guess.
 - A read cut off by a Railway restart (a deploy) is marked **stopped** when the server starts again, so no gym shows "reading" forever. Sync that gym again to re-read it.
 - The camp side panel and the camp bars' per-day spots come from this read.
+- **Appointments too (Nov 7 2026):** after the camps, the same read finds every appointment from today on (Planet's Open Gym / KNO / tryouts are appointments) and saves each one's setup and the appointment price tables. A problem in the appointment part never stops the camps: it is written in the read's note ("appointments NOT READ - why"). The appointment side panel shows its price table. Contract: `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md` top section.
 
 ---
 
