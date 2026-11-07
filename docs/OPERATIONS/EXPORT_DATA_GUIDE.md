@@ -9,12 +9,13 @@ Rebuilt 2026-11-07. Jayme: *"the export needs to be totally redone to include ev
 
 ## How to use it
 
+One screen, worked top to bottom, left to right (layout from Jayme's multi-view blueprint; look from her CORE visual philosophy: dark shell, white container floating on it, the calendar's own rose as the one accent):
+
 1. Calendar → **📤 Export**.
-2. **Dates** (top): This month · Next month · Today on · Entire database (first to last event date in the database) · or type From / To. Every event that *touches* the dates is in - a camp that starts before the From date and runs into it counts.
-3. **🏢 Gyms** and **🎯 Buckets** (left): all ticked; tap to drop. Gym colors come from the gyms table. A red * = the bucket has a monthly requirement.
-4. **📦 What to include** (middle): tick any sections. Each card shows how many rows it will have. **Quick pick** sets sections + columns in one tap (Everything · Spots check · Prices · Live on the portal? · Monthly requirements · Audit); change anything after.
-5. **🧩 Event columns** (right): the columns of the Events section, in groups; tap to drop, or "all / none" per group.
-6. **Bottom bar:** "Will include:" says exactly what will come out. Pick **CSV** (Excel, Sheets) · **JSON** (backup) · **Printable page** (opens in a new tab - print or save there). Then **📋 Copy** or **⬇️ Download**.
+2. **Top bar:** dates - This month · Next month · Today on · Entire database (first to last event date in the database) · or type From / To. Every event that *touches* the dates is in. Under it, **1** the gyms (one row, logo + code, all on; tap to drop) and the buckets (* = has a monthly requirement).
+3. **Left rail - 2 What to include:** tick any sections; each shows its row count. Click a section's name to see it in the preview. **Quick pick** sets sections + columns in one tap (Everything · Spots check · Prices · Live on the portal? · Monthly requirements · Audit).
+4. **Right - live preview:** the section you clicked, exactly as it will download / copy (first 150 rows on screen; the file and the copy have them all). For Events, the column groups sit above the table as tabs; tap a column to drop or add it, or click **×** on a column header.
+5. **Bottom bar:** "You get:" lists every ticked section and its rows. Pick **CSV** (Excel, Sheets) · **JSON** (backup) · **Printable page** (opens in a new tab - print or save there). Then **Copy** or **Download**.
 
 **Copy and Download give the same thing.** Copy puts every ticked section on the clipboard: tables (each under its title) for Gmail / Outlook / Docs, cells for Sheets / Excel (a blank row between sections).
 

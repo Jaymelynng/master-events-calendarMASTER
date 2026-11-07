@@ -55,6 +55,8 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
   const [includeNotLive, setIncludeNotLive] = useState(false);
   const [format, setFormat] = useState('csv');
   const [note, setNote] = useState('');
+  const [previewKey, setPreviewKey] = useState(() => load('export_sections', ['events'])[0] || 'events');   // the section shown in the preview
+  const [colGroup, setColGroup] = useState(COLUMN_GROUPS[0]);
 
   useEffect(() => {
     supabase.from('event_types').select('name').order('name').then(({ data }) => {
@@ -241,197 +243,261 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
   }, [onClose]);
 
   // ---------------------------------------------------------------- screen
-  const chip = (on) => `text-sm font-semibold px-3 py-1.5 rounded-full border-2 transition-colors cursor-pointer ${on ? 'bg-gray-900 border-gray-900 text-white hover:bg-gray-700' : 'bg-white border-gray-300 text-gray-800 hover:border-gray-500'}`;
-  const smallBtn = 'text-xs font-bold px-2.5 py-1 rounded-md bg-white border border-gray-400 text-gray-800 hover:bg-gray-100 cursor-pointer';
-  const panel = 'bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden flex flex-col min-h-0';
-  const panelHead = 'px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-2';
+  // Workflow layout (Jayme's multi-view blueprint: one frame, steps on the left, the result beside them,
+  // one action bar): 1 Gyms & buckets -> 2 What to include -> live preview of exactly what will download /
+  // copy -> act. Look (CORE-VISUAL-DESIGN-PHILOSOPHY): dark shell, white container floating on it, recessed
+  // rail, the section being previewed lifts as a white card; one accent - the calendar's own rose.
+  const C = {
+    shell: '#2b2326', rail: '#f3ecec', card: '#ffffff', ink: '#1f1a1b', soft: '#4a3f42',
+    accent: '#7a4f57', accentHover: '#64404a', tint: '#f6e9eb', line: '#e2d6d8', head: '#3a2e31',
+  };
+  const lift = '0 8px 25px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.12)';
+  const float = '0 20px 60px rgba(0,0,0,.35), 0 8px 20px rgba(0,0,0,.25)';
+  const stepTitle = (n, text, extra) => (
+    <div className="flex items-center justify-between gap-2 mb-2">
+      <div className="flex items-center gap-2">
+        <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white" style={{ background: C.accent }}>{n}</span>
+        <span className="text-sm font-black uppercase tracking-wide" style={{ color: C.ink }}>{text}</span>
+      </div>
+      {extra}
+    </div>
+  );
+  const linkBtn = (label, onClick) => (
+    <button type="button" onClick={onClick} className="text-xs font-bold hover:underline cursor-pointer" style={{ color: C.accent }}>{label}</button>
+  );
+  const pill = (on) => ({
+    background: on ? C.accent : C.card, color: on ? '#fff' : C.ink,
+    border: `1.5px solid ${on ? C.accent : C.line}`, boxShadow: on ? '0 2px 6px rgba(122,79,87,.35)' : '0 1px 2px rgba(0,0,0,.06)',
+  });
+  const preview = tableOf(previewKey);
+  const PREVIEW_ROWS = 150;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-3 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-gray-100 rounded-2xl w-full max-w-7xl max-h-[96vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3" style={{ background: 'rgba(20,14,16,.72)' }} onClick={onClose}>
+      <div className="w-full h-full max-w-[1500px] max-h-[94vh] rounded-2xl overflow-hidden flex flex-col" style={{ background: C.shell, boxShadow: float }} onClick={(e) => e.stopPropagation()}>
 
-        {/* Header + dates */}
-        <div className="bg-white border-b border-gray-200 px-5 py-3 flex flex-wrap items-center gap-3">
-          <h2 className="text-xl font-bold text-gray-900 mr-2">📤 Export &amp; Copy</h2>
-          <div className="flex flex-wrap gap-1.5">
-            <button className={chip(false)} onClick={() => setRange(iso(new Date(today.getFullYear(), today.getMonth(), 1)), iso(new Date(today.getFullYear(), today.getMonth() + 1, 0)))}>This month</button>
-            <button className={chip(false)} onClick={() => setRange(iso(new Date(today.getFullYear(), today.getMonth() + 1, 1)), iso(new Date(today.getFullYear(), today.getMonth() + 2, 0)))}>Next month</button>
-            <button className={chip(false)} onClick={() => setRange(iso(today), dbRange?.last || iso(new Date(today.getFullYear() + 1, 11, 31)))}>Today on</button>
-            <button className={chip(false)} disabled={!dbRange} onClick={() => dbRange && setRange(dbRange.first, dbRange.last)}>Entire database</button>
-          </div>
-          <div className="flex items-center gap-1.5 text-sm text-gray-800">
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="px-2 py-1 border border-gray-400 rounded-md" />
-            <span>to</span>
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="px-2 py-1 border border-gray-400 rounded-md" />
-          </div>
-          <div className="ml-auto text-sm font-semibold text-gray-800">
-            {loadingEvents ? 'Loading events…' : `${events.length} events in these dates`}
-          </div>
-          <button onClick={onClose} className="text-gray-700 hover:text-black text-3xl leading-none w-9 h-9 rounded-full hover:bg-gray-100" aria-label="Close">×</button>
-        </div>
-
-        {/* Three panels: WHO · WHAT · COLUMNS */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1.25fr)]">
-
-          {/* WHO: gyms + buckets */}
-          <div className={panel}>
-            <div className={panelHead}>
-              <div>
-                <h3 className="font-bold text-gray-900">🏢 Gyms</h3>
-                <p className="text-xs text-gray-700">{selectedGyms.length} of {gyms.length}</p>
-              </div>
-              <div className="flex gap-1">
-                <button className={smallBtn} onClick={() => setSelectedGyms(gyms.map((g) => g.id))}>All</button>
-                <button className={smallBtn} onClick={() => setSelectedGyms([])}>None</button>
-              </div>
-            </div>
-            <div className="p-3 grid grid-cols-2 gap-2">
-              {gyms.map((g) => {
-                const on = selectedGyms.includes(g.id);
-                const color = (g.brand_colors && g.brand_colors[0]) || '#4b5563';
-                return (
-                  <button key={g.id} type="button" onClick={() => toggle(selectedGyms, setSelectedGyms, g.id)}
-                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-left cursor-pointer transition-all hover:shadow-md"
-                    style={{ border: `2px solid ${on ? color : '#d1d5db'}`, borderLeftWidth: 6, borderLeftColor: color, background: on ? `${color}18` : '#fff' }}>
-                    {g.logo_url
-                      ? <img src={g.logo_url} alt="" className="w-7 h-7 rounded-full object-cover border border-white shadow" />
-                      : <span className="w-7 h-7 rounded-full" style={{ background: color }} />}
-                    <span className="font-bold text-sm text-gray-900">{g.id}</span>
-                    <span className="ml-auto text-sm font-bold" style={{ color: on ? color : '#9ca3af' }}>{on ? '✓' : ''}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className={`${panelHead} border-t`}>
-              <div>
-                <h3 className="font-bold text-gray-900">🎯 Buckets</h3>
-                <p className="text-xs text-gray-700">{selectedTypes.length} of {eventTypes.length} · <span className="text-red-700 font-bold">*</span> has a monthly requirement</p>
-              </div>
-              <div className="flex gap-1">
-                <button className={smallBtn} onClick={() => setSelectedTypes([...eventTypes])}>All</button>
-                <button className={smallBtn} onClick={() => setSelectedTypes([])}>None</button>
-              </div>
-            </div>
-            <div className="p-3 flex flex-wrap gap-1.5">
-              {eventTypes.map((t) => (
-                <button key={t} type="button" className={chip(selectedTypes.includes(t))} onClick={() => toggle(selectedTypes, setSelectedTypes, t)}>
-                  {t}{requiredTypes.includes(t) && <span className={selectedTypes.includes(t) ? 'text-red-300' : 'text-red-700'}> *</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* WHAT: quick picks + sections */}
-          <div className={panel}>
-            <div className={panelHead}>
-              <div>
-                <h3 className="font-bold text-gray-900">📦 What to include</h3>
-                <p className="text-xs text-gray-700">Tick any. Download and Copy both give you exactly these.</p>
-              </div>
-            </div>
-            <div className="px-3 pt-3 flex flex-wrap gap-1.5">
-              <span className="text-xs font-bold text-gray-800 self-center mr-1">Quick pick:</span>
-              {QUICK_PICKS.map((q) => (
-                <button key={q.key} type="button" onClick={() => applyQuick(q)}
-                  className="text-xs font-bold px-2.5 py-1 rounded-md bg-indigo-700 text-white hover:bg-indigo-800 cursor-pointer shadow-sm">{q.label}</button>
-              ))}
-            </div>
-            <div className="p-3 space-y-2">
-              {visibleSections.map((s) => {
-                const on = sections.includes(s.key);
-                const t = tableOf(s.key);
-                const count = busy ? '…' : (t ? t.rows.length : 0);
-                return (
-                  <div key={s.key} className={`rounded-xl border-2 transition-colors ${on ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 bg-white hover:border-gray-400'}`}>
-                    <button type="button" onClick={() => toggle(sections, setSections, s.key)} className="w-full flex items-center gap-3 p-2.5 text-left cursor-pointer">
-                      <span className={`w-6 h-6 rounded-md flex items-center justify-center text-sm font-bold flex-shrink-0 ${on ? 'bg-indigo-600 text-white' : 'bg-white border-2 border-gray-400 text-transparent'}`}>✓</span>
-                      <span className="text-lg flex-shrink-0">{s.icon}</span>
-                      <span className="flex-1 min-w-0">
-                        <span className="block font-bold text-sm text-gray-900">{s.label}{s.admin && <span className="ml-2 text-[11px] font-bold bg-gray-800 text-white px-1.5 py-0.5 rounded">ADMIN</span>}</span>
-                        <span className="block text-xs text-gray-700">{s.desc}</span>
-                      </span>
-                      <span className={`text-sm font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${on ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-900'}`}>{count}</span>
-                    </button>
-                    {s.key === 'events' && (
-                      <label className="flex items-center gap-2 px-3 pb-2.5 -mt-1 text-sm text-gray-900 cursor-pointer">
-                        <input type="checkbox" checked={includeNotLive} onChange={(e) => setIncludeNotLive(e.target.checked)} className="w-4 h-4 accent-indigo-600" />
-                        <span>Also add camps built in iClass but <b>not live</b> on the portal yet
-                          {includeNotLive && notLiveRaw && <b> ({notLiveEvents.filter((e) => selectedTypes.includes(e.type)).length})</b>}</span>
-                      </label>
-                    )}
-                    {on && t?.note && !busy && <div className="px-3 pb-2.5 -mt-1 text-xs text-gray-800">{t.note}</div>}
-                  </div>
-                );
-              })}
-              {extrasState.error && <div className="text-sm font-bold text-red-700">iClass setup facts did not load: {extrasState.error}. Those columns will be blank.</div>}
-            </div>
-          </div>
-
-          {/* COLUMNS (Events section) */}
-          <div className={`${panel} ${sections.includes('events') ? '' : 'opacity-60'}`}>
-            <div className={panelHead}>
-              <div>
-                <h3 className="font-bold text-gray-900">🧩 Event columns</h3>
-                <p className="text-xs text-gray-700">{columnKeys.length} of {ALL_COLUMNS.length} · used by the Events section</p>
-              </div>
-              <div className="flex gap-1">
-                <button className={smallBtn} onClick={() => setDropped([])}>All</button>
-                <button className={smallBtn} onClick={() => setDropped([...ALL_COLUMNS])}>None</button>
-              </div>
-            </div>
-            <div className="p-3 space-y-3 overflow-y-auto">
-              {COLUMN_GROUPS.map((grp) => {
-                const cols = EVENT_COLUMNS.filter((c) => c.group === grp);
-                const allOn = cols.every((c) => !dropped.includes(c.key));
-                return (
-                  <div key={grp}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold uppercase tracking-wide text-gray-900">{grp}</span>
-                      <button className="text-xs font-bold text-indigo-800 hover:underline cursor-pointer"
-                        onClick={() => setDropped(allOn ? [...new Set([...dropped, ...cols.map((c) => c.key)])] : dropped.filter((k) => !cols.some((c) => c.key === k)))}>
-                        {allOn ? 'none' : 'all'}
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {cols.map((c) => {
-                        const on = !dropped.includes(c.key);
-                        return (
-                          <button key={c.key} type="button" onClick={() => toggle(dropped, setDropped, c.key)}
-                            className={`text-xs font-semibold px-2.5 py-1 rounded-full border-2 cursor-pointer transition-colors ${on ? 'bg-indigo-700 border-indigo-700 text-white hover:bg-indigo-800' : 'bg-white border-gray-300 text-gray-800 hover:border-gray-500'}`}>
-                            {on ? '✓ ' : ''}{c.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer: what will happen, format, Copy, Download */}
-        <div className="bg-white border-t border-gray-200 px-5 py-3 flex flex-wrap items-center gap-3">
-          <div className="flex-1 min-w-[240px] text-sm text-gray-900">
-            {busy ? <span className="font-semibold">Reading the data…</span>
-              : chosenTables.length === 0 ? <span className="font-semibold text-red-700">Tick at least one section.</span>
-                : <span><b>Will include:</b> {chosenTables.map((t) => `${t.title} ${t.rows.length}${t.key === 'events' ? ` rows × ${columnKeys.length} columns` : ''}`).join(' · ')}</span>}
-            {note && <div className="text-sm font-bold text-green-800 mt-0.5">{note}</div>}
-          </div>
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-            {[['csv', 'CSV (Excel, Sheets)'], ['json', 'JSON (backup)'], ['html', 'Printable page']].map(([k, label]) => (
-              <button key={k} type="button" onClick={() => setFormat(k)}
-                className={`text-sm font-semibold px-3 py-1.5 rounded-md cursor-pointer ${format === k ? 'bg-gray-900 text-white' : 'text-gray-900 hover:bg-white'}`}>{label}</button>
+        {/* Top bar - pinned: title + dates */}
+        <div className="relative flex flex-wrap items-center gap-3 pl-5 pr-14 py-3">
+          <h2 className="text-xl font-black text-white mr-3">Export &amp; Copy</h2>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[
+              ['This month', () => setRange(iso(new Date(today.getFullYear(), today.getMonth(), 1)), iso(new Date(today.getFullYear(), today.getMonth() + 1, 0)))],
+              ['Next month', () => setRange(iso(new Date(today.getFullYear(), today.getMonth() + 1, 1)), iso(new Date(today.getFullYear(), today.getMonth() + 2, 0)))],
+              ['Today on', () => setRange(iso(today), dbRange?.last || iso(new Date(today.getFullYear() + 1, 11, 31)))],
+              ['Entire database', () => dbRange && setRange(dbRange.first, dbRange.last)],
+            ].map(([label, fn]) => (
+              <button key={label} type="button" onClick={fn}
+                className="text-sm font-bold px-3 py-1.5 rounded-full bg-white hover:bg-[#f3ecec] cursor-pointer" style={{ color: C.ink, boxShadow: '0 2px 6px rgba(0,0,0,.3)' }}>{label}</button>
             ))}
           </div>
-          <button onClick={copy} disabled={!canGo}
-            title="Copies every section you ticked: tables for email / Docs, cells for Sheets / Excel"
-            className={`px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 ${canGo ? 'bg-indigo-700 hover:bg-indigo-800 text-white shadow-lg cursor-pointer' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}>
-            📋 Copy {busy ? '' : `${totalRows} rows`}
+          <div className="flex items-center gap-2 text-sm font-semibold text-white">
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="px-2 py-1.5 rounded-md bg-white" style={{ color: C.ink }} />
+            <span>to</span>
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="px-2 py-1.5 rounded-md bg-white" style={{ color: C.ink }} />
+          </div>
+          <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 w-9 h-9 rounded-full text-white text-2xl leading-none hover:bg-white/15 cursor-pointer">×</button>
+        </div>
+
+        {/* Step 1 on the shell: gyms, then buckets - one row each, all ticked, tap to drop */}
+        <div className="px-5 pb-3 space-y-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0" style={{ background: '#fff', color: C.ink }}>1</span>
+            {gyms.map((g) => {
+              const on = selectedGyms.includes(g.id);
+              const color = (g.brand_colors && g.brand_colors[0]) || C.soft;
+              return (
+                <button key={g.id} type="button" onClick={() => toggle(selectedGyms, setSelectedGyms, g.id)} title={g.name}
+                  className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full cursor-pointer transition-all"
+                  style={{ background: on ? '#fff' : 'rgba(255,255,255,.14)', boxShadow: on ? `0 0 0 2px ${color}, 0 3px 8px rgba(0,0,0,.35)` : 'none' }}>
+                  {g.logo_url ? <img src={g.logo_url} alt="" className="w-6 h-6 rounded-full object-cover bg-white" style={{ opacity: on ? 1 : 0.6 }} /> : <span className="w-6 h-6 rounded-full" style={{ background: color }} />}
+                  <span className="text-xs font-black" style={{ color: on ? C.ink : '#fff' }}>{g.id}</span>
+                </button>
+              );
+            })}
+            <span className="flex gap-3 ml-1">
+              <button type="button" onClick={() => setSelectedGyms(gyms.map((g) => g.id))} className="text-xs font-bold text-white underline cursor-pointer">All gyms</button>
+              <button type="button" onClick={() => setSelectedGyms([])} className="text-xs font-bold text-white underline cursor-pointer">None</button>
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 pl-[30px]">
+            {eventTypes.map((t) => {
+              const on = selectedTypes.includes(t);
+              return (
+                <button key={t} type="button" onClick={() => toggle(selectedTypes, setSelectedTypes, t)}
+                  className="text-xs font-bold px-2.5 py-1 rounded-full cursor-pointer"
+                  style={{ background: on ? '#fff' : 'rgba(255,255,255,.14)', color: on ? C.ink : '#fff', boxShadow: on ? '0 3px 8px rgba(0,0,0,.35)' : 'none' }}>
+                  {t}{requiredTypes.includes(t) ? ' *' : ''}
+                </button>
+              );
+            })}
+            <span className="text-xs font-semibold text-white ml-1">* has a monthly requirement</span>
+            <span className="flex gap-3 ml-1">
+              <button type="button" onClick={() => setSelectedTypes([...eventTypes])} className="text-xs font-bold text-white underline cursor-pointer">All buckets</button>
+              <button type="button" onClick={() => setSelectedTypes([])} className="text-xs font-bold text-white underline cursor-pointer">None</button>
+            </span>
+          </div>
+        </div>
+
+        {/* The container floats on the shell: steps rail | live preview */}
+        <div className="flex-1 min-h-0 mx-3 rounded-2xl overflow-hidden flex flex-col lg:flex-row" style={{ background: C.card, boxShadow: lift }}>
+
+          {/* Rail - recessed */}
+          <div className="lg:w-[300px] flex-shrink-0 overflow-y-auto p-4 space-y-5" style={{ background: C.rail, borderRight: `1px solid ${C.line}` }}>
+
+            {/* Step 2 - what */}
+            <div>
+              {stepTitle(2, 'What to include')}
+              <div className="flex flex-wrap gap-1 mb-2.5">
+                {QUICK_PICKS.map((q) => (
+                  <button key={q.key} type="button" onClick={() => { applyQuick(q); setPreviewKey(q.sections[0]); }}
+                    className="text-xs font-bold px-2 py-1 rounded-md cursor-pointer bg-white hover:bg-[#f6e9eb]" style={{ color: C.ink, border: `1px solid ${C.line}` }}>{q.label}</button>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                {visibleSections.map((s) => {
+                  const on = sections.includes(s.key);
+                  const showing = previewKey === s.key;
+                  const t = tableOf(s.key);
+                  return (
+                    <div key={s.key} className="rounded-xl transition-all"
+                      style={{ background: showing ? C.card : 'transparent', boxShadow: showing ? lift : 'none', borderLeft: `4px solid ${showing ? C.accent : 'transparent'}` }}>
+                      <div className="flex items-center gap-2.5 px-2.5 py-2">
+                        <button type="button" onClick={() => toggle(sections, setSections, s.key)} aria-label={`Include ${s.label}`}
+                          className="w-5 h-5 rounded flex items-center justify-center text-xs font-black flex-shrink-0 cursor-pointer"
+                          style={{ background: on ? C.accent : C.card, color: '#fff', border: `2px solid ${on ? C.accent : '#b9aaad'}` }}>{on ? '✓' : ''}</button>
+                        <button type="button" onClick={() => setPreviewKey(s.key)} className="flex-1 min-w-0 text-left cursor-pointer">
+                          <span className="block text-sm font-bold" style={{ color: C.ink }}>{s.label}{s.admin ? ' · admin' : ''}</span>
+                          {showing && <span className="block text-xs" style={{ color: C.soft }}>{s.desc}</span>}
+                        </button>
+                        <span className="text-xs font-black px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: on ? C.tint : '#e9e2e3', color: C.ink }}>{busy ? '…' : (t ? t.rows.length : 0)}</span>
+                      </div>
+                      {showing && s.key === 'events' && (
+                        <label className="flex items-start gap-2 px-3 pb-2.5 text-xs cursor-pointer" style={{ color: C.ink }}>
+                          <input type="checkbox" checked={includeNotLive} onChange={(e) => setIncludeNotLive(e.target.checked)} className="mt-0.5 w-4 h-4" style={{ accentColor: C.accent }} />
+                          <span>Add camps built in iClass but <b>not live</b> yet{includeNotLive && notLiveRaw ? ` (${notLiveEvents.filter((e) => selectedTypes.includes(e.type)).length})` : ''}</span>
+                        </label>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Live preview - exactly what will download / copy for the section picked on the left */}
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+            <div className="px-5 pt-4 pb-3" style={{ borderBottom: `1px solid ${C.line}` }}>
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h3 className="text-lg font-black" style={{ color: C.ink }}>{preview ? preview.title : 'Pick a section'}</h3>
+                {preview && <span className="text-sm font-semibold" style={{ color: C.soft }}>{busy ? 'reading…' : `${preview.rows.length} rows${previewKey === 'events' ? ` · ${columnKeys.length} columns` : ''}`}</span>}
+                {preview && !sections.includes(previewKey) && (
+                  <button type="button" onClick={() => toggle(sections, setSections, previewKey)}
+                    className="text-xs font-bold px-2.5 py-1 rounded-md text-white cursor-pointer" style={{ background: C.accent }}>+ Include this section</button>
+                )}
+              </div>
+              {preview?.note && !busy && <p className="text-sm mt-1" style={{ color: C.soft }}>{preview.note}</p>}
+              {extrasState.error && <p className="text-sm mt-1 font-bold" style={{ color: '#b91c1c' }}>iClass setup facts did not load ({extrasState.error}) - those columns are blank.</p>}
+
+              {/* Event columns - one group at a time; or click × on a column header in the preview */}
+              {previewKey === 'events' && (
+                <div className="mt-3">
+                  <div className="flex flex-wrap items-end gap-1">
+                    {COLUMN_GROUPS.map((grp) => {
+                      const cols = EVENT_COLUMNS.filter((c) => c.group === grp);
+                      const onCount = cols.filter((c) => !dropped.includes(c.key)).length;
+                      const active = colGroup === grp;
+                      return (
+                        <button key={grp} type="button" onClick={() => setColGroup(grp)}
+                          className="text-xs font-bold px-2.5 py-1.5 rounded-t-lg cursor-pointer"
+                          style={{ background: active ? C.tint : 'transparent', color: C.ink, borderBottom: `3px solid ${active ? C.accent : 'transparent'}` }}>
+                          {grp} <span style={{ color: C.soft }}>{onCount}/{cols.length}</span>
+                        </button>
+                      );
+                    })}
+                    <span className="ml-auto flex gap-3 pb-1.5">{linkBtn('All columns', () => setDropped([]))}{linkBtn('No columns', () => setDropped([...ALL_COLUMNS]))}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 p-2 rounded-b-lg" style={{ background: C.tint }}>
+                    {EVENT_COLUMNS.filter((c) => c.group === colGroup).map((c) => {
+                      const on = !dropped.includes(c.key);
+                      return (
+                        <button key={c.key} type="button" onClick={() => toggle(dropped, setDropped, c.key)}
+                          className="text-xs font-bold px-2.5 py-1 rounded-full cursor-pointer" style={pill(on)}>
+                          {on ? '✓ ' : '+ '}{c.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-auto">
+              {busy ? (
+                <div className="p-6 text-sm font-semibold" style={{ color: C.soft }}>Reading the data…</div>
+              ) : !preview ? null : preview.rows.length === 0 ? (
+                <div className="p-6 text-sm font-semibold" style={{ color: C.soft }}>Nothing for these dates, gyms and buckets.</div>
+              ) : (
+                <table className="min-w-full text-xs border-separate border-spacing-0">
+                  <thead className="sticky top-0 z-10">
+                    <tr>
+                      {preview.columns.map((c) => (
+                        <th key={c.key} className="text-left font-bold px-2.5 py-2 whitespace-nowrap" style={{ background: C.head, color: '#fff' }}>
+                          <span className="inline-flex items-center gap-1.5">
+                            {c.label}
+                            {previewKey === 'events' && (
+                              <button type="button" onClick={() => toggle(dropped, setDropped, c.key)} title="Drop this column"
+                                className="w-4 h-4 rounded-full text-[11px] leading-none bg-white/20 hover:bg-white/40 cursor-pointer">×</button>
+                            )}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.rows.slice(0, PREVIEW_ROWS).map((r, i) => (
+                      <tr key={i} style={{ background: i % 2 ? '#faf6f6' : '#fff' }}>
+                        {r.map((v, j) => (
+                          <td key={j} className="px-2.5 py-1.5 align-top" style={{ color: C.ink, borderBottom: `1px solid ${C.line}`, maxWidth: 320 }}>
+                            <div className="line-clamp-2">{preview.columns[j]?.key === 'link' && v ? <a href={v} target="_blank" rel="noreferrer" style={{ color: C.accent }} className="font-bold underline">Open</a> : String(v ?? '')}</div>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {!busy && preview && preview.rows.length > PREVIEW_ROWS && (
+                <div className="px-5 py-3 text-xs font-semibold" style={{ color: C.soft }}>Showing the first {PREVIEW_ROWS} of {preview.rows.length} rows here - Download and Copy include all {preview.rows.length}.</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Action bar - pinned */}
+        <div className="flex flex-wrap items-center gap-3 px-5 py-3">
+          <div className="flex-1 min-w-[260px] text-sm text-white">
+            {busy ? <b>Reading the data…</b>
+              : chosenTables.length === 0 ? <b>Tick at least one section on the left.</b>
+                : <span><b>You get:</b> {chosenTables.map((t) => `${t.title} (${t.rows.length})`).join(' · ')}</span>}
+            {note && <div className="font-bold mt-0.5" style={{ color: '#bff0cf' }}>{note}</div>}
+          </div>
+          <div className="flex items-center rounded-lg p-1" style={{ background: 'rgba(255,255,255,.12)' }}>
+            {[['csv', 'CSV'], ['json', 'JSON'], ['html', 'Printable page']].map(([k, label]) => (
+              <button key={k} type="button" onClick={() => setFormat(k)}
+                className="text-sm font-bold px-3 py-1.5 rounded-md cursor-pointer"
+                style={{ background: format === k ? '#fff' : 'transparent', color: format === k ? C.ink : '#fff' }}>{label}</button>
+            ))}
+          </div>
+          <button onClick={copy} disabled={!canGo} title="Copies every ticked section: tables for email / Docs, cells for Sheets / Excel"
+            className="px-5 py-2.5 rounded-lg font-black text-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ background: '#fff', color: C.ink, boxShadow: '0 4px 14px rgba(0,0,0,.35)' }}>
+            Copy {busy ? '' : `${totalRows} rows`}
           </button>
           <button onClick={download} disabled={!canGo}
-            className={`px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 ${canGo ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-lg cursor-pointer' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}>
-            {format === 'html' ? '🖨️ Open page' : `⬇️ Download ${format.toUpperCase()}`}
+            className="px-5 py-2.5 rounded-lg font-black text-sm text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ background: C.accent, boxShadow: '0 4px 14px rgba(0,0,0,.45)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = C.accentHover; }} onMouseLeave={(e) => { e.currentTarget.style.background = C.accent; }}>
+            {format === 'html' ? 'Open printable page' : `Download ${format.toUpperCase()}`}
           </button>
         </div>
       </div>
