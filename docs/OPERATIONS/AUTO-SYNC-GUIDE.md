@@ -145,6 +145,11 @@ As soon as a gym's events are imported (single-gym Import, or each gym inside **
 - The camp side panel and the camp bars' per-day spots come from this read.
 - **Appointments too (Nov 7 2026):** after the camps, the same read finds every appointment from today on (Planet's Open Gym / KNO / tryouts are appointments) and saves each one's setup and the appointment price tables. A problem in the appointment part never stops the camps: it is written in the read's note ("appointments NOT READ - why"). The appointment side panel shows its price table. Contract: `docs/OPERATIONS/PRICING_SOURCE_OF_TRUTH.md` top section.
 
+### Sync All Gyms: Copy results + the "Review Needed" stop (Nov 7 2026)
+
+- **📋 Copy results** (next to Done / Stop): copies every gym's result as plain text - status, events, new / updated / removed / now faded, the per-bucket counts, any failure or review reason, and the iClass setup chip - ready to paste into an email, a note or a sheet. Jayme: *"i want to be able to copy results so i can paste it faster"*. It copies what the panel shows at the moment of the click (the setup chips keep moving after the sync ends; copy again later for the final ones).
+- **Review Needed** stops a gym when more than 5 of its events would come off the calendar AND that is more than half of them. Since Nov 7 2026 it does **not** count events that iClass still has as an **active** camp the portal is hiding ("Show on portal" off, registration not open yet, or registration closed), read from the gym's last setup read by exact gym + camp id (`hiddenButActiveInIclass`, `src/lib/iclassCamp.js`). Those leave the live list and show **faded** on the calendar, so the gym reads e.g. "20 now faded (not on portal: "Show on portal" is off)". Why: SGT turned "Show on portal" off on its 20 summer 2027 before/after care weeks and Sync All stopped with "20 of 39 events would be deleted (51%)". An event with no stored camp record is not explained and still counts toward the stop.
+
 ---
 
 ## 📊 SYNC PROGRESS TRACKER

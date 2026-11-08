@@ -6,6 +6,7 @@ import { compareEvents } from '../../lib/eventComparison';
 import { supabase } from '../../lib/supabase';
 import DismissRuleModal from './DismissRuleModal';
 import SetupReadChip, { useSetupReadLine } from './SetupReadChip';
+import { hiddenButActiveInIclass } from '../../lib/iclassCamp';
 
 export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPatterns = [] }) {
   const [selectedGym, setSelectedGym] = useState('');
@@ -86,6 +87,80 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
   const eventTypes = typeRows.map(t => t.name);
   // Short label for a bucket = its display name from the same table.
   const typeLabel = (type) => typeRows.find(t => t.name === type)?.display_name || type;
+
+  // COPY RESULTS (Jayme 2026-11-07: "i want to be able to copy results so i can paste it faster").
+  // Plain text, one block per gym, built from exactly what the panel shows at the moment of the click.
+  const [copyState, setCopyState] = useState(null);
+  const buildSyncAllText = () => {
+    const p = syncAllProgress;
+    if (!p) return '';
+    const res = p.gymResults;
+    const done = res.filter(g => g.status === 'done');
+    const sum = (k) => done.reduce((s, g) => s + (g.summary?.[k] || 0), 0);
+    const faded = res.reduce((s, g) => s + (g.hiddenMoved || 0), 0);
+    const paused = res.filter(g => g.status === 'paused').length;
+    const errors = res.filter(g => g.status === 'error').length;
+    const when = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const head = [
+      `Sync All - ${when}${syncAllComplete ? '' : ' (still running)'}`,
+      [
+        `${done.length} of ${p.totalGyms} gyms synced`,
+        `${sum('eventsFound')} events`,
+        sum('new') ? `${sum('new')} new` : null,
+        sum('changed') ? `${sum('changed')} updated` : null,
+        sum('deleted') - faded > 0 ? `${sum('deleted') - faded} removed` : null,
+        faded ? `${faded} now faded (not on portal)` : null,
+        paused ? `${paused} need review` : null,
+        errors ? `${errors} had errors` : null,
+      ].filter(Boolean).join(' · '),
+    ];
+    const STATUS = { pending: 'Waiting', syncing: 'Syncing', importing: 'Importing', done: 'Done', error: 'ERROR', paused: 'REVIEW NEEDED' };
+    const blocks = res.map(g => {
+      const lines = [`${g.gymId} - ${g.gymName}: ${STATUS[g.status] || g.status}`];
+      const s = g.summary;
+      if (g.status === 'done' && s) {
+        const removed = s.deleted - (g.hiddenMoved || 0);
+        lines.push('  ' + [
+          `${s.eventsFound} events`,
+          s.new ? `${s.new} new` : null,
+          s.changed ? `${s.changed} updated` : null,
+          removed > 0 ? `${removed} removed` : null,
+          g.hiddenMoved ? `${g.hiddenMoved} now faded (${Object.entries(g.hiddenReasons || {}).map(([r, n]) => `${n}: ${r.split(' - ')[0]}`).join('; ')})` : null,
+          !s.new && !s.changed && !s.deleted ? 'no changes' : null,
+        ].filter(Boolean).join(' · '));
+      }
+      if (g.typeResults && Object.keys(g.typeResults).length) {
+        lines.push('  ' + Object.entries(g.typeResults)
+          .map(([t, r]) => `${typeLabel(t)} ${r.status === 'error' ? 'FAILED' : r.count}`).join(' · '));
+      }
+      if (s?.failedTypes) lines.push(`  Failed to sync: ${s.failedTypes.join(', ')}`);
+      if (g.paused && s?.pauseReason) lines.push(`  ${s.pauseReason} - sync this gym by itself to review`);
+      if (g.error) lines.push(`  Error: ${g.error}`);
+      const setup = setupLine.statusFor(g.gymId);
+      if (setup) lines.push(`  iClass setup: ${setup.text}`);
+      return lines.join('\n');
+    });
+    return [...head, '', ...blocks].join('\n');
+  };
+  const copySyncAllResults = async () => {
+    const text = buildSyncAllText();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyState('copied');
+    } catch (e) {
+      // Clipboard refused (browser setting): put the text in a box and select it so Ctrl+C works.
+      const box = document.createElement('textarea');
+      box.value = text;
+      box.style.position = 'fixed'; box.style.top = '0'; box.style.left = '0'; box.style.opacity = '0';
+      document.body.appendChild(box);
+      box.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+      document.body.removeChild(box);
+      setCopyState(ok ? 'copied' : 'failed');
+    }
+    setTimeout(() => setCopyState(null), 2500);
+  };
 
   // Get events with validation issues from the sync results
   const getEventsWithValidationIssues = () => {
@@ -349,19 +424,28 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
           fullSweep: checkedTypes.length === eventTypes.length
         });
 
-        // SAFETY CHECK: suspicious mass deletions
+        // SAFETY CHECK: suspicious mass deletions. Camps iClass still has as active but the portal hides
+        // (Show on portal off, registration not open / closed) are not counted: they leave the live list
+        // and show faded on the calendar. Only removals iClass can't explain can stop the sync.
         const deletedCount = comp.deleted.length;
         const activeCount = gymExisting.filter(e => !e.deleted_at).length;
-        const ratio = activeCount > 0 ? deletedCount / activeCount : 0;
+        let hiddenMap = new Map();
+        try { hiddenMap = await hiddenButActiveInIclass(comp.deleted); } catch (e) { hiddenMap = new Map(); }
+        const unexplained = deletedCount - hiddenMap.size;
+        const ratio = activeCount > 0 ? unexplained / activeCount : 0;
+        const hiddenReasons = {};
+        hiddenMap.forEach((r) => { hiddenReasons[r] = (hiddenReasons[r] || 0) + 1; });
+        gymResults[i].hiddenMoved = hiddenMap.size;
+        gymResults[i].hiddenReasons = hiddenReasons;
 
-        if (deletedCount > 5 && ratio > 0.5) {
+        if (unexplained > 5 && ratio > 0.5) {
           gymResults[i].status = 'paused';
           gymResults[i].paused = true;
           gymResults[i].summary = {
             eventsFound: allIncoming.length, new: comp.new.length,
             changed: comp.changed.length, deleted: deletedCount,
             unchanged: comp.unchanged.length,
-            pauseReason: `${deletedCount} of ${activeCount} events would be deleted (${Math.round(ratio * 100)}%)`
+            pauseReason: `${unexplained} of ${activeCount} events would be deleted (${Math.round(ratio * 100)}%) and iClass doesn't show them as hidden`
           };
           setSyncAllProgress(prev => ({ ...prev, gymResults: [...gymResults] }));
           return;
@@ -1173,7 +1257,12 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                         <span>{gym.summary.eventsFound} events</span>
                         {gym.summary.new > 0 && <span className="text-green-700 font-medium">+{gym.summary.new} new</span>}
                         {gym.summary.changed > 0 && <span className="text-blue-700 font-medium">{gym.summary.changed} updated</span>}
-                        {gym.summary.deleted > 0 && <span className="text-red-700 font-medium">{gym.summary.deleted} removed</span>}
+                        {gym.summary.deleted - (gym.hiddenMoved || 0) > 0 && <span className="text-red-700 font-medium">{gym.summary.deleted - (gym.hiddenMoved || 0)} removed</span>}
+                        {gym.hiddenMoved > 0 && (
+                          <span className="text-slate-700 font-medium" title={Object.entries(gym.hiddenReasons || {}).map(([r, n]) => `${n}: ${r}`).join('\n')}>
+                            {gym.hiddenMoved} now faded (not on portal: {Object.keys(gym.hiddenReasons || {}).map(r => r.split(' - ')[0]).join('; ')})
+                          </span>
+                        )}
                         {gym.summary.new === 0 && gym.summary.changed === 0 && gym.summary.deleted === 0 && (
                           <span className="text-gray-400">No changes</span>
                         )}
@@ -1243,6 +1332,13 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
 
             {/* Action buttons */}
             <div className="flex gap-3">
+              <button
+                onClick={() => copySyncAllResults()}
+                className="px-4 py-3 bg-white text-purple-800 border-2 border-purple-300 rounded-lg font-bold hover:bg-purple-50 transition-colors cursor-pointer"
+                title="Copies every gym's result as text - paste it into an email, a note or a sheet"
+              >
+                {copyState === 'copied' ? '✅ Copied' : copyState === 'failed' ? '❌ The browser blocked copying' :'📋 Copy results'}
+              </button>
               {syncAllComplete ? (
                 <button
                   onClick={() => { setSyncAllMode(false); setSyncAllProgress(null); setSyncAllComplete(false); }}

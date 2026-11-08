@@ -63,6 +63,47 @@ export function notLiveReasons(r, today = new Date()) {
   return out;
 }
 
+// Of the events a sync is about to take off the calendar, which ones iClass itself still has as an ACTIVE camp
+// that the portal is not showing (Show on portal off / registration not open / closed)? Those are not lost:
+// the calendar draws them faded the moment they leave the events list. Jayme 2026-11-07, SGT turned
+// "Show on portal" off on 20 summer care weeks and Sync All stopped with "20 of 39 would be deleted".
+// Read by exact gym + camp id from the last setup read; an event with no stored camp record is NOT explained.
+// Returns Map eventId -> the reason in iClass's own settings.
+export async function hiddenButActiveInIclass(events) {
+  const out = new Map();
+  const withIds = (events || []).map((e) => ({ e, id: iclassCampId(e) })).filter((x) => x.id);
+  if (!withIds.length) return out;
+  const gyms = [...new Set(withIds.map((x) => x.e.gym_id))];
+  const ids = [...new Set(withIds.map((x) => x.id))];
+  const audit = new Map();
+  const active = new Set();
+  for (let i = 0; i < ids.length; i += 300) {
+    const part = ids.slice(i, i + 300);
+    const [a, s] = await Promise.all([
+      supabase.from('iclass_camp_audit')
+        .select('gym_id, camp_id, registration_start, registration_end, show_on_web')
+        .in('gym_id', gyms).in('camp_id', part).is('gone_from_iclass_at', null)
+        .order('gym_id').order('camp_id').range(0, 999),
+      supabase.from('iclass_camp_setup')
+        .select('gym_id, camp_id, active:raw->>active')
+        .in('gym_id', gyms).in('camp_id', part).is('gone_from_iclass_at', null)
+        .order('gym_id').order('camp_id').range(0, 999),
+    ]);
+    if (a.error) throw new Error(a.error.message);
+    if (s.error) throw new Error(s.error.message);
+    (a.data || []).forEach((r) => audit.set(`${r.gym_id}:${r.camp_id}`, r));
+    (s.data || []).forEach((r) => { if (String(r.active) === '1') active.add(`${r.gym_id}:${r.camp_id}`); });
+  }
+  withIds.forEach(({ e, id }) => {
+    const k = `${e.gym_id}:${id}`;
+    const row = audit.get(k);
+    if (!row || !active.has(k)) return;
+    const reasons = notLiveReasons(row).filter((r) => !r.startsWith('On the portal'));
+    if (reasons.length) out.set(e.id, reasons[0]);
+  });
+  return out;
+}
+
 // Camps built in iClass that the portal does NOT show (see notLiveReasons). The calendar draws them faded
 // with a "NOT ON PORTAL" tag (Jayme 2026-11-04: "show it but make it a diff color or transparent to show that
 // it's there but not on portal"). They are never in the events table, so no count, requirement, email or error
