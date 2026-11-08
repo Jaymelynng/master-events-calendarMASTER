@@ -1,24 +1,30 @@
 // ============================================================================
-// EXPORT & COPY - pick the dates, gyms, buckets, sections and columns; then Download OR Copy the same thing
+// EXPORT & COPY - 1 Filter -> 2 See it -> 3 Take it (Copy or Download the same thing)
 // ============================================================================
 // Rebuilt 2026-11-07. Jayme: "the export needs to be totally redone to include everything we have just done
 // and also i want the option that whatever is chosen to download can also be bulk copied".
+// Redone again the same night. Jayme: "its flat its like a spreadsheet with zero filters for programs - so many
+// words zero visual communication everything's off center ... there's no way i can export school year camps
+// only? or specific programs?"
 //
-// - Every section is built once (src/lib/exportData.js) and the same tables go to the CSV / JSON file, the
-//   printable page and the clipboard, so a download and a copy can never disagree.
-// - The data behind every section is read as soon as the filters change, so Copy writes to the clipboard
-//   right on the click (browsers refuse a clipboard write that comes too long after it).
-// - Nothing typed: buckets from event_types, requirements from monthly_requirements, gym colors from
-//   gyms.brand_colors, prices from the signed-in iClass price tables. Before this rebuild the window had a
-//   typed gym-color list (AGA instead of AAG, MGC's old color, no EAG), typed requirement fallbacks
-//   (1 / 2 / 1) and a "SPECIAL EVENT" count for a bucket that no longer exists.
-// - Your picks (sections, dropped columns) are remembered on this computer.
+// - FILTER (left): every way the data can be sliced, each with live counts that follow the other filters:
+//   gyms, bucket, iClass Event Type (search "school" -> "Only these" ticks every school-year type at every gym),
+//   iClass Program, spots, live on the portal or not. Every value comes from the data - nothing typed here.
+// - SEE IT (middle): the count, the filters in play as chips, then the events as cards grouped by gym in the
+//   gym's own colors. "Columns" shows exactly what the file / copy will hold. The other sections are tabs.
+// - TAKE IT (right): the columns, the format, Copy, Download.
+// - Every section is built once (src/lib/exportData.js); the CSV / JSON file, the printable page and the
+//   clipboard all get the same tables. The data is read as soon as the filters change, so Copy writes to the
+//   clipboard on the click (browsers refuse a clipboard write that comes too long after it).
 // ============================================================================
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { isErrorAcknowledgedAnywhere } from '../../lib/validationHelpers';
 import { eventsApi } from '../../lib/api';
-import { EVENT_COLUMNS, COLUMN_GROUPS } from '../../lib/eventRow';
+import {
+  EVENT_COLUMNS, COLUMN_GROUPS, DEFAULT_COPY_COLUMNS, setupOf, spotsOf, statusOf,
+  eventTypeOf, programOf, hoursOf, agesOf, sortEvents,
+} from '../../lib/eventRow';
 import { fetchNotLiveRows, toNotLiveEvents } from '../../lib/iclassCamp';
 import {
   SECTIONS, buildSections, fetchExportExtras, fetchSetupReads,
@@ -29,55 +35,88 @@ import { getErrorLabel } from './constants';
 
 const ALL_COLUMNS = EVENT_COLUMNS.map((c) => c.key);
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const ymd = (v) => (v ? String(v).split('T')[0] : '');
 const mdyShort = (s) => { const [y, m, d] = s.split('-').map(Number); return `${m}/${d}/${y}`; };
+const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 const load = (key, fallback) => { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v ?? fallback; } catch (e) { return fallback; } };
 const save = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { /* private mode */ } };
 
-// One-tap starting points. Each sets the sections and the event columns; change anything after.
-const QUICK_PICKS = [
-  { key: 'everything', label: 'Everything', sections: ['events', 'price_tables', 'requirements', 'audit', 'dismissed', 'setup_reads'], columns: ALL_COLUMNS },
-  { key: 'spots', label: 'Spots check', sections: ['events'], columns: ['gym', 'gym_name', 'bucket', 'title', 'start', 'end', 'spots', 'spots_by_day', 'status', 'max_kids', 'signup', 'reg_open', 'reg_close', 'link'] },
-  { key: 'prices', label: 'Prices', sections: ['events', 'price_tables'], columns: ['gym', 'gym_name', 'bucket', 'title', 'start', 'end', 'category', 'price_table', 'prices', 'due_at_signup', 'link'] },
-  { key: 'live', label: 'Live on the portal?', sections: ['events'], columns: ['gym', 'gym_name', 'bucket', 'title', 'start', 'end', 'live', 'why_not_live', 'show_on_web', 'registration_on', 'reg_open', 'reg_close', 'link'], notLive: true },
-  { key: 'requirements', label: 'Monthly requirements', sections: ['requirements'], columns: null },
-  { key: 'audit', label: 'Audit', sections: ['audit', 'dismissed', 'setup_reads'], columns: null },
+// Column sets: one tap sets the Events columns; change any column after.
+const COLUMN_SETS = [
+  { key: 'basics', label: 'Basics', columns: DEFAULT_COPY_COLUMNS },
+  { key: 'spots', label: 'Spots', columns: ['gym', 'bucket', 'title', 'start', 'end', 'spots', 'spots_by_day', 'status', 'max_kids', 'signup', 'reg_open', 'reg_close', 'link'] },
+  { key: 'prices', label: 'Prices', columns: ['gym', 'bucket', 'title', 'start', 'end', 'category', 'price_table', 'prices', 'due_at_signup', 'link'] },
+  { key: 'live', label: 'Live?', columns: ['gym', 'bucket', 'title', 'start', 'end', 'live', 'why_not_live', 'show_on_web', 'registration_on', 'reg_open', 'reg_close', 'link'] },
+  { key: 'iclass', label: 'iClass setup', columns: ['gym', 'bucket', 'title', 'start', 'end', 'category', 'program', 'charge_category', 'price_table', 'setup_read', 'link'] },
+  { key: 'all', label: 'Everything', columns: ALL_COLUMNS },
 ];
+
+// Readable text on any gym color: near-black on light fills, white on dark ones.
+const inkOn = (hex) => {
+  const h = String(hex || '').replace('#', '');
+  if (h.length !== 6) return '#fff';
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45 ? '#1f1a1b' : '#fff';
+};
+
+// The look (CORE-VISUAL-DESIGN-PHILOSOPHY): dark shell -> white container floating on it -> recessed side
+// columns -> lifted white cards. One accent: the calendar's own rose.
+const C = {
+  shell: '#2b2326', page: '#ffffff', side: '#f1e9ea', card: '#ffffff', ink: '#1f1a1b', soft: '#5a4d50',
+  accent: '#7a4f57', accentHover: '#64404a', tint: '#f6e9eb', line: '#e4d8da', head: '#3a2e31',
+  open: '#166534', openBg: '#dcfce7', almost: '#92400e', almostBg: '#fef3c7', full: '#991b1b', fullBg: '#fee2e2',
+};
+const LIFT = '0 6px 18px rgba(0,0,0,.10), 0 2px 5px rgba(0,0,0,.08)';
+const FLOAT = '0 20px 60px rgba(0,0,0,.35), 0 8px 20px rgba(0,0,0,.25)';
+const SPOT_STYLE = {
+  Open: { bg: C.openBg, fg: C.open },
+  'Almost full': { bg: C.almostBg, fg: C.almost },
+  FULL: { bg: C.fullBg, fg: C.full },
+  'No count': { bg: '#ece6e7', fg: C.soft },
+};
+
+// The filters. value(e, x) = the event's value for that filter; x = { extras, dayCounts }.
+const FACETS = [
+  { key: 'gym', label: 'Gyms', value: (e) => e.gym_id },
+  { key: 'bucket', label: 'Bucket', value: (e) => e.type || '(none)' },
+  { key: 'etype', label: 'iClass Event Type', search: true, value: (e, x) => eventTypeOf(e, x.extras) || '(not read)' },
+  { key: 'program', label: 'iClass Program', search: true, value: (e, x) => programOf(e, x.extras) || '(no program)' },
+  { key: 'spots', label: 'Spots', value: (e, x) => statusOf(e, x.dayCounts) || 'No count' },
+  { key: 'live', label: 'Live on the portal', value: (e) => (e.not_on_portal ? 'Not live yet' : 'Live') },
+];
+const NO_FILTER = { gym: null, bucket: null, etype: null, program: null, spots: null, live: ['Live'] };
 
 export default function ExportModal({ onClose, gyms, monthlyRequirements, currentMonth, currentYear, acknowledgedPatterns = [] }) {
   // ---------------------------------------------------------------- picks
   const [startDate, setStartDate] = useState(iso(new Date(currentYear, currentMonth, 1)));
   const [endDate, setEndDate] = useState(iso(new Date(currentYear, currentMonth + 1, 0)));
-  const [selectedGyms, setSelectedGyms] = useState(gyms.map((g) => g.id));
-  const [eventTypes, setEventTypes] = useState([]);
-  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [filters, setFilters] = useState(NO_FILTER);   // facet key -> null (everything) or the values kept
+  const [search, setSearch] = useState('');             // words in the event name
+  const [facetSearch, setFacetSearch] = useState({});   // facet key -> typed words
+  const [eventTypes, setEventTypes] = useState([]);     // buckets, in the event_types table's order
   const [sections, setSections] = useState(() => load('export_sections', ['events']));
   const [dropped, setDropped] = useState(() => load('export_columns_dropped', []));
-  const [includeNotLive, setIncludeNotLive] = useState(false);
   const [format, setFormat] = useState('csv');
   const [note, setNote] = useState('');
-  const [previewKey, setPreviewKey] = useState(() => load('export_sections', ['events'])[0] || 'events');   // the section shown in the preview
-  const [colGroup, setColGroup] = useState(COLUMN_GROUPS[0]);
+  const [previewKey, setPreviewKey] = useState('events');
+  const [eventsView, setEventsView] = useState('cards');
+  const [showColumnList, setShowColumnList] = useState(false);
 
   useEffect(() => {
-    supabase.from('event_types').select('name').order('name').then(({ data }) => {
-      const names = (data || []).map((r) => r.name).filter(Boolean);
-      setEventTypes(names);
-      setSelectedTypes(names);
-    });
+    supabase.from('event_types').select('name').order('name').then(({ data }) => setEventTypes((data || []).map((r) => r.name).filter(Boolean)));
   }, []);
   useEffect(() => save('export_sections', sections), [sections]);
   useEffect(() => save('export_columns_dropped', dropped), [dropped]);
-
-  const requiredTypes = Object.keys(monthlyRequirements || {}).filter((t) => Number(monthlyRequirements[t]) > 0);
   const columnKeys = useMemo(() => ALL_COLUMNS.filter((k) => !dropped.includes(k)), [dropped]);
 
-  // Sync log: only after the * PIN unlock (same unlock as before this rebuild)
+  // Sync log: only after the * PIN unlock (same unlock as before)
   const ADMIN_PIN = process.env.REACT_APP_ADMIN_PIN || '1426';
   const [isAdmin, setIsAdmin] = useState(() => sessionStorage.getItem('export_admin_unlocked') === 'true');
   useEffect(() => {
     if (isAdmin) return undefined;
     const onKey = (e) => {
-      if (e.key !== '*') return;
+      if (e.key !== '*' || ['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) return;
       const pin = prompt('Enter PIN to unlock the Sync log:');
       if (pin === ADMIN_PIN) { setIsAdmin(true); sessionStorage.setItem('export_admin_unlocked', 'true'); }
     };
@@ -97,23 +136,17 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
   useEffect(() => {
     let alive = true;
     setLoadingEvents(true);
-    // every event that touches the dates, page by page
-    eventsApi.getAll(startDate, endDate)
+    eventsApi.getAll(startDate, endDate)       // every event that touches the dates, page by page
       .then((d) => { if (alive) setEvents(d || []); })
       .catch(() => { if (alive) setEvents([]); })
       .finally(() => { if (alive) setLoadingEvents(false); });
+    setNotLiveRaw(null);
+    fetchNotLiveRows(startDate, endDate)       // camps built in iClass but not live (the faded calendar camps)
+      .then((r) => { if (alive) setNotLiveRaw(r); })
+      .catch(() => { if (alive) setNotLiveRaw({ rows: [], rules: [] }); });
     return () => { alive = false; };
   }, [startDate, endDate]);
 
-  useEffect(() => {
-    let alive = true;
-    setNotLiveRaw(null);
-    if (!includeNotLive) return undefined;
-    fetchNotLiveRows(startDate, endDate).then((r) => { if (alive) setNotLiveRaw(r); }).catch(() => { if (alive) setNotLiveRaw({ rows: [], rules: [] }); });
-    return () => { alive = false; };
-  }, [includeNotLive, startDate, endDate]);
-
-  // The first and last event dates in the database, for "Entire database"
   useEffect(() => {
     Promise.all([
       supabase.from('events').select('start_date').is('deleted_at', null).order('start_date', { ascending: true }).limit(1),
@@ -126,45 +159,85 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
 
   useEffect(() => {
     if (!isAdmin || !sections.includes('sync') || syncLog.length) return;
-    supabase.from('sync_log').select('*').order('last_synced', { ascending: false }).limit(100)
-      .then(({ data }) => setSyncLog(data || []));
+    supabase.from('sync_log').select('*').order('last_synced', { ascending: false }).limit(100).then(({ data }) => setSyncLog(data || []));
   }, [isAdmin, sections, syncLog.length]);
 
-  const gymEvents = useMemo(() => events.filter((e) => selectedGyms.includes(e.gym_id)), [events, selectedGyms]);
-  const notLiveEvents = useMemo(() => (includeNotLive && notLiveRaw
-    ? toNotLiveEvents(notLiveRaw.rows, notLiveRaw.rules, gyms, events).filter((e) => selectedGyms.includes(e.gym_id))
-    : []), [includeNotLive, notLiveRaw, gyms, events, selectedGyms]);
-  const pickedEvents = useMemo(() => [...gymEvents, ...notLiveEvents].filter((e) => selectedTypes.includes(e.type)),
-    [gymEvents, notLiveEvents, selectedTypes]);
+  // Every event the filters can choose from: live ones + the not-live camps
+  const notLiveEvents = useMemo(() => (notLiveRaw ? toNotLiveEvents(notLiveRaw.rows, notLiveRaw.rules, gyms, events) : []), [notLiveRaw, gyms, events]);
+  const pool = useMemo(() => [...events, ...notLiveEvents], [events, notLiveEvents]);
 
-  // Read the iClass setup facts for exactly these events as soon as they change
-  const eventsKey = pickedEvents.map((e) => e.id).join(',');
+  // The iClass setup facts (event type, program, spots by day, prices) for the whole pool - the filters need them
+  const poolKey = pool.map((e) => e.id).join(',');
   useEffect(() => {
     let alive = true;
-    if (!pickedEvents.length) { setExtrasState({ key: eventsKey, dayCounts: {}, extras: {} }); return undefined; }
-    fetchExportExtras(pickedEvents)
-      .then((r) => { if (alive) setExtrasState({ key: eventsKey, ...r }); })
-      .catch((err) => { if (alive) setExtrasState({ key: eventsKey, dayCounts: {}, extras: {}, error: err.message }); });
+    if (!pool.length) { setExtrasState({ key: poolKey, dayCounts: {}, extras: {} }); return undefined; }
+    fetchExportExtras(pool)
+      .then((r) => { if (alive) setExtrasState({ key: poolKey, ...r }); })
+      .catch((err) => { if (alive) setExtrasState({ key: poolKey, dayCounts: {}, extras: {}, error: err.message }); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventsKey]);
-  const extrasReady = extrasState.key === eventsKey;
+  }, [poolKey]);
+  const extrasReady = extrasState.key === poolKey;
+  const x = useMemo(() => ({ extras: extrasState.extras, dayCounts: extrasState.dayCounts }), [extrasState]);
 
-  const gymsKey = selectedGyms.join(',');
+  // ---------------------------------------------------------------- filtering
+  const words = search.trim().toLowerCase();
+  const passes = (e, skip) => FACETS.every((f) => f.key === skip || !filters[f.key] || filters[f.key].includes(f.value(e, x)))
+    && (!words || String(e.title || '').toLowerCase().includes(words));
+  const picked = useMemo(() => pool.filter((e) => passes(e, null)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pool, filters, words, x]);
+
+  // Each filter's options + counts (counts follow every OTHER filter, so a number is what you'd get by ticking it)
+  const facetData = useMemo(() => {
+    const out = {};
+    FACETS.forEach((f) => {
+      const all = {};
+      if (f.key === 'gym') gyms.forEach((g) => { all[g.id] = 0; });          // every gym shows, even with 0 events
+      if (f.key === 'bucket') eventTypes.forEach((t) => { all[t] = 0; });    // every bucket shows
+      pool.forEach((e) => { const v = f.value(e, x); all[v] = all[v] || 0; });
+      pool.filter((e) => passes(e, f.key)).forEach((e) => { const v = f.value(e, x); all[v] += 1; });
+      let values = Object.keys(all);
+      if (f.key === 'gym') values = gyms.map((g) => g.id).filter((id) => id in all).concat(values.filter((v) => !gyms.some((g) => g.id === v)));
+      else if (f.key === 'bucket') values = eventTypes.filter((t) => t in all).concat(values.filter((v) => !eventTypes.includes(v)));
+      else if (f.key === 'spots') values = ['Open', 'Almost full', 'FULL', 'No count'].filter((v) => v in all);
+      else if (f.key === 'live') values = ['Live', 'Not live yet'].filter((v) => v in all);
+      else values.sort((a, b) => (all[b] - all[a]) || a.localeCompare(b));
+      out[f.key] = { values, counts: all };
+    });
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pool, filters, words, x, gyms, eventTypes]);
+
+  const isOn = (fk, v) => !filters[fk] || filters[fk].includes(v);
+  const toggleValue = (fk, v) => setFilters((prev) => {
+    const all = facetData[fk].values;
+    const cur = prev[fk] || all;
+    const next = cur.includes(v) ? cur.filter((y) => y !== v) : [...cur, v];
+    return { ...prev, [fk]: next.length === all.length ? null : next };
+  });
+  const onlyValues = (fk, vals) => setFilters((prev) => ({ ...prev, [fk]: vals }));
+  const resetFacet = (fk) => setFilters((prev) => ({ ...prev, [fk]: NO_FILTER[fk] }));
+  const clearAll = () => { setFilters(NO_FILTER); setSearch(''); setFacetSearch({}); };
+
+  // ---------------------------------------------------------------- the tables
+  const reqEvents = useMemo(() => events.filter((e) => isOn('gym', e.gym_id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [events, filters]);
+  const pickedGyms = gyms.map((g) => g.id).filter((id) => isOn('gym', id));
+  const gymsKey = pickedGyms.join(',');
   useEffect(() => {
     let alive = true;
-    fetchSetupReads(selectedGyms).then((r) => { if (alive) setSetupReads(r); }).catch(() => { if (alive) setSetupReads([]); });
+    fetchSetupReads(pickedGyms).then((r) => { if (alive) setSetupReads(r); }).catch(() => { if (alive) setSetupReads([]); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gymsKey]);
 
-  // ---------------------------------------------------------------- the tables
   const ctx = useMemo(() => ({
-    events: pickedEvents,
-    reqEvents: gymEvents,
+    events: picked,
     columnKeys,
     gyms,
-    gymIds: selectedGyms,
+    gymIds: pickedGyms,
     gymName: (id) => gyms.find((g) => g.id === id)?.name || '',
     dayCounts: extrasState.dayCounts,
     extras: extrasState.extras,
@@ -172,37 +245,48 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
     errorLabel: (t) => getErrorLabel(t) || t,
     requirements: monthlyRequirements,
     startDate, endDate, setupReads, syncLog,
-  }), [pickedEvents, gymEvents, columnKeys, gyms, selectedGyms, extrasState, acknowledgedPatterns, monthlyRequirements, startDate, endDate, setupReads, syncLog]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [picked, columnKeys, gyms, gymsKey, extrasState, acknowledgedPatterns, monthlyRequirements, startDate, endDate, setupReads, syncLog]);
 
   const visibleSections = SECTIONS.filter((s) => !s.admin || isAdmin);
   const activeKeys = sections.filter((k) => visibleSections.some((s) => s.key === k));
-  // Every section's table, built once - the counts on the cards and what downloads / copies are the same thing
   const allTables = useMemo(() => {
-    // requirements count by gym only (every bucket), whatever buckets are ticked for the other sections
     const tables = buildSections(visibleSections.map((s) => s.key), ctx);
-    const req = buildSections(['requirements'], { ...ctx, events: ctx.reqEvents })[0];
+    // requirements count live events by gym only (every bucket), whatever else is filtered
+    const req = buildSections(['requirements'], { ...ctx, events: reqEvents })[0];
     return tables.map((t) => (t.key === 'requirements' ? req : t));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctx, isAdmin]);
+  }, [ctx, isAdmin, reqEvents]);
   const tableOf = (k) => allTables.find((t) => t.key === k);
   const chosenTables = activeKeys.map(tableOf).filter(Boolean);
 
-  const busy = loadingEvents || !extrasReady || (includeNotLive && !notLiveRaw);
+  const busy = loadingEvents || !extrasReady || !notLiveRaw;
   const totalRows = chosenTables.reduce((n, t) => n + t.rows.length, 0);
   const canGo = !busy && chosenTables.length > 0 && !(activeKeys.length === 1 && activeKeys[0] === 'events' && !columnKeys.length);
 
   // ---------------------------------------------------------------- actions
-  const toggle = (list, setList, v) => setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
-  const applyQuick = (q) => {
-    setSections(q.sections);
-    if (q.columns) setDropped(ALL_COLUMNS.filter((k) => !q.columns.includes(k)));
-    setIncludeNotLive(!!q.notLive);
-  };
+  const toggle = (list, setList, v) => setList(list.includes(v) ? list.filter((y) => y !== v) : [...list, v]);
   const setRange = (a, b) => { setStartDate(a); setEndDate(b); };
   const today = new Date();
+  const ranges = [
+    ['This month', iso(new Date(today.getFullYear(), today.getMonth(), 1)), iso(new Date(today.getFullYear(), today.getMonth() + 1, 0))],
+    ['Next month', iso(new Date(today.getFullYear(), today.getMonth() + 1, 1)), iso(new Date(today.getFullYear(), today.getMonth() + 2, 0))],
+    ['Today on', iso(today), dbRange?.last || iso(new Date(today.getFullYear() + 1, 11, 31))],
+    ['Everything', dbRange?.first, dbRange?.last],
+  ];
+
+  // The filters in play, as words (shown as chips, and written at the top of the file / copy)
+  const chips = [];
+  FACETS.forEach((f) => {
+    const kept = filters[f.key];
+    if (!kept || JSON.stringify(kept) === JSON.stringify(NO_FILTER[f.key])) return;
+    chips.push({ key: f.key, text: `${f.label}: ${kept.length ? kept.join(', ') : 'none'}` });
+  });
+  if (words) chips.push({ key: 'search', text: `Name has "${search.trim()}"` });
+  const liveNote = filters.live === null ? 'live + not live' : (filters.live || []).join(' + ');
 
   const heading = `Master Events Calendar - ${mdyShort(startDate)} to ${mdyShort(endDate)}`;
-  const subheading = `${selectedGyms.length} of ${gyms.length} gyms · ${selectedTypes.length} of ${eventTypes.length} buckets · made ${new Date().toLocaleString('en-US')}`;
+  const subheading = [chips.length ? chips.map((c) => c.text).join(' · ') : `every gym, every bucket, ${liveNote}`, `made ${new Date().toLocaleString('en-US')}`].join(' · ');
   const fileName = (ext) => `master-calendar-${activeKeys.length > 2 ? 'combined' : activeKeys.join('-').replace(/_/g, '-')}-${startDate}_to_${endDate}.${ext}`;
 
   const download = () => {
@@ -210,19 +294,19 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
     if (format === 'html') {
       const url = URL.createObjectURL(new Blob([toHTMLPage(chosenTables, heading, subheading)], { type: 'text/html' }));
       window.open(url, '_blank');
-      setNote(`Opened the printable page: ${chosenTables.length} section${chosenTables.length === 1 ? '' : 's'}, ${totalRows} rows`);
+      setNote(`Opened the printable page · ${totalRows} rows`);
       return;
     }
     const content = format === 'json'
-      ? toJSONFile(chosenTables, { made: new Date().toISOString(), dates: { from: startDate, to: endDate }, gyms: selectedGyms, buckets: selectedTypes },
-        activeKeys.includes('events') ? pickedEvents : null)
+      ? toJSONFile(chosenTables, { made: new Date().toISOString(), dates: { from: startDate, to: endDate }, filters: chips.map((c) => c.text) },
+        activeKeys.includes('events') ? picked : null)
       : toCSVFile(chosenTables, `${heading} (${subheading})`);
     const url = URL.createObjectURL(new Blob([content], { type: format === 'json' ? 'application/json' : 'text/csv' }));
     const a = document.createElement('a');
     a.href = url; a.download = fileName(format);
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setNote(`Downloaded ${fileName(format)}: ${totalRows} rows`);
+    setNote(`Downloaded · ${totalRows} rows`);
   };
 
   const copy = async () => {
@@ -230,7 +314,7 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
     try {
       const payload = toClipboardAll(chosenTables);
       await copyToClipboardRich(payload);
-      setNote(`Copied ${chosenTables.length} section${chosenTables.length === 1 ? '' : 's'}, ${payload.rows} rows - paste into email, Docs, Sheets or Excel`);
+      setNote(`Copied ${payload.rows} rows - paste into email, Docs, Sheets or Excel`);
     } catch (err) {
       setNote(`Could not copy: ${err.message}`);
     }
@@ -242,263 +326,388 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // ---------------------------------------------------------------- screen
-  // Workflow layout (Jayme's multi-view blueprint: one frame, steps on the left, the result beside them,
-  // one action bar): 1 Gyms & buckets -> 2 What to include -> live preview of exactly what will download /
-  // copy -> act. Look (CORE-VISUAL-DESIGN-PHILOSOPHY): dark shell, white container floating on it, recessed
-  // rail, the section being previewed lifts as a white card; one accent - the calendar's own rose.
-  const C = {
-    shell: '#2b2326', rail: '#f3ecec', card: '#ffffff', ink: '#1f1a1b', soft: '#4a3f42',
-    accent: '#7a4f57', accentHover: '#64404a', tint: '#f6e9eb', line: '#e2d6d8', head: '#3a2e31',
-  };
-  const lift = '0 8px 25px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.12)';
-  const float = '0 20px 60px rgba(0,0,0,.35), 0 8px 20px rgba(0,0,0,.25)';
-  const stepTitle = (n, text, extra) => (
-    <div className="flex items-center justify-between gap-2 mb-2">
-      <div className="flex items-center gap-2">
-        <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white" style={{ background: C.accent }}>{n}</span>
-        <span className="text-sm font-black uppercase tracking-wide" style={{ color: C.ink }}>{text}</span>
-      </div>
-      {extra}
-    </div>
+  // ---------------------------------------------------------------- pieces
+  const gymOf = (id) => gyms.find((g) => g.id === id);
+  const colorOf = (id) => (gymOf(id)?.brand_colors || [])[0] || C.accent;
+  const checkbox = (on) => (
+    <span className="w-[18px] h-[18px] rounded-[5px] flex items-center justify-center text-[12px] font-black flex-shrink-0"
+      style={{ background: on ? C.accent : '#fff', color: '#fff', border: `2px solid ${on ? C.accent : '#b9aaad'}` }}>{on ? '✓' : ''}</span>
   );
-  const linkBtn = (label, onClick) => (
-    <button type="button" onClick={onClick} className="text-xs font-bold hover:underline cursor-pointer" style={{ color: C.accent }}>{label}</button>
-  );
-  const pill = (on) => ({
-    background: on ? C.accent : C.card, color: on ? '#fff' : C.ink,
-    border: `1.5px solid ${on ? C.accent : C.line}`, boxShadow: on ? '0 2px 6px rgba(122,79,87,.35)' : '0 1px 2px rgba(0,0,0,.06)',
-  });
-  const preview = tableOf(previewKey);
-  const PREVIEW_ROWS = 150;
 
+  const facetCard = (f) => {
+    const d = facetData[f.key] || { values: [], counts: {} };
+    const kept = filters[f.key];
+    const changed = JSON.stringify(kept) !== JSON.stringify(NO_FILTER[f.key]);
+    const q = (facetSearch[f.key] || '').trim().toLowerCase();
+    const shown = q ? d.values.filter((v) => v.toLowerCase().includes(q)) : d.values;
+    const keptCount = kept ? kept.length : d.values.length;
+
+    if (f.key === 'gym') {
+      return (
+        <div key={f.key} className="rounded-xl p-3" style={{ background: C.card, boxShadow: LIFT }}>
+          {facetHead(f, `${keptCount} of ${d.values.length}`, changed)}
+          <div className="grid grid-cols-2 gap-1.5">
+            {d.values.map((id) => {
+              const g = gymOf(id); const on = isOn('gym', id); const n = d.counts[id] || 0;
+              return (
+                <button key={id} type="button" onClick={() => toggleValue('gym', id)} title={`${g?.name || id} - tap to ${on ? 'leave out' : 'add'}`}
+                  className="group relative flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-lg cursor-pointer transition-all"
+                  style={{ background: on ? '#fff' : '#f3eeee', boxShadow: on ? `inset 0 0 0 2px ${colorOf(id)}` : 'none', opacity: on ? 1 : 0.55 }}>
+                  {g?.logo_url ? <img src={g.logo_url} alt="" className="w-6 h-6 rounded-full object-cover bg-white flex-shrink-0" /> : <span className="w-6 h-6 rounded-full flex-shrink-0" style={{ background: colorOf(id) }} />}
+                  <span className="text-[13px] font-black" style={{ color: C.ink }}>{id}</span>
+                  <span className="ml-auto text-[13px] font-bold" style={{ color: C.soft }}>{n}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    if (f.key === 'spots' || f.key === 'live') {
+      return (
+        <div key={f.key} className="rounded-xl p-3" style={{ background: C.card, boxShadow: LIFT }}>
+          {facetHead(f, null, changed)}
+          <div className="flex flex-wrap gap-1.5">
+            {d.values.map((v) => {
+              const on = isOn(f.key, v); const st = f.key === 'spots' ? SPOT_STYLE[v] : (v === 'Live' ? SPOT_STYLE.Open : SPOT_STYLE['No count']);
+              return (
+                <button key={v} type="button" onClick={() => toggleValue(f.key, v)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[13px] font-bold cursor-pointer"
+                  style={{ background: on ? st.bg : '#fff', color: on ? st.fg : C.soft, border: `2px solid ${on ? st.fg : C.line}`, opacity: on ? 1 : 0.6 }}>
+                  {v} <span className="font-black">{d.counts[v] || 0}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div key={f.key} className="rounded-xl p-3" style={{ background: C.card, boxShadow: LIFT }}>
+        {facetHead(f, `${keptCount} of ${d.values.length}`, changed)}
+        {f.search && d.values.length > 6 && (
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <input value={facetSearch[f.key] || ''} onChange={(e) => setFacetSearch((p) => ({ ...p, [f.key]: e.target.value }))}
+              placeholder={f.key === 'etype' ? 'Type: school year, summer, half day…' : 'Type to find…'}
+              className="flex-1 min-w-0 text-[13px] px-2.5 py-1.5 rounded-lg outline-none" style={{ background: C.tint, color: C.ink, border: `1.5px solid ${C.line}` }} />
+            {q && shown.length > 0 && (
+              <button type="button" onClick={() => onlyValues(f.key, shown)} className="text-[12px] font-black px-2.5 py-1.5 rounded-lg text-white cursor-pointer flex-shrink-0" style={{ background: C.accent }}>
+                Only these {shown.length}
+              </button>
+            )}
+          </div>
+        )}
+        <div className="space-y-0.5 max-h-[230px] overflow-y-auto pr-1">
+          {shown.map((v) => {
+            const on = isOn(f.key, v); const n = d.counts[v] || 0;
+            return (
+              <div key={v} className="group flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-[#f6eff0]" style={{ opacity: n === 0 && !on ? 0.45 : 1 }}>
+                <button type="button" onClick={() => toggleValue(f.key, v)} className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer">
+                  {checkbox(on)}
+                  <span className="text-[13px] font-semibold truncate" style={{ color: C.ink }} title={v}>{v}</span>
+                </button>
+                <button type="button" onClick={() => onlyValues(f.key, [v])} className="hidden group-hover:inline text-[11px] font-black px-1.5 py-0.5 rounded cursor-pointer" style={{ color: C.accent, background: C.tint }}>only</button>
+                <span className="text-[13px] font-bold w-8 text-right flex-shrink-0" style={{ color: C.soft }}>{n}</span>
+              </div>
+            );
+          })}
+          {!shown.length && <div className="text-[13px] px-1.5 py-1" style={{ color: C.soft }}>Nothing matches "{facetSearch[f.key]}"</div>}
+        </div>
+      </div>
+    );
+  };
+  function facetHead(f, countText, changed) {
+    return (
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.ink }}>{f.label}</span>
+        <span className="flex items-center gap-2">
+          {countText && <span className="text-[12px] font-bold" style={{ color: C.soft }}>{countText}</span>}
+          {changed && <button type="button" onClick={() => resetFacet(f.key)} className="text-[12px] font-black hover:underline cursor-pointer" style={{ color: C.accent }}>Reset</button>}
+        </span>
+      </div>
+    );
+  }
+
+  // One event as a card: date block · name + facts · spots + price
+  const eventCard = (e) => {
+    const s = setupOf(e, x.extras);
+    const start = ymd(e.start_date || e.date); const end = ymd(e.end_date);
+    const [, m, d] = start ? start.split('-').map(Number) : [0, 0, 0];
+    const endDay = end && end !== start ? Number(end.split('-')[2]) : null;
+    const endMon = end && end !== start && Number(end.split('-')[1]) !== m ? MON[Number(end.split('-')[1]) - 1] : '';
+    const sp = spotsOf(e, x.dayCounts); const st = statusOf(e, x.dayCounts) || 'No count'; const ss = SPOT_STYLE[st];
+    const etype = eventTypeOf(e, x.extras);
+    const facts = [etype || e.type, agesOf(e) && `Ages ${agesOf(e)}`, hoursOf(e).split(' | ')[0]].filter(Boolean);
+    return (
+      <div key={e.id} className="flex items-stretch gap-3 rounded-xl p-2.5"
+        style={{ background: C.card, boxShadow: LIFT, opacity: e.not_on_portal ? 0.62 : 1, border: e.not_on_portal ? `1.5px dashed ${C.soft}` : '1.5px solid transparent' }}>
+        <div className="w-[58px] flex-shrink-0 rounded-lg flex flex-col items-center justify-center py-1" style={{ background: C.tint }}>
+          <span className="text-[11px] font-black tracking-wider" style={{ color: C.accent }}>{m ? MON[m - 1] : ''}</span>
+          <span className="text-[22px] font-black leading-none" style={{ color: C.ink }}>{d || ''}</span>
+          {endDay && <span className="text-[11px] font-bold" style={{ color: C.soft }}>to {endMon} {endDay}</span>}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[14px] font-bold leading-snug line-clamp-2" style={{ color: C.ink }} title={e.title}>{e.title}</div>
+          <div className="text-[13px] mt-0.5 truncate" style={{ color: C.soft }}>{facts.join(' · ')}</div>
+          {e.not_on_portal && <div className="text-[12px] font-bold mt-0.5" style={{ color: C.ink }}>Not live: {(e.not_live_reasons || [])[0] || 'not on the portal'}</div>}
+          {!e.not_on_portal && s?.prices && <div className="text-[12px] mt-0.5 truncate" style={{ color: C.soft }} title={s.prices}>{s.prices}</div>}
+        </div>
+        <div className="flex flex-col items-end justify-center gap-1 flex-shrink-0">
+          <span className="text-[13px] font-black px-2.5 py-1 rounded-full" style={{ background: ss.bg, color: ss.fg }}>
+            {sp.left === null ? 'no count' : sp.left <= 0 ? 'FULL' : `${sp.left} left`}
+          </span>
+          {e.event_url && <a href={e.event_url} target="_blank" rel="noreferrer" className="text-[12px] font-bold hover:underline" style={{ color: C.accent }}>Open ↗</a>}
+        </div>
+      </div>
+    );
+  };
+
+  const cardsView = () => {
+    const sorted = sortEvents(picked);
+    const groups = [];
+    sorted.forEach((e) => {
+      const last = groups[groups.length - 1];
+      if (last && last.gym === e.gym_id) last.items.push(e); else groups.push({ gym: e.gym_id, items: [e] });
+    });
+    return (
+      <div className="p-4 space-y-5">
+        {groups.map((grp) => {
+          const g = gymOf(grp.gym); const color = colorOf(grp.gym);
+          return (
+            <div key={grp.gym}>
+              <div className="flex items-center gap-2.5 mb-2 px-3 py-2 rounded-xl sticky top-0 z-10" style={{ background: color, boxShadow: LIFT }}>
+                {g?.logo_url && <img src={g.logo_url} alt="" className="w-7 h-7 rounded-full object-cover bg-white" />}
+                <span className="text-[15px] font-black" style={{ color: inkOn(color) }}>{g?.name || grp.gym}</span>
+                <span className="ml-auto text-[13px] font-black px-2.5 py-0.5 rounded-full" style={{ background: '#fff', color: C.ink }}>{grp.items.length}</span>
+              </div>
+              <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))' }}>
+                {grp.items.map(eventCard)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const tableView = (t, droppable) => (
+    <table className="min-w-full text-[13px] border-separate border-spacing-0">
+      <thead className="sticky top-0 z-10">
+        <tr>
+          {t.columns.map((c) => (
+            <th key={c.key} className="text-left font-bold px-2.5 py-2 whitespace-nowrap" style={{ background: C.head, color: '#fff' }}>
+              <span className="inline-flex items-center gap-1.5">
+                {c.label}
+                {droppable && <button type="button" onClick={() => toggle(dropped, setDropped, c.key)} title="Leave this column out" className="w-4 h-4 rounded-full text-[11px] leading-none bg-white/20 hover:bg-white/40 cursor-pointer">×</button>}
+              </span>
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {t.rows.slice(0, 200).map((r, i) => (
+          <tr key={i} style={{ background: i % 2 ? '#faf6f6' : '#fff' }}>
+            {r.map((v, j) => (
+              <td key={j} className="px-2.5 py-1.5 align-top" style={{ color: C.ink, borderBottom: `1px solid ${C.line}`, maxWidth: 320 }}>
+                <div className="line-clamp-2">{t.columns[j]?.key === 'link' && v ? <a href={v} target="_blank" rel="noreferrer" style={{ color: C.accent }} className="font-bold underline">Open</a> : String(v ?? '')}</div>
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
+  const preview = tableOf(previewKey);
+  const eventsChosen = activeKeys.includes('events');
+
+  // ---------------------------------------------------------------- screen
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3" style={{ background: 'rgba(20,14,16,.72)' }} onClick={onClose}>
-      <div className="w-full h-full max-w-[1500px] max-h-[94vh] rounded-2xl overflow-hidden flex flex-col" style={{ background: C.shell, boxShadow: float }} onClick={(e) => e.stopPropagation()}>
+      <div className="w-full h-full max-w-[1560px] max-h-[95vh] rounded-2xl overflow-hidden flex flex-col" style={{ background: C.shell, boxShadow: FLOAT }} onClick={(e) => e.stopPropagation()}>
 
-        {/* Top bar - pinned: title + dates */}
-        <div className="relative flex flex-wrap items-center gap-3 pl-5 pr-14 py-3">
-          <h2 className="text-xl font-black text-white mr-3">Export &amp; Copy</h2>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {[
-              ['This month', () => setRange(iso(new Date(today.getFullYear(), today.getMonth(), 1)), iso(new Date(today.getFullYear(), today.getMonth() + 1, 0)))],
-              ['Next month', () => setRange(iso(new Date(today.getFullYear(), today.getMonth() + 1, 1)), iso(new Date(today.getFullYear(), today.getMonth() + 2, 0)))],
-              ['Today on', () => setRange(iso(today), dbRange?.last || iso(new Date(today.getFullYear() + 1, 11, 31)))],
-              ['Entire database', () => dbRange && setRange(dbRange.first, dbRange.last)],
-            ].map(([label, fn]) => (
-              <button key={label} type="button" onClick={fn}
-                className="text-sm font-bold px-3 py-1.5 rounded-full bg-white hover:bg-[#f3ecec] cursor-pointer" style={{ color: C.ink, boxShadow: '0 2px 6px rgba(0,0,0,.3)' }}>{label}</button>
-            ))}
+        {/* Top bar: title · dates · close - one line, centered on its own axis */}
+        <div className="flex items-center gap-4 px-5 py-3">
+          <h2 className="text-[22px] font-black text-white whitespace-nowrap">Export &amp; Copy</h2>
+          <div className="flex items-center rounded-xl p-1" style={{ background: 'rgba(255,255,255,.12)' }}>
+            {ranges.map(([label, a, b]) => {
+              const on = a && b && a === startDate && b === endDate;
+              return (
+                <button key={label} type="button" disabled={!a || !b} onClick={() => setRange(a, b)}
+                  className="text-[14px] font-bold px-3.5 py-1.5 rounded-lg cursor-pointer whitespace-nowrap"
+                  style={{ background: on ? '#fff' : 'transparent', color: on ? C.ink : '#fff', boxShadow: on ? '0 2px 6px rgba(0,0,0,.3)' : 'none' }}>{label}</button>
+              );
+            })}
           </div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-white">
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="px-2 py-1.5 rounded-md bg-white" style={{ color: C.ink }} />
+          <div className="flex items-center gap-2 text-[14px] font-semibold text-white">
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="px-2.5 py-1.5 rounded-lg bg-white" style={{ color: C.ink }} />
             <span>to</span>
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="px-2 py-1.5 rounded-md bg-white" style={{ color: C.ink }} />
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="px-2.5 py-1.5 rounded-lg bg-white" style={{ color: C.ink }} />
           </div>
-          <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 w-9 h-9 rounded-full text-white text-2xl leading-none hover:bg-white/15 cursor-pointer">×</button>
+          <button onClick={onClose} aria-label="Close" className="ml-auto w-10 h-10 rounded-full text-white text-[26px] leading-none hover:bg-white/15 cursor-pointer flex-shrink-0">×</button>
         </div>
 
-        {/* Step 1 on the shell: gyms, then buckets - one row each, all ticked, tap to drop */}
-        <div className="px-5 pb-3 space-y-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0" style={{ background: '#fff', color: C.ink }}>1</span>
-            {gyms.map((g) => {
-              const on = selectedGyms.includes(g.id);
-              const color = (g.brand_colors && g.brand_colors[0]) || C.soft;
-              return (
-                <button key={g.id} type="button" onClick={() => toggle(selectedGyms, setSelectedGyms, g.id)} title={g.name}
-                  className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full cursor-pointer transition-all"
-                  style={{ background: on ? '#fff' : 'rgba(255,255,255,.14)', boxShadow: on ? `0 0 0 2px ${color}, 0 3px 8px rgba(0,0,0,.35)` : 'none' }}>
-                  {g.logo_url ? <img src={g.logo_url} alt="" className="w-6 h-6 rounded-full object-cover bg-white" style={{ opacity: on ? 1 : 0.6 }} /> : <span className="w-6 h-6 rounded-full" style={{ background: color }} />}
-                  <span className="text-xs font-black" style={{ color: on ? C.ink : '#fff' }}>{g.id}</span>
-                </button>
-              );
-            })}
-            <span className="flex gap-3 ml-1">
-              <button type="button" onClick={() => setSelectedGyms(gyms.map((g) => g.id))} className="text-xs font-bold text-white underline cursor-pointer">All gyms</button>
-              <button type="button" onClick={() => setSelectedGyms([])} className="text-xs font-bold text-white underline cursor-pointer">None</button>
-            </span>
+        {/* The page floats on the shell: 1 Filter | 2 See it | 3 Take it */}
+        <div className="flex-1 min-h-0 mx-3 mb-3 rounded-2xl overflow-hidden flex" style={{ background: C.page, boxShadow: '0 10px 30px rgba(0,0,0,.35)' }}>
+
+          {/* 1 FILTER */}
+          <div className="w-[300px] flex-shrink-0 flex flex-col min-h-0" style={{ background: C.side, borderRight: `1px solid ${C.line}` }}>
+            <div className="flex items-center justify-between px-4 pt-4 pb-2">
+              <span className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-full flex items-center justify-center text-[14px] font-black text-white" style={{ background: C.accent }}>1</span>
+                <span className="text-[16px] font-black" style={{ color: C.ink }}>Filter</span>
+              </span>
+              {(chips.length > 0) && <button type="button" onClick={clearAll} className="text-[13px] font-black hover:underline cursor-pointer" style={{ color: C.accent }}>Clear all</button>}
+            </div>
+            <div className="px-4 pb-2">
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search event names…"
+                className="w-full text-[14px] px-3 py-2 rounded-lg outline-none" style={{ background: '#fff', color: C.ink, border: `1.5px solid ${C.line}`, boxShadow: 'inset 0 1px 2px rgba(0,0,0,.06)' }} />
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-3">
+              {FACETS.map(facetCard)}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5 pl-[30px]">
-            {eventTypes.map((t) => {
-              const on = selectedTypes.includes(t);
-              return (
-                <button key={t} type="button" onClick={() => toggle(selectedTypes, setSelectedTypes, t)}
-                  className="text-xs font-bold px-2.5 py-1 rounded-full cursor-pointer"
-                  style={{ background: on ? '#fff' : 'rgba(255,255,255,.14)', color: on ? C.ink : '#fff', boxShadow: on ? '0 3px 8px rgba(0,0,0,.35)' : 'none' }}>
-                  {t}{requiredTypes.includes(t) ? ' *' : ''}
-                </button>
-              );
-            })}
-            <span className="text-xs font-semibold text-white ml-1">* has a monthly requirement</span>
-            <span className="flex gap-3 ml-1">
-              <button type="button" onClick={() => setSelectedTypes([...eventTypes])} className="text-xs font-bold text-white underline cursor-pointer">All buckets</button>
-              <button type="button" onClick={() => setSelectedTypes([])} className="text-xs font-bold text-white underline cursor-pointer">None</button>
-            </span>
-          </div>
-        </div>
 
-        {/* The container floats on the shell: steps rail | live preview */}
-        <div className="flex-1 min-h-0 mx-3 rounded-2xl overflow-hidden flex flex-col lg:flex-row" style={{ background: C.card, boxShadow: lift }}>
-
-          {/* Rail - recessed */}
-          <div className="lg:w-[300px] flex-shrink-0 overflow-y-auto p-4 space-y-5" style={{ background: C.rail, borderRight: `1px solid ${C.line}` }}>
-
-            {/* Step 2 - what */}
-            <div>
-              {stepTitle(2, 'What to include')}
-              <div className="flex flex-wrap gap-1 mb-2.5">
-                {QUICK_PICKS.map((q) => (
-                  <button key={q.key} type="button" onClick={() => { applyQuick(q); setPreviewKey(q.sections[0]); }}
-                    className="text-xs font-bold px-2 py-1 rounded-md cursor-pointer bg-white hover:bg-[#f6e9eb]" style={{ color: C.ink, border: `1px solid ${C.line}` }}>{q.label}</button>
-                ))}
+          {/* 2 SEE IT */}
+          <div className="flex-1 min-w-0 flex flex-col min-h-0">
+            <div className="px-5 pt-4 pb-3" style={{ borderBottom: `1px solid ${C.line}` }}>
+              <div className="flex items-center gap-4 flex-wrap">
+                <span className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-full flex items-center justify-center text-[14px] font-black text-white" style={{ background: C.accent }}>2</span>
+                  <span className="text-[34px] font-black leading-none" style={{ color: C.ink }}>{busy ? '…' : picked.length}</span>
+                  <span className="text-[16px] font-bold" style={{ color: C.soft }}>events · {mdyShort(startDate)} – {mdyShort(endDate)}</span>
+                </span>
+                <div className="flex flex-wrap gap-1.5 min-w-0">
+                  {chips.length === 0 && <span className="text-[13px] font-semibold px-2.5 py-1 rounded-full" style={{ background: C.tint, color: C.ink }}>Every gym · every bucket · live on the portal</span>}
+                  {chips.map((c) => (
+                    <span key={c.key} title={c.text} className="flex items-center gap-1 text-[13px] font-bold pl-2.5 pr-1 py-1 rounded-full max-w-[420px]" style={{ background: C.accent, color: '#fff' }}>
+                      <span className="truncate">{c.text}</span>
+                      <button type="button" onClick={() => (c.key === 'search' ? setSearch('') : resetFacet(c.key))} className="w-5 h-5 rounded-full hover:bg-white/25 cursor-pointer flex-shrink-0" aria-label="Remove">×</button>
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-1.5">
+
+              {/* What goes in: each section is a tab; the box puts it in the file / copy */}
+              <div className="flex flex-wrap items-end gap-1 mt-3">
                 {visibleSections.map((s) => {
-                  const on = sections.includes(s.key);
-                  const showing = previewKey === s.key;
-                  const t = tableOf(s.key);
+                  const on = sections.includes(s.key); const showing = previewKey === s.key; const t = tableOf(s.key);
                   return (
-                    <div key={s.key} className="rounded-xl transition-all"
-                      style={{ background: showing ? C.card : 'transparent', boxShadow: showing ? lift : 'none', borderLeft: `4px solid ${showing ? C.accent : 'transparent'}` }}>
-                      <div className="flex items-center gap-2.5 px-2.5 py-2">
-                        <button type="button" onClick={() => toggle(sections, setSections, s.key)} aria-label={`Include ${s.label}`}
-                          className="w-5 h-5 rounded flex items-center justify-center text-xs font-black flex-shrink-0 cursor-pointer"
-                          style={{ background: on ? C.accent : C.card, color: '#fff', border: `2px solid ${on ? C.accent : '#b9aaad'}` }}>{on ? '✓' : ''}</button>
-                        <button type="button" onClick={() => setPreviewKey(s.key)} className="flex-1 min-w-0 text-left cursor-pointer">
-                          <span className="block text-sm font-bold" style={{ color: C.ink }}>{s.label}{s.admin ? ' · admin' : ''}</span>
-                          {showing && <span className="block text-xs" style={{ color: C.soft }}>{s.desc}</span>}
-                        </button>
-                        <span className="text-xs font-black px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: on ? C.tint : '#e9e2e3', color: C.ink }}>{busy ? '…' : (t ? t.rows.length : 0)}</span>
-                      </div>
-                      {showing && s.key === 'events' && (
-                        <label className="flex items-start gap-2 px-3 pb-2.5 text-xs cursor-pointer" style={{ color: C.ink }}>
-                          <input type="checkbox" checked={includeNotLive} onChange={(e) => setIncludeNotLive(e.target.checked)} className="mt-0.5 w-4 h-4" style={{ accentColor: C.accent }} />
-                          <span>Add camps built in iClass but <b>not live</b> yet{includeNotLive && notLiveRaw ? ` (${notLiveEvents.filter((e) => selectedTypes.includes(e.type)).length})` : ''}</span>
-                        </label>
-                      )}
+                    <div key={s.key} className="flex items-center gap-2 pl-2 pr-3 py-2 rounded-t-xl"
+                      style={{ background: showing ? C.tint : 'transparent', borderBottom: `3px solid ${showing ? C.accent : 'transparent'}` }}>
+                      <button type="button" onClick={() => toggle(sections, setSections, s.key)} aria-label={`Put ${s.label} in the file`} className="cursor-pointer">{checkbox(on)}</button>
+                      <button type="button" onClick={() => setPreviewKey(s.key)} className="text-[14px] font-bold cursor-pointer whitespace-nowrap" style={{ color: on ? C.ink : C.soft }}>
+                        {s.label}{s.admin ? ' · admin' : ''} <span className="font-black" style={{ color: C.accent }}>{busy ? '' : (t ? t.rows.length : 0)}</span>
+                      </button>
                     </div>
                   );
                 })}
-              </div>
-            </div>
-          </div>
-
-          {/* Live preview - exactly what will download / copy for the section picked on the left */}
-          <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-            <div className="px-5 pt-4 pb-3" style={{ borderBottom: `1px solid ${C.line}` }}>
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h3 className="text-lg font-black" style={{ color: C.ink }}>{preview ? preview.title : 'Pick a section'}</h3>
-                {preview && <span className="text-sm font-semibold" style={{ color: C.soft }}>{busy ? 'reading…' : `${preview.rows.length} rows${previewKey === 'events' ? ` · ${columnKeys.length} columns` : ''}`}</span>}
-                {preview && !sections.includes(previewKey) && (
-                  <button type="button" onClick={() => toggle(sections, setSections, previewKey)}
-                    className="text-xs font-bold px-2.5 py-1 rounded-md text-white cursor-pointer" style={{ background: C.accent }}>+ Include this section</button>
+                {previewKey === 'events' && (
+                  <div className="ml-auto flex items-center rounded-lg p-0.5 mb-1" style={{ background: C.tint }}>
+                    {[['cards', 'Cards'], ['columns', 'Columns']].map(([k, label]) => (
+                      <button key={k} type="button" onClick={() => setEventsView(k)} className="text-[13px] font-bold px-3 py-1 rounded-md cursor-pointer"
+                        style={{ background: eventsView === k ? '#fff' : 'transparent', color: C.ink, boxShadow: eventsView === k ? '0 1px 3px rgba(0,0,0,.15)' : 'none' }}>{label}</button>
+                    ))}
+                  </div>
                 )}
               </div>
-              {preview?.note && !busy && <p className="text-sm mt-1" style={{ color: C.soft }}>{preview.note}</p>}
-              {extrasState.error && <p className="text-sm mt-1 font-bold" style={{ color: '#b91c1c' }}>iClass setup facts did not load ({extrasState.error}) - those columns are blank.</p>}
-
-              {/* Event columns - one group at a time; or click × on a column header in the preview */}
-              {previewKey === 'events' && (
-                <div className="mt-3">
-                  <div className="flex flex-wrap items-end gap-1">
-                    {COLUMN_GROUPS.map((grp) => {
-                      const cols = EVENT_COLUMNS.filter((c) => c.group === grp);
-                      const onCount = cols.filter((c) => !dropped.includes(c.key)).length;
-                      const active = colGroup === grp;
-                      return (
-                        <button key={grp} type="button" onClick={() => setColGroup(grp)}
-                          className="text-xs font-bold px-2.5 py-1.5 rounded-t-lg cursor-pointer"
-                          style={{ background: active ? C.tint : 'transparent', color: C.ink, borderBottom: `3px solid ${active ? C.accent : 'transparent'}` }}>
-                          {grp} <span style={{ color: C.soft }}>{onCount}/{cols.length}</span>
-                        </button>
-                      );
-                    })}
-                    <span className="ml-auto flex gap-3 pb-1.5">{linkBtn('All columns', () => setDropped([]))}{linkBtn('No columns', () => setDropped([...ALL_COLUMNS]))}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 p-2 rounded-b-lg" style={{ background: C.tint }}>
-                    {EVENT_COLUMNS.filter((c) => c.group === colGroup).map((c) => {
-                      const on = !dropped.includes(c.key);
-                      return (
-                        <button key={c.key} type="button" onClick={() => toggle(dropped, setDropped, c.key)}
-                          className="text-xs font-bold px-2.5 py-1 rounded-full cursor-pointer" style={pill(on)}>
-                          {on ? '✓ ' : '+ '}{c.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              {preview?.note && !busy && <p className="text-[13px] mt-2" style={{ color: C.soft }}>{preview.note}</p>}
+              {extrasState.error && <p className="text-[13px] mt-2 font-bold" style={{ color: C.full }}>iClass setup facts did not load ({extrasState.error}) - those columns are blank.</p>}
             </div>
 
-            <div className="flex-1 min-h-0 overflow-auto">
+            <div className="flex-1 min-h-0 overflow-auto" style={{ background: previewKey === 'events' && eventsView === 'cards' ? '#f7f2f3' : '#fff' }}>
               {busy ? (
-                <div className="p-6 text-sm font-semibold" style={{ color: C.soft }}>Reading the data…</div>
-              ) : !preview ? null : preview.rows.length === 0 ? (
-                <div className="p-6 text-sm font-semibold" style={{ color: C.soft }}>Nothing for these dates, gyms and buckets.</div>
-              ) : (
-                <table className="min-w-full text-xs border-separate border-spacing-0">
-                  <thead className="sticky top-0 z-10">
-                    <tr>
-                      {preview.columns.map((c) => (
-                        <th key={c.key} className="text-left font-bold px-2.5 py-2 whitespace-nowrap" style={{ background: C.head, color: '#fff' }}>
-                          <span className="inline-flex items-center gap-1.5">
-                            {c.label}
-                            {previewKey === 'events' && (
-                              <button type="button" onClick={() => toggle(dropped, setDropped, c.key)} title="Drop this column"
-                                className="w-4 h-4 rounded-full text-[11px] leading-none bg-white/20 hover:bg-white/40 cursor-pointer">×</button>
-                            )}
-                          </span>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.rows.slice(0, PREVIEW_ROWS).map((r, i) => (
-                      <tr key={i} style={{ background: i % 2 ? '#faf6f6' : '#fff' }}>
-                        {r.map((v, j) => (
-                          <td key={j} className="px-2.5 py-1.5 align-top" style={{ color: C.ink, borderBottom: `1px solid ${C.line}`, maxWidth: 320 }}>
-                            <div className="line-clamp-2">{preview.columns[j]?.key === 'link' && v ? <a href={v} target="_blank" rel="noreferrer" style={{ color: C.accent }} className="font-bold underline">Open</a> : String(v ?? '')}</div>
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-              {!busy && preview && preview.rows.length > PREVIEW_ROWS && (
-                <div className="px-5 py-3 text-xs font-semibold" style={{ color: C.soft }}>Showing the first {PREVIEW_ROWS} of {preview.rows.length} rows here - Download and Copy include all {preview.rows.length}.</div>
+                <div className="p-8 text-[15px] font-bold" style={{ color: C.soft }}>Reading the data…</div>
+              ) : !preview ? null : (previewKey === 'events' ? picked.length === 0 : preview.rows.length === 0) ? (
+                <div className="p-8 text-[15px] font-bold" style={{ color: C.soft }}>Nothing matches these filters.{chips.length ? ' ' : ''}{chips.length > 0 && <button type="button" onClick={clearAll} className="underline cursor-pointer" style={{ color: C.accent }}>Clear all filters</button>}</div>
+              ) : previewKey === 'events' && eventsView === 'cards' ? cardsView() : tableView(preview, previewKey === 'events')}
+              {!busy && preview && (previewKey !== 'events' || eventsView === 'columns') && preview.rows.length > 200 && (
+                <div className="px-5 py-3 text-[13px] font-semibold" style={{ color: C.soft }}>First 200 of {preview.rows.length} rows shown here - Copy and Download include all {preview.rows.length}.</div>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Action bar - pinned */}
-        <div className="flex flex-wrap items-center gap-3 px-5 py-3">
-          <div className="flex-1 min-w-[260px] text-sm text-white">
-            {busy ? <b>Reading the data…</b>
-              : chosenTables.length === 0 ? <b>Tick at least one section on the left.</b>
-                : <span><b>You get:</b> {chosenTables.map((t) => `${t.title} (${t.rows.length})`).join(' · ')}</span>}
-            {note && <div className="font-bold mt-0.5" style={{ color: '#bff0cf' }}>{note}</div>}
+          {/* 3 TAKE IT */}
+          <div className="w-[290px] flex-shrink-0 flex flex-col min-h-0" style={{ background: C.side, borderLeft: `1px solid ${C.line}` }}>
+            <div className="flex items-center gap-2 px-4 pt-4 pb-3">
+              <span className="w-7 h-7 rounded-full flex items-center justify-center text-[14px] font-black text-white" style={{ background: C.accent }}>3</span>
+              <span className="text-[16px] font-black" style={{ color: C.ink }}>Take it</span>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 space-y-3">
+              <div className="rounded-xl p-3" style={{ background: C.card, boxShadow: LIFT, opacity: eventsChosen ? 1 : 0.5 }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.ink }}>Event columns</span>
+                  <span className="text-[12px] font-bold" style={{ color: C.soft }}>{columnKeys.length} of {ALL_COLUMNS.length}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {COLUMN_SETS.map((cs) => {
+                    const on = cs.columns.length === columnKeys.length && cs.columns.every((k) => columnKeys.includes(k));
+                    return (
+                      <button key={cs.key} type="button" onClick={() => setDropped(ALL_COLUMNS.filter((k) => !cs.columns.includes(k)))}
+                        className="text-[13px] font-bold px-2 py-2 rounded-lg cursor-pointer"
+                        style={{ background: on ? C.accent : '#fff', color: on ? '#fff' : C.ink, border: `1.5px solid ${on ? C.accent : C.line}`, boxShadow: on ? '0 3px 8px rgba(122,79,87,.35)' : '0 1px 2px rgba(0,0,0,.06)' }}>{cs.label}</button>
+                    );
+                  })}
+                </div>
+                <button type="button" onClick={() => setShowColumnList((v) => !v)} className="w-full mt-2 text-[13px] font-black py-1.5 rounded-lg cursor-pointer" style={{ color: C.accent, background: C.tint }}>
+                  {showColumnList ? 'Hide the column list' : 'Pick columns one by one'}
+                </button>
+                {showColumnList && (
+                  <div className="mt-2 space-y-2">
+                    {COLUMN_GROUPS.map((grp) => (
+                      <div key={grp}>
+                        <div className="text-[11px] font-black uppercase tracking-wider mb-0.5" style={{ color: C.soft }}>{grp}</div>
+                        {EVENT_COLUMNS.filter((c) => c.group === grp).map((c) => {
+                          const on = !dropped.includes(c.key);
+                          return (
+                            <button key={c.key} type="button" onClick={() => toggle(dropped, setDropped, c.key)} className="w-full flex items-center gap-2 px-1 py-0.5 rounded hover:bg-[#f6eff0] cursor-pointer text-left">
+                              {checkbox(on)}<span className="text-[13px] font-semibold" style={{ color: C.ink }}>{c.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl p-3" style={{ background: C.card, boxShadow: LIFT }}>
+                <div className="text-[12px] font-black uppercase tracking-wider mb-2" style={{ color: C.ink }}>In the file / copy</div>
+                {chosenTables.length === 0
+                  ? <div className="text-[13px] font-bold" style={{ color: C.full }}>Tick a section in the middle (the boxes on the tabs).</div>
+                  : chosenTables.map((t) => (
+                    <div key={t.key} className="flex justify-between text-[13px] py-0.5" style={{ color: C.ink }}>
+                      <span className="font-semibold">{t.title}</span><span className="font-black">{busy ? '…' : t.rows.length}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* The actions - pinned at the bottom of step 3 */}
+            <div className="p-4 space-y-2" style={{ borderTop: `1px solid ${C.line}` }}>
+              <div className="flex rounded-lg p-0.5" style={{ background: '#e6dcde' }}>
+                {[['csv', 'CSV'], ['json', 'JSON'], ['html', 'Printable']].map(([k, label]) => (
+                  <button key={k} type="button" onClick={() => setFormat(k)} className="flex-1 text-[13px] font-bold py-1.5 rounded-md cursor-pointer"
+                    style={{ background: format === k ? '#fff' : 'transparent', color: C.ink, boxShadow: format === k ? '0 1px 3px rgba(0,0,0,.15)' : 'none' }}>{label}</button>
+                ))}
+              </div>
+              <button onClick={copy} disabled={!canGo} title="Tables for email / Docs, cells for Sheets / Excel"
+                className="w-full py-3 rounded-xl font-black text-[15px] text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                style={{ background: C.accent, boxShadow: '0 6px 16px rgba(122,79,87,.45)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = C.accentHover; }} onMouseLeave={(e) => { e.currentTarget.style.background = C.accent; }}>
+                Copy {busy ? '' : `${totalRows} rows`}
+              </button>
+              <button onClick={download} disabled={!canGo}
+                className="w-full py-3 rounded-xl font-black text-[15px] text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                style={{ background: C.head, boxShadow: '0 6px 16px rgba(0,0,0,.30)' }}>
+                {format === 'html' ? 'Open printable page' : `Download ${format.toUpperCase()}`}
+              </button>
+              {note && <div className="text-[13px] font-bold text-center" style={{ color: C.open }}>{note}</div>}
+            </div>
           </div>
-          <div className="flex items-center rounded-lg p-1" style={{ background: 'rgba(255,255,255,.12)' }}>
-            {[['csv', 'CSV'], ['json', 'JSON'], ['html', 'Printable page']].map(([k, label]) => (
-              <button key={k} type="button" onClick={() => setFormat(k)}
-                className="text-sm font-bold px-3 py-1.5 rounded-md cursor-pointer"
-                style={{ background: format === k ? '#fff' : 'transparent', color: format === k ? C.ink : '#fff' }}>{label}</button>
-            ))}
-          </div>
-          <button onClick={copy} disabled={!canGo} title="Copies every ticked section: tables for email / Docs, cells for Sheets / Excel"
-            className="px-5 py-2.5 rounded-lg font-black text-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-            style={{ background: '#fff', color: C.ink, boxShadow: '0 4px 14px rgba(0,0,0,.35)' }}>
-            Copy {busy ? '' : `${totalRows} rows`}
-          </button>
-          <button onClick={download} disabled={!canGo}
-            className="px-5 py-2.5 rounded-lg font-black text-sm text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-            style={{ background: C.accent, boxShadow: '0 4px 14px rgba(0,0,0,.45)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = C.accentHover; }} onMouseLeave={(e) => { e.currentTarget.style.background = C.accent; }}>
-            {format === 'html' ? 'Open printable page' : `Download ${format.toUpperCase()}`}
-          </button>
         </div>
       </div>
     </div>

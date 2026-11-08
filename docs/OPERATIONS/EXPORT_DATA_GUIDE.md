@@ -9,17 +9,25 @@ Rebuilt 2026-11-07. Jayme: *"the export needs to be totally redone to include ev
 
 ## How to use it
 
-One screen, worked top to bottom, left to right (layout from Jayme's multi-view blueprint; look from her CORE visual philosophy: dark shell, white container floating on it, the calendar's own rose as the one accent):
+Redone again 2026-11-07 (night). Jayme: *"its flat its like a spreadsheet with zero filters for programs - so many words zero visual communication everything's off center ... there's no way i can export school year camps only? or specific programs?"*
 
-1. Calendar → **📤 Export**.
-2. **Top bar:** dates - This month · Next month · Today on · Entire database (first to last event date in the database) · or type From / To. Every event that *touches* the dates is in. Under it, **1** the gyms (one row, logo + code, all on; tap to drop) and the buckets (* = has a monthly requirement).
-3. **Left rail - 2 What to include:** tick any sections; each shows its row count. Click a section's name to see it in the preview. **Quick pick** sets sections + columns in one tap (Everything · Spots check · Prices · Live on the portal? · Monthly requirements · Audit).
-4. **Right - live preview:** the section you clicked, exactly as it will download / copy (first 150 rows on screen; the file and the copy have them all). For Events, the column groups sit above the table as tabs; tap a column to drop or add it, or click **×** on a column header.
-5. **Bottom bar:** "You get:" lists every ticked section and its rows. Pick **CSV** (Excel, Sheets) · **JSON** (backup) · **Printable page** (opens in a new tab - print or save there). Then **Copy** or **Download**.
+One screen, three steps left to right (dark shell, white page floating on it, the calendar's rose as the one accent):
 
-**Copy and Download give the same thing.** Copy puts every ticked section on the clipboard: tables (each under its title) for Gmail / Outlook / Docs, cells for Sheets / Excel (a blank row between sections).
+1. Calendar -> **Export**. Top bar: This month · Next month · Today on · Everything (first to last event date in the database) · or type From / To. Every event that *touches* the dates is in.
+2. **1 Filter** (left). Every filter shows a live count that follows the other filters, so a number is what you get by ticking it:
+   - **Search event names**
+   - **Gyms** (all 14 always listed, even with 0) · **Bucket**
+   - **iClass Event Type** and **iClass Program**: type words (e.g. *school*) and press **Only these N** to keep every match at every gym (each gym spells them differently: SCHOOL YEAR CAMP - FULL DAY, School-Year Camp, ...). Hover a row for **only**.
+   - **Spots**: Open / Almost full (3 or fewer) / FULL / No count · **Live on the portal**: Live (on by default) / Not live yet (camps built in iClass but not on the portal).
+   - **Reset** per filter, **Clear all** at the top. Every value comes from the data (the setup read first, else what the sync saved) - nothing typed in the code.
+3. **2 See it** (middle): the count, the filters in play as chips (x removes one), then a tab per section with a box that puts it in the file / copy. Events show as **Cards** grouped by gym in the gym's color (date, name, event type, ages, hours, prices, spots left) or as **Columns** - exactly what the file will hold (x on a header drops it).
+4. **3 Take it** (right): Event columns (Basics · Spots · Prices · Live? · iClass setup · Everything, or **Pick columns one by one**), what is in the file / copy, CSV / JSON / Printable, **Copy**, **Download**.
 
-Your picks (sections, dropped columns) are remembered on this computer.
+**Copy and Download give the same thing.** Copy puts every ticked section on the clipboard: tables (each under its title) for Gmail / Outlook / Docs, cells for Sheets / Excel. The file's first line lists the filters used.
+
+Your picks (sections, columns) are remembered on this computer; filters start fresh each time.
+
+Tested on the test copy 2026-11-07: December 2026, Event Type search "school" -> Only these 5 -> 48 events (database: 48 events of the same 5 Event Types); then Program "SCHOOL YEAR CAMPS" only -> 39, and Copy started "Events (39)" with 39 rows. "school" also matches AAG's "School Vacation Week Camp" (Whoville) - untick it if not wanted.
 
 ---
 
@@ -35,7 +43,7 @@ Your picks (sections, dropped columns) are remembered on this computer.
 | **iClass setup read per gym** | gym | latest `iclass_setup_reads` row - a gym never read says **never read** |
 | **Sync log** (admin: press `*` + PIN) | sync | `sync_log`, last 100 |
 
-**"Also add camps built in iClass but not live"** (Events card): adds the faded calendar camps as rows marked **Not live**, with **Why Not Live** (Show on portal off / registration opens later / registration closed / not synced yet). Off by default. They never count toward requirements.
+**Not live yet** (Live on the portal filter): adds the faded calendar camps as rows marked **Not live**, with **Why Not Live** (Show on portal off / registration opens later / registration closed / not synced yet). Off by default. They never count toward requirements.
 
 ## The event columns
 

@@ -83,6 +83,16 @@ export function spotsOf(e, dayCounts) {
   return { left: Number(e.openings), byDay: '', source: 'portal (day 1 only)' };
 }
 
+// FULL / Almost full (3 or fewer) / Open, from spotsOf; '' when no count was read. Shared by the Status
+// column and the Export window's Spots filter so they can never disagree.
+export function statusOf(e, dayCounts) {
+  const s = spotsOf(e, dayCounts);
+  if (s.left === null) return '';
+  return s.left <= 0 ? 'FULL' : s.left <= 3 ? 'Almost full' : 'Open';
+}
+// iClass Event Type / Program for the filters: the signed-in setup read first, else what the sync saved.
+export const eventTypeOf = (e, extras) => setupOf(e, extras)?.eventType || e.camp_type || '';
+export const programOf = (e, extras) => setupOf(e, extras)?.program || e.program_name || '';
 // A price table's boxes as one line, in iClass's own grid: rows = number of days (camps) or time slots
 // (appointments), across = 1st / 2nd / 3rd child. A row where every child pays the same shows once
 // ("1 day $120"); otherwise "1st $35, 2nd+ $30". A blank box in iClass says BLANK.
@@ -106,7 +116,7 @@ export function formatPrices(cells, unit = 'day') {
   }).join(' · ');
 }
 
-const hoursOf = (e) => {
+export const hoursOf = (e) => {
   if (Array.isArray(e.daily_schedule) && e.daily_schedule.length) {
     return e.daily_schedule.map((d) => {
       const hrs = d.start_time ? `${d.start_time}${d.end_time ? '-' + d.end_time : ''}` : '';
@@ -116,7 +126,7 @@ const hoursOf = (e) => {
   return e.time || '';
 };
 
-const agesOf = (e) => {
+export const agesOf = (e) => {
   const hasMin = e.age_min !== null && e.age_min !== undefined;
   const hasMax = e.age_max !== null && e.age_max !== undefined;
   if (hasMin && hasMax) return `${e.age_min}-${e.age_max}`;
@@ -195,7 +205,7 @@ export const EVENT_COLUMNS = [
 
   { group: 'Spots & sign-up', key: 'spots', label: 'Spots Left', get: (e, c) => { const s = spotsOf(e, c.dayCounts); return s.left === null ? '' : s.left; } },
   { group: 'Spots & sign-up', key: 'spots_by_day', label: 'Spots by Day', get: (e, c) => spotsOf(e, c.dayCounts).byDay },
-  { group: 'Spots & sign-up', key: 'status', label: 'Status', get: (e, c) => { const s = spotsOf(e, c.dayCounts); if (s.left === null) return ''; return s.left <= 0 ? 'FULL' : s.left <= 3 ? 'Almost full' : 'Open'; } },
+  { group: 'Spots & sign-up', key: 'status', label: 'Status', get: (e, c) => statusOf(e, c.dayCounts) },
   { group: 'Spots & sign-up', key: 'max_kids', label: 'Max Kids', get: (e, c) => setupOf(e, c.extras)?.maxKids ?? '' },
   // per day vs whole camp only means something when the event runs more than one day (blank for a one-day event)
   { group: 'Spots & sign-up', key: 'signup', label: 'Sign-up', get: (e) => {
@@ -215,8 +225,8 @@ export const EVENT_COLUMNS = [
   { group: 'Price', key: 'prices', label: 'Prices', get: (e, c) => setupOf(e, c.extras)?.prices || '' },
   { group: 'Price', key: 'due_at_signup', label: 'Due at Sign-up', get: (e, c) => setupOf(e, c.extras)?.dueAtSignup ?? '' },
 
-  { group: 'Where it lives in iClass', key: 'category', label: 'iClass Event Type', get: (e, c) => setupOf(e, c.extras)?.eventType || e.camp_type || '' },
-  { group: 'Where it lives in iClass', key: 'program', label: 'iClass Program', get: (e, c) => setupOf(e, c.extras)?.program || e.program_name || '' },
+  { group: 'Where it lives in iClass', key: 'category', label: 'iClass Event Type', get: (e, c) => eventTypeOf(e, c.extras) },
+  { group: 'Where it lives in iClass', key: 'program', label: 'iClass Program', get: (e, c) => programOf(e, c.extras) },
   { group: 'Where it lives in iClass', key: 'charge_category', label: 'Charge Category', get: (e, c) => {
     const s = setupOf(e, c.extras);
     if (!s?.chargeCategory) return '';
@@ -232,7 +242,7 @@ export const EVENT_COLUMNS = [
 // The columns "Copy what's shown" uses when nobody picked (short enough to paste into an email).
 export const DEFAULT_COPY_COLUMNS = ['gym', 'gym_name', 'bucket', 'title', 'start', 'end', 'hours', 'ages', 'spots', 'signup', 'link'];
 
-const sortEvents = (events) => [...events].sort((a, b) =>
+export const sortEvents = (events) => [...events].sort((a, b) =>
   (a.gym_id || '').localeCompare(b.gym_id || '')
   || ymd(a.start_date || a.date).localeCompare(ymd(b.start_date || b.date))
   || (a.title || '').localeCompare(b.title || ''));
