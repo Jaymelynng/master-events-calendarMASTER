@@ -217,6 +217,18 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
     return { ...prev, [fk]: next.length === all.length ? null : next };
   });
   const onlyValues = (fk, vals) => setFilters((prev) => ({ ...prev, [fk]: vals }));
+  // Bulk (Jayme 2026-11-08: "each section i have to click or unclick one at a time absolutely nothing bulk action about that")
+  const allValues = (fk) => setFilters((prev) => ({ ...prev, [fk]: null }));
+  const noValues = (fk) => setFilters((prev) => ({ ...prev, [fk]: [] }));
+  const addValues = (fk, vals) => setFilters((prev) => {
+    const all = facetData[fk].values; const cur = prev[fk] || all;
+    const next = [...new Set([...cur, ...vals])];
+    return { ...prev, [fk]: next.length === all.length ? null : next };
+  });
+  const dropValues = (fk, vals) => setFilters((prev) => {
+    const cur = prev[fk] || facetData[fk].values;
+    return { ...prev, [fk]: cur.filter((v) => !vals.includes(v)) };
+  });
   const resetFacet = (fk) => setFilters((prev) => ({ ...prev, [fk]: NO_FILTER[fk] }));
   const clearAll = () => { setFilters(NO_FILTER); setSearch(''); setFacetSearch({}); };
 
@@ -392,11 +404,16 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
             <input value={facetSearch[f.key] || ''} onChange={(e) => setFacetSearch((p) => ({ ...p, [f.key]: e.target.value }))}
               placeholder={f.key === 'etype' ? 'Type: school year, summer, half day…' : 'Type to find…'}
               className="flex-1 min-w-0 text-[13px] px-2.5 py-1.5 rounded-lg outline-none" style={{ background: C.tint, color: C.ink, border: `1.5px solid ${C.line}` }} />
-            {q && shown.length > 0 && (
-              <button type="button" onClick={() => onlyValues(f.key, shown)} className="text-[12px] font-black px-2.5 py-1.5 rounded-lg text-white cursor-pointer flex-shrink-0" style={{ background: C.accent }}>
-                Only these {shown.length}
-              </button>
-            )}
+          </div>
+        )}
+        {q && shown.length > 0 && (
+          <div className="flex gap-1 mb-1.5">
+            <button type="button" onClick={() => onlyValues(f.key, shown)} title="Keep only the matches"
+              className="flex-1 text-[12px] font-black px-2 py-1.5 rounded-lg text-white cursor-pointer hover:brightness-110" style={{ background: C.accent }}>Only these {shown.length}</button>
+            <button type="button" onClick={() => addValues(f.key, shown)} title="Tick every match, keep the rest as they are"
+              className="flex-1 text-[12px] font-black px-2 py-1.5 rounded-lg cursor-pointer hover:brightness-95" style={{ background: C.tint, color: C.accent, border: `1.5px solid ${C.accent}` }}>+ Add these</button>
+            <button type="button" onClick={() => dropValues(f.key, shown)} title="Untick every match, keep the rest as they are"
+              className="flex-1 text-[12px] font-black px-2 py-1.5 rounded-lg cursor-pointer hover:brightness-95" style={{ background: C.tint, color: C.accent, border: `1.5px solid ${C.accent}` }}>− Drop these</button>
           </div>
         )}
         <div className="space-y-0.5 max-h-[230px] overflow-y-auto pr-1">
@@ -418,13 +435,22 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
       </div>
     );
   };
+  function bulkBtn(label, onClick, active) {
+    return (
+      <button type="button" onClick={onClick} disabled={active}
+        className="text-[11px] font-black px-2 py-0.5 rounded-md cursor-pointer disabled:cursor-default"
+        style={{ background: active ? C.accent : '#fff', color: active ? '#fff' : C.accent, border: `1.5px solid ${C.accent}` }}>{label}</button>
+    );
+  }
   function facetHead(f, countText, changed) {
     return (
       <div className="flex items-center justify-between mb-2">
         <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.ink }}>{f.label}</span>
-        <span className="flex items-center gap-2">
-          {countText && <span className="text-[12px] font-bold" style={{ color: C.soft }}>{countText}</span>}
-          {changed && <button type="button" onClick={() => resetFacet(f.key)} className="text-[12px] font-black hover:underline cursor-pointer" style={{ color: C.accent }}>Reset</button>}
+        <span className="flex items-center gap-1.5">
+          {countText && <span className="text-[12px] font-bold mr-0.5" style={{ color: C.soft }}>{countText}</span>}
+          {bulkBtn('All', () => allValues(f.key), filters[f.key] === null)}
+          {bulkBtn('None', () => noValues(f.key), Array.isArray(filters[f.key]) && filters[f.key].length === 0)}
+          {changed && f.key === 'live' && <button type="button" onClick={() => resetFacet(f.key)} className="text-[12px] font-black hover:underline cursor-pointer" style={{ color: C.accent }}>Reset</button>}
         </span>
       </div>
     );
@@ -592,6 +618,10 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
 
               {/* What goes in: each section is a tab; the box puts it in the file / copy */}
               <div className="flex flex-wrap items-end gap-1 mt-3">
+                <div className="flex items-center gap-1 pr-2 py-2">
+                  {bulkBtn('All', () => setSections(visibleSections.map((s) => s.key)), visibleSections.every((s) => sections.includes(s.key)))}
+                  {bulkBtn('None', () => setSections([]), activeKeys.length === 0)}
+                </div>
                 {visibleSections.map((s) => {
                   const on = sections.includes(s.key); const showing = previewKey === s.key; const t = tableOf(s.key);
                   return (
@@ -657,9 +687,21 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
                 </button>
                 {showColumnList && (
                   <div className="mt-2 space-y-2">
-                    {COLUMN_GROUPS.map((grp) => (
+                    <div className="flex items-center gap-1">
+                      {bulkBtn('All columns', () => setDropped([]), dropped.length === 0)}
+                      {bulkBtn('None', () => setDropped([...ALL_COLUMNS]), columnKeys.length === 0)}
+                    </div>
+                    {COLUMN_GROUPS.map((grp) => {
+                      const keys = EVENT_COLUMNS.filter((c) => c.group === grp).map((c) => c.key);
+                      const allOn = keys.every((k) => !dropped.includes(k));
+                      return (
                       <div key={grp}>
-                        <div className="text-[11px] font-black uppercase tracking-wider mb-0.5" style={{ color: C.soft }}>{grp}</div>
+                        <button type="button" onClick={() => setDropped(allOn ? [...new Set([...dropped, ...keys])] : dropped.filter((k) => !keys.includes(k)))}
+                          title={allOn ? 'Untick this whole group' : 'Tick this whole group'}
+                          className="w-full flex items-center gap-2 px-1 py-0.5 rounded hover:bg-[#f6eff0] cursor-pointer text-left">
+                          {checkbox(allOn)}<span className="text-[11px] font-black uppercase tracking-wider" style={{ color: C.ink }}>{grp}</span>
+                        </button>
+                        <div className="pl-4">
                         {EVENT_COLUMNS.filter((c) => c.group === grp).map((c) => {
                           const on = !dropped.includes(c.key);
                           return (
@@ -668,8 +710,10 @@ export default function ExportModal({ onClose, gyms, monthlyRequirements, curren
                             </button>
                           );
                         })}
+                        </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -19,7 +19,8 @@ One screen, three steps left to right (dark shell, white page floating on it, th
    - **Gyms** (all 14 always listed, even with 0) · **Bucket**
    - **iClass Event Type** and **iClass Program**: type words (e.g. *school*) and press **Only these N** to keep every match at every gym (each gym spells them differently: SCHOOL YEAR CAMP - FULL DAY, School-Year Camp, ...). Hover a row for **only**.
    - **Spots**: Open / Almost full (3 or fewer) / FULL / No count · **Live on the portal**: Live (on by default) / Not live yet (camps built in iClass but not on the portal).
-   - **Reset** per filter, **Clear all** at the top. Every value comes from the data (the setup read first, else what the sync saved) - nothing typed in the code.
+   - **All / None** on every filter, **Clear all** at the top. After typing in a list's search box: **Only these N** (keep just the matches), **+ Add these** (tick every match), **− Drop these** (untick every match, e.g. type *care* to drop every care type at once). Every value comes from the data (the setup read first, else what the sync saved) - nothing typed in the code.
+   - Bulk added 2026-11-08. Jayme: *"each section i have to click or unclick one at a time absolutely nothing bulk action about that"*. Also: **All / None** in front of the section tabs, **All columns / None** and a box on each column group (Event, Spots & sign-up, ...) to tick or untick the whole group.
 3. **2 See it** (middle): the count, the filters in play as chips (x removes one), then a tab per section with a box that puts it in the file / copy. Events show as **Cards** grouped by gym in the gym's color (date, name, event type, ages, hours, prices, spots left) or as **Columns** - exactly what the file will hold (x on a header drops it).
 4. **3 Take it** (right): Event columns (Basics · Spots · Prices · Live? · iClass setup · Everything, or **Pick columns one by one**), what is in the file / copy, CSV / JSON / Printable, **Copy**, **Download**.
 
@@ -28,6 +29,8 @@ One screen, three steps left to right (dark shell, white page floating on it, th
 Your picks (sections, columns) are remembered on this computer; filters start fresh each time.
 
 Tested on the test copy 2026-11-07: December 2026, Event Type search "school" -> Only these 5 -> 48 events (database: 48 events of the same 5 Event Types); then Program "SCHOOL YEAR CAMPS" only -> 39, and Copy started "Events (39)" with 39 rows. "school" also matches AAG's "School Vacation Week Camp" (Whoville) - untick it if not wanted.
+
+Bulk buttons tested on the test copy 2026-11-08 (November 2026, 123 events = 102 in `events` + 21 already past in `events_archive`, which holds 23 with 2 deleted): sections All -> all 6 in the file, None -> 0 and Copy greys out; Gyms None -> 0 events, All -> 123; Event Type "care" -> − Drop these -> 118 (database: 5 November events with a care type); columns None -> 0 of 32, All columns -> 32, untick the Event group -> 20, tick it -> 32.
 
 ---
 
