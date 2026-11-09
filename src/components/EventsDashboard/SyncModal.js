@@ -101,8 +101,16 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
     const paused = res.filter(g => g.status === 'paused').length;
     const errors = res.filter(g => g.status === 'error').length;
     const when = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const sr = setupLine.summary();
+    const setupHead = sr.asked
+      ? [
+          `iClass setup: ${sr.read.length} of ${sr.asked} gyms read`,
+          sr.going.length ? `still reading: ${sr.going.join(', ')}` : null,
+          sr.failed.length ? `failed: ${sr.failed.join(', ')}` : null,
+        ].filter(Boolean).join(' · ')
+      : null;
     const head = [
-      `Sync All - ${when}${syncAllComplete ? '' : ' (still running)'}`,
+      `Sync All - ${when}${syncAllComplete && !sr.going.length ? '' : ' (still running)'}`,
       [
         `${done.length} of ${p.totalGyms} gyms synced`,
         `${sum('eventsFound')} events`,
@@ -113,7 +121,8 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
         paused ? `${paused} need review` : null,
         errors ? `${errors} had errors` : null,
       ].filter(Boolean).join(' · '),
-    ];
+      setupHead,
+    ].filter(Boolean);
     const STATUS = { pending: 'Waiting', syncing: 'Syncing', importing: 'Importing', done: 'Done', error: 'ERROR', paused: 'REVIEW NEEDED' };
     const blocks = res.map(g => {
       const lines = [`${g.gymId} - ${g.gymName}: ${STATUS[g.status] || g.status}`];
@@ -1162,7 +1171,11 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
             <div className="p-4 bg-purple-50 border-2 border-purple-300 rounded-lg">
               <div className="flex justify-between items-center mb-2">
                 <h3 className="font-bold text-purple-800 text-lg">
-                  {syncAllComplete ? '✅ Sync Complete!' : `🔄 Syncing All Gyms...`}
+                  {!syncAllComplete
+                    ? '🔄 Syncing All Gyms...'
+                    : setupLine.summary().going.length
+                      ? '✅ Events synced · 🔄 iClass setup still reading'
+                      : '✅ Sync Complete!'}
                 </h3>
                 <span className="text-sm font-medium text-purple-600">
                   {syncAllProgress.gymResults.filter(g => g.status === 'done' || g.status === 'error' || g.status === 'paused').length} / {syncAllProgress.totalGyms} gyms
@@ -1185,6 +1198,16 @@ export default function SyncModal({ theme, onClose, onBack, gyms, acknowledgedPa
                   );
                 })()}
               </div>
+              {syncAllComplete && setupLine.summary().asked > 0 && (() => {
+                const sr = setupLine.summary();
+                return (
+                  <p className="text-sm font-semibold text-purple-900 mt-2">
+                    iClass setup: {sr.read.length} of {sr.asked} gyms read
+                    {sr.going.length ? ` · still reading ${sr.going.join(', ')} (about 1–2 minutes each, updates by itself)` : ' · all done'}
+                    {sr.failed.length ? ` · failed: ${sr.failed.join(', ')}` : ''}
+                  </p>
+                );
+              })()}
               {!syncAllComplete && (
                 <p className="text-xs text-purple-600 mt-2">
                   {(() => {

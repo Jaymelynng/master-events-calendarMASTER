@@ -91,7 +91,15 @@ export function useSetupReadLine() {
     return { kind: 'failed', text: row.note || 'stopped' };
   };
 
-  return { queue, statusFor };
+  // Where the whole line stands, so the panel never says "Sync Complete" while reads are still going
+  // (Jayme 2026-11-09: the header said complete and EST / PLG still showed "reading now").
+  const summary = () => {
+    const ids = Object.keys(asked).sort();
+    const by = (kinds) => ids.filter((g) => kinds.includes(statusFor(g)?.kind));
+    return { asked: ids.length, read: by(['ok']), failed: by(['failed']), going: by(['waiting', 'reading']) };
+  };
+
+  return { queue, statusFor, summary };
 }
 
 const LOOK = {
