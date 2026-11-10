@@ -60,6 +60,13 @@ def kind_of(c):
     n = c['camp_name']
     m = re.match(r'\s*Week\s*(\d+)\s*:\s*(.*?)\s*\|', n)
     wk, theme = (m.group(1), m.group(2).strip()) if m else (None, None)
+    # Times ("9:00 AM", "3:00PM") hold a ":" and an AM / PM that are not the theme or the camp kind
+    # (EGF 2026-11-10: "Week 1 HAWAIIAN HULLABALOO- ALL DAY CAMP 9:00 AM - 3:00 PM" came out "Week 1 00 AM - 3:00 PM AM").
+    n_nt = re.sub(r'\d{1,2}(?::\d{2})?\s*[AP]\.?M\.?|\d{1,2}:\d{2}', ' ', n, flags=re.I)
+    if not m and ':' not in n_nt:   # "Week 1 THEME - KIND <times>", no colon outside the times
+        m3 = re.match(r'\s*Week\s*(\d+)\s+(.+?)\s*-\s*\S', n_nt, re.I)
+        if m3:
+            m, wk, theme = m3, m3.group(1), m3.group(2).strip(' -,!')
     if not m:   # other name patterns, e.g. AAG "Week 1 AM Camp: Passport to Fun June 21-June 25"
         m2 = re.match(r'\s*Week\s*(\d+)\b[^:]*:\s*(.*?)\s*(?:\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*\d.*)?$', n, re.I)
         if m2:
@@ -77,8 +84,12 @@ def kind_of(c):
     else:
         sport = 'Ninja' if re.search(r'ninja|parkour', n, re.I) else ('Girls' if re.search(r'girls', n, re.I) else ('Gym' if re.search(r'gymnastics', n, re.I) else ''))
         fh = 'Full Day' if 'FULL' in t or re.search(r'full day', n, re.I) else ('Half Day' if 'HALF' in t or re.search(r'half day', n, re.I) else '')
-        if not fh:   # AM / PM half-day camps named that way (AAG "AM Camp", "PM Camp")
-            fh = 'AM' if re.search(r'\bAM\b', n) else ('PM' if re.search(r'\bPM\b', n) else '')
+        if not fh and re.search(r'\ball[- ]day\b(?!\s*care)', n_nt, re.I):   # EGF "ALL DAY CAMP" (not MGC "ALL DAY CARE")
+            fh = 'Full Day'
+        if not fh:   # AM / PM half-day camps named that way (AAG "AM Camp", "PM Camp"); a time's AM / PM does not count
+            fh = 'AM' if re.search(r'\bAM\b', n_nt) else ('PM' if re.search(r'\bPM\b', n_nt) else '')
+            if fh and re.search(r'\bextended\b', n_nt, re.I):   # EGF "AM Extended" / "PM Extended" = its care hours
+                fh += ' Extended'
         elif fh == 'Half Day':   # PLG "Summer - AM Half Day" / "PM Half Day": two different camps, never one group
             ap = re.search(r'\b(AM|PM)\b', n)
             if ap:
@@ -124,7 +135,7 @@ def sport(c):
 def is_care(c):
     """Before / After / Extended Care: its settings say care, or its name does (HGA's Memorial Week Aftercare
     is set up under SUMMER CAMP - FULL DAY). Their text is not checked for snack, what to wear or bring."""
-    return bool(c.get('_care') or re.search(r'\b(after|before|extended)\s*care\b|aftercare', c['camp_name'] or '', re.I))
+    return bool(c.get('_care') or re.search(r'\b(after|before|extended)\s*care\b|aftercare|\b[AP]M\s+extended\b', c['camp_name'] or '', re.I))
 
 
 def name_vs_settings(c):
@@ -352,14 +363,29 @@ def main():
     # its camps before launch is the gym's choice. Inactive only keeps a camp out of 'Camps are live' / 'Goes live early'.
 
     # 2. Registration end = camp's last day
+    #    Many camps closing the same number of days early = ONE row (EGF 2026-11-10: 43 camps each a day early were
+    #    43 rows; TIG's 22 camps all close the Wednesday before camp). Closed-already camps keep their own row.
+    early = collections.defaultdict(list)
     for c in camps:
         ran(c, 'Registration end date')
         last = c['_days'][-1][0] if c['_days'] else c['end_date']
         if c['registration_end'] and d(c['registration_end']) != d(last):
+            gap = (d(last) - d(c['registration_end'])).days
+            if d(c['registration_end']) >= today and gap > 0:
+                early[gap].append((c, last))
+                continue
             note = f"Registration ends {mdy(c['registration_end'])} instead of {mdy(last)} (last day of camp)."
             if d(c['registration_end']) < today:
                 note += ' Registration is already closed, so this camp is missing from the portal list and its page says Registration Closed.'
             row('Registration end date', label(c), note, c['_href'])
+    for gap, grp in sorted(early.items()):
+        if len(grp) < 3:
+            for c, last in grp:
+                row('Registration end date', label(c), f"Registration ends {mdy(c['registration_end'])} instead of {mdy(last)} (last day of camp).", c['_href'])
+            continue
+        c0, last0 = grp[0]
+        who = f"All {N}" if len(grp) == N else f"{len(grp)} of {N}"
+        row('Registration end date', who, f"Registration ends {gap} day{'s' if gap != 1 else ''} before the last day of camp (e.g. {label(c0)}: ends {mdy(c0['registration_end'])}, last day {mdy(last0)}). On purpose?", who=[c for c, _ in grp])
 
     # 2b. The same camp entered twice (same name, same dates)
     twins = collections.defaultdict(list)
