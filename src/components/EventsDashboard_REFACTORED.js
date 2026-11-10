@@ -20,7 +20,7 @@ import { rulesApi } from '../lib/api';
 import DashboardHeader, { ActionButtons } from './EventsDashboard/DashboardHeader';
 import BulkPortalOpener from './EventsDashboard/BulkPortalOpener';
 import MonthlyRequirementsTable from './EventsDashboard/MonthlyRequirementsTable';
-import CalendarControls, { CalendarViewToggle, CalendarLegend } from './EventsDashboard/CalendarControls';
+import CalendarControls, { CalendarLegend } from './EventsDashboard/CalendarControls';
 import CalendarGrid from './EventsDashboard/CalendarGrid';
 import TableView from './EventsDashboard/TableView';
 import EventDetailPanel from './EventsDashboard/EventDetailPanel';
@@ -476,6 +476,8 @@ const EventsDashboard = () => {
             portalView={portalView}
             onPortalViewChange={setPortalView}
             portalCounts={portalCounts}
+            errorFocus={errorFocus}
+            onErrorFocusToggle={() => setErrorFocus(f => !f)}
             shownCount={shownEvents.length}
             onCopyShown={async () => {
               try {
@@ -499,18 +501,8 @@ const EventsDashboard = () => {
           {/* Calendar View */}
           {viewMode === 'calendar' && (
             <div className="space-y-2">
-              {/* Calendar View Toggle */}
-              <CalendarViewToggle
-                calendarView={calendarView}
-                onCalendarViewChange={handleCalendarViewChange}
-                theme={theme}
-                errorFocus={errorFocus}
-                onErrorFocusToggle={() => setErrorFocus(f => !f)}
-                portalView={portalView}
-                onPortalViewChange={setPortalView}
-                portalCounts={portalCounts}
-              />
-
+              {/* Days, weeks, Error view and the Portal filter now live in the one control panel
+                  (CalendarControls) - Jayme 2026-11-10. */}
               {/* Calendar Legend — only in Errors Focus mode. Normal view is
                   events + spots; the error-dot legend only matters when you're
                   hunting errors. */}

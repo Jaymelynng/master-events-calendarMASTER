@@ -54,6 +54,8 @@ export default function CalendarControls({
   portalView = 'both',
   onPortalViewChange,
   portalCounts = { on: 0, off: 0 },
+  errorFocus = false,
+  onErrorFocusToggle,
 }) {
   const [copiedCount, setCopiedCount] = useState(null);
   const [gymRowRef, gymRowWidth] = useWidth();
@@ -195,140 +197,163 @@ export default function CalendarControls({
         );
       })()}
 
-      {/* All Controls in One Row */}
-      <div className="flex justify-center items-end gap-3 mb-2">
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-2">Category:</label>
-          <select
-            value={selectedEventType}
-            onChange={(e) => onEventTypeChange(e.target.value)}
-            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-300 focus:border-pink-400 bg-white shadow-sm min-w-[140px]"
-          >
-            <option value="all">All Events</option>
-            {eventTypesFromEvents.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
+      {/* ONE control panel, two rows (Jayme 2026-11-10: "it's flat, it blends together, zero communication on
+          what it does / what to do ... save vertical space but make it so visually I know what to do").
+          Each job sits in its own labeled box: SHOW (category chips + search) · ON THE PORTAL? · DAYS · VIEW & COPY.
+          The picked button in every box is dark plum with white text and lifts; the rest are raised white.
+          The Category dropdown is gone - it repeated the chips (every fact once). Was 5 rows, now 2. */}
+      <div
+        className="rounded-2xl p-2.5 space-y-2"
+        style={{ background: '#ffffff', border: `1px solid ${PANEL_EDGE}`, boxShadow: '0 10px 28px rgba(60,30,30,.16), 0 3px 8px rgba(60,30,30,.12)' }}
+      >
+        <div className="flex flex-wrap gap-2 items-stretch">
+          <Group label="Show" grow>
+            <Seg on={selectedEventType === 'all'} onClick={() => onEventTypeChange('all')} title="Every category">ALL</Seg>
+            {chipTypes.map(type => {
+              const on = selectedEventType === type;
+              return (
+                <button
+                  key={type}
+                  onClick={() => onEventTypeChange(type)}
+                  aria-pressed={on}
+                  title={type}
+                  className="px-2.5 py-1 rounded-lg text-[13px] cursor-pointer transition-all hover:-translate-y-px hover:shadow-md"
+                  style={{
+                    backgroundColor: getEventTypeColor(type, eventTypes),
+                    color: INK,
+                    fontWeight: on ? 800 : 600,
+                    boxShadow: on ? `0 0 0 3px ${PLUM}, 0 5px 12px rgba(74,51,54,.4)` : '0 1px 3px rgba(60,30,30,.28)',
+                    transform: on ? 'translateY(-1px)' : 'none',
+                  }}
+                >
+                  {on ? '✓ ' : ''}{chipLabel(type)}
+                </button>
+              );
+            })}
+            <div className="relative ml-1" style={{ minWidth: 150, flex: '1 1 150px', maxWidth: 230 }}>
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: INK }} />
+              <input
+                type="text"
+                placeholder="Search events..."
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="w-full pl-8 pr-2 py-1 rounded-lg text-[13px] bg-white focus:outline-none focus:ring-2"
+                style={{ border: `1.5px solid ${PANEL_EDGE}`, color: INK, boxShadow: 'inset 0 1px 2px rgba(60,30,30,.12)' }}
+              />
+            </div>
+          </Group>
+          {onPortalViewChange && (
+            <Group label="On the portal?">
+              <PortalChips portalView={portalView} onPortalViewChange={onPortalViewChange} portalCounts={portalCounts} />
+            </Group>
+          )}
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search events..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-300 focus:border-pink-400 bg-white shadow-sm w-48"
-          />
+        <div className="flex flex-wrap gap-2 items-stretch">
+          {viewMode !== 'table' && onCalendarViewChange && (
+            <Group label="Days" grow>
+              {[['firstHalf', 'Days 1–15'], ['secondHalf', 'Days 16–30'], ['full', 'Full month'], ['fromToday', '📍 Today → end']].map(([k, l]) => (
+                <Seg key={k} on={calendarView === k} onClick={() => onCalendarViewChange(k)}>{l}</Seg>
+              ))}
+              <span aria-hidden="true" className="mx-1 self-stretch" style={{ width: 2, background: PANEL_EDGE, borderRadius: 2 }} />
+              {['week1', 'week2', 'week3', 'week4'].map((w, i) => (
+                <Seg key={w} on={calendarView === w} onClick={() => onCalendarViewChange(w)}>Week {i + 1}{i === 3 ? '+' : ''}</Seg>
+              ))}
+            </Group>
+          )}
+          <Group label="View & copy" grow={viewMode === 'table'}>
+            <button
+              onClick={onViewModeToggle}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[13px] font-bold cursor-pointer transition-all hover:-translate-y-px hover:shadow-md"
+              style={{ background: '#ffffff', color: INK, boxShadow: '0 1px 3px rgba(60,30,30,.3)' }}
+            >
+              {viewMode === 'calendar' ? <List className="w-4 h-4" /> : <Grid className="w-4 h-4" />}
+              {viewMode === 'calendar' ? 'Table view' : 'Calendar view'}
+            </button>
+            {viewMode !== 'table' && onErrorFocusToggle && (
+              <button
+                onClick={onErrorFocusToggle}
+                className="px-3 py-1 rounded-lg text-[13px] font-bold text-white cursor-pointer transition-all hover:-translate-y-px"
+                style={errorFocus
+                  ? { background: PLUM, boxShadow: '0 4px 10px rgba(74,51,54,.45)' }
+                  : { background: '#c62828', boxShadow: '0 4px 10px rgba(198,40,40,.4)' }}
+                title={errorFocus ? 'Go back to the normal calendar (events + spots)' : 'See only the events with errors'}
+              >
+                {errorFocus ? '📅 Back to calendar' : '🚨 Error view'}
+              </button>
+            )}
+            {onCopyShown && (
+              <button
+                onClick={async () => {
+                  const n = await onCopyShown();
+                  if (n !== null && n !== undefined) {
+                    setCopiedCount(n);
+                    setTimeout(() => setCopiedCount(null), 2500);
+                  }
+                }}
+                disabled={!shownCount}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[13px] font-bold text-white transition-all hover:-translate-y-px disabled:opacity-40"
+                style={{
+                  cursor: shownCount ? 'pointer' : 'not-allowed',
+                  background: copiedCount !== null ? '#15803d' : PLUM,
+                  boxShadow: '0 4px 10px rgba(74,51,54,.4)',
+                }}
+                title="Copy every event on screen right now as a table — paste into email, Excel or Google Sheets"
+              >
+                <Copy className="w-4 h-4" />
+                {copiedCount !== null ? `Copied ${copiedCount} ✓` : `Copy what's shown (${shownCount || 0})`}
+              </button>
+            )}
+          </Group>
         </div>
-
-        <button
-          onClick={onViewModeToggle}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border hover:bg-gray-50 transition-colors shadow-sm"
-        >
-          {viewMode === 'calendar' ? <List className="w-4 h-4" /> : <Grid className="w-4 h-4" />}
-          {viewMode === 'calendar' ? 'Table View' : 'Calendar View'}
-        </button>
-
-        {/* Copies exactly the events on screen right now (gyms, category,
-            search and the days in view) as a table to paste anywhere. */}
-        {onCopyShown && (
-          <button
-            onClick={async () => {
-              const n = await onCopyShown();
-              if (n !== null && n !== undefined) {
-                setCopiedCount(n);
-                setTimeout(() => setCopiedCount(null), 2500);
-              }
-            }}
-            disabled={!shownCount}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all shadow-sm hover:brightness-95 hover:shadow-md disabled:opacity-40"
-            style={{
-              cursor: shownCount ? 'pointer' : 'not-allowed',
-              backgroundColor: copiedCount !== null ? '#15803d' : theme.colors.primary,
-              color: '#ffffff',
-            }}
-            title="Copy every event on screen right now as a table — paste into email, Excel or Google Sheets"
-          >
-            <Copy className="w-4 h-4" />
-            {copiedCount !== null ? `Copied ${copiedCount} ✓` : `Copy what's shown (${shownCount || 0})`}
-          </button>
-        )}
       </div>
-
-      {/* Event Types - one chip per bucket, straight from the event_types table.
-          Add a bucket on the admin side and its chip appears here on its own -
-          nothing to hardcode. Buckets that aren't scored (CAMP CARE, SPECIALTY,
-          UNSORTED) still get a chip so Jayme can pull them up on the calendar. */}
-      <div className="flex justify-center items-center gap-2 mb-2 flex-wrap">
-        <button
-          onClick={() => onEventTypeChange('all')}
-          className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer border transition-all text-sm ${
-            selectedEventType === 'all'
-              ? 'border-gray-500 shadow-md bg-gray-100 font-semibold'
-              : 'border-gray-300 bg-white hover:bg-gray-50'
-          }`}
-        >
-          ALL
-        </button>
-
-        {chipTypes.map(type => (
-          <button
-            key={type}
-            onClick={() => onEventTypeChange(type)}
-            className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer border transition-all text-sm ${
-              selectedEventType === type ? 'border-gray-600 shadow-md font-semibold' : 'border-transparent'
-            }`}
-            style={{ backgroundColor: getEventTypeColor(type, eventTypes) }}
-            title={type}
-          >
-            {chipLabel(type)}
-          </button>
-        ))}
-      </div>
-
-      {/* Portal filter: on the calendar it sits in the Error View row (CalendarViewToggle) to save a row;
-          Table View has no such row, so it shows here. */}
-      {onPortalViewChange && viewMode === 'table' && (
-        <div className="flex justify-center mb-2">
-          <PortalChips portalView={portalView} onPortalViewChange={onPortalViewChange} portalCounts={portalCounts} />
-        </div>
-      )}
     </div>
   );
 }
 
-// Portal filter (Jayme 2026-11-10): what parents can see. Both = live + faded (default);
-// On portal = live only; Not on portal = only the faded camps built in iClass that parents can't see.
-// Works with the gyms, category and search; Copy what's shown follows it.
+// The control panel's pieces: a labeled box per job, and the button inside it.
+const INK = '#2b2224';
+const PLUM = '#4a3336';
+const PANEL_EDGE = '#d9c4c4';
+function Group({ label, grow, children }) {
+  return (
+    <div
+      className="rounded-xl px-2.5 pt-1.5 pb-2"
+      style={{ background: '#ead8d8', border: `1px solid ${PANEL_EDGE}`, boxShadow: 'inset 0 1px 3px rgba(60,30,30,.16)', flex: grow ? '1 1 auto' : '0 0 auto', minWidth: 0 }}
+    >
+      <div className="uppercase mb-1" style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.07em', color: INK }}>{label}</div>
+      <div className="flex flex-wrap items-center gap-1.5">{children}</div>
+    </div>
+  );
+}
+function Seg({ on, onClick, title, dashed, children }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={on}
+      title={title}
+      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[13px] cursor-pointer transition-all hover:-translate-y-px hover:shadow-md"
+      style={on
+        ? { background: PLUM, color: '#ffffff', fontWeight: 800, boxShadow: '0 4px 10px rgba(74,51,54,.45)', transform: 'translateY(-1px)' }
+        : { background: '#ffffff', color: INK, fontWeight: 600, boxShadow: '0 1px 3px rgba(60,30,30,.3)', outline: dashed ? `1.5px dashed ${PLUM}` : 'none', outlineOffset: -2 }}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function PortalChips({ portalView = 'both', onPortalViewChange, portalCounts = { on: 0, off: 0 } }) {
   return (
-    <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Portal filter">
-      <span className="text-sm font-semibold" style={{ color: '#2b2224' }}>Portal:</span>
+    <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Portal filter">
       {[
-        ['both', 'Both', portalCounts.on + portalCounts.off],
-        ['on', 'On portal', portalCounts.on],
-        ['off', 'Not on portal', portalCounts.off],
-      ].map(([key, label, n]) => {
-        const on = portalView === key;
-        return (
-          <button
-            key={key}
-            onClick={() => onPortalViewChange(key)}
-            aria-pressed={on}
-            className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer border transition-all text-sm hover:shadow-md ${on ? 'font-semibold shadow-md' : ''}`}
-            style={{
-              backgroundColor: on ? theme.colors.primary : '#ffffff',
-              color: on ? '#ffffff' : '#2b2224',
-              borderColor: on ? theme.colors.primary : '#c9bcbc',
-              borderStyle: key === 'off' && !on ? 'dashed' : 'solid',
-            }}
-            title={key === 'off' ? 'Camps built in iClass that parents cannot see yet (the faded ones)' : key === 'on' ? 'Only events parents can see and book now' : 'Live events plus the faded not-on-portal camps'}
-          >
-            {label} <span className="font-bold">{n}</span>
-          </button>
-        );
-      })}
+        ['both', 'Both', portalCounts.on + portalCounts.off, 'Live events plus the faded not-on-portal camps'],
+        ['on', 'On portal', portalCounts.on, 'Only events parents can see and book now'],
+        ['off', 'Not on portal', portalCounts.off, 'Camps built in iClass that parents cannot see yet (the faded ones)'],
+      ].map(([key, label, n, tip]) => (
+        <Seg key={key} on={portalView === key} onClick={() => onPortalViewChange(key)} title={tip} dashed={key === 'off'}>
+          {label} <span style={{ fontWeight: 800 }}>{n}</span>
+        </Seg>
+      ))}
     </div>
   );
 }
