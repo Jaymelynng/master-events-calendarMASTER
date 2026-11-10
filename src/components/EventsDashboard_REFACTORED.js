@@ -591,23 +591,24 @@ const EventsDashboard = () => {
 function BottomNavigation({ currentMonth, currentYear, onPreviousMonth, onNextMonth, onAddEvent }) {
   return (
     <>
+      {/* Same look as the month bar above the calendar: month = plain bold text, Previous / Next = raised white buttons */}
       <div className="flex justify-center items-center gap-4 mb-4 mt-6">
         <button
           onClick={onPreviousMonth}
-          className="flex items-center gap-1 px-3 py-1 rounded-full text-white transition-all duration-200 hover:scale-105 hover:shadow-md text-sm"
-          style={{ backgroundColor: theme.colors.primary }}
+          className="flex items-center gap-1 px-4 py-1.5 rounded-full text-sm font-bold cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+          style={{ background: '#ffffff', color: '#2b2224', border: '1.5px solid #d9c4c4', boxShadow: '0 3px 8px rgba(60,30,30,.22)' }}
         >
-          Previous
+          ‹ Previous
         </button>
-        <div className="text-base font-bold" style={{ color: theme.colors.textPrimary }}>
+        <div className="font-black text-center" style={{ color: '#2b2224', fontSize: 20, minWidth: 180 }}>
           {new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
         </div>
         <button
           onClick={onNextMonth}
-          className="flex items-center gap-1 px-3 py-1 rounded-full text-white transition-all duration-200 hover:scale-105 hover:shadow-md text-sm"
-          style={{ backgroundColor: theme.colors.primary }}
+          className="flex items-center gap-1 px-4 py-1.5 rounded-full text-sm font-bold cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+          style={{ background: '#ffffff', color: '#2b2224', border: '1.5px solid #d9c4c4', boxShadow: '0 3px 8px rgba(60,30,30,.22)' }}
         >
-          Next
+          Next ›
         </button>
       </div>
 

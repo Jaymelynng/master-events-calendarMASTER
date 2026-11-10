@@ -68,8 +68,10 @@ export default function DashboardHeader({
         </button>
 
         <div className="flex-shrink-0">
-          <h2 className="text-3xl font-bold px-10 py-4 rounded-full bg-white text-gray-800 text-center whitespace-nowrap"
-              style={{ boxShadow: '0 6px 20px rgba(0,0,0,0.3)' }}>
+          {/* Month = big white text, not a white pill like the buttons beside it (Jayme 2026-11-10:
+              same look as Previous / Next was "misleading, hard to see"). */}
+          <h2 className="text-4xl font-black text-white text-center whitespace-nowrap px-2"
+              style={{ textShadow: '0 2px 6px rgba(0,0,0,0.35)' }}>
             {new Date(currentYear, currentMonth).toLocaleDateString('en-US', {
               month: 'long',
               year: 'numeric'

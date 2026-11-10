@@ -82,18 +82,19 @@ export default function CalendarControls({
   return (
     <div className="mb-2 space-y-2">
       {/* Month Navigation */}
-      <div className="flex items-center justify-center gap-1 mb-2">
+      {/* Month = plain bold text (it is a label, not a button); Previous / Next = raised white buttons.
+          Jayme 2026-11-10: the month pill was the same color as the buttons - "misleading, hard to see". */}
+      <div className="flex items-center justify-center gap-4 mb-2">
         <button
           onClick={onPreviousMonth}
-          className="flex items-center gap-1 px-3 py-1 rounded-full text-white transition-all duration-200 hover:scale-105 hover:shadow-md text-sm"
-          style={{ backgroundColor: theme.colors.primary }}
+          className="flex items-center gap-1 px-4 py-1.5 rounded-full text-sm font-bold cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+          style={{ background: '#ffffff', color: INK, border: `1.5px solid ${PANEL_EDGE}`, boxShadow: '0 3px 8px rgba(60,30,30,.22)' }}
         >
           <ChevronLeft className="w-4 h-4" />
           Previous
         </button>
 
-        <h2 className="text-lg font-bold px-4 py-1 rounded-full text-white shadow-md"
-            style={{ backgroundColor: theme.colors.accent }}>
+        <h2 className="font-black text-center" style={{ color: INK, fontSize: 24, minWidth: 210 }}>
           {new Date(currentYear, currentMonth).toLocaleDateString('en-US', {
             month: 'long',
             year: 'numeric'
@@ -102,8 +103,8 @@ export default function CalendarControls({
 
         <button
           onClick={onNextMonth}
-          className="flex items-center gap-1 px-3 py-1 rounded-full text-white transition-all duration-200 hover:scale-105 hover:shadow-md text-sm"
-          style={{ backgroundColor: theme.colors.primary }}
+          className="flex items-center gap-1 px-4 py-1.5 rounded-full text-sm font-bold cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+          style={{ background: '#ffffff', color: INK, border: `1.5px solid ${PANEL_EDGE}`, boxShadow: '0 3px 8px rgba(60,30,30,.22)' }}
         >
           Next
           <ChevronRight className="w-4 h-4" />
