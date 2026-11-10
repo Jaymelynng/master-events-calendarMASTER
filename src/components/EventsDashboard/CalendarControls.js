@@ -316,11 +316,12 @@ const PANEL_EDGE = '#d9c4c4';
 function Group({ label, col, children }) {
   return (
     <div
-      className={`rounded-xl px-2.5 pt-1.5 pb-2 ${col === 2 ? 'lg:col-start-2' : col === 1 ? 'lg:col-start-1' : ''}`}
+      className={`rounded-xl px-2.5 pt-1.5 pb-2 flex flex-col justify-center ${col === 2 ? 'lg:col-start-2' : col === 1 ? 'lg:col-start-1' : ''}`}
       style={{ background: '#ead8d8', border: `1px solid ${PANEL_EDGE}`, boxShadow: 'inset 0 1px 3px rgba(60,30,30,.16)', minWidth: 0 }}
     >
-      <div className="uppercase mb-1" style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.07em', color: INK }}>{label}</div>
-      <div className="flex flex-wrap items-center gap-1.5">{children}</div>
+      {/* label + buttons centered in the box, side to side and top to bottom (Jayme 2026-11-10) */}
+      <div className="uppercase mb-1 text-center" style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.07em', color: INK }}>{label}</div>
+      <div className="flex flex-wrap items-center justify-center gap-1.5">{children}</div>
     </div>
   );
 }
@@ -342,7 +343,7 @@ function Seg({ on, onClick, title, dashed, children }) {
 
 export function PortalChips({ portalView = 'both', onPortalViewChange, portalCounts = { on: 0, off: 0 } }) {
   return (
-    <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Portal filter">
+    <div className="flex items-center justify-center gap-1.5 flex-wrap" role="group" aria-label="Portal filter">
       {[
         ['both', 'Both', portalCounts.on + portalCounts.off, 'Live events plus the faded not-on-portal camps'],
         ['on', 'On portal', portalCounts.on, 'Only events parents can see and book now'],
