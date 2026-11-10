@@ -203,11 +203,12 @@ export default function CalendarControls({
           The picked button in every box is dark plum with white text and lifts; the rest are raised white.
           The Category dropdown is gone - it repeated the chips (every fact once). Was 5 rows, now 2. */}
       <div
-        className="rounded-2xl p-2.5 space-y-2"
+        className="rounded-2xl p-2.5 grid gap-2 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto]"
         style={{ background: '#ffffff', border: `1px solid ${PANEL_EDGE}`, boxShadow: '0 10px 28px rgba(60,30,30,.16), 0 3px 8px rgba(60,30,30,.12)' }}
       >
-        <div className="flex flex-wrap gap-2 items-stretch">
-          <Group label="Show" grow>
+        {/* One shared grid (Jayme 2026-11-10 "alignment feels weird"): left column = SHOW over DAYS, same width;
+            right column = ON THE PORTAL? over VIEW & COPY, same width - every box edge lines up. */}
+          <Group label="Show">
             <Seg on={selectedEventType === 'all'} onClick={() => onEventTypeChange('all')} title="Every category">ALL</Seg>
             {chipTypes.map(type => {
               const on = selectedEventType === type;
@@ -243,15 +244,12 @@ export default function CalendarControls({
             </div>
           </Group>
           {onPortalViewChange && (
-            <Group label="On the portal?">
+            <Group label="On the portal?" col={2}>
               <PortalChips portalView={portalView} onPortalViewChange={onPortalViewChange} portalCounts={portalCounts} />
             </Group>
           )}
-        </div>
-
-        <div className="flex flex-wrap gap-2 items-stretch">
           {viewMode !== 'table' && onCalendarViewChange && (
-            <Group label="Days" grow>
+            <Group label="Days" col={1}>
               {[['firstHalf', 'Days 1–15'], ['secondHalf', 'Days 16–30'], ['full', 'Full month'], ['fromToday', '📍 Today → end']].map(([k, l]) => (
                 <Seg key={k} on={calendarView === k} onClick={() => onCalendarViewChange(k)}>{l}</Seg>
               ))}
@@ -261,7 +259,7 @@ export default function CalendarControls({
               ))}
             </Group>
           )}
-          <Group label="View & copy" grow={viewMode === 'table'}>
+          <Group label="View & copy" col={2}>
             <button
               onClick={onViewModeToggle}
               className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[13px] font-bold cursor-pointer transition-all hover:-translate-y-px hover:shadow-md"
@@ -305,7 +303,6 @@ export default function CalendarControls({
               </button>
             )}
           </Group>
-        </div>
       </div>
     </div>
   );
@@ -315,11 +312,12 @@ export default function CalendarControls({
 const INK = '#2b2224';
 const PLUM = '#4a3336';
 const PANEL_EDGE = '#d9c4c4';
-function Group({ label, grow, children }) {
+// col = which grid column the box sits in on a wide screen (1 = left, 2 = right); on a narrow screen they stack.
+function Group({ label, col, children }) {
   return (
     <div
-      className="rounded-xl px-2.5 pt-1.5 pb-2"
-      style={{ background: '#ead8d8', border: `1px solid ${PANEL_EDGE}`, boxShadow: 'inset 0 1px 3px rgba(60,30,30,.16)', flex: grow ? '1 1 auto' : '0 0 auto', minWidth: 0 }}
+      className={`rounded-xl px-2.5 pt-1.5 pb-2 ${col === 2 ? 'lg:col-start-2' : col === 1 ? 'lg:col-start-1' : ''}`}
+      style={{ background: '#ead8d8', border: `1px solid ${PANEL_EDGE}`, boxShadow: 'inset 0 1px 3px rgba(60,30,30,.16)', minWidth: 0 }}
     >
       <div className="uppercase mb-1" style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.07em', color: INK }}>{label}</div>
       <div className="flex flex-wrap items-center gap-1.5">{children}</div>
