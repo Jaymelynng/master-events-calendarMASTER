@@ -6,7 +6,7 @@
 // All UI components are in their own files in the EventsDashboard folder
 // ============================================================================
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { CheckCircle, ChevronUp, Loader } from 'lucide-react';
 
 // Custom hook with all state and logic
@@ -26,6 +26,7 @@ import TableView from './EventsDashboard/TableView';
 import EventDetailPanel from './EventsDashboard/EventDetailPanel';
 import { eventsInView, buildCopy, copyToClipboardRich } from './EventsDashboard/copyVisible';
 import { useNotOnPortalCamps } from '../lib/iclassCamp';
+import { DEFAULT_COPY_COLUMNS } from '../lib/eventRow';
 
 // Lazy-loaded modals (only load when needed)
 const AddEventModal = lazy(() => import('./EventsDashboard/AddEventModal'));
@@ -103,11 +104,18 @@ const EventsDashboard = () => {
       && (selectedEventType === 'all' || e.type === selectedEventType)
       && (!searchTerm || (e.title || '').toLowerCase().includes(searchTerm.toLowerCase())));
 
-  // The events actually on screen: in Table View every filtered row; on the
-  // calendar only those that fall on the days in view. Feeds "Copy what's shown".
-  const shownEvents = viewMode === 'table'
-    ? filteredEvents
-    : eventsInView(filteredEvents, displayDates, currentYear, currentMonth);
+  // Portal filter (Jayme 2026-11-10): Both (default) = live events + the faded not-on-portal camps;
+  // On portal = only what parents can see and book; Not on portal = only the faded camps.
+  const [portalView, setPortalView] = useState('both');
+  const portalEvents = portalView === 'on' ? filteredEvents
+    : portalView === 'off' ? notOnPortal
+    : (notOnPortal.length ? [...filteredEvents, ...notOnPortal] : filteredEvents);
+  const inView = (list) => (viewMode === 'table' ? list : eventsInView(list, displayDates, currentYear, currentMonth));
+
+  // The events actually on screen: in Table View every row; on the calendar only those that fall on the
+  // days in view. Feeds "Copy what's shown" - so the copy follows the Portal filter too.
+  const shownEvents = inView(portalEvents);
+  const portalCounts = { on: inView(filteredEvents).length, off: inView(notOnPortal).length };
 
   // Show loading state
   if (loading) {
@@ -465,10 +473,15 @@ const EventsDashboard = () => {
             eventTypesFromEvents={eventTypesFromEvents}
             eventTypes={eventTypes}
             onAddEvent={() => setShowAddEventModal(true)}
+            portalView={portalView}
+            onPortalViewChange={setPortalView}
+            portalCounts={portalCounts}
             shownCount={shownEvents.length}
             onCopyShown={async () => {
               try {
-                const payload = await buildCopy(shownEvents, gymsList);
+                // a copy that holds not-live camps gets the "Live on Portal" column so each row says which it is
+                const cols = shownEvents.some(e => e.not_on_portal) ? [...DEFAULT_COPY_COLUMNS, 'live'] : undefined;
+                const payload = await buildCopy(shownEvents, gymsList, cols);
                 await copyToClipboardRich(payload);
                 return payload.count;
               } catch (err) {
@@ -480,7 +493,7 @@ const EventsDashboard = () => {
 
           {/* Table View */}
           {viewMode === 'table' && (
-            <TableView filteredEvents={filteredEvents} eventTypes={eventTypes} />
+            <TableView filteredEvents={portalEvents} eventTypes={eventTypes} />
           )}
 
           {/* Calendar View */}
@@ -505,7 +518,7 @@ const EventsDashboard = () => {
                 displayDates={displayDates}
                 allGymsFromList={visibleGyms}
                 gymsList={gymsList}
-                filteredEvents={notOnPortal.length ? [...filteredEvents, ...notOnPortal] : filteredEvents}
+                filteredEvents={portalEvents}
                 eventTypes={eventTypes}
                 currentMonth={currentMonth}
                 currentYear={currentYear}

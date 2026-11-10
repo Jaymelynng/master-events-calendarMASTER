@@ -50,6 +50,11 @@ export default function TableView({
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     <div className="font-medium">{event.title || 'Untitled Event'}</div>
+                    {event.not_on_portal && (
+                      <div className="text-xs font-bold mt-0.5" style={{ color: '#7a2a1e' }}>
+                        NOT ON PORTAL: {(event.not_live_reasons || ['parents cannot see it'])[0]}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span

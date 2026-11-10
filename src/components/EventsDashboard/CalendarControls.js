@@ -51,6 +51,9 @@ export default function CalendarControls({
   onAddEvent,
   onCopyShown,
   shownCount = 0,
+  portalView = 'both',
+  onPortalViewChange,
+  portalCounts = { on: 0, off: 0 },
 }) {
   const [copiedCount, setCopiedCount] = useState(null);
   const [gymRowRef, gymRowWidth] = useWidth();
@@ -283,6 +286,39 @@ export default function CalendarControls({
           </button>
         ))}
       </div>
+
+      {/* Portal filter (Jayme 2026-11-10): what parents can see. Both = live + faded (default);
+          On portal = live only; Not on portal = only the faded camps built in iClass that parents can't see.
+          Works with the gyms, category and search above; Copy what's shown follows it. */}
+      {onPortalViewChange && (
+        <div className="flex justify-center items-center gap-2 mb-2 flex-wrap" role="group" aria-label="Portal filter">
+          <span className="text-sm font-semibold" style={{ color: '#2b2224' }}>Portal:</span>
+          {[
+            ['both', 'Both', portalCounts.on + portalCounts.off],
+            ['on', 'On portal', portalCounts.on],
+            ['off', 'Not on portal', portalCounts.off],
+          ].map(([key, label, n]) => {
+            const on = portalView === key;
+            return (
+              <button
+                key={key}
+                onClick={() => onPortalViewChange(key)}
+                aria-pressed={on}
+                className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer border transition-all text-sm hover:shadow-md ${on ? 'font-semibold shadow-md' : ''}`}
+                style={{
+                  backgroundColor: on ? theme.colors.primary : '#ffffff',
+                  color: on ? '#ffffff' : '#2b2224',
+                  borderColor: on ? theme.colors.primary : '#c9bcbc',
+                  borderStyle: key === 'off' && !on ? 'dashed' : 'solid',
+                }}
+                title={key === 'off' ? 'Camps built in iClass that parents cannot see yet (the faded ones)' : key === 'on' ? 'Only events parents can see and book now' : 'Live events plus the faded not-on-portal camps'}
+              >
+                {label} <span className="font-bold">{n}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
