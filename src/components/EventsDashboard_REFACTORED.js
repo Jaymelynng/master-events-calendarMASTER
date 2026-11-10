@@ -506,6 +506,9 @@ const EventsDashboard = () => {
                 theme={theme}
                 errorFocus={errorFocus}
                 onErrorFocusToggle={() => setErrorFocus(f => !f)}
+                portalView={portalView}
+                onPortalViewChange={setPortalView}
+                portalCounts={portalCounts}
               />
 
               {/* Calendar Legend — only in Errors Focus mode. Normal view is

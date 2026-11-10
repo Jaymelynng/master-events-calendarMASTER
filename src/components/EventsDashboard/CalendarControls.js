@@ -287,38 +287,48 @@ export default function CalendarControls({
         ))}
       </div>
 
-      {/* Portal filter (Jayme 2026-11-10): what parents can see. Both = live + faded (default);
-          On portal = live only; Not on portal = only the faded camps built in iClass that parents can't see.
-          Works with the gyms, category and search above; Copy what's shown follows it. */}
-      {onPortalViewChange && (
-        <div className="flex justify-center items-center gap-2 mb-2 flex-wrap" role="group" aria-label="Portal filter">
-          <span className="text-sm font-semibold" style={{ color: '#2b2224' }}>Portal:</span>
-          {[
-            ['both', 'Both', portalCounts.on + portalCounts.off],
-            ['on', 'On portal', portalCounts.on],
-            ['off', 'Not on portal', portalCounts.off],
-          ].map(([key, label, n]) => {
-            const on = portalView === key;
-            return (
-              <button
-                key={key}
-                onClick={() => onPortalViewChange(key)}
-                aria-pressed={on}
-                className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer border transition-all text-sm hover:shadow-md ${on ? 'font-semibold shadow-md' : ''}`}
-                style={{
-                  backgroundColor: on ? theme.colors.primary : '#ffffff',
-                  color: on ? '#ffffff' : '#2b2224',
-                  borderColor: on ? theme.colors.primary : '#c9bcbc',
-                  borderStyle: key === 'off' && !on ? 'dashed' : 'solid',
-                }}
-                title={key === 'off' ? 'Camps built in iClass that parents cannot see yet (the faded ones)' : key === 'on' ? 'Only events parents can see and book now' : 'Live events plus the faded not-on-portal camps'}
-              >
-                {label} <span className="font-bold">{n}</span>
-              </button>
-            );
-          })}
+      {/* Portal filter: on the calendar it sits in the Error View row (CalendarViewToggle) to save a row;
+          Table View has no such row, so it shows here. */}
+      {onPortalViewChange && viewMode === 'table' && (
+        <div className="flex justify-center mb-2">
+          <PortalChips portalView={portalView} onPortalViewChange={onPortalViewChange} portalCounts={portalCounts} />
         </div>
       )}
+    </div>
+  );
+}
+
+// Portal filter (Jayme 2026-11-10): what parents can see. Both = live + faded (default);
+// On portal = live only; Not on portal = only the faded camps built in iClass that parents can't see.
+// Works with the gyms, category and search; Copy what's shown follows it.
+export function PortalChips({ portalView = 'both', onPortalViewChange, portalCounts = { on: 0, off: 0 } }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Portal filter">
+      <span className="text-sm font-semibold" style={{ color: '#2b2224' }}>Portal:</span>
+      {[
+        ['both', 'Both', portalCounts.on + portalCounts.off],
+        ['on', 'On portal', portalCounts.on],
+        ['off', 'Not on portal', portalCounts.off],
+      ].map(([key, label, n]) => {
+        const on = portalView === key;
+        return (
+          <button
+            key={key}
+            onClick={() => onPortalViewChange(key)}
+            aria-pressed={on}
+            className={`flex items-center gap-1 px-3 py-1 rounded cursor-pointer border transition-all text-sm hover:shadow-md ${on ? 'font-semibold shadow-md' : ''}`}
+            style={{
+              backgroundColor: on ? theme.colors.primary : '#ffffff',
+              color: on ? '#ffffff' : '#2b2224',
+              borderColor: on ? theme.colors.primary : '#c9bcbc',
+              borderStyle: key === 'off' && !on ? 'dashed' : 'solid',
+            }}
+            title={key === 'off' ? 'Camps built in iClass that parents cannot see yet (the faded ones)' : key === 'on' ? 'Only events parents can see and book now' : 'Live events plus the faded not-on-portal camps'}
+          >
+            {label} <span className="font-bold">{n}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -329,17 +339,20 @@ export function CalendarViewToggle({
   onCalendarViewChange,
   theme,
   errorFocus,
-  onErrorFocusToggle
+  onErrorFocusToggle,
+  portalView,
+  onPortalViewChange,
+  portalCounts,
 }) {
   return (
     <div className="text-center mb-2">
-      <h3 className="text-base font-semibold mb-2" style={{ color: theme.colors.textPrimary }}>
-        Calendar View:
-      </h3>
-
-      {/* Errors focus toggle — flips the whole calendar between "show me the
-          data (spots, etc.)" and "show me only what's wrong". */}
-      <div className="flex justify-center mb-2">
+      {/* One row (Jayme 2026-11-10, "this can be one row to save vertical space"): the Portal filter +
+          the Errors focus toggle, which flips the calendar between "show me the data (spots, etc.)" and
+          "show me only what's wrong". The old "Calendar View:" heading is gone - the button says what it does. */}
+      <div className="flex justify-center items-center gap-x-5 gap-y-2 mb-2 flex-wrap">
+        {onPortalViewChange && (
+          <PortalChips portalView={portalView} onPortalViewChange={onPortalViewChange} portalCounts={portalCounts} />
+        )}
         <button
           onClick={onErrorFocusToggle}
           className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold text-white transition-all duration-200 cursor-pointer hover:-translate-y-0.5"
