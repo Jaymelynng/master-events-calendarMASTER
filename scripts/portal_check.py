@@ -14,7 +14,7 @@ Usage:  python scripts/portal_check.py HGA --from 2027-05-01 --to 2027-09-30 --o
 """
 import argparse, json, os, re, sys, urllib.request
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'automation'))
 from audit_page_sheets import get, plain  # noqa: E402
 
 API = 'https://app.iclasspro.com/api/open/v1'

@@ -10,7 +10,7 @@ The page's gym codes follow the audit page (AAR / EGF / PGN for three gyms); thi
 AAG / EAG / PLG. The script never maps codes itself: it keys each file by this database's gym id and
 stores the gym's name; the page code is matched by that name against the page's `brands` docs.
 
-Usage:  python scripts/audit_page_sheets.py --from 2027-05-01 --to 2027-09-30 --out <folder>
+Usage:  python automation/audit_page_sheets.py --from 2027-05-01 --to 2027-09-30 --out <folder>
 Needs REACT_APP_SUPABASE_URL + REACT_APP_SUPABASE_ANON_KEY in .env.local (the app's own read key).
 """
 import argparse, html, json, os, re, sys, urllib.parse, urllib.request
@@ -27,7 +27,10 @@ def env():
                 if '=' in line and not line.strip().startswith('#'):
                     k, v = line.strip().split('=', 1)
                     vals[k] = v.strip().strip('"')
-    return vals['REACT_APP_SUPABASE_URL'].rstrip('/'), vals['REACT_APP_SUPABASE_ANON_KEY']
+    if 'REACT_APP_SUPABASE_URL' in vals:
+        return vals['REACT_APP_SUPABASE_URL'].rstrip('/'), vals['REACT_APP_SUPABASE_ANON_KEY']
+    # on Railway (the Run camp audit button): no .env.local - the server's own variables
+    return os.environ['SUPABASE_URL'].rstrip('/'), os.environ.get('SUPABASE_SERVICE_KEY') or os.environ['SUPABASE_KEY']
 
 
 URL, KEY = env()

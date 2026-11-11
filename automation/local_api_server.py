@@ -647,8 +647,34 @@ def setup_read():
     return jsonify({"success": True, "what": what, "started": True, "waiting": waiting, "readers": _setup_workers['n']})
 
 
+@app.route('/camp-audit', methods=['POST'])
+def camp_audit():
+    """Run camp audit button (Admin > Camp Audit). Body: {"gyms": ["AAG", ...]} (left out = every gym in the
+    gyms table). Answers at once; automation/camp_audit_job.py audits the gyms one at a time in the background
+    and writes each gym's progress and rows to camp_audit_runs / camp_audit_gym_results, which the app reads.
+    One run at a time: a press while one is running answers with that run's id."""
+    if not check_api_key():
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    import camp_audit_job
+    try:
+        result = camp_audit_job.start_run(data.get('gyms') or None)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    return jsonify({"success": True, **result})
+
+
 if __name__ == '__main__':
     import os
+
+    # A camp audit cut off by the last restart is marked stopped, never left "running" on screen.
+    try:
+        import camp_audit_job
+        closed = camp_audit_job.close_cut_off_runs()
+        if closed:
+            print(f"[CAMP AUDIT] marked {closed} cut-off run(s) as stopped", flush=True)
+    except Exception as e:
+        print(f"[CAMP AUDIT] could not check for cut-off runs - {e}", flush=True)
 
     # A setup read cut off by the last restart is marked stopped, never left "running" on screen.
     try:

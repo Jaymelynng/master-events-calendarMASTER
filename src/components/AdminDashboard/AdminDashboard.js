@@ -7,6 +7,7 @@ import AdminQuickActions from './AdminQuickActions';
 import AdminChangeHistory from './AdminChangeHistory';
 import EmailComposer from './EmailComposer';
 import AdminFuturePlans from './AdminFuturePlans';
+import AdminCampAudit from './AdminCampAudit';
 import AdminFormatRules from './AdminFormatRules';
 import { monthlyRequirementsApi, eventTypesApi } from '../../lib/api';
 
@@ -540,6 +541,7 @@ export default function AdminDashboard({
 
   const tabs = [
     { id: 'audit', label: '🚨 Errors', alwaysShow: true },
+    { id: 'campaudit', label: '🏕️ Camp Audit', alwaysShow: true },
     { id: 'buckets', label: '🗂️ Buckets', alwaysShow: true },
     { id: 'rules', label: '📏 Gym Rules', alwaysShow: true },
     { id: 'contacts', label: '✉️ Contacts', alwaysShow: true },
@@ -675,6 +677,10 @@ export default function AdminDashboard({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         {activeTab === 'audit' && (
           <AdminErrorsCenter gyms={gyms} events={events} />
+        )}
+
+        {activeTab === 'campaudit' && (
+          <AdminCampAudit gyms={gyms} />
         )}
 
         {activeTab === 'buckets' && (

@@ -29,70 +29,14 @@ Usage:
 """
 import argparse, glob, json, os, re, subprocess, sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# the audit itself lives in automation/ (Railway runs that folder: the Run camp audit button, 2026-11-11)
+AUTOMATION = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'automation')
+sys.path.insert(0, AUTOMATION)
 from audit_page_sheets import get  # noqa: E402
-from error_names import name as error_name  # noqa: E402
+from camp_audit_merge import KEEP_TAGS, merge, renamed  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-KEEP_TAGS = ('eye', 'hand')
 SKIP_STATUS = ('sent', 'ready')
-
-
-def norm_camp(s):
-    # group cells were "9 of 10 Ninja Half Day" / "All 10 Ninja Half Day" before 2026-11-10 and are now
-    # "9 Ninja Half Day camps" / "All 10 Ninja Half Day camps" (her Estrella wording): one key for both
-    s = (s or '').strip()
-    m = re.match(r'^(\d+) of \d+ (.+?)( camps)?$', s)
-    if m:
-        return f"{m.group(1)} {m.group(2)} camps"
-    m = re.match(r'^All (\d+) (?!in )(.+?)( camps)?$', s)
-    if m:
-        return f"All {m.group(1)} {m.group(2)} camps"
-    return s
-
-
-def key(r):
-    return ((r.get('err') or '').strip(), norm_camp(r.get('camp')))
-
-
-def renamed(rows):
-    # rows already on the page carry the error's name from when they were written; give them today's
-    # fixed name so a kept or deleted row still matches its script twin after a rename (error_names.py)
-    return [dict(r, err=error_name(r.get('err'))) for r in rows or []]
-
-
-def merge(script_rows, page_rows, hidden):
-    page_rows = renamed(page_rows)
-    hide = {key(h) for h in renamed(hidden)}
-    kept = [r for r in page_rows if r.get('by') in KEEP_TAGS]
-    kept_by_key = {}
-    for r in kept:
-        kept_by_key.setdefault(key(r), []).append(r)
-    out, used = [], set()
-    for r in script_rows:
-        k = key(r)
-        if k in kept_by_key:                       # her edit / Claude's eye row stands in its place
-            for kr in kept_by_key[k]:
-                if id(kr) not in used:
-                    out.append(kr); used.add(id(kr))
-            continue
-        if k in hide:
-            continue
-        out.append(r)
-    # Kept rows with no script twin go back where they sat on the page: right after the row that was above
-    # them (matched by Error + Camp); if that row is gone, after the last row with the same Error; else at the end.
-    for idx, r in enumerate(page_rows):
-        if r.get('by') not in KEEP_TAGS or id(r) in used:
-            continue
-        at = None
-        for prev in reversed(page_rows[:idx]):
-            hit = [i for i, x in enumerate(out) if key(x) == key(prev)]
-            if hit:
-                at = hit[-1]; break
-        if at is None:
-            at = max((i for i, x in enumerate(out) if x.get('err') == r.get('err')), default=-1)
-        out.insert(at + 1, r); used.add(id(r))
-    return out
 
 
 def main():
@@ -141,7 +85,7 @@ def main():
     upload = []
     coverage = {}   # calendar gym code -> {camp id: {on, checks, found}} from camp_audit.py
     for gid, code, doc in plan:
-        cmd = [sys.executable, os.path.join(HERE, 'camp_audit.py'), gid, '--out', runs]
+        cmd = [sys.executable, os.path.join(AUTOMATION, 'camp_audit.py'), gid, '--out', runs]
         if os.path.exists(std_path):
             cmd += ['--standards', std_path]
         for flag, v in (('--from', a.frm), ('--to', a.to), ('--launch', a.launch), ('--due', a.due)):
@@ -181,7 +125,7 @@ def main():
 
     # The camp sheets (the gym data tab) for EVERY gym on the page - sheets are data, so Sent / Ready gyms too.
     sheets_dir = os.path.join(a.out, '_sheets')
-    r = subprocess.run([sys.executable, os.path.join(HERE, 'audit_page_sheets.py'), '--from', window[0], '--to', window[1], '--out', sheets_dir],
+    r = subprocess.run([sys.executable, os.path.join(AUTOMATION, 'audit_page_sheets.py'), '--from', window[0], '--to', window[1], '--out', sheets_dir],
                        capture_output=True, text=True, encoding='utf-8', env=dict(os.environ, PYTHONIOENCODING='utf-8'))
     if r.returncode != 0:
         print("CAMP SHEETS FAILED - sheets left as they are")

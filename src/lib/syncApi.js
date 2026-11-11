@@ -212,6 +212,33 @@ export const startSetupRead = async (gymIds) => {
 };
 
 /**
+ * Run camp audit (Admin > Camp Audit). Railway audits these gyms one at a time in the background
+ * (automation/camp_audit_job.py) and writes each gym's progress and rows to camp_audit_runs /
+ * camp_audit_gym_results, which the Camp Audit tab reads. Answers right away with the run id; a press while
+ * a run is going answers with that run instead of starting a second one.
+ *
+ * @param {string[]} gymIds - calendar gym codes, e.g. ['AAG', 'SGT']
+ * @returns {Promise<{success: boolean, started?: boolean, run_id?: number, reason?: string, error?: string}>}
+ */
+export const startCampAudit = async (gymIds) => {
+  const API_URL = getApiUrl();
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/camp-audit`, {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify({ gyms: gymIds }),
+    }, TIMEOUTS.read);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      return { success: false, error: data.error || `Railway answered ${response.status}` };
+    }
+    return data;
+  } catch (error) {
+    return { success: false, error: error.name === 'AbortError' ? 'Railway did not answer' : error.message };
+  }
+};
+
+/**
  * Get list of available gyms from the API
  *
  * @returns {Promise<{success: boolean, gyms?: Array, error?: string}>}

@@ -19,7 +19,7 @@ run and says so; it never decides what Jayme decided against:
   - no holiday is a short week unless the camps themselves skip it (Memorial Day 2027 was the only one)
 Tested against the final, sent SGT and EST emails (2026-11-05) before first use on another gym.
 
-Usage:  python scripts/camp_audit.py HGA --from 2027-05-01 --to 2027-09-30 --launch 2026-11-16 --out <folder>
+Usage:  python automation/camp_audit.py HGA --from 2027-05-01 --to 2027-09-30 --launch 2026-11-16 --out <folder>
 """
 import argparse, collections, datetime as dt, json, os, re, sys
 
@@ -301,7 +301,7 @@ def main():
 
     def row(err, camp, note, href='', who=None):
         # who = the camps a group row ("All 12 Aftercare") is about, so each of them carries the finding
-        err = error_name(err)   # the ONE fixed name: what was checked against what (scripts/error_names.py)
+        err = error_name(err)   # the ONE fixed name: what was checked against what (automation/error_names.py)
         rows.append({'err': err, 'camp': camp, 'href': href, 'note': note})
         for cid in ([x['camp_id'] for x in who] if who is not None else lab2ids.get(camp, [])):
             found_on[cid].append(err)
