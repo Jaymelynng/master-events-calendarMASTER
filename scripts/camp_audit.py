@@ -466,9 +466,12 @@ def main():
 
     # 3. Every day's times vs the camp's other days + the same kind of camp
     by_kind = collections.defaultdict(list)
+    # Hours written in the camp's NAME split the group: Planet runs "EXT DAY: 4 - 5 PM" and "EXT DAY: 5 - 6 PM"
+    # side by side each week - one kind of camp, two products. Lumped together, every 4-5 day read as wrong (11/10).
+    name_hours = lambda c: tuple(re.findall(r'\d{1,2}(?::\d{2})?\s*-\s*\d{1,2}(?::\d{2})?\s*[AP]\.?M', c['camp_name'] or '', flags=re.I))
     for c in camps:
-        by_kind[(c['camp_type_name'], kind_of(c)[2])].append(c)
-    for (t, k), group in by_kind.items():
+        by_kind[(c['camp_type_name'], kind_of(c)[2], name_hours(c))].append(c)
+    for (t, k, _nh), group in by_kind.items():
         per_date = {id(c): collections.defaultdict(list) for c in group}
         for c in group:
             ran(c, 'Same hours every day')
@@ -726,7 +729,7 @@ def main():
                 em = MONTHS.index((tm_.group(3) or tm_.group(1))[:3].lower()) + 1
                 bad = bad or (em, int(tm_.group(4))) not in {(l.month, l.day), (d(c['end_date']).month, d(c['end_date']).day)}
             if bad:
-                row('Dates in camp name', label(c), f"Name says {tm_.group(0).strip()}. Camp is {mon_d(f.isoformat())}–{l.day}.", c['_href'])
+                row('Dates in camp name', label(c), f"Name says {tm_.group(0).strip()}. Camp is {mon_d(f.isoformat())}–{l.day if (l.month, l.year) == (f.month, f.year) else mon_d(l.isoformat())}.", c['_href'])
         elif not tm_ and len([x for x in camps if re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*\d', x['camp_name'], re.I)]) > len(camps) / 2:
             row('Dates in camp name', label(c), 'Name has no dates. The other camps’ names do.', c['_href'])
 
@@ -802,7 +805,7 @@ def main():
             f, l = d(c['_days'][0][0]), d(c['_days'][-1][0])
             yr = re.match(r'\s*,?\s*(20\d\d)', c['_desc'][dm.end():])      # a year right after the dates
             if (sm, int(dm.group(2))) != (f.month, f.day) or (em, int(dm.group(4))) != (l.month, l.day):
-                row('Dates in description', label(c), f"Says {dm.group(0)}. Camp is {mon_d(f.isoformat())}–{l.day}", c['_href'])
+                row('Dates in description', label(c), f"Says {dm.group(0)}. Camp is {mon_d(f.isoformat())}–{l.day if (l.month, l.year) == (f.month, f.year) else mon_d(l.isoformat())}", c['_href'])
             elif yr and int(yr.group(1)) != f.year:
                 row('Dates in description', label(c), f"Says {dm.group(0)}, {yr.group(1)}. Camp is {f.year}.", c['_href'])
         # Before / After / Extended Care text does not need snack, what to wear or what to bring (Jayme 2026-11-06)
