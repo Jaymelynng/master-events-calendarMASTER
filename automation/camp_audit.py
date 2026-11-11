@@ -1284,9 +1284,20 @@ def main():
         u = (t or '').upper()
         return 'Full Day' if 'FULL' in u else 'Half Day' if 'HALF' in u else 'After Care' if 'AFTER' in u else 'Before Care' if 'BEFORE' in u else (t or '').title()
     conf, sib = [], collections.defaultdict(list)
+    # one line per camp type AND price table: one camp type can hold camps on different tables (EGF: AM, PM, All Day,
+    # AM Extended and PM Extended are all Event Type SUMMER CAMP, each on its own table - 2026-11-11 the block showed
+    # only the AM table, "all on $175 - Camp AM", which is wrong). A table that only a few of the type's camps use, while
+    # most of the same kind use another, is a wrong-table finding (its own row), not a Confirmed line.
+    groups = []
     for t_name in sorted({c['camp_type_name'] for c in camps}, key=lambda x: (('CARE' in (x or '').upper()), x or '')):
-        users = [c for c in camps if c['camp_type_name'] == t_name]
-        tid = collections.Counter(c['price_table_id'] for c in users).most_common(1)[0][0]
+        of_type = [c for c in camps if c['camp_type_name'] == t_name]
+        main_tid = {k_: collections.Counter(c['price_table_id'] for c in of_type if sport(c) == k_).most_common(1)[0][0] for k_ in {sport(c) for c in of_type}}
+        # only kinds that mostly ARE this type pick its tables (HGA's one Aftercare set up as Full Day stays a finding)
+        home = [k_ for k_ in main_tid if collections.Counter(x['camp_type_name'] for x in camps if sport(x) == k_).most_common(1)[0][0] == t_name] or list(main_tid)
+        tids = list(dict.fromkeys(main_tid[sport(c)] for c in of_type if sport(c) in home))
+        for tid_ in tids:
+            groups.append((t_name, tid_, [c for c in of_type if main_tid[sport(c)] == tid_], len(tids) > 1))
+    for t_name, tid, users, split in groups:
         t = price.get(tid) or {}
         day1, wk5, wk4 = t.get((1, 1)), t.get((1, 5)), t.get((1, 4))
         care = 'CARE' in (t_name or '').upper()
@@ -1300,10 +1311,13 @@ def main():
         # a kind whose every camp has a price finding: the table is what it is LINKED to, not its confirmed price (AAG Full Day)
         wrong_kinds = [k_ for k_ in kinds_here if all(any(n_['err'].startswith('Price') and re.search(r'; the (weekly|daily|\d-day) price is \$', n_['note']) and 'Add “per day.”' not in n_['note']
                                                           for n_ in notes_on[c['camp_id']]) for c in users if sport(c) == k_)]
-        head = type_word(t_name) if len(kinds_here) == 1 or 'CARE' in (t_name or '').upper() else f"{type_word(t_name)} ({', '.join(kinds_here)}, all on the “{users[0]['price_table_name']}” price table)"
+        if split:   # the camp type is shared, so the kinds name the line (EGF "AM: $40 per day ...")
+            head = ', '.join(kinds_here)
+        else:
+            head = type_word(t_name) if len(kinds_here) == 1 or 'CARE' in (t_name or '').upper() else f"{type_word(t_name)} ({', '.join(kinds_here)}, all on the “{users[0]['price_table_name']}” price table)"
         wk_note = (f" ({' and '.join(wrong_kinds)} camps are linked to this table, but their descriptions say other prices: see Price mismatch)" if wrong_kinds else '')
         conf.append(f"{head}: " + ' · '.join(b for b in bits if b) + wk_note)
-        sib[sib_of(tid) or 'none'].append(type_word(t_name))
+        sib[sib_of(tid) or 'none'].append(head.split(' (')[0] if split else type_word(t_name))
     if len(sib) == 1:
         conf.append(f"Sibling discount: {next(iter(sib))}")
     else:
