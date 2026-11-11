@@ -226,7 +226,26 @@ def main():
     # SUMMER camps only: the camp's bucket (Admin > Buckets) must be CAMP or CAMP CARE, and school-year /
     # school-closure camps that fall in the summer window are left out (MGC Memorial Day camp, PLG School Year
     # Day Program, OAS School Closure Camp). Kids Night Out etc. drop out by bucket.
-    skipped = [c for c in camps if bucket(c['camp_type_name'], G, rules) not in ('CAMP', 'CAMP CARE') or re.search(r'school\s*(year|closure)', f"{c['camp_type_name']} {c['camp_name']}", re.I)]
+    # Summer or not is Jayme's mark on the camp's iClass TYPE ID (Admin > Buckets > Every iClass type:
+    # camp_type_settings), or her by-hand mark on the one camp (camp_season_overrides). A 'both' type goes by
+    # the camp's start date against that type's summer dates (blank = the Standards window). Only a type she
+    # has NOT marked yet falls back to the old wording test, so nothing changes until she marks it.
+    marks = {m['type_id']: m for m in get('camp_type_settings', {'select': 'type_id,season,summer_from,summer_to', 'gym_id': f'eq.{G}'}, 'type_id.asc')}
+    forced = {o['camp_id']: o['season'] for o in get('camp_season_overrides', {'select': 'camp_id,season', 'gym_id': f'eq.{G}'}, 'camp_id.asc')}
+
+    def not_summer(c):
+        if c['camp_id'] in forced:
+            return forced[c['camp_id']] != 'summer'
+        m = marks.get(c['camp_type_id']) or {}
+        if m.get('season') == 'summer':
+            return False
+        if m.get('season') == 'school_year':
+            return True
+        if m.get('season') == 'both':
+            return not ((m.get('summer_from') or a.frm) <= c['start_date'] <= (m.get('summer_to') or a.to))
+        return bool(re.search(r'school\s*(year|closure)', f"{c['camp_type_name']} {c['camp_name']}", re.I))
+
+    skipped = [c for c in camps if bucket(c['camp_type_name'], G, rules) not in ('CAMP', 'CAMP CARE') or not_summer(c)]
     camps = [c for c in camps if c not in skipped]
     if not camps:
         # No summer camps entered yet: one row, the wording on the audit page since 2026-11-05.
@@ -247,10 +266,14 @@ def main():
     for c in camps:
         raw = (setups.get(c['camp_id']) or {}).get('raw') or {}
         days = []
+        daymax = collections.defaultdict(list)   # camp day -> that day's own "max students" box(es)
         for sch in raw.get('schedule') or []:
             for b in sch.get('blocks') or []:
                 days.append((b['date'], sch.get('startTimeInt'), sch.get('endTimeInt')))
+                # a blank box is kept as -1 ("blank"): Eagle's PM camps had Friday blank and Monday-Thursday at 60
+                daymax[b['date']].append(-1 if sch.get('maxStudents') is None else int(sch['maxStudents']))
         c['_days'] = sorted(days)
+        c['_daymax'] = {day: tuple(sorted(v)) for day, v in daymax.items()}
         c['_desc'] = plain(c['description_html'])
         c['_empty'] = not c['_desc'].strip()   # an empty description gets ONE row, not every content row
         # Kim's instructions pasted in as the description (MGC 2026-11-05): counts as no description at all
@@ -355,9 +378,11 @@ def main():
         rs = d(c['registration_start']) if c['registration_start'] else None
         if rs and today < rs < launch and c['allow_registration'] and c['show_on_web'] and c['_active']:
             row('Goes live early', label(c), f"Change registration start from {mdy(c['registration_start'])} to {mdy(a.launch)}, the launch date. It would go live on the portal before {launch_words}.", c['_href'])
-    late_start = [c for c in camps if c['registration_start'] and d(c['registration_start']) > launch]
-    for c in late_start:
-        row('Registration start date', label(c), f"Change registration start from {mdy(c['registration_start'])} to {mdy(a.launch)}, the launch date.", c['_href'])
+    # Jayme 2026-11-11: every summer camp's registration opens ON launch day - not earlier (even when the camp is
+    # hidden some other way) and not later. Blank counts too. Until launch day itself; after it, only a LATER date is wrong.
+    off_start = [c for c in camps if (not c['registration_start'] and today <= launch) or (c['registration_start'] and (d(c['registration_start']) > launch or (d(c['registration_start']) < launch and today <= launch)))]
+    for c in off_start:
+        row('Registration start date', label(c), (f"Change registration start from {mdy(c['registration_start'])} to {mdy(a.launch)}, the launch date." if c['registration_start'] else f"Registration start is blank. Set it to {mdy(a.launch)}, the launch date."), c['_href'])
     # No 'Not in the portal menu' rows: a type is missing from the menu only because none of its camps is live yet.
     # No 'Status Inactive' rows either (Jayme 2026-11-05: "she obviously will turn them to active"): HOW a gym hides
     # its camps before launch is the gym's choice. Inactive only keeps a camp out of 'Camps are live' / 'Goes live early'.
@@ -607,6 +632,33 @@ def main():
             if c.get('max_entries') and rest_ and int(c['max_entries']) > 2 * rest_[-1]:
                 vals_ = ' or '.join(str(v) for v in rest_) if len(rest_) <= 3 else f"{rest_[0]}–{rest_[-1]}"
                 row('Max students', label(c), f"Max students is {int(c['max_entries'])}; the other {len(group) - 1} {s_name} camps are {vals_}. Is that intentional?", c['_href'])
+
+    # 5b. One camp day has a different max than the camp's other days (Jayme 2026-11-11, All Around: every Full Day
+    #     camp has Monday, Wednesday, Thursday and Friday at 35 and Tuesday at 25). Each camp day has its own
+    #     "max students" box in iClass, so one day can fill while the rest of that week still has room.
+    #     Weekday names (not dates) in the note, so the same pattern in every week folds into one "All 9 ..." row.
+    for c in camps:
+        ran(c, 'Spots by day')
+        per = c.get('_daymax') or {}
+        if len(set(per.values())) > 1:
+            fmt = lambda v: ' + '.join('blank' if x < 0 else str(x) for x in v)
+            byval = collections.defaultdict(list)
+            for day in sorted(per):
+                byval[per[day]].append(DAYNAME[d(day).weekday()])
+            ranked = sorted(byval.items(), key=lambda kv: -len(kv[1]))
+            join = lambda names: names[0] if len(names) == 1 else ', '.join(names[:-1]) + ' and ' + names[-1]
+            if len(ranked) == 2 and len(ranked[0][1]) > len(ranked[1][1]):
+                (main_v, main_days), (odd_v, odd_days) = ranked
+                be = lambda names: 'is' if len(names) == 1 else 'are'
+                if all(x < 0 for x in odd_v):
+                    note = f"Max students is blank on {join(odd_days)}; {join(main_days)} {be(main_days)} {fmt(main_v)}. Is that intentional?"
+                else:
+                    note = (f"{join(odd_days)} {be(odd_days)} set to {fmt(odd_v)} spot{'' if fmt(odd_v) == '1' else 's'}; {join(main_days)} "
+                            f"{be(main_days)} {fmt(main_v)}. " + (f"{join(odd_days)} could fill while the rest of the week still has room. " if all(x >= 0 for x in main_v) and max(odd_v) < max(main_v) else '') + "Is that intentional?")
+            else:
+                note = ('Max students is not the same every day: ' + '; '.join(f"{join(names)} {fmt(v)}" for v, names in ranked)
+                        + '. One day could fill while the rest of the week still has room. Is that intentional?')
+            row('Spots by day', label(c), note, c['_href'])
 
     # 6. Ages: settings consistent within the same kind; title ages vs setting (whole years) and description
     cur[0] = 'Ages'   # its group rows come before its camp loop
@@ -1086,11 +1138,15 @@ def main():
     _pic_hash = {}
     def pic_key(path):
         if path not in _pic_hash:
-            try:
-                raw_ = urllib.request.urlopen(urllib.request.Request(f"https://images.iclasspro.com/images/{path}", headers={'User-Agent': 'camp-audit'}), timeout=30).read()
-                _pic_hash[path] = hashlib.sha256(raw_).hexdigest()
-            except Exception:
-                _pic_hash[path] = None   # could not open it: never counted as matching another picture
+            _pic_hash[path] = None   # could not open it: never counted as matching another picture
+            for _try in range(2):    # twice, so one network blip is not reported as a broken picture
+                try:
+                    raw_ = urllib.request.urlopen(urllib.request.Request(f"https://images.iclasspro.com/images/{path}", headers={'User-Agent': 'camp-audit'}), timeout=30).read()
+                    if raw_:
+                        _pic_hash[path] = hashlib.sha256(raw_).hexdigest()
+                        break
+                except Exception:
+                    pass
         return _pic_hash[path]
     pic_weeks = collections.defaultdict(set)
     for c in camps:
@@ -1099,6 +1155,8 @@ def main():
             row('Picture missing', label(c), 'Add a thumbnail picture.', c['_href'])
         elif pic_key(c['picture_path']):
             pic_weeks[pic_key(c['picture_path'])].add(c['_week'])
+        else:   # a picture is set but its file does not open (All Around Week 5 AM, 2026-11-11): parents see no picture
+            row('Picture missing', label(c), 'A picture is set, but it does not open. Upload it again.', c['_href'])
     for h, wks in pic_weeks.items():
         if len(wks) > 1:
             names = sorted({label(c) for c in camps if c['picture_path'] and pic_key(c['picture_path']) == h})
