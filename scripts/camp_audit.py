@@ -402,7 +402,10 @@ def main():
                 ids = [str(x['camp_id']) for x in group]
                 times = 'twice' if len(group) == 2 else f'{len(group)} times'
                 many = 'two' if len(group) == 2 else str(len(group))
-                row('Same camp twice', label(c), f"This camp is listed {times} in iClass (IDs {', '.join(ids[:-1])} and {ids[-1]}), so parents will see {many} listings for the same camp. Is that intentional?", c['_href'])
+                if any(x['_listed'] for x in group):
+                    row('Same camp twice', label(c), f"This camp is listed {times} in iClass (IDs {', '.join(ids[:-1])} and {ids[-1]}), so parents see {many} listings for the same camp. Is that intentional?", c['_href'])
+                else:   # not on the portal yet (HGA: Inactive) - checker 2026-11-11
+                    row('Same camp twice', label(c), f"This camp is in iClass {times} (IDs {', '.join(ids[:-1])} and {ids[-1]}). At launch parents would see {many} listings. Should one be removed?", c['_href'])
 
     # 2c. Camp type + price table vs the other camps the NAME says it matches (an Aftercare set up as Full Day)
     by_sport = collections.defaultdict(list)
@@ -426,24 +429,39 @@ def main():
             if mine_c != main_c:
                 wk = f" for this {nd}-day week" if nd < 5 else ''
                 cost = lambda v: 'blank' if v is None else f"${v:g}"
-                row('Event Pricing Schedule', label(c), f"Payment Settings use the {c['price_table_name']} pricing schedule, so it charges {cost(mine_c)}{wk}. The other {n_t} {s_name} camps use {main_pt} ({cost(main_c)}). Is that intentional?", c['_href'])
+                # the WEEK price the description says ("$30 per day or $150 for the week" -> $150), else its first price
+                ds_ = (re.search(r'\$\s?(\d[\d,]*(?:\.\d\d)?)\s*(?:/\s*(?:wk|week)|per\s+week|a\s+week|for\s+the\s+week)', c['_desc'], re.I) if nd >= 2 else None) or re.search(r'\$\s?(\d[\d,]*(?:\.\d\d)?)', c['_desc'])
+                dtxt_ = f"; the description says ${ds_.group(1)}" if ds_ and main_c is not None and abs(float(ds_.group(1).replace(',', '')) - main_c) > 0.009 else ''
+                # checker 2026-11-11 (HGA Memorial Aftercare): say what it charges NOW, never the other table's price as if it were
+                row('Event Pricing Schedule', label(c), f"Payment Settings use the {c['price_table_name']} pricing schedule, so it charges {cost(mine_c)}{wk}{dtxt_}. The other {n_t} {s_name} camps use {main_pt} ({cost(main_c)}). Should it use {main_pt}" + (", with the description updated to match?" if dtxt_ else '?'), c['_href'])
                 c['_expected_table'] = tid   # the description price is then checked against the table its matching camps use
 
     # 2c-2. Sibling discount the same across matching camps (Standards #11): what each camp's own pricing schedule
     #       gives the 2nd and 3rd child, vs the schedule most camps of its Event Type use.
+    sib_odd = {}   # table id -> the boxes whose sibling price is off the table's own discount
     def sib_of(tid_):
+        """The table's sibling discount read from every box: the % most boxes give, plus each box that gives another."""
         t_ = price.get(tid_) or {}
-        d1 = t_.get((1, 1))
-        if not d1:
+        cells_ = {(k, n): (v, t_[(1, n)]) for (k, n), v in t_.items() if k in (2, 3) and v is not None and t_.get((1, n))}
+        if not cells_:
             return None
-        return tuple(round((1 - t_[(k, 1)] / d1) * 100) if t_.get((k, 1)) else None for k in (2, 3))
+        pct = {kn: round((1 - v / b) * 100, 1) for kn, (v, b) in cells_.items()}
+        main_p = collections.Counter(pct.values()).most_common(1)[0][0]
+        kids = sorted({k for k, _ in cells_})
+        who = '2nd and 3rd child' if kids == [2, 3] else '2nd child' + ('' if (3, 1) in t_ or any(k == 3 for k, _ in t_) else ' (the price table has no 3rd-child row)')
+        exc = collections.defaultdict(list)
+        for (k, n), p_ in sorted(pct.items(), key=lambda x: (x[0][1], x[0][0])):
+            if abs(p_ - main_p) > 0.5:
+                v, b = cells_[(k, n)]
+                exc[(n, v, round(b * (1 - main_p / 100), 2))].append(k)
+        money = lambda x: f"${x:,.2f}" if abs(x - round(x)) > 0.001 else f"${x:,.0f}"
+        ex_txt = '; '.join(f"{n} day{'s' if n > 1 else ''}: {money(v)} for the {' and '.join(['2nd', '3rd'][k - 2] for k in ks)} child, not {money(want)}"
+                          for (n, v, want), ks in exc.items())
+        base = 'none' if not main_p else f"{main_p:g}% off the {who}"
+        sib_odd[tid_] = [(n, v, want, ks, main_p) for (n, v, want), ks in exc.items()]
+        return base + (f" (except {ex_txt})" if ex_txt else '')
     def sib_words(v):
-        if v is None:
-            return 'no day price to compare'
-        a2, a3 = v
-        if not a2 and not a3:
-            return 'no sibling discount'
-        return f"{a2 or 0}% off the 2nd child" + ('' if a3 is None else f", {a3}% off the 3rd")
+        return 'no day price to compare' if v is None else ('no sibling discount' if v == 'none' else v)
     for t_name in {c['camp_type_name'] for c in camps}:
         users = [c for c in camps if c['camp_type_name'] == t_name]
         main_tid, n_main = collections.Counter(c['price_table_id'] for c in users).most_common(1)[0]
@@ -451,8 +469,27 @@ def main():
         for c in users:
             ran(c, 'Sibling discount')
             got = sib_of(c['price_table_id'])
-            if c['price_table_id'] != main_tid and got is not None and want is not None and got != want:
+            base_ = lambda v: v.split(' (except')[0] if v else v   # odd boxes get their own row (below)
+            if c['price_table_id'] != main_tid and got is not None and want is not None and base_(got) != base_(want):
                 row('Sibling discount', label(c), f"{sib_words(got)}. The other {n_main} {t_name} camps give {sib_words(want)}. Is that intentional?", c['_href'])
+
+    # 2c-3. One box of a price table off the table's own sibling discount (EGF AM Extended: 2nd child $35.50 for
+    #       the week, every other box 10% off; PM Extended the same on 3 days - 2026-11-11)
+    for tid_ in sorted({c['price_table_id'] for c in camps if c['price_table_id'] is not None}):
+        sib_of(tid_)
+        users = [c for c in camps if c['price_table_id'] == tid_]
+        for n, v, want, ks, main_p in sib_odd.get(tid_) or []:
+            money = lambda x: f"${x:,.2f}" if abs(x - round(x)) > 0.001 else f"${x:,.0f}"
+            base_v = (price.get(tid_) or {}).get((1, n))
+            kid = ' and '.join(['2nd', '3rd'][k - 2] for k in ks)
+            note = (f"“{users[0]['price_table_name']}”: the {kid} child pays {money(v)} for {n} day{'s' if n > 1 else ''}"
+                    + (' (the week)' if n == 5 else '') + f". Every other box is {main_p:g}% off; {main_p:g}% off {money(base_v)} is {money(want)}. Is that intentional?")
+            sps = {sport(c) for c in users}
+            if len(sps) == 1 and len(users) == sum(1 for c in camps if sport(c) == next(iter(sps))):
+                row('Price table', f"All {len(users)} {next(iter(sps))} camps", note, who=users)
+            else:
+                for c in users:
+                    row('Price table', label(c), note, c['_href'])
 
     # 2d. A week missing a kind of camp every other week has
     kinds_by_week = collections.defaultdict(set)
@@ -499,9 +536,26 @@ def main():
             for day, s, e in c['_days']:
                 if (s, e) != (cs, ce):
                     odd[(d(day).weekday(), s, e)].append(day)
+            mine_t = {(s, e) for (_, s, e) in c['_days']}
+            flipped_wd = set()
+            # only when the hours change more than once: an AM / PM flip among them is said as its own change
+            # (checker 2026-11-11, AAG Friday 12:30 AM–3:30 AM was buried in "Hours change through the week").
+            # A flip = a night-time day (starts before 6 AM, or at 9 PM or later) whose 12-hour twin is the usual
+            # hours or another day of this camp.
+            for key_ in (list(odd) if len({(s, e) for (_, s, e) in odd}) >= 2 else []):
+                wd, s, e = key_
+                if not (s < 6 * 3600 or s >= 21 * 3600):
+                    continue
+                for sh in (43200, -43200):
+                    if (s + sh, e + sh) in mine_t or (s + sh, e + sh) == (cs, ce):
+                        to = (s + sh, e + sh)
+                        row(f"{(k or sport(c)).strip()} {DAYNAME[wd]} time", label(c), f"Change {DAYNAME[wd]} from {clock(s)}–{clock(e)} to {clock(to[0])}–{clock(to[1])}.", c['_href'])
+                        del odd[key_]
+                        flipped_wd.add(wd)
+                        break
             if len({(s, e) for (_, s, e) in odd}) >= 2:
                 # hours change more than once across the week: one row that lists every day (AAG PM camps)
-                days_txt = '; '.join(f"{DAYNAME[d(day).weekday()]} {clock(s)}–{clock(e)}" for day, s, e in c['_days'])
+                days_txt = '; '.join(f"{DAYNAME[d(day).weekday()]} {clock(s)}–{clock(e)}" for day, s, e in c['_days'] if d(day).weekday() not in flipped_wd)
                 row(f"{k} hours", label(c), f"Hours change through the week: {days_txt}. Is that intentional?", c['_href'])
                 continue
             for (wd, s, e), _days in odd.items():
@@ -546,6 +600,14 @@ def main():
         if c['max_entries'] == 0 and c['waitlist_requests']:
             row('Spots not consistent', label(c), 'Max students is 0, so it shows as full and parents can only join the waitlist. Is that intentional?', c['_href'])
 
+    for s_name, group in by_sport.items():
+        for c in group:
+            ran(c, 'Spots')
+            rest_ = sorted({int(x['max_entries']) for x in group if x is not c and x.get('max_entries')})
+            if c.get('max_entries') and rest_ and int(c['max_entries']) > 2 * rest_[-1]:
+                vals_ = ' or '.join(str(v) for v in rest_) if len(rest_) <= 3 else f"{rest_[0]}–{rest_[-1]}"
+                row('Max students', label(c), f"Max students is {int(c['max_entries'])}; the other {len(group) - 1} {s_name} camps are {vals_}. Is that intentional?", c['_href'])
+
     # 6. Ages: settings consistent within the same kind; title ages vs setting (whole years) and description
     cur[0] = 'Ages'   # its group rows come before its camp loop
     for s_name, group in by_sport.items():
@@ -565,8 +627,13 @@ def main():
         if m and c['min_age'] is not None and c['max_age'] is not None:
             if (int(m.group(1)), int(m.group(2))) != (int(float(c['min_age'])), int(float(c['max_age']))):
                 dm = re.search(r'Ages?\s*:?\s*(\d+\s*[-–]\s*\d+)', c['_desc'], re.I)
-                row('Ages in title', label(c), f"Title says {m.group(1)}–{m.group(2)}; " + (f"description says {re.sub(r'\s*[-–]\s*', '–', dm.group(1))}, and " if dm else '')
-                    + f"settings allow {allow(c, int(m.group(1)))}.", c['_href'])
+                dtx = re.sub(r'\s*[-–]\s*', '–', dm.group(1)) if dm else None
+                if dtx == f"{m.group(1)}–{m.group(2)}":
+                    c['_ages_said_both'] = True   # the description row below would say the same thing again
+                    row('Ages in title', label(c), f"Title and description say {dtx}; settings allow {allow(c, int(m.group(1)))}.", c['_href'])
+                else:
+                    row('Ages in title', label(c), f"Title says {m.group(1)}–{m.group(2)}; " + (f"description says {dtx}, and " if dm else '')
+                        + f"settings allow {allow(c, int(m.group(1)))}.", c['_href'])
 
     # 7. Single-day sign-up: pattern row if mixed, then each camp vs its description
     cur[0] = 'Single-day sign-up'   # the pattern row comes before its camp loop
@@ -599,10 +666,12 @@ def main():
         # explained = single days open LATER ("Single-Day will open 1 week prior if spots are still available", SGT).
         # "individual day registration available!" is a promise of single days NOW, not an explanation (RBK 2026-11-06:
         # 18 camps with single-day sign-up off passed because the old test only looked for the word "available")
-        explained = re.search(r'single[- ]?days?\b[^.]*?\b(will\s+(?:open|be\s+(?:open|available))|open(?:s|ing)?\s+(?:\d+\s+\w+\s+)?(?:prior|before|later|closer)|if\s+spots)', c['_desc'], re.I)
+        explained = re.search(r'(?:single[- ]?days?|daily|individual\s+days?)\b[^.]*?\b(will\s+(?:open|be\s+(?:open|available))|open(?:s|ing)?\s+(?:\d+\s+\w+\s+)?(?:prior|before|later|closer)|if\s+spots|(?:will\s+)?not\s+be\s+(?:sold|available|open)|until\s+the\s+week)', c['_desc'], re.I)
         if not c['per_day_signup'] and day_price and not explained:
             row('Single-day registration', label(c), f"Single-day registration is off, but the description offers {re.sub(r'\s+', ' ', day_price.group(0))}. Should it be on?", c['_href'])
-        if c['per_day_signup'] and not day_price:
+        t1_ = (price.get(c['price_table_id']) or {}).get((1, 1))
+        bare_day = t1_ is not None and any(abs(float(x.replace(',', '')) - t1_) < 0.01 for x in re.findall(r'\$\s?(\d[\d,]*(?:\.\d\d)?)', c['_desc']))
+        if c['per_day_signup'] and not day_price and not bare_day:
             row('Missing daily price', label(c), 'Single-day registration is on, but the description only lists a weekly price.', c['_href'])
 
     # 8. Description price vs what the price table charges; blank boxes. Every camp, care too (Jayme 2026-11-05).
@@ -613,7 +682,9 @@ def main():
         # A camp on the wrong pricing schedule already has its own row; its description is checked against the
         # schedule its matching camps use, so the same wrong charge is not reported twice.
         exp = c.get('_expected_table')
-        t = price.get(exp if exp is not None else c['price_table_id'])
+        if exp is not None:   # the wrong-table row already says the description's price and both charges
+            continue
+        t = price.get(c['price_table_id'])
         nd = len({x[0] for x in c['_days']})   # camp DAYS, not time blocks (MGC all-day care has 2 a day)
         if not t or not nd:
             continue
@@ -630,6 +701,9 @@ def main():
                 said_day = re.search(r'\$\s?(\d+(?:\.\d\d)?)\s*(?:/\s*day|per\s+day|a\s+day)', c['_desc'], re.I)
                 if not wm and not said_day and abs(week_said - day_charge) <= 0.009:
                     row('Price in description', label(c), f"Description says ${week_said:g} without “per day” or “for the week”; the daily price is ${day_charge:g} ({wk_txt}). Add “per day.”", c['_href'])
+                elif nd < 5 and t.get((1, 5)) is not None and abs(week_said - t[(1, 5)]) <= 0.009:
+                    # checker 2026-11-11: $100 is this care table's own 5-day price, not another camp's
+                    row('Price in description', label(c), f"This is a {nd}-day week. Change the weekly amount from ${week_said:g} to ${charge:g}, the {nd}-day price.", c['_href'])
                 elif said_day and abs(float(said_day.group(1)) - day_charge) <= 0.009:
                     row('Price in description', label(c), f"Description also says ${week_said:g}, another camp’s price; this camp is ${day_charge:g} per day ({wk_txt}).", c['_href'])
                 else:
@@ -650,8 +724,9 @@ def main():
         # care camps only, so a wrong Full / Half Day day price was never caught)
         if c['_empty']:
             continue
-        exp_ = c.get('_expected_table')
-        t = price.get(exp_ if exp_ is not None else c['price_table_id']) or {}
+        if c.get('_expected_table') is not None:
+            continue
+        t = price.get(c['price_table_id']) or {}
         # every price the description SAYS is per day, plus "Single Day: $62" (RBK); one matching the table is enough -
         # RBK descriptions also say "After Care ... $20 per day", which is not this camp's day price
         said_days = [float(x) for x in re.findall(r'\$\s?(\d+(?:\.\d\d)?)\s*(?:/\s*day|per\s+day|a\s+day)', c['_desc'], re.I)]
@@ -669,8 +744,9 @@ def main():
         ran(c, 'Every price in the description')
         if c['_empty']:
             continue
-        exp_ = c.get('_expected_table')
-        t = price.get(exp_ if exp_ is not None else c['price_table_id']) or {}
+        if c.get('_expected_table') is not None:
+            continue
+        t = price.get(c['price_table_id']) or {}
         boxes = {round(v, 2) for v in t.values() if v is not None}
         if not boxes:
             continue
@@ -770,6 +846,22 @@ def main():
                   and not (own and words_(t) in words_(own))]
         return others[0] if own and words_(own) not in head and others else None
 
+    # The description's own HEADING for its week: its first line, when that line is not shared with any camp of
+    # another theme and still has words of its own once dates, numbers and words every other theme's heading uses
+    # are taken out. TIG "COED Ninja Summer Camp | Sports Week" / PLG "Villains Take Over" (checker 2026-11-11):
+    # a theme written another way, not a missing theme.
+    def first_line(c):
+        return next((x.strip() for x in c['_desc'].split('\n') if x.strip()), '')
+    def heading_of(c):
+        fl = first_line(c)
+        own = theme_of(c)
+        others = [o for o in camps if theme_of(o) != own]
+        if not fl or any(first_line(o) == fl for o in others) or re.search(r'school\s*(year|closure)', fl, re.I):
+            return None   # a school-closure heading is copied text (its own row, 14b), not a theme
+        shared = {w for o in others for w in re.findall(r'[a-z]+', first_line(o).lower())}
+        mine = [w for w in re.findall(r'[a-z]+', fl.lower()) if len(w) >= 4 and w not in shared and w[:3] not in MONTHS
+                and w not in {x.lower() for x in DAYNAME}]
+        return fl if mine else None
     # 11 + 12. Description has theme / dates / time; dates and time match; copied from another camp
     for c in camps:
         if c.get('_template'):
@@ -792,14 +884,24 @@ def main():
         # whole words only: "Minion Mayhem" is NOT in "Minion Mayhemayhem" (SGT 2026-11-06 passed as a substring)
         if theme and f" {th_w} " not in f" {words(c['_desc'])} ":
             typos = theme_typos(th_w.split(), words(c['_desc']).split())
-            if typos is None and not other_theme_in_heading(c):   # another week's theme: its own row (14b), said once
+            head_ = heading_of(c)
+            # the heading names the theme in a shorter form (TIG "Sports Week" for Sports Spectacular Week, CPF
+            # "Color Wars!" for Color Wars: The Grand Finale): the theme IS there - no row (checker 2026-11-11)
+            short_ok = head_ and any(w in re.findall(r'[a-z0-9]+', head_.lower()) for w in th_w.split() if len(w) >= 4 and w not in ('week', 'summer', 'camp'))
+            if typos is None and short_ok:
+                pass
+            elif typos is None and head_:   # a heading of its own with none of the theme's words (PLG "Villains Take Over")
+                c['_theme_heading'] = head_
+            elif typos is None and not other_theme_in_heading(c):   # another week's theme: its own row (14b), said once
                 missing.append('no theme')
             elif typos:   # the theme IS there, spelled differently: a Spelling row (15b), never "No theme"
                 c['_theme_typos'] = typos
         dm = re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*(\d{1,2})(?:st|nd|rd|th)?\s*[-–]\s*(?:(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*)?(\d{1,2})', c['_desc'], re.I)
         if not dm:
             missing.append('no dates')
-        tm = re.search(r'\d{1,2}(?::\d{2})?\s*(am|pm)', c['_desc'], re.I)
+        # "9 AM", "9am", "9:00 a.m." - and the short "9a - 3p" / "9 a-3p" a range is written in (TIG 2026-11-11:
+        # all 22 descriptions say "9a - 3p" and the audit said "add the hours")
+        tm = re.search(r'\d{1,2}(?::\d{2})?\s*[ap]\.?m\b|\d{1,2}(?::\d{2})?\s*[ap]\.?\s*(?:-|–|—|to)\s*\d{1,2}(?::\d{2})?\s*[ap]\b', c['_desc'], re.I)
         if not tm:
             missing.append('no hours')
         # Kim's list: ages and price in every description. Ages = "Ages 5-13" / "Age: 5" / "5-12 years" - a number,
@@ -825,6 +927,10 @@ def main():
         # Before / After / Extended Care text does not need snack, what to wear or what to bring (Jayme 2026-11-06)
         if not is_care(c) and not re.search(r'\bsnacks?\b', c['_desc'], re.I):
             c['_nosnack'] = True
+    for c in camps:
+        if c.get('_theme_heading'):
+            th_ = theme_of(c) or ''
+            row('Theme name', label(c), f"Title says “{th_}”; the description heading says “{c['_theme_heading']}”. Should they match?", c['_href'])
     # one row when every camp is missing the same things, else one row per camp
     miss = [c for c in camps if c.get('_missing')]
     if miss and len(miss) == N and len({c['_missing'] for c in miss}) == 1:
@@ -875,7 +981,7 @@ def main():
         (cs, ce), _ = sched.most_common(1)[0]
         # The FIRST range is the camp's hours line: any difference counts. Later ranges are often a part
         # of the day ("open gym from 3pm-4pm") - those count only when AM/PM is flipped against the schedule.
-        for i, m in enumerate(re.finditer(r'(\d{1,2}(?::\d{2})?\s*[AaPp]\.?[Mm]\.?)\s*(?:-|–|to)\s*(\d{1,2}(?::\d{2})?\s*[AaPp]\.?[Mm]\.?)', c['_desc'])):
+        for i, m in enumerate(re.finditer(r'(\d{1,2}(?::\d{2})?\s*[AaPp]\.?(?:[Mm]\.?)?)\s*(?:-|–|—|to)\s*(\d{1,2}(?::\d{2})?\s*[AaPp]\.?(?:[Mm]\.?)?)(?![A-Za-z])', c['_desc'])):
             try:
                 s, e = secs(m.group(1)), secs(m.group(2))
             except Exception:
@@ -890,7 +996,7 @@ def main():
     # 8b. Ages written in the DESCRIPTION vs the age settings (Standards #8; 13 yrs 11 mos = through 13)
     for c in camps:
         ran(c, 'Ages in description')
-        if c['_empty'] or c['min_age'] is None or c['max_age'] is None:
+        if c['_empty'] or c['min_age'] is None or c['max_age'] is None or c.get('_ages_said_both'):
             continue
         lo, hi = int(float(c['min_age'])), int(float(c['max_age']))
         m = re.search(r'\bages?\s*:?\s*(\d{1,2})\s*(?:yrs?|years?)?\s*(?:[-–]|to)\s*(\d{1,2})', c['_desc'], re.I)
@@ -950,6 +1056,8 @@ def main():
                 cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
             prev = cur
         return prev[-1] <= (1 if min(len(a), len(b)) < 7 else 2)
+    name_words_of = {o['camp_id']: set(re.findall(r'[a-z]+', (o['camp_name'] or '').lower())) for o in camps}
+    desc_words_of = {o['camp_id']: set(re.findall(r'[a-z]+', o['_desc'].lower())) for o in camps}
     for c in camps:
         ran(c, 'Spelling: name vs description')
         if c['_empty']:
@@ -960,7 +1068,8 @@ def main():
         for nw in sorted(name_w):
             if nw in desc_w:
                 continue
-            hits = sorted(dw for dw in desc_w if len(dw) >= 4 and near(nw, dw))
+            hits = sorted(dw for dw in desc_w if len(dw) >= 4 and near(nw, dw)
+                          and not any(dw in desc_words_of[o['camp_id']] for o in camps if nw not in name_words_of[o['camp_id']]))
             if hits and (nw, hits[0]) not in seen_pairs:
                 seen_pairs.add((nw, hits[0]))
                 row('Spelling', label(c), f"Title says “{nw}”; description says “{hits[0]}”. Which is right?", c['_href'])
@@ -1019,8 +1128,8 @@ def main():
     # 15. Camp name format (Kim's): [Week #:] Theme | Summer Camp | (Gym or Ninja) | Age | Date
     # Kim 2026-11-05: a week number before the theme is fine, Gym or Ninja may be spelled out
     # (Gymnastics / Parkour & Ninja), Full Day or Half Day goes right after it, Ages 5+ is fine (a range is
-    # her preference, never an error). So the second part must be exactly "Summer Camp" - no sport before it,
-    # no year after it - and nothing else here is flagged.
+    # her preference, never an error). So the second part must be exactly "Summer Camp" - no sport before it
+    # (a year is fine; only a WRONG year is flagged) - and nothing else here is flagged.
     def name_problem(n, yr_want=None):
         """What exactly is off in the name, in plain words (Jayme 2026-11-06: say what is wrong, not the whole format)."""
         parts = [p.strip() for p in (n or '').split('|')]
@@ -1074,8 +1183,8 @@ def main():
     # One "All N <kind>" row when the same note hits EVERY camp of that kind (her rule: "All N" only when it
     # truly is every one), otherwise one row per camp.
     def plural_note(t):   # one camp's note said for a group of camps
-        for a, b in (('Title says', 'Titles say'), ('description says', 'descriptions say'), ('Description says', 'Descriptions say'),
-                     ('the description offers', 'the descriptions offer'), ('the description only lists', 'the descriptions only list'),
+        for a, b in (('Title and description say', 'Titles and descriptions say'), ('Title says', 'Titles say'), ('description says', 'descriptions say'), ('Description says', 'Descriptions say'),
+                     ('the description offers', 'the descriptions offer'), ('the description heading says', 'the description headings say'), ('the description only lists', 'the descriptions only list'),
                      ('Description doesn’t', 'Descriptions don’t'), ('to the description.', 'to each description.'),
                      ('Description has', 'Descriptions have'), ('Description names', 'Descriptions name'), ('Description also says', 'Descriptions also say'),
                      ('this camp is', 'these camps are'), ("this camp's price table", 'their price table'), ('this camp’s text', 'each camp’s text')):
@@ -1103,7 +1212,9 @@ def main():
     rows[:] = [r for i, r in enumerate(rows) if i not in drop]
     sport_of = {label(c): sport(c) for c in camps}
     theme_by_label = {label(c): theme_of(c) for c in camps}
-    count_sport = collections.Counter(sport_of.values())
+    count_sport = collections.Counter(sport_of.values())          # labels: decides "all" vs "most"
+    recs_of = collections.Counter(label(c) for c in camps)         # records per label: the number said
+    recs_sport = collections.Counter(sport(c) for c in camps)
     grouped, done = [], set()
     for i, r in enumerate(rows):
         if i in done:
@@ -1112,7 +1223,7 @@ def main():
         same = [j for j, x in enumerate(rows) if x['err'] == r['err'] and x['note'] == r['note'] and sport_of.get(x['camp']) == sp] if sp else [i]
         plural = plural_note
         if sp and len(same) > 1 and len(same) == count_sport[sp]:
-            grouped.append({'err': r['err'], 'camp': f"All {len(same)} {sp} camps", 'href': '', 'note': plural(r['note'])})
+            grouped.append({'err': r['err'], 'camp': f"All {recs_sport[sp]} {sp} camps", 'href': '', 'note': plural(r['note'])})
             done.update(same)
         elif sp and len(same) >= 3 and len(same) > count_sport[sp] / 2:
             # most camps of the kind, same note: ONE "9 of 10 Full Day" row that names the ones it is NOT about
@@ -1128,7 +1239,7 @@ def main():
             body = plural(r['note'])
             q = re.search(r'\s+[^.?!]*\?$', body)   # the exception goes before a closing question
             body = f"{body[:q.start()]} {exc}{body[q.start():]}" if q else f"{body} {exc}"
-            grouped.append({'err': r['err'], 'camp': f"{len(same)} {sp} camps", 'href': '', 'note': body})
+            grouped.append({'err': r['err'], 'camp': f"{sum(recs_of[rows[j]['camp']] for j in same)} {sp} camps", 'href': '', 'note': body})
             done.update(same)
         else:
             grouped.append(r)
@@ -1150,18 +1261,16 @@ def main():
         if wk4:
             four = f"4-day week ${wk4:g} ({'4 × ' + f'${day1:g}' if day1 and abs(wk4 - 4 * day1) < 0.01 else 'not 4 × the day price'})"
         bits = [f"${day1:g} per day" if day1 else None] + ([] if care else [f"${wk5:g} per week" if wk5 else None, four])
-        kinds_here = sorted({sport(c) for c in users})
+        # a kind counts here only when most of its camps are this type (HGA's one Aftercare set up as Full Day is
+        # its own finding, not "Aftercare, all on the SUMMER CAMP table" - checker 2026-11-11)
+        kinds_here = sorted({sport(c) for c in users if collections.Counter(x['camp_type_name'] for x in camps if sport(x) == sport(c)).most_common(1)[0][0] == t_name}) or sorted({sport(c) for c in users})
+        # a kind whose every camp has a price finding: the table is what it is LINKED to, not its confirmed price (AAG Full Day)
+        wrong_kinds = [k_ for k_ in kinds_here if all(any(n_['err'].startswith('Price') and re.search(r'; the (weekly|daily|\d-day) price is \$', n_['note']) and 'Add “per day.”' not in n_['note']
+                                                          for n_ in notes_on[c['camp_id']]) for c in users if sport(c) == k_)]
         head = type_word(t_name) if len(kinds_here) == 1 or 'CARE' in (t_name or '').upper() else f"{type_word(t_name)} ({', '.join(kinds_here)}, all on the “{users[0]['price_table_name']}” price table)"
-        conf.append(f"{head}: " + ' · '.join(b for b in bits if b))
-        s2, s3 = t.get((2, 1)), t.get((3, 1))
-        off = [round((1 - x / day1) * 100) if (x and day1) else 0 for x in (s2, s3)]
-        if not any(off):
-            key = 'none'
-        elif (3, 1) not in t:   # no 3rd-child row in the table at all (RBK) - say so, never "0%"
-            key = f"{off[0]}% off the 2nd child (the price table has no 3rd-child row)"
-        else:
-            key = f"{off[0]}% off the 2nd and 3rd child" if off[0] == off[1] else f"{off[0]}% off the 2nd child, {off[1]}% off the 3rd"
-        sib[key].append(type_word(t_name))
+        wk_note = (f" ({' and '.join(wrong_kinds)} camps are linked to this table, but their descriptions say other prices: see Price mismatch)" if wrong_kinds else '')
+        conf.append(f"{head}: " + ' · '.join(b for b in bits if b) + wk_note)
+        sib[sib_of(tid) or 'none'].append(type_word(t_name))
     if len(sib) == 1:
         conf.append(f"Sibling discount: {next(iter(sib))}")
     else:
@@ -1171,10 +1280,13 @@ def main():
         if c['min_age'] is not None:
             ages[sport(c)][f"{age_text(c['min_age'])} – {age_text(c['max_age'])}"] += 1
     common = {s: cnt.most_common(1)[0][0] for s, cnt in ages.items()}
+    age_exc = [f"{label(c)}: {age_text(c['min_age'])} – {age_text(c['max_age'])}" for c in camps
+               if c['min_age'] is not None and f"{age_text(c['min_age'])} – {age_text(c['max_age'])}" != common[sport(c)]]
+    age_tail = (f" (except {'; '.join(dict.fromkeys(age_exc))})" if 0 < len(age_exc) <= 4 else (f" ({len(age_exc)} camps differ: see the age rows)" if age_exc else ''))
     if len(set(common.values())) == 1:
-        conf.append(f"Ages: {next(iter(common.values()))}")
+        conf.append(f"Ages: {next(iter(common.values()))}{age_tail}")
     else:
-        conf.append('Ages: ' + ' · '.join(f"{a} ({', '.join(s for s in common if common[s] == a)})" for a in dict.fromkeys(common.values())))
+        conf.append('Ages: ' + ' · '.join(f"{a} ({', '.join(s for s in common if common[s] == a)})" for a in dict.fromkeys(common.values())) + age_tail)
 
     first = (gym.get('manager_name') or '').split(' ')[0]
     email = {
