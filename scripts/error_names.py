@@ -62,15 +62,73 @@ PATTERNS = [
 ]
 
 
-def name(err):
-    """The fixed name for an error (an already-fixed name is returned as it is)."""
-    err = (err or '').strip()
+# Jayme's short labels (Estrella 2026-11-10: "Price mismatch", "Start date", "Ages in titles" ...). Every older
+# name above maps on to one of these, so a row or a deleted-row key written under any earlier name still matches.
+SHORT = {
+    'Open before launch · live portal vs launch date': 'Open before launch',
+    'Registration start · setting vs launch date': 'Registration start date',
+    'Registration end · setting vs last camp day': 'Registration end date',
+    'Entered twice · same camp, two listings': 'Entered twice',
+    'Event Type · this camp vs matching camps': 'Event Type',
+    'Price table · this camp vs matching camps': 'Price table',
+    'Sibling discount · this camp vs matching camps': 'Sibling discount',
+    'Camp on a closure day · schedule vs closure list': 'Camp on a closure day',
+    'Start date · setting vs camp days': 'Start date',
+    'End date · setting vs camp days': 'End date',
+    'Ages · name vs age setting': 'Ages in titles',
+    'Ages · description vs age setting': 'Ages in descriptions',
+    'Price · description vs price table': 'Price mismatch',
+    'Price table · blank box': 'Price table blank',
+    'Dates · name vs camp dates': 'Dates in title',
+    'Price · name vs price table': 'Price in title',
+    'Description missing': 'Missing description',
+    'Dates · description vs camp dates': 'Dates in description',
+    'Description missing · theme, dates, time or ages': 'Missing camp details',
+    'Description missing · snack': 'Snack information',
+    'Description missing · what to wear or bring': 'What to wear or bring',
+    'Wrong description · another camp’s description': 'Description from another camp',
+    'Wrong description · another camp’s text': 'Description from another camp',
+    'Spelling · name vs description': 'Spelling',
+    'Spelling · picture text': 'Picture spelling',
+    'Dates · picture vs camp dates': 'Picture dates',
+    'Picture · another week’s theme': 'Picture from another week',
+    'Picture · same as another week': 'Same picture',
+    'Name format · name vs Kim’s format': 'Title format',
+    'Time · description vs schedule (AM / PM mix-up)': 'Hours in description',
+    'Time · description vs schedule': 'Hours in description',
+    'Name · leftover text': 'Leftover text in title',
+    'Full / Half Day · name vs settings': 'Full / Half Day',
+    'Hours · one day vs the other days': 'Hours',
+    'Hours · not the same every day': 'Hours',
+    'Hours · this camp vs other weeks': 'Hours',
+    'Single-day sign-up · this week vs other weeks': 'Single-day registration',
+    'Single-day sign-up · setting vs description': 'Single-day registration',
+    'Missing camp · this week vs other weeks': 'Missing camp',
+    'Camp days · this camp vs the week’s other camps': 'Missing day',
+    'Min age · this camp vs matching camps': 'Min age',
+    'Max age · this camp vs matching camps': 'Max age',
+    'Spots · this camp vs matching camps': 'Spots',
+    'Price table · 2nd child vs other boxes': 'Price table',
+}
+
+
+def _older(err):
+    """The 11-06 name for an error (an already-fixed name is returned as it is)."""
     if err in FIXED:
         return FIXED[err]
     m = re.match(r'^(Min age|Max age|Spots) not consistent$', err)
     if m:
         return f"{m.group(1)} · this camp vs matching camps"
+    if re.match(r'^Missing ' + _DAYS + r'$', err):     # "Missing Monday" is already her label
+        return err
     for pat, new in PATTERNS:
         if new and re.match(pat, err):
             return new
     return err
+
+
+def name(err):
+    """Her short label for an error, from any name it was ever written under."""
+    err = (err or '').strip()
+    o = _older(err)
+    return SHORT.get(o, o)

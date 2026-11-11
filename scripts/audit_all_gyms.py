@@ -27,7 +27,7 @@ Usage:
   python scripts/audit_all_gyms.py --page <folder with gyms/ and sheets/> --out <folder>
       --from 2027-05-01 --to 2027-09-30 --launch 2026-11-16 --due 2026-11-09
 """
-import argparse, glob, json, os, subprocess, sys
+import argparse, glob, json, os, re, subprocess, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from audit_page_sheets import get  # noqa: E402
@@ -38,8 +38,21 @@ KEEP_TAGS = ('eye', 'hand')
 SKIP_STATUS = ('sent', 'ready')
 
 
+def norm_camp(s):
+    # group cells were "9 of 10 Ninja Half Day" / "All 10 Ninja Half Day" before 2026-11-10 and are now
+    # "9 Ninja Half Day camps" / "All 10 Ninja Half Day camps" (her Estrella wording): one key for both
+    s = (s or '').strip()
+    m = re.match(r'^(\d+) of \d+ (.+?)( camps)?$', s)
+    if m:
+        return f"{m.group(1)} {m.group(2)} camps"
+    m = re.match(r'^All (\d+) (?!in )(.+?)( camps)?$', s)
+    if m:
+        return f"All {m.group(1)} {m.group(2)} camps"
+    return s
+
+
 def key(r):
-    return ((r.get('err') or '').strip(), (r.get('camp') or '').strip())
+    return ((r.get('err') or '').strip(), norm_camp(r.get('camp')))
 
 
 def renamed(rows):
