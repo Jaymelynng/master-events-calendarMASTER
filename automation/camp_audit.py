@@ -608,6 +608,39 @@ def main():
                 vals_ = ' or '.join(str(v) for v in rest_) if len(rest_) <= 3 else f"{rest_[0]}–{rest_[-1]}"
                 row('Max students', label(c), f"Max students is {int(c['max_entries'])}; the other {len(group) - 1} {s_name} camps are {vals_}. Is that intentional?", c['_href'])
 
+    # 5b. One day of a camp holds fewer (or more) kids than the camp's other days (Jayme 2026-11-11, All Around:
+    # Tuesday 25, every other day 35). Each camp day has its own Max Students box when Allow Parents to Choose Days
+    # is on (KB line 39747). Read from iClass's own per-day count ("0 in, 35 open": in + open = that day's limit),
+    # so it is the limit iClass really applies - a box iClass ignores (choose-days off) never makes a row.
+    for c in camps:
+        ran(c, 'Spots')
+        caps = []
+        for part in (c.get('per_day') or '').split(' | '):
+            m = re.match(r'([A-Z][a-z]{2}) .*?: (\d+) in, (\d+) open', part.strip())
+            if m:
+                caps.append((DAYNAME[[x[:3] for x in DAYNAME].index(m.group(1))], int(m.group(2)) + int(m.group(3))))
+        if len({v for _, v in caps}) < 2:
+            continue
+        common = collections.Counter(v for _, v in caps).most_common()
+        if len(common) > 1 and common[0][1] == common[1][1]:
+            main = None   # no usual number: every day's limit is listed
+        else:
+            main = common[0][0]
+        say = lambda ds: ds[0] if len(ds) == 1 else ', '.join(ds[:-1]) + ' and ' + ds[-1]
+        by_v = collections.OrderedDict()
+        for day, v in caps:
+            by_v.setdefault(v, []).append(day)
+        if main is None:
+            note = 'Max students is ' + '; '.join(f"{v} on {say(ds)}" for v, ds in by_v.items()) + '. Is that intentional?'
+        else:
+            odd = [(v, ds) for v, ds in by_v.items() if v != main]
+            odd_days = [x for _, ds in odd for x in ds]
+            fewer = all(v < main for v, _ in odd)
+            note = (f"Max students is {main} on {say(by_v[main])}, but " + ' and '.join(f"{v} on {say(ds)}" for v, ds in odd) + '. '
+                    + (f"Parents could find {say(odd_days)} full while the other days still have room. " if fewer else '')
+                    + 'Is that intentional?')
+        row('Max students by day', label(c), note, c['_href'])
+
     # 6. Ages: settings consistent within the same kind; title ages vs setting (whole years) and description
     cur[0] = 'Ages'   # its group rows come before its camp loop
     for s_name, group in by_sport.items():
