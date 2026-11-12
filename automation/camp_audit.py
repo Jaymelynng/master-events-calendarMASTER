@@ -1231,18 +1231,26 @@ def main():
         # order" / "this is a rule at all the gyms"). "Girls Gymnastics Summer Camp Full Day" is fine, so is
         # "Summer Camp" anywhere in the name and Full / Half Day in any spot. Only a MISSING part is flagged:
         # no "Summer Camp" at all, no Ages, no dates (plus hours / a price in the name, and a wrong year).
+        # Kim 2026-11-12 answered every style: OK = week number before the theme, Gym/Ninja spelled out + Full/Half
+        # Day, a note in parentheses, Ages 5+, any order, the year, emojis. NOT OK = below.
         if not re.search(r'summer\s*camp', n or '', re.I):
-            return "has no “Summer Camp” part"
-        rest = parts[1:]
+            bits.append("has no “Summer Camp”")
+        if re.search(r'\b(mon|tue|tues|wed|thu|thur|fri)\b\.?\s*[-–]\s*(mon|tue|tues|wed|thu|thur|fri)\b', n or '', re.I):
+            bits.append("has day words like Tues-Fri (for a short week add (NO CAMP MONDAY) at the end instead)")
+        if re.search(r'\bwk\s*#?\d', n or '', re.I):
+            bits.append("says “WK1” (spell out Week 1)")
+        if re.search(r'\bages?\s*\d+\s*yrs?\b|\d+\s*yrs?\s*[-–]\s*\d+\s*yrs?', n or '', re.I):
+            bits.append("writes ages with “yr” (use Ages 4-12)")
+        rest = parts[1:] if len(parts) > 1 else parts
         # ages and dates are looked for in the WHOLE name: a name with no "|" at all (MGC care: "SUMMER CAMP
         # (AFTERNOON CARE) June 21-25") still has its dates
-        if not any(re.search(r'\bages?\b', p, re.I) for p in parts):
+        if not any(re.search(r'\bages?\b|\d+\s*yrs?\b', p, re.I) for p in parts):
             bits.append("has no Ages part")
         if not any(re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*\d', p, re.I) for p in parts):
             bits.append("has no dates")
         # hours or a price as a part of the name: not in Kim's format (only a short note in parentheses after the
         # date is). Said without the amount, so every week's name groups into one line.
-        if any(re.search(r'\d\s*(am|pm)\b', p, re.I) and not p.startswith('(') for p in rest):
+        if any(re.search(r'\d(:\d\d)?\s*(am|pm)\b', p, re.I) and not p.startswith('(') for p in rest):
             bits.append("has the camp hours in the name")
         if any(re.search(r'\$\s?\d', p) for p in rest):
             bits.append("has the price in the name")
