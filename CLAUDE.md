@@ -73,6 +73,7 @@
 | **Admin Dashboard** | |
 | Tab orchestrator | `src/components/AdminDashboard/AdminDashboard.js` |
 | Errors tab | `src/components/AdminDashboard/AdminErrorsCenter.js` |
+| Camp Data tab | `src/components/AdminDashboard/AdminCampData.js` — every gym's summer camps, LIVE from Supabase (no copies): `iclass_camp_audit` + `iclass_camp_setup` (all settings, description HTML, per-day counts) + `iclass_price_cells` + `iclass_setup_reads`; summer = `camp_audit_standards` window + Buckets CAMP / CAMP CARE (same filter as `automation/camp_audit.py`); settings grouped by `camp_setting_groups` (`database/ADD_CAMP_SETTING_GROUPS.sql`). Read-only. Built 2026-11-12; replaces the hand-copied claude.ai "Summer Camp Data" page (artifact EEfPv3oT5gNPnCuA66C1CA). |
 | Camp Audit tab | `src/components/AdminDashboard/AdminCampAudit.js` — gym picker + Run camp audit → Railway `POST /camp-audit` (`automation/camp_audit_job.py` runs `automation/camp_audit.py`, merges with `automation/camp_audit_merge.py`) → tables `camp_audit_runs`, `camp_audit_gym_results`, `camp_audit_gym_state`, `camp_audit_standards` (SQL: `database/ADD_CAMP_AUDIT_RUNS.sql`). Step 1 of 4 (2026-11-11); the email checklist still lives on the claude.ai audit page until step 2. |
 | Buckets tab | `src/components/AdminDashboard/AdminBuckets.js` (event_type_mappings + type_locked) |
 | Gym Rules tab | `src/components/AdminDashboard/AdminGymRules.js`, `RuleWizard.js`, `RuleManager.js` |
