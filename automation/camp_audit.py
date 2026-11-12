@@ -359,8 +359,8 @@ def main():
     for c in late_start:
         row('Registration start date', label(c), f"Change registration start from {mdy(c['registration_start'])} to {mdy(a.launch)}, the launch date.", c['_href'])
     # No 'Not in the portal menu' rows: a type is missing from the menu only because none of its camps is live yet.
-    # No 'Status Inactive' rows either (Jayme 2026-11-05: "she obviously will turn them to active"): HOW a gym hides
-    # its camps before launch is the gym's choice. Inactive only keeps a camp out of 'Camps are live' / 'Goes live early'.
+    # SUPERSEDED 2026-11-12: the 11-05 rule "how a gym hides its camps is the gym's choice" is replaced by ONE launch
+    # standard (Jayme 11/12): every setting ready, Status Inactive, so launch day = make them Active. See 2c-6.
 
     # 2. Registration end = camp's last day
     #    Many camps closing the same number of days early = ONE row (EGF 2026-11-10: 43 camps each a day early were
@@ -490,6 +490,62 @@ def main():
             else:
                 for c in users:
                     row('Price table', label(c), note, c['_href'])
+
+    # 2c-4. NO sibling discount in a camp price table (Jayme 2026-11-11: "all gyms should have sibling discounts
+    #       written into the audit"; care tables count - asked, she did not pick "not care camps"). 2c-2 only
+    #       compares camps to each other, so a gym where EVERY camp has none passed (AAR, PGN). A table with no
+    #       2nd-child price at all, or the same price for every child, is the finding. The RATE is not set by her.
+    #       CARE IS SKIPPED (Jayme 2026-11-11): every gym but Eagle charges siblings the same for Before / After /
+    #       Extended Care, so a care table with no discount is normal, not a finding. Camp tables only.
+    #       A care TABLE counts too (PGN "Day Program - Extended Day" camps are named "EXT DAY: 4 - 5 PM").
+    _care_tbl = lambda c: is_care(c) or re.search(r'care|extended', c.get('price_table_name') or '', re.I)
+    for tid_ in sorted({c['price_table_id'] for c in camps if c['price_table_id'] is not None and not _care_tbl(c)}):
+        users = [c for c in camps if c['price_table_id'] == tid_ and not _care_tbl(c)]
+        if not users:
+            continue
+        got_ = sib_of(tid_)
+        base_s = got_.split(' (except')[0] if got_ else got_
+        if base_s is not None and base_s != 'none':
+            continue
+        t_name_ = users[0]['price_table_name']
+        note = (f"The “{t_name_}” price table has only a 1st-child price, so siblings pay full price. Add a sibling discount."
+                if base_s is None else
+                f"The “{t_name_}” price table charges the 2nd and 3rd child the same as the 1st, so there is no sibling discount. Add one.")
+        sps = {sport(c) for c in users}
+        if len(users) == N:
+            row('No sibling discount', f"All {N}", note, who=users)
+        elif len(sps) == 1 and len(users) == sum(1 for c in camps if sport(c) == next(iter(sps))):
+            row('No sibling discount', f"All {len(users)} {next(iter(sps))} camps", note, who=users)
+        else:
+            for c in users:
+                row('No sibling discount', label(c), note, c['_href'])
+
+    # 2c-6. LAUNCH SETTINGS - ONE row per gym (Jayme 2026-11-12): every camp ready to go live - Show on Web, Allow Web
+    #       Registration and Auto Approve Requests ON - and Status INACTIVE, so on launch day the only change is making
+    #       them Active. Inactive hides a camp completely (HGA 11/5); her CCP test 11/12 showed a camp page still opens
+    #       with "Submit Request" when only web registration + the date hold it back. The row counts what differs.
+    #       Auto-approve off = parents see "Submit Request" and staff approve each one (KB 20848: no charge at sign-up).
+    act_ = [c for c in camps if c['_active']]
+    web_ = [c for c in camps if not c['show_on_web']]
+    reg_ = [c for c in camps if not c['allow_registration']]
+    aut_ = [c for c in camps if c.get('auto_approve') is False]
+    bad_ = [c for c in camps if c in act_ or c in web_ or c in reg_ or c in aut_]
+    if bad_:
+        # Jayme 2026-11-12: "this makes no sense" - write it as a to-do list, not a status readout
+        # Jayme 2026-11-12: the settings, then "x camps change from this to that"
+        ch_ = []
+        if web_: ch_.append(f"{len(web_)} camps: Show on Web off → on")
+        if reg_: ch_.append(f"{len(reg_)} camps: Allow Web Registration off → on")
+        if aut_: ch_.append(f"{len(aut_)} camps: Auto Approve Requests off → on")
+        if act_: ch_.append(f"{len(act_)} camps: Status Active → Inactive")
+        row('Launch settings', f"All {N}" if len(bad_) == N else f"{len(bad_)} of {N}",
+            f"Registration settings: Show on Web on, Allow Web Registration on, Auto Approve Requests on. Details: Status Inactive. "
+            f"Then on {launch_words} the only change is Status → Active.\nChange: {' · '.join(ch_)}",
+            who=bad_)
+
+    # (2c-5 REMOVED 2026-11-11, the same hour it was added: a week that costs the same as 4 days at the day price is
+    #  the week's PRICE BREAK, not an error. Kim: "The per day price is higher and then they get a price break on a
+    #  full week." OAS + CRR Half Day ($60 / $240 for 4 / $240 week) are on purpose. Do not add this check again.)
 
     # 2d. A week missing a kind of camp every other week has
     kinds_by_week = collections.defaultdict(set)
@@ -663,10 +719,11 @@ def main():
                 dtx = re.sub(r'\s*[-–]\s*', '–', dm.group(1)) if dm else None
                 if dtx == f"{m.group(1)}–{m.group(2)}":
                     c['_ages_said_both'] = True   # the description row below would say the same thing again
-                    row('Ages in title', label(c), f"Title and description say {dtx}; settings allow {allow(c, int(m.group(1)))}.", c['_href'])
+                    # Jayme 2026-11-12: say the places DON'T MATCH - never tell the gym which age is right
+                    row('Ages in title', label(c), f"Ages don’t match: the title and description say {dtx}, and the age settings allow {allow(c, int(m.group(1)))}. Make them match.", c['_href'])
                 else:
-                    row('Ages in title', label(c), f"Title says {m.group(1)}–{m.group(2)}; " + (f"description says {dtx}, and " if dm else '')
-                        + f"settings allow {allow(c, int(m.group(1)))}.", c['_href'])
+                    row('Ages in title', label(c), f"Ages don’t match: the title says {m.group(1)}–{m.group(2)}, " + (f"the description says {dtx}, " if dm else '')
+                        + f"and the age settings allow {allow(c, int(m.group(1)))}. Make " + ("all three" if dm else "them") + " match.", c['_href'])
 
     # 7. Single-day sign-up: pattern row if mixed, then each camp vs its description
     cur[0] = 'Single-day sign-up'   # the pattern row comes before its camp loop
@@ -1170,27 +1227,18 @@ def main():
         bits = []
         # every problem in the name, not just the first group (2026-11-06: CCP's row said only "Week #" and
         # never the hours and price parts in its names)
-        if re.search(r'summer\s*camp', second, re.I):
-            before = re.sub(r'\s*summer\s*camp.*', '', second, flags=re.I).strip()
-            if before:
-                bits.append(f"has “{before}” before Summer Camp (it goes after, as its own part)")
-            after = re.sub(r'.*summer\s*camp\s*(20\d\d)?', '', second, flags=re.I).strip()
-            after = re.sub(r'\bweek\s*\d+\b', 'Week #', after, flags=re.I)   # one line for every week, not ten
-            if after:
-                bits.append(f"has “{after}” after Summer Camp in the same part (it goes in its own part)")
-        elif not re.search(r'summer\s*camp', n or '', re.I):
+        # Jayme 2026-11-11: THE ORDER OF THE PARTS IS NOT AN ERROR, AT ANY GYM ("shes not going to care the
+        # order" / "this is a rule at all the gyms"). "Girls Gymnastics Summer Camp Full Day" is fine, so is
+        # "Summer Camp" anywhere in the name and Full / Half Day in any spot. Only a MISSING part is flagged:
+        # no "Summer Camp" at all, no Ages, no dates (plus hours / a price in the name, and a wrong year).
+        if not re.search(r'summer\s*camp', n or '', re.I):
             return "has no “Summer Camp” part"
-        else:
-            return "“Summer Camp” is not the second part"
-        # the rest of Kim's format (Standards #17): Full / Half Day right after Summer Camp (with Gym or Ninja),
-        # an Ages part, and the dates
-        rest = parts[2:]
-        fh_at = [i for i, p in enumerate(rest) if re.search(r'\b(full|half)\s*day\b', p, re.I)]
-        if fh_at and fh_at[0] != 0:
-            bits.append(f"has “{re.search(r'(full|half)\s*day', rest[fh_at[0]], re.I).group(0)}” in its own part, not right after Summer Camp (it goes with Gym or Ninja)")
-        if not any(re.search(r'\bages?\b', p, re.I) for p in rest):
+        rest = parts[1:]
+        # ages and dates are looked for in the WHOLE name: a name with no "|" at all (MGC care: "SUMMER CAMP
+        # (AFTERNOON CARE) June 21-25") still has its dates
+        if not any(re.search(r'\bages?\b', p, re.I) for p in parts):
             bits.append("has no Ages part")
-        if not any(re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*\d', p, re.I) for p in rest):
+        if not any(re.search(r'\b(' + '|'.join(MONTHS) + r')[a-z]*\.?\s*\d', p, re.I) for p in parts):
             bits.append("has no dates")
         # hours or a price as a part of the name: not in Kim's format (only a short note in parentheses after the
         # date is). Said without the amount, so every week's name groups into one line.
@@ -1268,11 +1316,16 @@ def main():
             # one theme run twice (TIG Sports Spectacular): the week's date tells them apart
             short = [s if short.count(s) == 1 else l.replace(' ' + sp, '') for s, l in zip(short, rest)]
             names = short[0] if len(short) == 1 else (' and '.join(short) if len(short) == 2 else ', '.join(short[:-1]) + ', and ' + short[-1])
-            exc = ('Update all except' if r['err'].startswith('Ages') else 'All except') + f" {names}."
             body = plural(r['note'])
-            q = re.search(r'\s+[^.?!]*\?$', body)   # the exception goes before a closing question
-            body = f"{body[:q.start()]} {exc}{body[q.start():]}" if q else f"{body} {exc}"
-            grouped.append({'err': r['err'], 'camp': f"{sum(recs_of[rows[j]['camp']] for j in same)} {sp} camps", 'href': '', 'note': body})
+            camp_ = f"{sum(recs_of[rows[j]['camp']] for j in same)} {sp} camps"
+            if r['err'].startswith('Ages'):
+                # Jayme 2026-11-12: "Update all except ..." read as an order; the exceptions go in the Camp column
+                camp_ += f" (all but {names})"
+            else:
+                exc = f"All except {names}."
+                q = re.search(r'\s+[^.?!]*\?$', body)   # the exception goes before a closing question
+                body = f"{body[:q.start()]} {exc}{body[q.start():]}" if q else f"{body} {exc}"
+            grouped.append({'err': r['err'], 'camp': camp_, 'href': '', 'note': body})
             done.update(same)
         else:
             grouped.append(r)
@@ -1303,8 +1356,9 @@ def main():
         care = 'CARE' in (t_name or '').upper()
         four = None
         if wk4:
-            four = f"4-day week ${wk4:g} ({'4 × ' + f'${day1:g}' if day1 and abs(wk4 - 4 * day1) < 0.01 else 'not 4 × the day price'})"
-        bits = [f"${day1:g} per day" if day1 else None] + ([] if care else [f"${wk5:g} per week" if wk5 else None, four])
+            # Jayme 2026-11-12: "nothing here says how much a full 5 day week is" - say 1 day / full week (5 days) / 4-day week
+            four = f"${wk4:g} for a 4-day week"
+        bits = [f"${day1:g} for 1 day" if day1 else None] + ([] if care else [f"${wk5:g} for a full week (5 days)" if wk5 else None, four])
         # a kind counts here only when most of its camps are this type (HGA's one Aftercare set up as Full Day is
         # its own finding, not "Aftercare, all on the SUMMER CAMP table" - checker 2026-11-11)
         kinds_here = sorted({sport(c) for c in users if collections.Counter(x['camp_type_name'] for x in camps if sport(x) == sport(c)).most_common(1)[0][0] == t_name}) or sorted({sport(c) for c in users})
@@ -1340,7 +1394,8 @@ def main():
         'code': G, 'name': gym['name'], 'gm': first, 'status': 'auditing',
         'subject': f"{gym['name']} Summer Camps 2027",
         'intro': "I was linking all of your summer camp data and getting it ready for marketing. Here’s what I confirmed, and the things I found that need a look.",
-        'confirmed': '\n'.join(conf), 'rows': rows, 'signoff': 'Thank you,\nJayme',
+        # Launch settings is always the FIRST row of the email (Jayme 2026-11-12)
+        'confirmed': '\n'.join(conf), 'rows': sorted(rows, key=lambda r: r['err'] != 'Launch settings'), 'signoff': 'Thank you,\nJayme',
     }
     json.dump(email, open(os.path.join(a.out, f'{G}_email.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     # Per-camp audit record for the camp sheet: when it ran, every check that ran on the camp, and its own findings.
