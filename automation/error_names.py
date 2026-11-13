@@ -22,6 +22,7 @@ FIXED = {
     'Sibling discount': 'Sibling discount · this camp vs matching camps',
     'No sibling discount': 'Sibling discount · none in the price table',
     'Closed day': 'Camp on a closure day · schedule vs closure list',
+    'Spots by day': 'Spots · one day vs the camp’s other days',
     'Camp start date': 'Start date · setting vs camp days',
     'Camp end date': 'End date · setting vs camp days',
     'Ages in title': 'Ages · name vs age setting',
@@ -110,6 +111,7 @@ SHORT = {
     'Min age · this camp vs matching camps': 'Min age',
     'Max age · this camp vs matching camps': 'Max age',
     'Spots · this camp vs matching camps': 'Spots',
+    'Spots · one day vs the camp’s other days': 'Spots by day',
     'Price table · 2nd child vs other boxes': 'Price table',
 }
 
