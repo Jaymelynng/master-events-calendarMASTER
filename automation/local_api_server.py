@@ -664,6 +664,24 @@ def camp_audit():
     return jsonify({"success": True, **result})
 
 
+@app.route('/camp-audit/edit', methods=['POST'])
+def camp_audit_edit():
+    """Save Jayme's edit to one gym's audit email (Admin > Camp Audit, step 2). Body: {"gym": "AAG", "patch": {...}}
+    with any of rows / hidden / subject / gm / intro / signoff / status. Written with the service key, so the
+    audit tables stay read-only to the public."""
+    if not check_api_key():
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    import camp_audit_job
+    try:
+        saved = camp_audit_job.save_gym_edit(data.get('gym'), data.get('patch') or {})
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    return jsonify({"success": True, "saved": saved})
+
+
 if __name__ == '__main__':
     import os
 

@@ -10,6 +10,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { startCampAudit } from '../../lib/syncApi';
+import CampAuditEmail from './CampAuditEmail';
 
 const INK = '#1f1a1a';
 const ACCENT = '#8b6f6f';
@@ -60,6 +61,7 @@ export default function AdminCampAudit({ gyms = [] }) {
   const [startError, setStartError] = useState(null);
   const [starting, setStarting] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
+  const [emailGym, setEmailGym] = useState(null);   // gym whose audit email is open (step 2)
 
   const picked = sorted.filter(g => !dropped.has(g.id));
   const gymById = useMemo(() => Object.fromEntries(sorted.map(g => [g.id, g])), [sorted]);
@@ -129,10 +131,11 @@ export default function AdminCampAudit({ gyms = [] }) {
           <li>All gyms are ticked. Tap a gym to leave it out.</li>
           <li>Press <b>Run camp audit</b>. You can leave this screen; it keeps running on the server.</li>
           <li>Each gym shows its rows when it finishes. A gym takes about a minute.</li>
+          <li>Press <b>Open email</b> on a gym to see its audit email: edit or delete any row, add a row, set the status, then <b>Copy email</b> and paste into Outlook.</li>
         </ol>
         <p className="mt-3 text-sm" style={{ color: '#3a3030' }}>
           The audit reads what iClass held at the last sync (<b>iClass read</b> on each gym). Sync first if you want today's settings.
-          Your own rows and deleted rows from the audit page come along unchanged (copied Nov 11). Editing rows here comes in the next step.
+          A row you edit, add or delete here stays that way when the audit runs again.
         </p>
       </div>
 
@@ -201,7 +204,7 @@ export default function AdminCampAudit({ gyms = [] }) {
                   <tr className="text-left" style={{ color: '#3a3030' }}>
                     <th className="py-2 pr-3">Gym</th><th className="py-2 pr-3">Status</th><th className="py-2 pr-3">Camps</th>
                     <th className="py-2 pr-3">Rows</th><th className="py-2 pr-3">Your rows kept</th>
-                    <th className="py-2 pr-3">iClass read</th><th className="py-2 pr-3">Audited</th>
+                    <th className="py-2 pr-3">iClass read</th><th className="py-2 pr-3">Audited</th><th className="py-2 pr-3" />
                   </tr>
                 </thead>
                 <tbody>
@@ -221,6 +224,12 @@ export default function AdminCampAudit({ gyms = [] }) {
                         <td className="py-2 pr-3">{r.rows ? kept : '—'}</td>
                         <td className="py-2 pr-3">{when(r.source_read_at) || 'not read'}</td>
                         <td className="py-2 pr-3">{when(r.finished_at) || '—'}</td>
+                        <td className="py-2 pr-3">{r.status === 'done' && (
+                          <button type="button" onClick={() => { setEmailGym(r.gym_id); setTimeout(() => { const el = document.getElementById('camp-audit-email'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50); }}
+                            className="px-3 py-1.5 text-sm font-bold rounded-lg cursor-pointer transition-all hover:brightness-110"
+                            style={{ background: firstColor(g), color: textOn(firstColor(g)), boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
+                            {emailGym === r.gym_id ? 'Email open ▾' : 'Open email ▸'}
+                          </button>)}</td>
                       </tr>
                     );
                   })}
@@ -230,6 +239,13 @@ export default function AdminCampAudit({ gyms = [] }) {
           </>
         )}
       </div>
+
+      {/* Step 2: the open gym's audit email - edit, delete, add rows, status, copy for Outlook */}
+      {emailGym && gymById[emailGym] && (
+        <div id="camp-audit-email">
+          <CampAuditEmail key={emailGym} gym={gymById[emailGym]} brand={firstColor(gymById[emailGym])} />
+        </div>
+      )}
     </div>
   );
 }

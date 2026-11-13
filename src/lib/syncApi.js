@@ -239,6 +239,30 @@ export const startCampAudit = async (gymIds) => {
 };
 
 /**
+ * Save an edit to one gym's audit email (Admin > Camp Audit). Railway writes it with its service key
+ * (automation/camp_audit_job.py save_gym_edit), so the audit tables stay read-only to the public.
+ *
+ * @param {string} gymId - calendar gym code, e.g. 'AAG'
+ * @param {object} patch - any of rows, hidden, subject, gm, intro, signoff, status
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export const saveCampAuditEdit = async (gymId, patch) => {
+  const API_URL = getApiUrl();
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/camp-audit/edit`, {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify({ gym: gymId, patch }),
+    }, TIMEOUTS.read);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) return { success: false, error: data.error || `Railway answered ${response.status}` };
+    return data;
+  } catch (error) {
+    return { success: false, error: error.name === 'AbortError' ? 'Railway did not answer' : error.message };
+  }
+};
+
+/**
  * Get list of available gyms from the API
  *
  * @returns {Promise<{success: boolean, gyms?: Array, error?: string}>}

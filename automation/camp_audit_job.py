@@ -112,6 +112,39 @@ def _work(run_id, gyms):
         _running['run_id'] = None
 
 
+EDITABLE = ('rows', 'hidden', 'subject', 'gm', 'intro', 'signoff', 'status')
+STATUSES = ('not', 'missing', 'auditing', 'ready', 'sent')
+
+
+def save_gym_edit(gym, patch):
+    """Jayme's edit to one gym's email (Admin > Camp Audit, step 2). Saved to camp_audit_gym_state - the work the
+    next run merges with (camp_audit_merge.py: rows tagged by:'hand' are kept, `hidden` rows never come back) -
+    and, when rows change, onto the gym's newest finished result so the screen shows it at once."""
+    known = [x['id'] for x in _sb('GET', 'gyms?select=id&order=id.asc')]
+    if gym not in known:
+        raise ValueError(f"unknown gym {gym!r}")
+    clean = {k: v for k, v in (patch or {}).items() if k in EDITABLE}
+    if not clean:
+        raise ValueError('nothing to save')
+    if 'status' in clean and clean['status'] not in STATUSES:
+        raise ValueError(f"unknown status {clean['status']!r}")
+    for k in ('rows', 'hidden'):
+        if k in clean and not (isinstance(clean[k], list) and all(isinstance(r, dict) for r in clean[k])):
+            raise ValueError(f"{k} must be a list of rows")
+    if 'rows' in clean:
+        clean['rows'] = [{f: r.get(f) for f in ('err', 'camp', 'note', 'href', 'by') if r.get(f) is not None} for r in clean['rows']]
+    if 'hidden' in clean:
+        clean['hidden'] = [{'err': h.get('err'), 'camp': h.get('camp')} for h in clean['hidden']]
+    state = _sb('PATCH', f"camp_audit_gym_state?gym_id=eq.{gym}", clean, prefer='return=representation')
+    if not state:
+        raise ValueError(f"{gym} has no saved audit email yet")
+    if 'rows' in clean:
+        latest = _sb('GET', f"camp_audit_gym_results?gym_id=eq.{gym}&status=eq.done&order=finished_at.desc&limit=1&select=id")
+        if latest:
+            _sb('PATCH', f"camp_audit_gym_results?id=eq.{latest[0]['id']}", {'rows': clean['rows']})
+    return sorted(clean)
+
+
 def _one_gym(run_id, g, std_file, tmp):
     from camp_audit_merge import merge
     _set(run_id, g, status='running', started_at=_now(), step='Checking every camp against its iClass settings')
