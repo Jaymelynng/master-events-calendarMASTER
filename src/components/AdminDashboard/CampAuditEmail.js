@@ -14,7 +14,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { saveCampAuditEdit } from '../../lib/syncApi';
 
-const STATUS = [['not', 'Not started'], ['missing', 'Missing camps'], ['auditing', 'Auditing'], ['ready', 'Ready to send'], ['sent', 'Sent']];
+const STATUS = [['not', 'Not started'], ['missing', 'Missing camps'], ['auditing', 'Auditing'], ['ready', 'Ready to send'], ['r1sent', 'Round 1 sent'], ['sent', 'Sent']];
 const INK = '#14181f';
 const when = (t) => (t ? new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : null);
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -64,7 +64,7 @@ export default function CampAuditEmail({ gym, brand }) {
   const load = useCallback(async () => {
     setError(null);
     const [s, r] = await Promise.all([
-      supabase.from('camp_audit_gym_state').select('gym_id,status,rows,hidden,subject,intro,signoff,gm,name').eq('gym_id', gym.id).maybeSingle(),
+      supabase.from('camp_audit_gym_state').select('gym_id,status,rows,hidden,subject,intro,signoff,gm,name,confirmed').eq('gym_id', gym.id).maybeSingle(),
       supabase.from('camp_audit_gym_results').select('id,run_id,rows,confirmed,finished_at,source_read_at').eq('gym_id', gym.id).eq('status', 'done').order('finished_at', { ascending: false }).limit(1),
     ]);
     if (s.error || r.error) { setError((s.error || r.error).message); return; }
@@ -87,7 +87,7 @@ export default function CampAuditEmail({ gym, brand }) {
   if (!result) return <p className="cae-note">{gym.id} has no finished audit yet. Run camp audit above.</p>;
   const rows = result.rows || [];
   const hidden = state.hidden || [];
-  const e = { gm: state.gm || '', intro: state.intro || '', signoff: state.signoff ?? 'Thank you,\nJayme', subject: state.subject || '', confirmed: result.confirmed || '', rows };
+  const e = { gm: state.gm || '', intro: state.intro || '', signoff: state.signoff ?? 'Thank you,\nJayme', subject: state.subject || '', confirmed: (state.confirmed && state.confirmed.trim()) ? state.confirmed : (result.confirmed || ''), rows };
 
   const setRows = (next, extra = {}) => save({ rows: next, ...extra }, () => setResult(r => ({ ...r, rows: next })));
   const editRow = (i, k, v) => {
@@ -135,7 +135,9 @@ export default function CampAuditEmail({ gym, brand }) {
         <p>Hi {state.gm || '…'},</p>
         {ed('intro', 'Opening line', true)}
         <h4>Confirmed (from the camp settings)</h4>
-        <div className="cae-confirmed">{e.confirmed || <span className="cae-note">No Confirmed lines in this run.</span>}</div>
+        {/* Confirmed: her edited block when she has one, else the newest run's own (from the price tables + age settings) */}
+        <div className="cae-confirmed"><div key={`confirmed:${e.confirmed}`} className="cae-ed" contentEditable suppressContentEditableWarning data-ph="One confirmed setting per line"
+          style={{ whiteSpace: 'pre-wrap' }} onBlur={(x) => setField('confirmed', x.currentTarget.innerText.replace(/\n+$/, ''))}>{e.confirmed}</div></div>
         <h4>Found <span className="cae-count">· {rows.length} rows</span></h4>
         <p className="cae-note">Click any Error or Notes text to change it. A row you edit or add, and a row you delete, stay that way when the audit runs again.</p>
         <div className="cae-tablewrap"><table>

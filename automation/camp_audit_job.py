@@ -112,8 +112,9 @@ def _work(run_id, gyms):
         _running['run_id'] = None
 
 
-EDITABLE = ('rows', 'hidden', 'subject', 'gm', 'intro', 'signoff', 'status')
-STATUSES = ('not', 'missing', 'auditing', 'ready', 'sent')
+EDITABLE = ('rows', 'hidden', 'subject', 'gm', 'intro', 'signoff', 'status', 'confirmed')
+# r1sent = "Round 1 sent", used on the audit page since 2026-11-12 (first email sent, gym fixing)
+STATUSES = ('not', 'missing', 'auditing', 'ready', 'r1sent', 'sent')
 
 
 def save_gym_edit(gym, patch):
@@ -135,6 +136,9 @@ def save_gym_edit(gym, patch):
         clean['rows'] = [{f: r.get(f) for f in ('err', 'camp', 'note', 'href', 'by') if r.get(f) is not None} for r in clean['rows']]
     if 'hidden' in clean:
         clean['hidden'] = [{'err': h.get('err'), 'camp': h.get('camp')} for h in clean['hidden']]
+    if 'confirmed' in clean and not isinstance(clean['confirmed'], str):
+        raise ValueError('confirmed must be text')
+    # an edited Confirmed block is kept in camp_audit_gym_state and wins over the run's own (the app shows it first)
     state = _sb('PATCH', f"camp_audit_gym_state?gym_id=eq.{gym}", clean, prefer='return=representation')
     if not state:
         raise ValueError(f"{gym} has no saved audit email yet")
