@@ -15,10 +15,10 @@ export default function CampsPage() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#e9edf3', padding: '18px max(16px, env(safe-area-inset-left, 0px))' }}>
-      <h1 style={{ margin: '0 0 14px', fontSize: 24, fontWeight: 800, color: '#14181f' }}>Summer Camps</h1>
+    <div style={{ minHeight: '100vh', background: '#1f2636', padding: '18px max(16px, env(safe-area-inset-left, 0px))' }}>
+      <h1 style={{ margin: '0 0 14px', fontSize: 24, fontWeight: 800, color: '#ffffff' }}>Summer Camps</h1>
       {error && <div style={{ background: '#fde2e2', color: '#8a1616', borderRadius: 10, padding: '10px 12px', fontWeight: 700 }}>Could not load the gyms: {error}</div>}
-      {!gyms && !error && <p style={{ color: '#3f4857' }}>Loading…</p>}
+      {!gyms && !error && <p style={{ color: '#ffffff' }}>Loading…</p>}
       {gyms && <AdminCampData gyms={gyms} />}
     </div>
   );

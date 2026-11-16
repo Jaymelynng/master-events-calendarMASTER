@@ -439,6 +439,7 @@ export default function AdminCampData({ gyms = [] }) {
 
 function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
   const { camps, pricing, leftOut } = d;
+  const [toast, toastEl] = useToast();
   const N = camps.length; const today = todayIso();
   if (!N) return (
     <div className="cdt-sheet"><p className="cdt-note">No summer camps in iClass for {gymId} at the last read. Once the gym enters them and the gym is synced, they show up here.</p>
@@ -450,7 +451,11 @@ function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
   const live = count(c => c.active !== false && c.showOnWeb && c.regStart && c.regStart <= today && (!c.regEnd || c.regEnd >= today));
   const inactive = count(c => c.active === false);
   const single = count(c => c.singleDay);
-  const signed = camps.reduce((n, c) => n + (c.enrolled || 0), 0);
+  // The sync saves a count per camp day, not who signed up (rosters wait for the Data Center's enrollment home,
+  // Jayme's yes 2026-11-12): so this counts camps with sign-ups and kid-days booked, not different children
+  // (one child in 8 camps would look the same as 8 children). Switch to real kid counts once rosters are saved.
+  const withSignups = count(c => (c.enrolled || 0) > 0);
+  const kidDays = camps.reduce((n, c) => n + (c.dayCaps || []).reduce((m, x) => m + (Number(x.in) || 0), 0), 0);
   const opens = Object.entries(camps.reduce((m, c) => { const k = c.regStart || 'not set'; m[k] = (m[k] || 0) + 1; return m; }, {})).sort((a, b) => b[1] - a[1]);
   const ageSet = [...new Set(camps.map(c => c.ages))];
   const splitT = new Set(camps.filter(c => /ninja/i.test(c.name || '')).map(c => c.type).filter(t => camps.some(c => c.type === t && !/ninja/i.test(c.name || ''))));
@@ -471,7 +476,7 @@ function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
           {tile('Parents can see now', live, live ? 'Visible on the portal today' : 'None visible today')}
           {tile('Registration opens', opens[0] ? fullDate(opens[0][0]) : '?', opens.length > 1 ? opens.slice(1).map(([dt, n]) => `${n} on ${fullDate(dt)}`).join(' · ') : `All ${N} camps`)}
           {tile('Single-day sign-up', `${single} of ${N}`, single === N ? 'Every camp sells single days' : single ? 'Some camps sell single days' : 'Full week only')}
-          {tile('Signed up so far', signed, 'Kids on the busiest day, all camps added')}
+          {tile('Camps with sign-ups', `${withSignups} of ${N}`, withSignups ? `${kidDays} kid-day${kidDays === 1 ? '' : 's'} booked · names not saved yet` : 'No one signed up yet')}
         </div>
         <div className="cdt-dash2">
           <div className="cdt-tile"><div className="cdt-tk">Camps offered (Event Types)</div><ul>{types.map(t => <li key={t}><KindTag k={kindOfType(t)} /> <b>{t}</b> ·{count(c => c.type === t)} camps · {[...new Set(camps.filter(c => c.type === t).map(c => c.ages))].join(' / ')}</li>)}</ul></div>
@@ -497,7 +502,7 @@ function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
             </tbody></table></div></div>))}</div>
       </div>
 
-      <div className="cdt-sec"><div className="cdt-sec-h"><h3>Every camp week</h3></div>
+      <div className="cdt-sec cdt-sec-tray"><div className="cdt-sec-h"><h3>Every camp week</h3></div>
         <div className="cdt-chips" role="group" aria-label="Show Event Type">
           <button type="button" className="cdt-chip" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>All <span>{N}</span></button>
           {types.map(t => <button type="button" key={t} className="cdt-chip" aria-pressed={filter === t} onClick={() => setFilter(t)}><KindTag k={kindOfType(t)} /> {t} <span>{count(c => c.type === t)}</span></button>)}
@@ -507,16 +512,19 @@ function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
           <section className="cdt-weekcard" key={w}>
             <div className="cdt-weekhead"><span>Week {weeks.indexOf(w) + 1} · {fmtDate(w)}</span><span className="cdt-wkcount">{wl.length} camp{wl.length === 1 ? '' : 's'}</span></div>
             <div className="cdt-weekscroll"><table>
-              <colgroup><col style={{ width: 92 }} /><col style={{ width: 120 }} /><col /><col style={{ width: 150 }} /><col style={{ width: 170 }} /><col style={{ width: 130 }} /><col style={{ width: 150 }} /><col style={{ width: 70 }} /></colgroup>
+              <colgroup><col style={{ width: 86 }} /><col style={{ width: 108 }} /><col /><col style={{ width: 230 }} /><col style={{ width: 190 }} /><col style={{ width: 118 }} /><col style={{ width: 128 }} /><col style={{ width: 66 }} /></colgroup>
               <thead><tr><th /><th>Dates</th><th>Camp</th><th>Status</th><th>Days &amp; times</th><th>Sign-up</th><th>Ages (setting)</th><th className="cdt-num">Spots</th></tr></thead>
-              <tbody>{wl.map(c => { const isOpen = open.has(`${gymId}:${c.id}`); const times = [...new Set(c.dayList.map(x => `${x.start}–${x.end}`))].join(' · ') || '—'; return (
+              <tbody>{wl.map((c, i) => { const isOpen = open.has(`${gymId}:${c.id}`); const times = [...new Set(c.dayList.map(x => `${x.start}–${x.end}`))].join(' · ') || '—'; return (
                 <React.Fragment key={c.id}>
-                  <tr className="cdt-camprow" id={`cdt-camp-${c.id}`} aria-expanded={isOpen} onClick={() => toggle(c.id)}>
+                  <tr className={`cdt-camprow${i % 2 ? ' alt' : ''}`} id={`cdt-camp-${c.id}`} aria-expanded={isOpen} onClick={() => toggle(c.id)}>
                     <td><button type="button" className="cdt-openbtn" onClick={(e) => { e.stopPropagation(); toggle(c.id); }}>{isOpen ? 'Close ▾' : 'Open ▸'}</button></td>
                     <td className="cdt-nowrap"><b>{fmtDate(c.start)}–{fmtDate(c.end)}</b></td>
-                    <td>{c.kind && <><KindTag k={c.kind} /> </>}{c.name}<small>{c.type}</small></td>
-                    <td><span className={`cdt-su ${c.active === true ? 'on' : c.active === false ? 'off' : 'unk'}`}>{c.active === true ? 'Active' : c.active === false ? 'Inactive' : 'Not read'}</span><small>{c.showOnWeb ? 'On web' : 'Hidden'} · opens {fullDate(c.regStart)}</small></td>
-                    <td>{c.dayList.length || '?'} days<small>{times}</small></td>
+                    <td className="cdt-campcell">{c.kind && <><KindTag k={c.kind} /> </>}
+                      {c.link ? <a className="cdt-camplink" href={c.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title="Open the parent page">{c.name} ↗</a> : c.name}
+                      {c.link && <button type="button" className="cdt-cp cdt-cpsm" onClick={async (e) => { e.stopPropagation(); toast((await copyRich('', c.link)) ? 'Link copied' : 'Could not copy'); }}>Copy link</button>}
+                      <span className="cdt-typepill">{c.type}</span></td>
+                    <td><span className={`cdt-su ${c.active === true ? 'on' : c.active === false ? 'off' : 'unk'}`}>{c.active === true ? 'Active' : c.active === false ? 'Inactive' : 'Not read'}</span> <span className="cdt-inl">{c.showOnWeb ? 'On web' : 'Hidden'} · opens {fullDate(c.regStart)}</span></td>
+                    <td><b>{c.dayList.length || '?'} days</b> <span className="cdt-inl">{times}</span></td>
                     <td><span className={`cdt-su ${c.singleDay ? 'day' : 'week'}`}>{c.singleDay ? 'Single days' : 'Full week only'}</span></td>
                     <td>{c.ages}</td>
                     <td className="cdt-num">{c.enrolled} / {c.maxKids ?? '?'}</td>
@@ -527,6 +535,7 @@ function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
           </section>
         ))}
       </div>
+      {toastEl}
     </>
   );
 }
@@ -696,7 +705,11 @@ const CSS = `
 .cdt{--sheet:#fff;--ink:#14181f;--muted:#3f4857;--line:#c9d0db;--soft:#eef1f6;--zebra:#f6f8fb;--tray:#cfd6e2;--accent:#1747c9;--ok:#16794a;--bad:#b3261e;
   --sh1:0 1px 2px rgba(16,24,40,.10),0 2px 6px rgba(16,24,40,.08);--sh2:0 2px 4px rgba(16,24,40,.10),0 8px 20px rgba(16,24,40,.12);
   --sh3:0 4px 8px rgba(16,24,40,.14),0 16px 36px rgba(16,24,40,.18);--lift:0 14px 34px rgba(16,24,40,.24),0 4px 10px rgba(16,24,40,.16);
-  color:var(--ink);font-size:15px;line-height:1.45}
+  --tint:color-mix(in srgb,var(--brand) 9%,#f3f5f9);--tint2:color-mix(in srgb,var(--brand) 16%,#e9edf3);
+  --float:0 20px 60px rgba(0,0,0,.30),0 8px 20px rgba(0,0,0,.20);
+  color:var(--ink);font-size:15px;line-height:1.45;
+  /* Layer 1: a deep surface behind everything, so every white section floats instead of white-on-white */
+  background:linear-gradient(160deg,#4a5873 0%,#36425a 55%,#2b3549 100%);border-radius:16px;padding:16px}
 .cdt-wrap{display:grid;grid-template-columns:230px minmax(0,1fr);gap:18px;align-items:start}
 @media (max-width:900px){.cdt-wrap{grid-template-columns:1fr}}
 .cdt-rail{position:sticky;top:12px;display:flex;flex-direction:column;gap:6px;max-height:calc(100vh - 24px);overflow:auto;padding:2px 4px 8px 2px}
@@ -710,19 +723,20 @@ const CSS = `
 .cdt-gname b{font-weight:800;font-size:14px}.cdt-gname small{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cdt-pill{flex:none;font-weight:700;font-size:12px;line-height:1;border-radius:999px;padding:4px 8px;background:var(--soft);color:var(--ink)}
 .cdt-page{min-width:0;display:flex;flex-direction:column;gap:14px}
-.cdt-band{background:var(--brand);color:#fff;border-radius:14px;box-shadow:var(--sh3);overflow:hidden}
+.cdt-band{background:var(--brand);color:#fff;border-radius:14px;box-shadow:var(--float);overflow:hidden;outline:2px solid rgba(255,255,255,.22);outline-offset:-2px}
 .cdt-band-in{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:16px 18px}
 .cdt-biglogo{flex:none;width:72px;height:72px;border-radius:16px;background:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25),0 8px 18px rgba(0,0,0,.2);color:#111}
 .cdt-biglogo img{width:62px;height:62px;object-fit:contain}
 .cdt-band h2{font-weight:800;font-size:24px;margin:0}.cdt-sub{font-size:14px;font-weight:600}
 .cdt-stripe{display:flex;height:10px}.cdt-stripe span{flex:1}
-.cdt-sheet,.cdt-sec{background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0;box-shadow:var(--sh2)}
+.cdt-sheet,.cdt-sec{background:var(--sheet);border:0;border-radius:14px;padding:16px;min-width:0;box-shadow:var(--float)}
+.cdt-sec-tray{background:var(--tint2)}
 .cdt-sec-h{margin-bottom:10px;padding-bottom:8px;border-bottom:3px solid var(--brand)}.cdt-sec-h h3{font-weight:800;font-size:17px;margin:0}
 .cdt-note{color:var(--muted);font-size:13px;margin:6px 0}
 .cdt-err{background:#fde2e2;color:#8a1616;border-radius:10px;padding:10px 12px;font-weight:700}
 .cdt-dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .cdt-dash2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:10px}
-.cdt-tile{background:var(--sheet);border:1px solid var(--line);border-top:4px solid var(--brand);border-radius:10px;padding:10px 12px;box-shadow:var(--sh1);min-width:0}
+.cdt-tile{background:var(--tint);border:1px solid color-mix(in srgb,var(--brand) 18%,#d5dbe5);border-top:5px solid var(--brand);border-radius:10px;padding:10px 12px;box-shadow:var(--sh2);min-width:0}
 .cdt-tk{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}.cdt-tv{font-weight:800;font-size:26px;line-height:1.15;margin-top:2px}.cdt-ts{font-size:13px;margin-top:3px}
 .cdt-tile ul{margin:6px 0 0;padding-left:18px;font-size:14px;line-height:1.5}
 .cdt-leftout{margin-top:10px;font-size:13px;background:var(--soft);border-radius:10px;padding:10px 12px}
@@ -734,15 +748,24 @@ const CSS = `
 .cdt-blankcell{color:var(--bad);font-weight:800}
 .cdt-mx td,.cdt-mx th{text-align:center;padding:6px 8px}.cdt-mx td:first-child,.cdt-mx th:first-child{text-align:left;white-space:nowrap}
 .cdt-mx .ok{background:#c8f0d9;font-weight:800;cursor:pointer}.cdt-mx .two{background:#ffe2a8;font-weight:800;cursor:pointer}.cdt-mx .none{background:var(--bad);color:#fff;font-weight:800}
-.cdt-ptgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}.cdt-ptgrid h4{font-weight:700;font-size:15px;margin:0 0 2px}
+.cdt-ptgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}.cdt-ptgrid h4{font-weight:800;font-size:15px;margin:0 0 2px}
+.cdt-ptgrid > div{background:var(--tint);border-radius:12px;padding:12px;box-shadow:var(--sh2);border-top:5px solid var(--brand);min-width:0}
 .cdt-chips{display:flex;flex-wrap:wrap;gap:8px}
-.cdt-chip{flex:1 1 auto;background:var(--sheet);color:var(--ink);border:2px solid var(--line);border-radius:999px;padding:7px 14px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:var(--sh1)}
+.cdt-chip{flex:1 1 auto;background:var(--tint);color:var(--ink);border:2px solid color-mix(in srgb,var(--brand) 25%,#cfd6e2);border-radius:999px;padding:7px 14px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:var(--sh1)}
 .cdt-chip span{font-weight:800;margin-left:4px}.cdt-chip:hover{border-color:var(--brand)}
 .cdt-chip[aria-pressed="true"]{background:var(--brand);color:#fff;border-color:var(--brand);box-shadow:var(--sh2)}
-.cdt-weekcard{background:var(--sheet);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh3);overflow:hidden;margin-top:20px}
+.cdt-weekcard{background:var(--sheet);border:0;border-radius:14px;box-shadow:var(--sh3);overflow:hidden;margin-top:20px}
+.cdt-weekcard .cdt-camprow.alt td{background:var(--zebra)}
+.cdt-weekcard .cdt-camprow td{vertical-align:middle}
+.cdt-campcell{line-height:1.6}
+.cdt-camplink{color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.cdt-camplink:hover{color:var(--brand)}
+.cdt-cpsm{padding:3px 8px;font-size:11px;margin:0 6px;vertical-align:1px}
+.cdt-typepill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700;background:var(--tint2);color:var(--ink);box-shadow:inset 0 0 0 1px rgba(16,24,40,.12);vertical-align:1px;white-space:nowrap}
+.cdt-inl{font-size:13px;font-weight:600;color:var(--muted)}
 .cdt-weekhead{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 16px;background:var(--brand);color:#fff;font-weight:800;font-size:17px}
 .cdt-wkcount{font-weight:700;font-size:13px;background:rgba(255,255,255,.22);border-radius:999px;padding:3px 10px}
-.cdt-weekscroll{overflow-x:auto}.cdt-weekcard table{table-layout:fixed;min-width:980px}
+.cdt-weekscroll{overflow-x:auto}.cdt-weekcard table{table-layout:fixed;min-width:1180px}
 .cdt-weekcard th{background:var(--soft);color:var(--ink);border-bottom:2px solid var(--line)}
 .cdt-camprow{cursor:pointer}.cdt-camprow:hover td{background:var(--soft)}
 .cdt-camprow td small{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-top:2px}
@@ -782,7 +805,8 @@ const CSS = `
 .cdt-kind{display:inline-block;vertical-align:1px;border-radius:999px;padding:2px 9px;font-weight:800;font-size:12px;line-height:1.3;letter-spacing:.03em;text-transform:uppercase;color:#fff;box-shadow:0 1px 3px rgba(16,24,40,.25)}
 .cdt-chip[aria-pressed="true"] .cdt-kind{box-shadow:0 0 0 2px #fff}
 /* Rail: the two master lists sit above the gyms */
-.cdt-master .cdt-logo{font-size:17px;background:#fff}.cdt-railgap{height:6px;border-bottom:2px solid var(--line);margin:2px 4px 6px}
+.cdt-master .cdt-logo{font-size:17px;background:#fff}.cdt-railgap{height:6px;border-bottom:2px solid rgba(255,255,255,.3);margin:2px 4px 6px}
+.cdt-gym{box-shadow:0 2px 6px rgba(0,0,0,.25),0 6px 16px rgba(0,0,0,.18)}
 /* Sign-up questions */
 .cdt-qlist{display:grid;gap:10px;padding:4px 0 6px}
 .cdt-qcard{background:var(--sheet);border:1px solid var(--line);border-left:5px solid var(--brand);border-radius:8px;padding:10px 12px;box-shadow:var(--sh1);min-width:0}
@@ -803,6 +827,8 @@ const CSS = `
 .cdt-pl td small,.cdt-lk td small{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-top:2px}
 .cdt-lk td small{font-weight:600;word-break:break-all}
 .cdt-pl tr.first td{border-top:3px solid var(--line)}
+.cdt-pl tbody tr:nth-child(even) td:not(.cdt-wk){background:var(--zebra)}
+.cdt-lk tbody tr:nth-child(even) td{background:var(--zebra)}
 .cdt-pl td.cdt-wk{font-weight:800;background:#c8f0d9}
 .cdt-look,.cdt-why{color:var(--bad);font-weight:700;font-size:13px}.cdt-why{min-width:180px}
 .cdt-lk td.cdt-u{word-break:break-all;min-width:220px;font-size:13px}.cdt-lk a,.cdt-u a{color:var(--accent);font-weight:600}
@@ -810,9 +836,10 @@ const CSS = `
 .cdt-jump{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 16px}
 .cdt-jump a{flex:1 1 auto;text-align:center;background:var(--sheet);color:var(--accent);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-weight:700;font-size:14px;box-shadow:var(--sh1);text-decoration:underline}
 .cdt-jump a:hover{box-shadow:var(--sh2);border-color:var(--accent)}
-.cdt-lksec{scroll-margin-top:12px;margin-top:18px}
-.cdt-lkgyms{padding:8px}
-.cdt-lkgym{background:var(--sheet);border:1px solid var(--line);border-radius:10px;box-shadow:var(--sh1);margin-bottom:10px}
+.cdt-lksec{scroll-margin-top:12px;margin-top:18px;background:var(--tint);border-radius:12px;padding:12px 14px 14px;box-shadow:var(--sh2);border-top:5px solid var(--brand)}
+.cdt-lksec .cdt-tablewrap{background:var(--sheet)}
+.cdt-lkgyms{padding:10px;background:var(--tint2)}
+.cdt-lkgym{background:var(--sheet);border:0;border-left:6px solid var(--brand);border-radius:10px;box-shadow:var(--sh2);margin-bottom:10px}
 .cdt-lkgym summary{cursor:pointer;padding:10px 12px;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .cdt-lkgym summary .cdt-ghost{margin-left:auto}.cdt-lkgym[open] summary{border-bottom:3px solid var(--line)}
 .cdt-toast{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:max(18px,env(safe-area-inset-bottom,0px));z-index:60;background:#0f5a36;color:#fff;font-weight:800;border-radius:10px;padding:10px 16px;box-shadow:var(--lift)}
