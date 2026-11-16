@@ -166,7 +166,7 @@ async function loadGym(gym, win, rules, kinds) {
   const ids = camps.map(c => c.camp_id);
   const setups = {};
   for (let i = 0; i < ids.length; i += 200) {
-    const part = await readAll(() => supabase.from('iclass_camp_setup').select('camp_id, raw, public_raw, occupancy, read_at')
+    const part = await readAll(() => supabase.from('iclass_camp_setup').select('camp_id, raw, public_raw, occupancy, read_at, signups_read_at')
       .eq('gym_id', gym.id).in('camp_id', ids.slice(i, i + 200)).order('camp_id'));
     part.forEach(s => { setups[s.camp_id] = s; });
   }
@@ -176,6 +176,14 @@ async function loadGym(gym, win, rules, kinds) {
     .eq('gym_id', gym.id).in('price_table_id', tableIds).order('price_table_id').order('child_number').order('days')) : [];
   const { data: reads } = await supabase.from('iclass_setup_reads').select('finished_at, status')
     .eq('gym_id', gym.id).not('finished_at', 'is', null).order('finished_at', { ascending: false }).limit(1);
+  // Real sign-ups (iclass_camp_signup_totals: counts only) + different kids across this gym's summer camps
+  const totals = {};
+  for (let i = 0; i < ids.length; i += 200) {
+    const part = await readAll(() => supabase.from('iclass_camp_signup_totals').select('*')
+      .eq('gym_id', gym.id).in('camp_id', ids.slice(i, i + 200)).order('camp_id'));
+    part.forEach(t => { totals[t.camp_id] = t; });
+  }
+  const { data: kids, error: kidsErr } = ids.length ? await supabase.rpc('camp_signup_kids', { p_gym: gym.id, p_camp_ids: ids }) : { data: 0 };
 
   const list = camps.map(c => {
     const s = setups[c.camp_id] || {}; const raw = s.raw || {};
@@ -191,7 +199,12 @@ async function loadGym(gym, win, rules, kinds) {
       active: raw.active == null ? null : raw.active === 1,
       ages: amin && amax ? `${amin} – ${amax}` : amin ? `${amin} and up` : amax ? `up to ${amax}` : 'not set',
       singleDay: c.per_day_signup, showOnWeb: c.show_on_web, regStart: c.registration_start, regEnd: c.registration_end,
-      maxKids: c.max_entries, enrolled: Math.max(0, ...occ.map(d => Number(d.occ) || 0)),
+      maxKids: c.max_entries,
+      // The sign-up list when it has been read (exact: ACTIVE sign-ups), else the busiest day's count
+      fromList: !!s.signups_read_at,
+      enrolled: s.signups_read_at ? Number((totals[c.camp_id] || {}).active_signups || 0) : Math.max(0, ...occ.map(d => Number(d.occ) || 0)),
+      daysBooked: s.signups_read_at ? Number((totals[c.camp_id] || {}).active_days_booked || 0) : null,
+      otherSignups: s.signups_read_at && totals[c.camp_id] && totals[c.camp_id].other_signups ? `${totals[c.camp_id].other_signups} ${totals[c.camp_id].other_types}` : null,
       priceTableId: c.price_table_id,
       link: gym.iclass_slug ? `https://portal.iclasspro.com/${gym.iclass_slug}/camp-details/${c.camp_id}?typeId=${c.camp_type_id}` : null,
       picture: c.picture_path ? `https://images.iclasspro.com/images/${c.picture_path}` : null,
@@ -213,7 +226,8 @@ async function loadGym(gym, win, rules, kinds) {
     const users = list.filter(c => c.priceTableId === tid);
     return { id: tid, schedule: (mine[0] && mine[0].price_table_name) || (camps.find(c => c.price_table_id === tid) || {}).price_table_name || `Price table ${tid}`, campCount: users.length, types: [...new Set(users.map(c => c.type))], days, rows };
   });
-  return { camps: list, pricing, leftOut: leftOut.map(c => ({ name: c.camp_name, type: c.camp_type_name })), readAt: reads && reads[0] ? reads[0].finished_at : null };
+  return { camps: list, pricing, leftOut: leftOut.map(c => ({ name: c.camp_name, type: c.camp_type_name })), readAt: reads && reads[0] ? reads[0].finished_at : null,
+    kids: kidsErr ? null : kids };
 }
 
 // An object-valued setting written out as label: value lines (never raw JSON)
@@ -456,6 +470,8 @@ function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
   // (one child in 8 camps would look the same as 8 children). Switch to real kid counts once rosters are saved.
   const withSignups = count(c => (c.enrolled || 0) > 0);
   const kidDays = camps.reduce((n, c) => n + (c.dayCaps || []).reduce((m, x) => m + (Number(x.in) || 0), 0), 0);
+  const listCamps = count(c => c.fromList);   // camps whose sign-up list has been read
+  const others = camps.filter(c => c.otherSignups);
   // Spots sold = each camp's Spots column added up (kids on that camp's busiest day, iClass's own per-day count;
   // a full-week camp has the same count every day). Total spots = each camp's Max students added up.
   const spots = (list) => list.reduce((a, c) => ({ sold: a.sold + (c.enrolled || 0), max: a.max + (Number(c.maxKids) || 0), noMax: a.noMax + (c.maxKids == null ? 1 : 0) }), { sold: 0, max: 0, noMax: 0 });
@@ -493,7 +509,10 @@ function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
           {tile('Registration opens', opens[0] ? fullDate(opens[0][0]) : '?', opens.length > 1 ? opens.slice(1).map(([dt, n]) => `${n} on ${fullDate(dt)}`).join(' · ') : `All ${N} camps`)}
           {tile('Single-day sign-up', `${single} of ${N}`, single === N ? 'Every camp sells single days' : single ? 'Some camps sell single days' : 'Full week only')}
           <div className="cdt-tile"><div className="cdt-tk">Spots sold</div><div className="cdt-tv">{allSpots.sold} <span className="cdt-of">of {allSpots.max.toLocaleString()}</span></div>
-            <Bar s={allSpots} /><div className="cdt-ts">{withSignups} of {N} camps have sign-ups · {kidDays} kid-day{kidDays === 1 ? '' : 's'}{allSpots.noMax ? ` · ${allSpots.noMax} camp${allSpots.noMax === 1 ? '' : 's'} with no max` : ''}</div></div>
+            <Bar s={allSpots} /><div className="cdt-ts">{listCamps === N
+              ? <><b>{d.kids ?? '?'} different kid{d.kids === 1 ? '' : 's'}</b> · {withSignups} of {N} camps have sign-ups · {camps.reduce((n, c) => n + (c.daysBooked || 0), 0)} days booked{others.length ? ` · not counted: ${others.map(c => c.otherSignups).join(', ')}` : ''}</>
+              : <>{withSignups} of {N} camps have sign-ups · {kidDays} kid-days · busiest-day count{listCamps ? ` (sign-up list read for ${listCamps} of ${N})` : ' until the next sync reads the sign-up lists'}</>}
+              {allSpots.noMax ? ` · ${allSpots.noMax} camp${allSpots.noMax === 1 ? '' : 's'} with no max` : ''}</div></div>
         </div>
         <div className="cdt-dash2">
           <div className="cdt-tile"><div className="cdt-tk">Camps offered (Event Types)</div><ul>{types.map(t => <li key={t}><KindTag k={kindOfType(t)} /> <b>{t}</b> ·{count(c => c.type === t)} camps · {[...new Set(camps.filter(c => c.type === t).map(c => c.ages))].join(' / ')}</li>)}</ul></div>

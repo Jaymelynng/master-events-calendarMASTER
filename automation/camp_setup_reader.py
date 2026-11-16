@@ -6,6 +6,9 @@ Reads what the public feed can't: hidden camps, Show on Web / Allow Registration
 Entries, each camp's price table, and per-day sign-ups. Saves every reply WHOLE into:
   iclass_camp_setup   (one row per camp; re-read while it has not ended, hidden ones included; also the
                        public reply, the only home of "waitlist requests on/off")
+  iclass_camp_enrollments (one row per camp sign-up, from the camp screen's own sign-up list; children's names
+                       taken out - NAME_FIELDS; a sign-up iClass stops listing gets gone_from_iclass_at = a drop.
+                       The public page reads only totals: view iclass_camp_signup_totals + camp_signup_kids())
   iclass_price_tables (one row per price table; view iclass_price_cells flattens it)
   iclass_gym_settings (the gym-wide calls in GYM_SETTINGS_CALLS, one row each)
   iclass_setup_reads  (one row per gym per read — "ok" or why it was NOT read)
@@ -70,7 +73,12 @@ ALLOWED_GETS = [
 # it answers which time slots exist between two dates (the screen sends the same call on every page view).
 ALLOWED_POSTS = [
     r'/api/v1/appointment-timeslots/filtered',
+    # A camp's sign-up list: the camp screen's own read, body {"recordId": camp id} (Jayme's Tigar recording
+    # 2026-11-16, network recorder 93e8c4a9). Answers the enrollments; changes nothing in iClass.
+    r'/api/v1/camps/\d+/enrollment-details/',
 ]
+# Children's names never leave this reader: these fields are taken out of each sign-up row before saving.
+NAME_FIELDS = ('studentName', 'firstName', 'lastName', 'studentFirstName', 'studentLastName')
 
 # Gym-wide calls, read once per gym, each reply saved whole (iclass_gym_settings.setting_key = the key).
 # Every one is in Jayme's F12 recordings (_HAR-CAPTURES field map, checked 2026-11-04).
@@ -232,6 +240,26 @@ class HarSource:
         return self.replies.get(('POST', path))
 
 
+def _signup_rows(reply):
+    """The sign-up rows of one camp, names taken out. None = the call did not answer (nothing is marked as dropped);
+    [] = iClass answered with no sign-ups. The reply is {"data": {"enrollments": {<id>: {...}}}} (or a list)."""
+    if not isinstance(reply, dict):
+        return None
+    data = reply.get('data')
+    if isinstance(data, list) and not data:
+        return []                      # iClass answers an empty list for a camp with no sign-ups (camp 710)
+    if not isinstance(data, dict):
+        return None
+    en = data.get('enrollments')
+    if isinstance(en, dict):
+        en = list(en.values())
+    if en is None:
+        return []
+    if not isinstance(en, list):
+        return None
+    return [{k: v for k, v in r.items() if k not in NAME_FIELDS} for r in en if isinstance(r, dict)]
+
+
 def collect(source, slug, today=None):
     """Every price table + gym-wide setting + every camp that has not ended (hidden ones too), each reply whole."""
     today = (today or date.today()).isoformat()
@@ -251,8 +279,10 @@ def collect(source, slug, today=None):
             continue
         occ = source.get(f'/api/v1/get-camp-occupancy/{camp_id}')
         public = source.get(f'/api/open/v1/{slug}/camps/{camp_id}')
+        signups = source.post(f'/api/v1/camps/{camp_id}/enrollment-details/', {'recordId': camp_id})
         camps.append({'camp_id': camp_id, 'raw': detail, 'occupancy': occ.get('data') if occ else None,
-                      'public_raw': public.get('data') if public else None})
+                      'public_raw': public.get('data') if public else None,
+                      'signups': _signup_rows(signups)})
     settings, settings_missing = {}, []
     for key, path in GYM_SETTINGS_CALLS.items():
         reply = source.get(path)
@@ -360,8 +390,10 @@ def save(gym_id, result, read_at):
     tables = [{'gym_id': gym_id, 'price_table_id': t['id'], 'name': t.get('name'), 'raw': t, 'read_at': read_at,
                'gone_from_iclass_at': None} for t in result['price_tables']]
     camps = [{'gym_id': gym_id, 'camp_id': c['camp_id'], 'raw': c['raw'], 'occupancy': c['occupancy'],
-              'public_raw': c['public_raw'], 'read_at': read_at, 'gone_from_iclass_at': None}
+              'public_raw': c['public_raw'], 'read_at': read_at, 'gone_from_iclass_at': None,
+              'signups_read_at': read_at if c.get('signups') is not None else None}
              for c in result['camps']]
+    save_signups(gym_id, result['camps'], read_at)
     settings = [{'gym_id': gym_id, 'setting_key': k, 'raw': v, 'read_at': read_at}
                 for k, v in result['settings'].items()]
     for i in range(0, len(tables), 200):
@@ -383,6 +415,33 @@ def save(gym_id, result, read_at):
         ids = ','.join(str(t['id']) for t in result['price_tables'])
         _sb('PATCH', f'iclass_price_tables?gym_id=eq.{gym_id}&price_table_id=not.in.({ids})'
                      f'&gone_from_iclass_at=is.null', {'gone_from_iclass_at': read_at})
+
+
+def save_signups(gym_id, camps, read_at):
+    """Upsert every sign-up of every camp read (iclass_camp_enrollments, names already taken out). For a camp whose
+    list answered, a sign-up iClass no longer lists gets gone_from_iclass_at (a drop) - never deleted. A camp whose
+    list did not answer (None) is left exactly as it was."""
+    rows = []
+    for c in camps:
+        for r in c.get('signups') or []:
+            if r.get('enrollmentId') is None:
+                continue
+            rows.append({'gym_id': gym_id, 'enrollment_id': int(r['enrollmentId']), 'camp_id': int(r.get('campId') or c['camp_id']),
+                         'student_id': r.get('studentId'), 'family_id': r.get('familyId'),
+                         'enrollment_status': r.get('enrollmentStatus'), 'enrollment_type': r.get('enrollmentType'),
+                         'approved': None if r.get('enrollmentApproved') is None else bool(int(r['enrollmentApproved'])),
+                         'block_count': r.get('blockCount'), 'created_date': r.get('createdDate') or None,
+                         'raw': r, 'read_at': read_at, 'gone_from_iclass_at': None})
+    for i in range(0, len(rows), 200):
+        _sb('POST', 'iclass_camp_enrollments?on_conflict=gym_id,enrollment_id', rows[i:i + 200],
+            prefer='resolution=merge-duplicates')
+    for c in camps:
+        if c.get('signups') is None:
+            continue
+        ids = [str(int(r['enrollmentId'])) for r in c['signups'] if r.get('enrollmentId') is not None]
+        cond = f"&enrollment_id=not.in.({','.join(ids)})" if ids else ''
+        _sb('PATCH', f"iclass_camp_enrollments?gym_id=eq.{gym_id}&camp_id=eq.{c['camp_id']}{cond}&gone_from_iclass_at=is.null",
+            {'gone_from_iclass_at': read_at})
 
 
 def save_prices(gym_id, tables, read_at):
@@ -481,6 +540,8 @@ def run_gym(gym_id, slug, source, do_save, what='full', note_prefix=''):
             f"{len(result['camps'])} read, {len(result['camps_missing'])} did not answer, "
             f"{sum(1 for c in result['camps'] if c['occupancy'] is not None)} with per-day counts, "
             f"{sum(1 for c in result['camps'] if c['public_raw'] is not None)} with the public reply, "
+            f"{sum(1 for c in result['camps'] if c.get('signups') is not None)} with the sign-up list "
+            f"({sum(len(c.get('signups') or []) for c in result['camps'])} sign-ups), "
             f"{len(result['price_tables'])} price tables, "
             f"{len(result['settings'])} of {len(GYM_SETTINGS_CALLS)} gym settings"
             + (f" (not read: {', '.join(result['settings_missing'])})" if result['settings_missing'] else ''))
