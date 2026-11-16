@@ -13,6 +13,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { saveCampAuditEdit } from '../../lib/syncApi';
+import { copyRich } from '../../lib/copyRich';
 
 const STATUS = [['not', 'Not started'], ['missing', 'Missing camps'], ['auditing', 'Auditing'], ['ready', 'Ready to send'], ['r1sent', 'Round 1 sent'], ['sent', 'Sent']];
 const INK = '#14181f';
@@ -35,21 +36,8 @@ function emailHtml(e) {
 const emailText = (e) => `Hi ${e.gm || ''},\n\n${e.intro || ''}\n\nConfirmed (from the camp settings)\n\n${e.confirmed || ''}\n\nFound\n\n☐\tError\tCamp\tNotes\n`
   + e.rows.map(r => `☐\t${r.err}\t${r.camp}\t${r.note}`).join('\n') + `\n\n${e.signoff || 'Thank you,\nJayme'}`;
 
-// Copy, in order: a hidden formatted copy selected and copied (keeps the table for Outlook), the clipboard with HTML, plain text.
-async function copy(html, text) {
-  if (html) {
-    const box = document.createElement('div');
-    box.setAttribute('contenteditable', 'true');
-    box.style.cssText = 'position:fixed;left:-10000px;top:0;width:600px;opacity:0;background:#fff;color:#000';
-    box.innerHTML = html; document.body.appendChild(box);
-    const sel = window.getSelection(); const rg = document.createRange(); rg.selectNodeContents(box); sel.removeAllRanges(); sel.addRange(rg);
-    let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
-    sel.removeAllRanges(); box.remove();
-    if (ok) return true;
-    try { await navigator.clipboard.write([new window.ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([text], { type: 'text/plain' }) })]); return true; } catch (e) { /* next */ }
-  }
-  try { await navigator.clipboard.writeText(text); return true; } catch (e) { return false; }
-}
+// Copy: one shared helper (src/lib/copyRich.js) for the audit email and the Camp Data lists.
+const copy = copyRich;
 
 const tagOf = (r) => (r.by === 'eye' ? 'found by eye' : r.by === 'hand' ? 'edited by you' : null);
 

@@ -11,6 +11,13 @@
 //   Which camps are summer camps      Admin > Buckets (event_type_mappings) -> CAMP / CAMP CARE, the same
 //                                     filter as automation/camp_audit.py
 //   How settings are grouped          camp_setting_groups (database/ADD_CAMP_SETTING_GROUPS.sql)
+//   Flex Week links + camps left off  camp_link_extras (database/ADD_CAMP_LINK_EXTRAS.sql) - the only link facts
+//                                     iClass's camp data does not have
+//
+// Views (Jayme 2026-11-16: "MASTER LINKS, MASTER PRICING ... THEN EACH GYM PAGE INDIVIDUALLY"):
+//   Master price list  every gym's summer camp price tables side by side
+//   Master link list   every gym's camp-type lists, Flex Week links and every camp's own page, with Copy buttons
+//   Each gym           the gym's camp sheet (unchanged)
 //
 // Look: Jayme's CORE-VISUAL-DESIGN-PHILOSOPHY - every layer contrasts with the one it touches and lifts
 // (two-layer shadows); the open camp is a recessed tray with raised cards; each week is its own raised card.
@@ -18,6 +25,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { resolveRule } from '../../lib/bucketRules';
+import { copyRich } from '../../lib/copyRich';
+
+const PRICES = '__prices';
+const LINKS = '__links';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -82,18 +93,64 @@ async function readAll(build) {
   }
 }
 
+// The SAME summer-camp filter as the audit (camp_audit.py / audit_page_sheets.py): bucket CAMP / CAMP CARE,
+// minus school-year / school-closure camps in the window. Left-out camps are named, never silently dropped.
+// NOTE (no-hardcoding law): the school-year/closure words are the audit's own test, kept identical here on
+// purpose; they move to a Summer / School-year tag per camp type in Buckets (open item), then both read that.
+function summerSplit(all, gymId, rules) {
+  const bucketOf = (c) => { const r = resolveRule(c.camp_type_name, gymId, rules); return r ? r.event_type : null; };
+  const schoolYear = (c) => /school\s*(year|closure)/i.test(`${c.camp_type_name || ''} ${c.camp_name || ''}`);
+  const leftOut = all.filter(c => !['CAMP', 'CAMP CARE'].includes(bucketOf(c)) || schoolYear(c));
+  const camps = all.filter(c => !leftOut.includes(c)).map(c => ({ ...c, bucket: bucketOf(c) }));
+  return { camps, leftOut };
+}
+
+// The parent-portal links, in the form iClass itself sends parents to (checked 11/16: /camps/<type> and
+// /camp-details/<id> both forward to these).
+const campURL = (slug, id, typeId) => `https://portal.iclasspro.com/${slug}/event-details/${id}${typeId != null ? `?typeId=${typeId}` : ''}`;
+const typeURL = (slug, typeId) => `https://portal.iclasspro.com/${slug}/events/${typeId}?sortBy=time`;
+
+// Every gym at once, for the two master lists: summer camps (light columns), Active/Inactive, price tables,
+// the link extras and each gym's newest iClass read. Same tables and same filter as each gym's sheet.
+async function loadAll(gyms, win, rules) {
+  const [rows, acts, cells, extras, reads] = await Promise.all([
+    readAll(() => supabase.from('iclass_camp_audit').select('gym_id, camp_id, camp_name, start_date, camp_type_id, camp_type_name, price_table_id, price_table_name')
+      .is('gone_from_iclass_at', null).gte('start_date', win[0]).lte('start_date', win[1]).order('gym_id').order('camp_id')),
+    readAll(() => supabase.from('iclass_camp_setup').select('gym_id, camp_id, active:raw->active').order('gym_id').order('camp_id')),
+    readAll(() => supabase.from('iclass_price_cells').select('gym_id, price_table_id, price_table_name, child_number, days, amount')
+      .order('gym_id').order('price_table_id').order('child_number').order('days')),
+    readAll(() => supabase.from('camp_link_extras').select('*').order('id')),
+    Promise.all(gyms.map(g => supabase.from('iclass_setup_reads').select('gym_id, finished_at').eq('gym_id', g.id)
+      .not('finished_at', 'is', null).order('finished_at', { ascending: false }).limit(1).then(r => (r.data && r.data[0]) || null))),
+  ]);
+  const active = {}; acts.forEach(a => { active[`${a.gym_id}:${a.camp_id}`] = a.active; });
+  const camps = []; const tables = [];
+  gyms.forEach(g => {
+    const { camps: mine } = summerSplit(rows.filter(r => r.gym_id === g.id), g.id, rules);
+    mine.forEach(c => {
+      const a = active[`${g.id}:${c.camp_id}`];
+      camps.push({ gym: g.id, slug: g.iclass_slug, id: c.camp_id, name: String(c.camp_name || '').replace(/\s+/g, ' ').trim(),
+        type: c.camp_type_name || 'No camp type', typeId: c.camp_type_id, bucket: c.bucket, start: c.start_date,
+        active: a == null ? null : Number(a) === 1, priceTableId: c.price_table_id, priceTableName: c.price_table_name });
+    });
+    [...new Set(mine.map(c => c.price_table_id).filter(x => x != null))].forEach(tid => {
+      const cs = cells.filter(x => x.gym_id === g.id && x.price_table_id === tid);
+      const users = mine.filter(c => c.price_table_id === tid);
+      const row = (k) => { const out = []; cs.filter(x => x.child_number === k).forEach(x => { out[x.days - 1] = x.amount == null ? null : Number(x.amount); }); return Array.from(out, v => (v === undefined ? null : v)); };
+      tables.push({ gym: g.id, id: tid, name: (cs[0] && cs[0].price_table_name) || (users[0] && users[0].price_table_name) || `Price table ${tid}`,
+        camps: users.length, care: users.every(c => c.bucket === 'CAMP CARE'), read: cs.length > 0, first: row(1), second: row(2) });
+    });
+  });
+  tables.sort((a, b) => a.gym.localeCompare(b.gym) || a.name.localeCompare(b.name));
+  const readAt = {}; reads.forEach(r => { if (r) readAt[r.gym_id] = r.finished_at; });
+  return { camps, tables, extras, readAt };
+}
+
 async function loadGym(gym, win, rules) {
   const all = await readAll(() => supabase.from('iclass_camp_audit').select('*')
     .eq('gym_id', gym.id).is('gone_from_iclass_at', null).gte('start_date', win[0]).lte('start_date', win[1])
     .order('camp_id'));
-  // The SAME summer-camp filter as the audit (camp_audit.py / audit_page_sheets.py): bucket CAMP / CAMP CARE,
-  // minus school-year / school-closure camps in the window. Left-out camps are named, never silently dropped.
-  // NOTE (no-hardcoding law): the school-year/closure words are the audit's own test, kept identical here on
-  // purpose; they move to a Summer / School-year tag per camp type in Buckets (open item), then both read that.
-  const bucketOf = (c) => { const r = resolveRule(c.camp_type_name, gym.id, rules); return r ? r.event_type : null; };
-  const schoolYear = (c) => /school\s*(year|closure)/i.test(`${c.camp_type_name || ''} ${c.camp_name || ''}`);
-  const leftOut = all.filter(c => !['CAMP', 'CAMP CARE'].includes(bucketOf(c)) || schoolYear(c));
-  const camps = all.filter(c => !leftOut.includes(c));
+  const { camps, leftOut } = summerSplit(all, gym.id, rules);
   const ids = camps.map(c => c.camp_id);
   const setups = {};
   for (let i = 0; i < ids.length; i += 200) {
@@ -147,8 +204,37 @@ async function loadGym(gym, win, rules) {
   return { camps: list, pricing, leftOut: leftOut.map(c => ({ name: c.camp_name, type: c.camp_type_name })), readAt: reads && reads[0] ? reads[0].finished_at : null };
 }
 
+// An object-valued setting written out as label: value lines (never raw JSON)
+const HIDE_KEYS = /^(id|campId|taxId|sortOrder)$/;
+const readable = (o) => {
+  const rows = Object.entries(o || {}).filter(([k, v]) => !HIDE_KEYS.test(k) && v !== null && v !== undefined && v !== '' && !(k === 'isDeleted' && v === false));
+  if (!rows.length) return o && o.id != null ? `id ${o.id}` : <span className="cdt-blank">blank</span>;
+  return rows.map(([k, v]) => <div key={k}><b>{label(k)}:</b> {v === true ? 'Yes' : v === false ? 'No' : typeof v === 'object' ? JSON.stringify(v) : String(v)}</div>);
+};
+
+// The camp's sign-up questions (iClass field "option"), in iClass's own order, written out as parents read them.
+function Questions({ v }) {
+  const list = (Array.isArray(v) ? v : [v]).filter(o => o && typeof o === 'object').sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  if (!list.length) return <p className="cdt-note">No sign-up questions.</p>;
+  return (
+    <div className="cdt-qlist">{list.map((o, i) => { const price = parseFloat(o.price); return (
+      <div className="cdt-qcard" key={o.id ?? i}>
+        <div className="cdt-q">{o.question || o.name || '(no question text)'}</div>
+        {o.description && <div className="cdt-qd">{o.description}</div>}
+        {o.additionalInfo && <div className="cdt-qd">{o.additionalInfo}</div>}
+        <div className="cdt-qtags">
+          {o.responseRequired ? <span className="cdt-qtag req">Required</span> : <span className="cdt-qtag">Optional</span>}
+          {o.yesNoVisible && <span className="cdt-qtag">Yes/No</span>}
+          {price > 0 && <span className="cdt-qtag flag">Costs {money(price)}</span>}
+          {o.addTax && <span className="cdt-qtag flag">Taxed</span>}
+          {o.isDeleted && <span className="cdt-qtag flag">Deleted</span>}
+        </div>
+      </div>); })}</div>
+  );
+}
+
 function SettingsPanel({ c, groups }) {
-  const s = c.settings || {}; const keys = Object.keys(s);
+  const s = c.settings || {}; const keys = Object.keys(s).filter(k => k !== 'option');
   if (!keys.length) return <p className="cdt-note">The settings for this camp were not read.</p>;
   const tests = groups.map(g => { let re = null; try { re = new RegExp(g.field_pattern, g.case_sensitive ? '' : 'i'); } catch (e) { re = null; } return { name: g.group_name, re }; });
   const groupOf = (k) => (tests.find(t => t.re && t.re.test(k)) || { name: 'Other' }).name;
@@ -161,8 +247,8 @@ function SettingsPanel({ c, groups }) {
     if (v === true) return <span className="cdt-yes">Yes</span>;
     if (v === false) return <span className="cdt-no">No</span>;
     if (k === 'active') return v === 1 ? <span className="cdt-yes">Active</span> : v === 0 ? <span className="cdt-no">Inactive</span> : String(v);
-    if (Array.isArray(v)) return v.map((x, i) => <div key={i}>{x && typeof x === 'object' ? (x.Name || x.name || x.title || x.code || JSON.stringify(x)) : String(x)}</div>);
-    if (typeof v === 'object') return JSON.stringify(v);
+    if (Array.isArray(v)) return v.map((x, i) => <div key={i}>{x && typeof x === 'object' ? (x.Name || x.name || x.title || x.code || readable(x)) : String(x)}</div>);
+    if (typeof v === 'object') return readable(v);
     if (/date/i.test(k) && /^\d{4}-\d\d-\d\d/.test(String(v))) return `${fullDate(String(v))}${String(v).length > 10 ? ` ${String(v).slice(11, 16)}` : ''}`;
     return <>{String(v)}{named[k] ? <> · <b>{named[k]}</b></> : null}</>;
   };
@@ -184,6 +270,7 @@ function SettingsPanel({ c, groups }) {
           </div>
         </div>
       ))}
+      {'option' in s && <div className="cdt-sgroup"><h5>Sign-up questions</h5><Questions v={s.option} /></div>}
       {portalKeys.length > 0 && (
         <div className="cdt-sgroup"><h5>What the parent portal reports</h5>
           <div className="cdt-kvgrid">{portalKeys.map(k => kv(k, c.portal[k]))}</div></div>
@@ -219,7 +306,7 @@ function CampDetail({ c, groups }) {
           </section>
         </div>
         <section className="cdt-card">
-          <div className="cdt-head"><h5>Every iClass setting <small>{Object.keys(c.settings || {}).length} fields{c.readAt ? ` · read ${when(c.readAt)}` : ''}</small></h5></div>
+          <div className="cdt-head"><h5>Every iClass setting <small>{Object.keys(c.settings || {}).filter(k => k !== 'option').length} fields{c.readAt ? ` · read ${when(c.readAt)}` : ''}</small></h5></div>
           <SettingsPanel c={c} groups={groups} />
         </section>
       </div>
@@ -254,7 +341,16 @@ export default function AdminCampData({ gyms = [] }) {
     return () => { alive = false; };
   }, []);
 
-  const gym = sorted.find(g => g.id === current) || sorted[0];
+  const master = current === PRICES || current === LINKS;
+  const gym = master ? null : (sorted.find(g => g.id === current) || sorted[0]);
+  // the two master lists load every gym once per visit to the tab
+  const [allData, setAllData] = useState(null);
+  const startedAll = useRef(false);
+  useEffect(() => {
+    if (!base || !master || !sorted.length || startedAll.current) return;
+    startedAll.current = true;
+    loadAll(sorted, base.win, base.rules).then(setAllData).catch(e => setAllData({ error: e.message }));
+  }, [base, master, sorted]);
   // each gym loads once per visit to the tab (a fresh visit reads again, so it shows the newest sync)
   const started = useRef(new Set());
   useEffect(() => {
@@ -268,14 +364,23 @@ export default function AdminCampData({ gyms = [] }) {
 
   const pick = (id) => { setCurrent(id); setFilter('all'); try { localStorage.setItem('campdata-gym', id); } catch (e) { /* per-viewer only */ } };
   const toggle = (id) => setOpen(prev => { const n = new Set(prev); const k = `${gym.id}:${id}`; n.has(k) ? n.delete(k) : n.add(k); return n; });
-  const b = brandOf(gym);
+  const b = gym ? brandOf(gym) : { main: '#1747c9', colors: [] };
   const d = gym ? data[gym.id] : null;
+  const masterBtn = (code, icon, title) => (
+    <button type="button" className="cdt-gym cdt-master" aria-current={current === code} onClick={() => pick(code)} style={{ '--g': '#14181f' }}>
+      <span className="cdt-logo">{icon}</span>
+      <span className="cdt-gname"><b>{title}</b><small>All gyms</small></span>
+    </button>
+  );
 
   return (
     <div className="cdt" style={{ '--brand': b.main }}>
       <style>{CSS}</style>
       <div className="cdt-wrap">
         <nav className="cdt-rail" aria-label="Gyms">
+          {masterBtn(PRICES, '$', 'Master price list')}
+          {masterBtn(LINKS, '↗', 'Master link list')}
+          <div className="cdt-railgap" aria-hidden />
           {sorted.map(g => { const gb = brandOf(g); const on = g.id === gym?.id; return (
             <button key={g.id} type="button" className="cdt-gym" aria-current={on} onClick={() => pick(g.id)} style={{ '--g': gb.main }}>
               <span className="cdt-logo">{g.logo_url ? <img src={g.logo_url} alt="" /> : g.id.slice(0, 1)}</span>
@@ -286,6 +391,20 @@ export default function AdminCampData({ gyms = [] }) {
 
         <main className="cdt-page">
           {error && <div className="cdt-err">Could not load camp data: {error}</div>}
+          {master && (
+            <section className="cdt-band">
+              <div className="cdt-band-in">
+                <div className="cdt-biglogo"><b style={{ fontSize: 30 }}>{current === PRICES ? '$' : '↗'}</b></div>
+                <div className="cdt-who"><h2>{current === PRICES ? 'Master price list' : 'Master link list'}</h2>
+                  <div className="cdt-sub">{current === PRICES ? "Every gym's summer camp price tables, side by side" : "Every gym's summer camp links. Copy one, a whole list, or one gym."}
+                    {base ? ` · Summer camps ${fmtDate(base.win[0])} – ${fmtDate(base.win[1])}` : ''}</div></div>
+              </div>
+            </section>
+          )}
+          {master && !allData && !error && <div className="cdt-sheet"><p className="cdt-note">Loading every gym…</p></div>}
+          {master && allData && allData.error && <div className="cdt-err">Could not load every gym: {allData.error}</div>}
+          {current === PRICES && allData && !allData.error && <MasterPrices all={allData} gyms={sorted} />}
+          {current === LINKS && allData && !allData.error && <MasterLinks all={allData} gyms={sorted} />}
           {gym && (
             <section className="cdt-band">
               <div className="cdt-band-in">
@@ -296,7 +415,7 @@ export default function AdminCampData({ gyms = [] }) {
               {b.colors.length > 0 && <div className="cdt-stripe" aria-hidden>{b.colors.map(c => <span key={c} style={{ background: c }} />)}</div>}
             </section>
           )}
-          {(!d || d.loading) && !error && <div className="cdt-sheet"><p className="cdt-note">Loading {gym ? gym.id : ''} camps…</p></div>}
+          {gym && (!d || d.loading) && !error && <div className="cdt-sheet"><p className="cdt-note">Loading {gym ? gym.id : ''} camps…</p></div>}
           {d && d.error && <div className="cdt-err">Could not load {gym.id}: {d.error}</div>}
           {d && d.camps && <GymSheet d={d} filter={filter} setFilter={setFilter} open={open} toggle={toggle} gymId={gym.id} groups={base.groups} />}
         </main>
@@ -398,6 +517,158 @@ function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
   );
 }
 
+// ---- shared by the two master lists
+const XT = 'border:1px solid #cfcfcf;padding:5px 8px;vertical-align:top;font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;';
+const XH = `${XT}background:#f2f2f2;font-weight:bold;text-align:left;`;
+const escH = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function useToast() {
+  const [msg, setMsg] = useState(null); const t = useRef(null);
+  const show = (text, bad) => { setMsg({ text, bad }); clearTimeout(t.current); t.current = setTimeout(() => setMsg(null), 2400); };
+  const el = msg ? <div className={`cdt-toast${msg.bad ? ' bad' : ''}`} role="status">{msg.text}</div> : null;
+  return [show, el];
+}
+const GymCell = ({ g, gyms }) => { const gy = gyms.find(x => x.id === g); return <td className="cdt-g" style={{ '--g': brandOf(gy).main }}>{g}</td>; };
+
+// What a price table charges: 1-4 single days, the 5-day week, what the week saves, the 2nd-child discount, and any
+// 2nd-child box that does not match the rest of its own table. All from the table itself.
+const r2 = (n) => Math.round(n * 100) / 100;
+function priceFacts(t) {
+  const f = t.first || []; const s = t.second || []; const day = f[0]; const week = f.length >= 5 ? f[4] : null;
+  const saves = week != null && day != null ? r2(day * 5 - week) : null;
+  const ratios = s.map((v, i) => (v != null && f[i] ? v / f[i] : null)).filter(v => v != null).sort((a, b) => a - b);
+  const ratio = ratios.length ? ratios[Math.floor(ratios.length / 2)] : null;
+  const pct = ratio == null ? null : Math.round((1 - ratio) * 100);
+  const sib = ratio == null ? 'No 2nd-child price' : pct === 0 ? 'Same price as 1st child' : `${pct}% off`;
+  const odd = [];
+  if (ratio != null) s.forEach((v, i) => { if (v == null || !f[i]) return; const want = r2(f[i] * ratio);
+    if (Math.abs(want - v) > 0.011) odd.push(`2nd child, ${i + 1} day${i ? 's' : ''}: ${money(v)}. The rest of this table is ${pct}% off, which would be ${money(want)}.`); });
+  return { day, week, saves, sib, sibWeek: s.length >= 5 ? s[4] : null, odd, same4: week != null && f[3] === week && saves > 0, long: f.length > 5 ? f.length : 0, short: f.length && f.length < 5 ? f.length : 0 };
+}
+
+function MasterPrices({ all, gyms }) {
+  const [pf, setPf] = useState('all');
+  const [toast, toastEl] = useToast();
+  const tables = all.tables;
+  const kind = (t) => (t.care ? 'care' : 'camp');
+  const list = tables.filter(t => pf === 'all' || kind(t) === pf);
+  const n = (k) => tables.filter(t => kind(t) === k).length;
+  const missing = gyms.filter(g => !tables.some(t => t.gym === g.id));
+  const cell = (v, i) => (v == null ? <td key={i} className="cdt-num">—</td> : <td key={i} className="cdt-num">{money(v)}</td>);
+  const copyList = async () => {
+    const H = ['Gym', 'Price table', 'Camps', '1 day', '2 days', '3 days', '4 days', '5 days (week)', 'Week saves', '2nd child', 'Look at'];
+    const R = list.map(t => { const x = priceFacts(t); const f = t.first || [];
+      return [t.gym, t.name, t.camps, ...[0, 1, 2, 3].map(i => (f[i] == null ? '' : money(f[i]))), x.week == null ? '' : money(x.week),
+        x.saves == null ? '' : x.saves > 0 ? `${money(x.saves)} off` : 'No break', x.sib, x.odd.join(' ')]; });
+    const html = `<table style="border-collapse:collapse;"><tr>${H.map(h => `<th style="${XH}">${h}</th>`).join('')}</tr>${R.map(r => `<tr>${r.map(c => `<td style="${XT}">${escH(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+    toast((await copyRich(html, [H, ...R].map(r => r.join('\t')).join('\n'))) ? 'Price list copied' : 'Could not copy', false);
+  };
+  let last = null;
+  return (
+    <div className="cdt-sec">
+      <div className="cdt-sec-h cdt-sec-hrow"><h3>Every price table <span className="cdt-n">· {list.length}</span></h3><button type="button" className="cdt-ghost" onClick={copyList}>Copy list</button></div>
+      <div className="cdt-howto"><b>How to read it.</b> 1 to 4 days is what a parent pays picking single days. <b>5 days is the week price.</b> "Week saves" is
+        5 single days minus the week price. A week that costs less than 5 single days is the gym's price break, not an error (Kim 11/11: "The per day price is
+        higher and then they get a price break on a full week."). "No break" means the week is exactly 5 single days.</div>
+      <div className="cdt-chips" role="group" aria-label="Show">
+        <button type="button" className="cdt-chip" aria-pressed={pf === 'all'} onClick={() => setPf('all')}>All tables <span>{tables.length}</span></button>
+        <button type="button" className="cdt-chip" aria-pressed={pf === 'camp'} onClick={() => setPf('camp')}>Camp <span>{n('camp')}</span></button>
+        <button type="button" className="cdt-chip" aria-pressed={pf === 'care'} onClick={() => setPf('care')}>Before / After / Extended care <span>{n('care')}</span></button>
+      </div>
+      <div className="cdt-tablewrap" style={{ marginTop: 12 }}><table className="cdt-pl">
+        <thead><tr><th>Gym</th><th>Price table</th><th className="cdt-num">1 day</th><th className="cdt-num">2 days</th><th className="cdt-num">3 days</th><th className="cdt-num">4 days</th><th className="cdt-num">5 days (week)</th><th>Week saves</th><th>2nd child</th><th>Look at</th></tr></thead>
+        <tbody>{list.map(t => { const x = priceFacts(t); const f = t.first || []; const first = t.gym !== last; last = t.gym; return (
+          <tr key={`${t.gym}:${t.id}`} className={first ? 'first' : ''}>
+            {first ? <GymCell g={t.gym} gyms={gyms} /> : <td className="cdt-g" style={{ '--g': brandOf(gyms.find(y => y.id === t.gym)).main }} />}
+            <td><b>{t.name}</b><small>{t.camps} camp{t.camps === 1 ? '' : 's'} use it{!t.read ? ' · price table not read yet' : ''}{x.long ? ` · table goes to ${x.long} days: ${money(f[f.length - 1])}` : ''}{x.short ? ` · ${x.short}-day table, no 5-day price` : ''}</small></td>
+            {[0, 1, 2, 3].map(i => cell(f[i], i))}
+            <td className="cdt-num cdt-wk">{x.week == null ? '—' : money(x.week)}{x.same4 && <small>same as 4 days</small>}</td>
+            <td>{x.saves == null ? '—' : x.saves > 0 ? <span className="cdt-su on">{money(x.saves)} off</span> : <span className="cdt-su week">No break</span>}</td>
+            <td>{x.sib}{x.sibWeek != null && x.sib.endsWith('off') && <small>week: {money(x.sibWeek)}</small>}</td>
+            <td className="cdt-look">{x.odd.map((o, i) => <div key={i}>{o}</div>)}</td>
+          </tr>); })}</tbody>
+      </table></div>
+      <p className="cdt-note">{list.length} of {tables.length} price tables shown · {list.reduce((a, t) => a + (t.camps || 0), 0)} summer camps use them. Read live from each gym's iClass price table at its last sync.
+        "Look at" lists a box that does not match the rest of its own table.{missing.length ? ` No summer camp price table read for: ${missing.map(g => g.id).join(', ')}.` : ''}</p>
+      {toastEl}
+    </div>
+  );
+}
+
+function MasterLinks({ all, gyms }) {
+  const [toast, toastEl] = useToast();
+  const hide = {}; all.extras.filter(e => e.kind === 'leave_off').forEach(e => { hide[`${e.gym_id}:${e.camp_id}`] = e; });
+  const listed = []; const out = [];
+  all.camps.forEach(c => {
+    if (!c.slug) { out.push({ ...c, url: null, reason: 'No iClass link name for this gym' }); return; }
+    const row = { ...c, url: campURL(c.slug, c.id, c.typeId) };
+    const h = hide[`${c.gym}:${c.id}`];
+    if (h) out.push({ ...row, reason: h.reason, isPublic: h.is_public });
+    else if (c.active === false) out.push({ ...row, reason: 'Inactive in iClass' });
+    else listed.push(row);
+  });
+  const notPublic = out.filter(r => r.isPublic === true);
+  const leftOff = out.filter(r => r.isPublic !== true);
+  const types = [];
+  gyms.forEach(g => { const mine = listed.filter(r => r.gym === g.id);
+    [...new Map(mine.map(r => [r.typeId, r])).values()].forEach(r => types.push({ gym: g.id, bucket: r.bucket, label: r.type, n: mine.filter(x => x.typeId === r.typeId).length, url: typeURL(g.iclass_slug, r.typeId) })); });
+  types.sort((a, b) => a.gym.localeCompare(b.gym) || a.label.localeCompare(b.label));
+  const flex = (k) => all.extras.filter(e => e.kind === k).sort((a, b) => a.gym_id.localeCompare(b.gym_id) || String(a.label).localeCompare(String(b.label)));
+  const copyRows = async (rows, lines, done) => {
+    const html = `<table style="border-collapse:collapse;">${rows.map(([cells, u]) => `<tr>${cells.map(c => `<td style="${XT}">${escH(c)}</td>`).join('')}<td style="${XT}"><a href="${escH(u)}" style="color:#0b57d0;">${escH(u)}</a></td></tr>`).join('')}</table>`;
+    const text = rows.map(([cells, u]) => (lines ? `${cells[0]} ${cells[1]}: ${u}` : [...cells, u].join('\t'))).join('\n');
+    toast((await copyRich(html, text)) ? done : 'Could not copy', false);
+  };
+  const copyOne = async (u) => toast((await copyRich('', u)) ? 'Link copied' : 'Could not copy', false);
+  const Lnk = ({ u }) => <a href={u} target="_blank" rel="noopener noreferrer">{u}</a>;
+  const Cp = ({ u }) => <button type="button" className="cdt-cp" onClick={() => copyOne(u)}>Copy</button>;
+  const typeRows = (bucket) => types.filter(t => t.bucket === bucket);
+  const secs = [
+    { k: 'camp', title: 'Summer camp lists', about: "Each gym's camp-type pages (the list parents scroll). One row per iClass Event Type in Buckets as CAMP.",
+      rows: typeRows('CAMP').map(t => [[t.gym, `${t.label} (${t.n} camps)`], t.url]),
+      body: <table className="cdt-lk"><thead><tr><th>Gym</th><th>Camp type</th><th>Link</th><th /></tr></thead><tbody>
+        {typeRows('CAMP').map(t => <tr key={t.url}><GymCell g={t.gym} gyms={gyms} /><td>{t.label} <span className="cdt-n">({t.n} camp{t.n === 1 ? '' : 's'})</span></td><td className="cdt-u"><Lnk u={t.url} /></td><td className="cdt-x"><Cp u={t.url} /></td></tr>)}</tbody></table> },
+    { k: 'care', title: 'Extended care lists', about: 'Before Care, After Care and Extended Day pages. One row per iClass Event Type in Buckets as CAMP CARE.',
+      rows: typeRows('CAMP CARE').map(t => [[t.gym, `${t.label} (${t.n} camps)`], t.url]),
+      body: <table className="cdt-lk"><thead><tr><th>Gym</th><th>Camp type</th><th>Link</th><th /></tr></thead><tbody>
+        {typeRows('CAMP CARE').map(t => <tr key={t.url}><GymCell g={t.gym} gyms={gyms} /><td>{t.label} <span className="cdt-n">({t.n} camp{t.n === 1 ? '' : 's'})</span></td><td className="cdt-u"><Lnk u={t.url} /></td><td className="cdt-x"><Cp u={t.url} /></td></tr>)}</tbody></table> },
+    ...['flex_full', 'flex_half'].map(k => ({ k, title: k === 'flex_full' ? 'Flex Week – Full Day' : 'Flex Week – Half Day',
+      about: "The gym's Flex Week product (buy a week, pick the days). These are iClass products, not camps, so they are kept in the calendar database (camp_link_extras), from your link page 11/16.",
+      rows: flex(k).map(x => [[x.gym_id, `${x.label !== 'Full Day' && x.label !== 'Half Day' ? `${x.label} ` : ''}${money(Number(x.price))}`], x.url]),
+      body: <table className="cdt-lk"><thead><tr><th>Gym</th><th className="cdt-num">Price</th><th>Link</th><th /></tr></thead><tbody>
+        {flex(k).map(x => <tr key={x.id}><GymCell g={x.gym_id} gyms={gyms} /><td className="cdt-num">{money(Number(x.price))}{x.label !== 'Full Day' && x.label !== 'Half Day' && <span className="cdt-n"> {x.label.replace(/^Half Day /, '')}</span>}</td><td className="cdt-u"><Lnk u={x.url} /></td><td className="cdt-x"><Cp u={x.url} /></td></tr>)}</tbody></table> })),
+  ];
+  if (notPublic.length) secs.splice(2, 0, { k: 'notpublic', title: 'Not public – do not advertise', about: 'Real camps parents can find, kept out of every other list and every Copy all on purpose.', lines: true,
+    rows: notPublic.map(r => [[r.gym, r.name], r.url]),
+    body: <table className="cdt-lk"><thead><tr><th>Gym</th><th>Camp</th><th>Why</th><th>Link</th><th /></tr></thead><tbody>
+      {notPublic.map(r => <tr key={`${r.gym}:${r.id}`}><GymCell g={r.gym} gyms={gyms} /><td>{r.name}</td><td className="cdt-why">{r.reason}</td><td className="cdt-u"><Lnk u={r.url} /></td><td className="cdt-x"><Cp u={r.url} /></td></tr>)}</tbody></table> });
+  secs.push({ k: 'every', title: 'Every camp', about: "Each camp's own page. Open a gym to see its camps, or copy one gym at a time.", lines: true,
+    rows: listed.map(r => [[r.gym, r.name], r.url]),
+    body: <div className="cdt-lkgyms">{gyms.map(g => { const mine = listed.filter(r => r.gym === g.id); if (!mine.length) return null; return (
+      <details className="cdt-lkgym" key={g.id}><summary><span className="cdt-g" style={{ '--g': brandOf(g).main }}>{g.id}</span> · {mine.length} camps
+        <button type="button" className="cdt-ghost" onClick={(e) => { e.preventDefault(); copyRows(mine.map(r => [[r.gym, r.name], r.url]), true, `${g.id} links copied`); }}>Copy all {g.id} camp links</button></summary>
+        <table className="cdt-lk"><tbody>{mine.map(r => <tr key={r.id}><td>{r.name}<small><Lnk u={r.url} /></small></td><td className="cdt-x"><Cp u={r.url} /></td></tr>)}</tbody></table></details>); })}</div> });
+  if (leftOff.length) secs.push({ k: 'leftoff', title: 'Left off', about: 'Not on any list above, so a Copy all never picks them up. Inactive camps drop off by themselves; they come back once the gym makes them Active and the gym syncs.', noCopy: true,
+    rows: [],
+    body: <table className="cdt-lk"><thead><tr><th>Gym</th><th>Camp</th><th>Why</th><th>Link</th></tr></thead><tbody>
+      {leftOff.map(r => <tr key={`${r.gym}:${r.id}`}><GymCell g={r.gym} gyms={gyms} /><td>{r.name}<small>{r.type}</small></td><td className="cdt-why">{r.reason}</td><td className="cdt-u">{r.url ? <Lnk u={r.url} /> : '—'}</td></tr>)}</tbody></table> });
+  const noSlug = gyms.filter(g => !g.iclass_slug).map(g => g.id);
+  return (
+    <div className="cdt-sec">
+      <p className="cdt-note">Camp lists and every camp's page are built from each gym's last iClass sync, so they update with every sync; a camp that is Inactive in iClass drops off by itself.{noSlug.length ? ` No iClass link name in the gyms table for: ${noSlug.join(', ')}.` : ''}</p>
+      <nav className="cdt-jump" aria-label="Jump to">{secs.map(s => <a key={s.k} href={`#cdt-lk-${s.k}`} onClick={(e) => { e.preventDefault(); const el = document.getElementById(`cdt-lk-${s.k}`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>{s.title}</a>)}</nav>
+      {secs.map(s => (
+        <section className="cdt-lksec" id={`cdt-lk-${s.k}`} key={s.k}>
+          <div className="cdt-sec-h cdt-sec-hrow"><h3>{s.title} <span className="cdt-n">· {s.k === 'every' ? listed.length : s.k === 'leftoff' ? leftOff.length : s.rows.length}</span></h3>
+            {!s.noCopy && <button type="button" className="cdt-ghost" onClick={() => copyRows(s.rows, !!s.lines, `${s.title} copied`)}>Copy all {s.title}</button>}</div>
+          <p className="cdt-note" style={{ margin: '-2px 0 8px' }}>{s.about}</p>
+          <div className="cdt-tablewrap">{s.body}</div>
+        </section>
+      ))}
+      {toastEl}
+    </div>
+  );
+}
+
 // Styles live here (scoped under .cdt) so the tab carries the exact look approved on the claude.ai page.
 const CSS = `
 .cdt{--sheet:#fff;--ink:#14181f;--muted:#3f4857;--line:#c9d0db;--soft:#eef1f6;--zebra:#f6f8fb;--tray:#cfd6e2;--accent:#1747c9;--ok:#16794a;--bad:#b3261e;
@@ -485,4 +756,40 @@ const CSS = `
 .cdt-blank{color:var(--muted);font-style:italic}.cdt-yes{color:var(--ok);font-weight:800}.cdt-no{color:var(--bad);font-weight:800}
 .cdt-weekcard .cdt-daytbl{border-radius:10px;overflow:hidden;box-shadow:var(--sh2);border:1px solid var(--line);table-layout:auto;min-width:0;width:100%}
 .cdt-weekcard .cdt-daytbl th{padding:7px 10px;background:var(--brand);color:#fff;border-bottom:0}.cdt-daytbl td{padding:7px 10px}.cdt-daytbl tbody tr:nth-child(even) td{background:var(--zebra)}
+/* Rail: the two master lists sit above the gyms */
+.cdt-master .cdt-logo{font-size:17px;background:#fff}.cdt-railgap{height:6px;border-bottom:2px solid var(--line);margin:2px 4px 6px}
+/* Sign-up questions */
+.cdt-qlist{display:grid;gap:10px;padding:4px 0 6px}
+.cdt-qcard{background:var(--sheet);border:1px solid var(--line);border-left:5px solid var(--brand);border-radius:8px;padding:10px 12px;box-shadow:var(--sh1);min-width:0}
+.cdt-q{font-weight:700;font-size:15px;line-height:1.3}.cdt-qd{font-size:14px;margin-top:4px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.cdt-qtags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.cdt-qtag{border-radius:999px;padding:2px 10px;font-weight:700;font-size:12px;background:var(--soft);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.cdt-qtag.req{background:var(--brand);color:#fff;box-shadow:none}.cdt-qtag.flag{background:#b45309;color:#fff;box-shadow:none}
+/* Master lists */
+.cdt-sec-hrow{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+.cdt-n{font-weight:600;font-size:13px;color:var(--muted)}
+.cdt-ghost{background:var(--sheet);color:var(--ink);border:2px solid var(--brand);border-radius:8px;padding:6px 12px;font-weight:800;font-size:13px;cursor:pointer;box-shadow:var(--sh1)}
+.cdt-ghost:hover{background:var(--brand);color:#fff;box-shadow:var(--sh2)}
+.cdt-cp{background:var(--brand);color:#fff;border:0;border-radius:7px;padding:5px 10px;font-weight:800;font-size:12px;cursor:pointer;box-shadow:var(--sh1)}
+.cdt-cp:hover{filter:brightness(1.12);box-shadow:var(--sh2)}
+.cdt-howto{background:var(--soft);border-left:5px solid var(--brand);border-radius:8px;padding:10px 12px;box-shadow:var(--sh1);font-size:14px;margin-bottom:12px}
+.cdt td.cdt-g,.cdt-lkgym .cdt-g{font-weight:800;font-size:15px;white-space:nowrap;border-left:6px solid var(--g,var(--accent))}
+.cdt-lkgym .cdt-g{display:inline-block;padding-left:8px}
+.cdt-pl td small,.cdt-lk td small{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-top:2px}
+.cdt-lk td small{font-weight:600;word-break:break-all}
+.cdt-pl tr.first td{border-top:3px solid var(--line)}
+.cdt-pl td.cdt-wk{font-weight:800;background:#c8f0d9}
+.cdt-look,.cdt-why{color:var(--bad);font-weight:700;font-size:13px}.cdt-why{min-width:180px}
+.cdt-lk td.cdt-u{word-break:break-all;min-width:220px;font-size:13px}.cdt-lk a,.cdt-u a{color:var(--accent);font-weight:600}
+.cdt-lk td.cdt-x{width:70px;text-align:right}
+.cdt-jump{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 16px}
+.cdt-jump a{flex:1 1 auto;text-align:center;background:var(--sheet);color:var(--accent);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-weight:700;font-size:14px;box-shadow:var(--sh1);text-decoration:underline}
+.cdt-jump a:hover{box-shadow:var(--sh2);border-color:var(--accent)}
+.cdt-lksec{scroll-margin-top:12px;margin-top:18px}
+.cdt-lkgyms{padding:8px}
+.cdt-lkgym{background:var(--sheet);border:1px solid var(--line);border-radius:10px;box-shadow:var(--sh1);margin-bottom:10px}
+.cdt-lkgym summary{cursor:pointer;padding:10px 12px;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.cdt-lkgym summary .cdt-ghost{margin-left:auto}.cdt-lkgym[open] summary{border-bottom:3px solid var(--line)}
+.cdt-toast{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:max(18px,env(safe-area-inset-bottom,0px));z-index:60;background:#0f5a36;color:#fff;font-weight:800;border-radius:10px;padding:10px 16px;box-shadow:var(--lift)}
+.cdt-toast.bad{background:var(--bad)}
 `;
