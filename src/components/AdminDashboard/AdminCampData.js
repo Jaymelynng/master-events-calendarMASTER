@@ -456,6 +456,22 @@ function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
   // (one child in 8 camps would look the same as 8 children). Switch to real kid counts once rosters are saved.
   const withSignups = count(c => (c.enrolled || 0) > 0);
   const kidDays = camps.reduce((n, c) => n + (c.dayCaps || []).reduce((m, x) => m + (Number(x.in) || 0), 0), 0);
+  // Spots sold = each camp's Spots column added up (kids on that camp's busiest day, iClass's own per-day count;
+  // a full-week camp has the same count every day). Total spots = each camp's Max students added up.
+  const spots = (list) => list.reduce((a, c) => ({ sold: a.sold + (c.enrolled || 0), max: a.max + (Number(c.maxKids) || 0), noMax: a.noMax + (c.maxKids == null ? 1 : 0) }), { sold: 0, max: 0, noMax: 0 });
+  const allSpots = spots(camps);
+  const Bar = ({ s, light }) => { const pct = s.max ? Math.min(100, (s.sold / s.max) * 100) : 0; return (
+    <span className={`cdt-bar${light ? ' light' : ''}`} title={`${s.sold} of ${s.max} spots sold`}><span className="cdt-barfill" style={{ width: `${pct}%` }} /></span>); };
+  const copyAll = async () => {
+    const H = ['Week', 'Dates', 'Camp', 'Camp type', 'Status', 'On web', 'Registration opens', 'Days', 'Times', 'Sign-up', 'Ages (setting)', 'Spots sold', 'Max students', 'Parent page'];
+    const R = list.slice().sort((a, b) => String(a.start).localeCompare(String(b.start))).map(c => [
+      `Week ${weeks.indexOf(weekOf(c.start)) + 1} · ${fmtDate(weekOf(c.start))}`, `${fmtDate(c.start)}–${fmtDate(c.end)}`, String(c.name || '').replace(/\s+/g, ' ').trim(), c.type,
+      c.active === true ? 'Active' : c.active === false ? 'Inactive' : 'Not read', c.showOnWeb ? 'On web' : 'Hidden', fullDate(c.regStart),
+      c.dayList.length || '', [...new Set(c.dayList.map(x => `${x.start}–${x.end}`))].join(' · '), c.singleDay ? 'Single days' : 'Full week only', c.ages,
+      c.enrolled ?? '', c.maxKids ?? '', c.link || '']);
+    const html = `<table style="border-collapse:collapse;"><tr>${H.map(h => `<th style="${XH}">${h}</th>`).join('')}</tr>${R.map(r => `<tr>${r.map((v, i) => `<td style="${XT}">${i === 13 && v ? `<a href="${escH(v)}" style="color:#0b57d0;">${escH(v)}</a>` : escH(v)}</td>`).join('')}</tr>`).join('')}</table>`;
+    toast((await copyRich(html, [H, ...R].map(r => r.join('\t')).join('\n'))) ? `${R.length} camps copied` : 'Could not copy');
+  };
   const opens = Object.entries(camps.reduce((m, c) => { const k = c.regStart || 'not set'; m[k] = (m[k] || 0) + 1; return m; }, {})).sort((a, b) => b[1] - a[1]);
   const ageSet = [...new Set(camps.map(c => c.ages))];
   const splitT = new Set(camps.filter(c => /ninja/i.test(c.name || '')).map(c => c.type).filter(t => camps.some(c => c.type === t && !/ninja/i.test(c.name || ''))));
@@ -476,7 +492,8 @@ function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
           {tile('Parents can see now', live, live ? 'Visible on the portal today' : 'None visible today')}
           {tile('Registration opens', opens[0] ? fullDate(opens[0][0]) : '?', opens.length > 1 ? opens.slice(1).map(([dt, n]) => `${n} on ${fullDate(dt)}`).join(' · ') : `All ${N} camps`)}
           {tile('Single-day sign-up', `${single} of ${N}`, single === N ? 'Every camp sells single days' : single ? 'Some camps sell single days' : 'Full week only')}
-          {tile('Camps with sign-ups', `${withSignups} of ${N}`, withSignups ? `${kidDays} kid-day${kidDays === 1 ? '' : 's'} booked · names not saved yet` : 'No one signed up yet')}
+          <div className="cdt-tile"><div className="cdt-tk">Spots sold</div><div className="cdt-tv">{allSpots.sold} <span className="cdt-of">of {allSpots.max.toLocaleString()}</span></div>
+            <Bar s={allSpots} /><div className="cdt-ts">{withSignups} of {N} camps have sign-ups · {kidDays} kid-day{kidDays === 1 ? '' : 's'}{allSpots.noMax ? ` · ${allSpots.noMax} camp${allSpots.noMax === 1 ? '' : 's'} with no max` : ''}</div></div>
         </div>
         <div className="cdt-dash2">
           <div className="cdt-tile"><div className="cdt-tk">Camps offered (Event Types)</div><ul>{types.map(t => <li key={t}><KindTag k={kindOfType(t)} /> <b>{t}</b> ·{count(c => c.type === t)} camps · {[...new Set(camps.filter(c => c.type === t).map(c => c.ages))].join(' / ')}</li>)}</ul></div>
@@ -502,7 +519,7 @@ function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
             </tbody></table></div></div>))}</div>
       </div>
 
-      <div className="cdt-sec cdt-sec-tray"><div className="cdt-sec-h"><h3>Every camp week</h3></div>
+      <div className="cdt-sec cdt-sec-tray"><div className="cdt-sec-h cdt-sec-hrow"><h3>Every camp week</h3><button type="button" className="cdt-ghost" onClick={copyAll}>Copy all {filter === 'all' ? '' : `${filter} `}camps ({list.length})</button></div>
         <div className="cdt-chips" role="group" aria-label="Show Event Type">
           <button type="button" className="cdt-chip" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>All <span>{N}</span></button>
           {types.map(t => <button type="button" key={t} className="cdt-chip" aria-pressed={filter === t} onClick={() => setFilter(t)}><KindTag k={kindOfType(t)} /> {t} <span>{count(c => c.type === t)}</span></button>)}
@@ -510,7 +527,9 @@ function GymSheet({ d, filter, setFilter, open, toggle, gymId, groups }) {
         <p className="cdt-note">Press <b>Open</b> on any camp to see its full description, every setting, each day's hours and its picture.</p>
         {byWeek.map(([w, wl]) => (
           <section className="cdt-weekcard" key={w}>
-            <div className="cdt-weekhead"><span>Week {weeks.indexOf(w) + 1} · {fmtDate(w)}</span><span className="cdt-wkcount">{wl.length} camp{wl.length === 1 ? '' : 's'}</span></div>
+            <div className="cdt-weekhead"><span>Week {weeks.indexOf(w) + 1} · {fmtDate(w)}</span>
+              <span className="cdt-wkspots">{(() => { const s = spots(wl); return <><b>{s.sold}</b>&nbsp;of {s.max} spots sold <Bar s={s} light /></>; })()}</span>
+              <span className="cdt-wkcount">{wl.length} camp{wl.length === 1 ? '' : 's'}</span></div>
             <div className="cdt-weekscroll"><table>
               <colgroup><col style={{ width: 86 }} /><col style={{ width: 108 }} /><col /><col style={{ width: 230 }} /><col style={{ width: 190 }} /><col style={{ width: 118 }} /><col style={{ width: 128 }} /><col style={{ width: 66 }} /></colgroup>
               <thead><tr><th /><th>Dates</th><th>Camp</th><th>Status</th><th>Days &amp; times</th><th>Sign-up</th><th>Ages (setting)</th><th className="cdt-num">Spots</th></tr></thead>
@@ -763,6 +782,12 @@ const CSS = `
 .cdt-cpsm{padding:3px 8px;font-size:11px;margin:0 6px;vertical-align:1px}
 .cdt-typepill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700;background:var(--tint2);color:var(--ink);box-shadow:inset 0 0 0 1px rgba(16,24,40,.12);vertical-align:1px;white-space:nowrap}
 .cdt-inl{font-size:13px;font-weight:600;color:var(--muted)}
+.cdt-of{font-size:15px;font-weight:700;color:var(--muted)}
+.cdt-bar{display:inline-block;vertical-align:middle;width:100%;height:10px;border-radius:999px;background:#d3d9e3;box-shadow:inset 0 1px 3px rgba(16,24,40,.25);overflow:hidden;margin-top:6px}
+.cdt-barfill{display:block;height:100%;min-width:3px;border-radius:999px;background:linear-gradient(90deg,#16794a,#23a866);box-shadow:0 0 6px rgba(35,168,102,.6)}
+.cdt-bar.light{width:140px;height:9px;margin:0 0 0 8px;background:rgba(255,255,255,.28);box-shadow:inset 0 1px 3px rgba(0,0,0,.35)}
+.cdt-bar.light .cdt-barfill{background:linear-gradient(90deg,#7ef0b0,#c8ffe0)}
+.cdt-wkspots{margin-left:auto;margin-right:12px;display:inline-flex;align-items:center;font-size:14px;font-weight:700;white-space:nowrap}
 .cdt-weekhead{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 16px;background:var(--brand);color:#fff;font-weight:800;font-size:17px}
 .cdt-wkcount{font-weight:700;font-size:13px;background:rgba(255,255,255,.22);border-radius:999px;padding:3px 10px}
 .cdt-weekscroll{overflow-x:auto}.cdt-weekcard table{table-layout:fixed;min-width:1180px}
